@@ -8,16 +8,26 @@
 
 ## Preview link
 
-**https://mirrorline-75qpw4kgp-vn-mn-product-group.vercel.app** — status Ready,
-deployed 10 Nov 2026 09:43 EST. Includes the glass-box design system across the
-component library, the public site and the studio, and the single shared
-`ViewerPanel` that replaced three implementations of it.
+**https://mirrorline-9diwjwc5w-vn-mn-product-group.vercel.app** — status Ready,
+deployed 10 Nov 2026 17:54 EST, from `3ade0dc` with a clean tree.
+
+Everything below, plus the design-engineering pass: the FAQ now animates open
+and shut instead of snapping, the chevron runs on the same duration token as
+the row it sits in, and the shared `Tooltip` works at all (it needed a
+provider nobody had mounted). Worth opening the FAQ on `/` — that is the
+visible one.
 
 <details>
-<summary>Earlier preview, 10 Nov 06:33 EST</summary>
+<summary>Earlier previews</summary>
 
-https://mirrorline-id7syd5uv-vn-mn-product-group.vercel.app — the calendar
-column fix and the design taste pass, before the glass-box system landed.
+https://mirrorline-75qpw4kgp-vn-mn-product-group.vercel.app — 10 Nov 09:43
+EST. The glass-box design system across the component library, the public site
+and the studio, and the single shared `ViewerPanel` that replaced three
+implementations of it.
+
+https://mirrorline-id7syd5uv-vn-mn-product-group.vercel.app — 10 Nov 06:33
+EST. The calendar column fix and the design taste pass, before the glass-box
+system landed.
 
 </details>
 
