@@ -104,7 +104,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
 
   if (asChild) {
     return (
-      <Slot className={classes} {...props}>
+      <Slot ref={ref} className={classes} {...props}>
         {children}
       </Slot>
     )
@@ -170,9 +170,15 @@ export interface CardProps
 }
 
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(function Card(
-  { as: Component = 'div', className, tone, padding, selected, ...props },
+  { as, className, tone, padding, selected, ...props },
   ref,
 ) {
+  // The tag varies at runtime, but TypeScript would otherwise intersect the
+  // props and refs of every allowed element and reject all of them. Every
+  // option here is a plain block container, so typing it as the default is
+  // accurate for props and for the ref.
+  const Component = (as ?? 'div') as 'div'
+
   return (
     <Component
       ref={ref}

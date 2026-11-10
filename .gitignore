@@ -10,6 +10,8 @@ __pycache__/
 .venv/
 automation/n8n/data/
 .DS_Store
+# Leads captured by apps/web/app/api/leads/route.ts. Never committed.
+.data/
 
 # Leads captured by the website demo form. Local only — this is contact data,
 # and it has no business in git.

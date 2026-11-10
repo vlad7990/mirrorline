@@ -27,7 +27,9 @@ const SPARK_HEIGHT = 40
 /** Keeps the stroke from clipping at the top and bottom edges. */
 const SPARK_PADDING = 3
 
-export interface SparklineProps extends React.SVGAttributes<SVGSVGElement> {
+// `values` is omitted from the SVG attributes because SMIL already claims it
+// as a string; ours is the data series.
+export interface SparklineProps extends Omit<React.SVGAttributes<SVGSVGElement>, 'values'> {
   /** Two or more values, oldest first. */
   values: readonly number[]
   strokeWidth?: number

@@ -48,7 +48,9 @@ export const LIGHT_COLORS = {
  */
 export const DARK_COLORS = {
   primary: '#C8401C',
-  'primary-hover': '#D9491F',
+  // Darkens on hover in BOTH themes. The instinct in dark mode is to lighten,
+  // but #D9491F drops white to 4.27:1 and fails AA. #B33716 holds 6.07:1.
+  'primary-hover': '#B33716',
   'on-primary': '#FFFFFF',
   accent: '#FF7A5C',
   'accent-soft': '#3A2019',

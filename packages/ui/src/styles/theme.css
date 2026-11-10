@@ -101,7 +101,9 @@
    stays put so white-on-primary keeps its 4.99:1 ratio in both themes. */
 @layer base {
   .dark {
-    --color-primary-hover: #d9491f;
+    /* No --color-primary-hover override: the primary fill and its hover are
+       deliberately identical in both themes. Lightening the hover in dark mode
+       drops white text to 4.27:1 and fails AA, so it darkens here too. */
     --color-accent: #ff7a5c;
     --color-accent-soft: #3a2019;
     --color-on-accent-soft: #ffc0ae;
