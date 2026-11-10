@@ -12,7 +12,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <SiteHeader />
-      <main id="main" className="flex-1">
+      {/* tabIndex -1: Safari scrolls to a skip-link target without moving
+          focus, so the next Tab would start again from the top of the page. */}
+      <main id="main" tabIndex={-1} className="flex-1">
         {children}
       </main>
       <SiteFooter />

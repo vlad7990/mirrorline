@@ -18,6 +18,12 @@ import { useId, useState } from 'react'
 /** Statuses that are already settled; approving them again would say nothing. */
 const SETTLED_STATUSES: readonly PostStatus[] = ['approved', 'published', 'published-private']
 
+/**
+ * The "locked" look the `disabled` attribute used to give us, now keyed off
+ * `aria-disabled` so the control keeps its place in the tab order.
+ */
+const LOCKED_SWITCH_CLASSES = 'aria-disabled:cursor-not-allowed aria-disabled:opacity-55'
+
 /** The hashtags come from the workspace niche, not from a literal. */
 function hashtagsFor(): string {
   return [workspace.niche, ...workspace.nearbyNiches]
@@ -82,11 +88,20 @@ export function PostPanel({ post, status, dayLabel, onApprove, onSendBack }: Pos
         <Label htmlFor={aiSwitchId} className="font-normal">
           AI label on platform
         </Label>
+        {/* SC 3.3.2 / 4.1.2: `aria-disabled` rather than `disabled`. A disabled
+            switch leaves the tab order, so a keyboard-only person never landed
+            on it and never heard why it cannot move. This one still takes
+            focus, still reads its explanation, and still cannot be toggled:
+            `checked` is pinned true and the handler is a no-op. */}
         <Switch
           id={aiSwitchId}
           checked={isAiLocked ? true : isAiLabelOn}
-          onCheckedChange={isAiLocked ? undefined : setAiLabelOn}
-          disabled={isAiLocked}
+          onCheckedChange={(next) => {
+            if (isAiLocked) return
+            setAiLabelOn(next)
+          }}
+          aria-disabled={isAiLocked || undefined}
+          className={isAiLocked ? LOCKED_SWITCH_CLASSES : undefined}
           aria-describedby={isAiLocked ? aiNoteId : undefined}
         />
       </div>

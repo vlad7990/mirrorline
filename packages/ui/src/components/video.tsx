@@ -85,7 +85,8 @@ export const VideoThumb = React.forwardRef<HTMLDivElement, VideoThumbProps>(func
     <div
       ref={ref}
       className={cn(
-        'relative flex aspect-[9/16] flex-col justify-end overflow-hidden rounded-md p-3.5',
+        // DESIGN.md "Shapes": "Video thumbnails 8px".
+        'relative flex aspect-[9/16] flex-col justify-end overflow-hidden rounded-thumb p-3.5',
         className,
       )}
       style={{ backgroundColor: thumbColor(index) }}

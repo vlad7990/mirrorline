@@ -27,15 +27,17 @@ function itemCountLabel(count: number): string {
 export function NeedsYouCard() {
   const [approvedIds, setApprovedIds] = React.useState<readonly string[]>([])
   const [toastTitle, setToastTitle] = React.useState<string | null>(null)
-  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** Counts approvals rather than holding a boolean, so each one re-fires. */
+  const [approvalCount, setApprovalCount] = React.useState(0)
+  const headingRef = React.useRef<HTMLHeadingElement>(null)
 
-  // A pending timer that fires after unmount would set state on nothing.
-  React.useEffect(
-    () => () => {
-      if (timerRef.current !== null) clearTimeout(timerRef.current)
-    },
-    [],
-  )
+  // SC 2.4.3: approving filters the row out, which unmounts the button that
+  // was just pressed and would leave focus on <body>. Send it to the list
+  // heading, which is where the remaining items are.
+  React.useEffect(() => {
+    if (approvalCount === 0) return
+    headingRef.current?.focus()
+  }, [approvalCount])
 
   const items = NEEDS_YOU_ITEMS.filter((item) => !approvedIds.includes(item.id))
 
@@ -43,14 +45,18 @@ export function NeedsYouCard() {
     // A new array, never a push: the previous list stays exactly as it was.
     setApprovedIds((previous) => [...previous, item.id])
     setToastTitle('Approved')
-    if (timerRef.current !== null) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => setToastTitle(null), TOAST_MS)
+    setApprovalCount((previous) => previous + 1)
   }
 
   return (
     <Card as="section" aria-labelledby="needs-you-heading" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="needs-you-heading" className="m-0 font-heading text-title text-text">
+        <h2
+          id="needs-you-heading"
+          ref={headingRef}
+          tabIndex={-1}
+          className="m-0 font-heading text-title text-text"
+        >
           Needs you
         </h2>
         <span className="text-meta text-text-muted">{itemCountLabel(items.length)}</span>
@@ -87,6 +93,7 @@ export function NeedsYouCard() {
         open={toastTitle !== null}
         title={toastTitle ?? ''}
         description="The post is queued for its slot."
+        durationMs={TOAST_MS}
         onDismiss={() => setToastTitle(null)}
       />
     </Card>

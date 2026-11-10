@@ -241,19 +241,29 @@ export function AlertBar({
 /* -------------------------------------------------------------------------- */
 
 export interface ToastProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
-  /** Render it or not. The caller owns the timer. */
+  /** Render the content or not. The live region itself is always mounted. */
   open: boolean
   /** One word or a short phrase: "Published". */
   title: React.ReactNode
   description?: React.ReactNode
-  /** Shows a dismiss button when supplied. */
+  /** Shows a dismiss button when supplied. Also what auto-dismiss calls. */
   onDismiss?: () => void
   dismissLabel?: string
+  /**
+   * Dismiss itself after this many milliseconds. Needs `onDismiss`. The timer
+   * pauses while the toast is hovered or holds focus, so it cannot pull the
+   * Dismiss button out from under someone who is on their way to it.
+   */
+  durationMs?: number
 }
 
 /**
  * A quiet confirmation. role="status" with aria-live="polite" announces it
  * without interrupting whatever the person is doing.
+ *
+ * SC 4.1.3: the live region is mounted on first render and only its contents
+ * change. A region that appears at the same instant as its text is often
+ * missed entirely by NVDA and JAWS.
  */
 export function Toast({
   open,
@@ -261,32 +271,57 @@ export function Toast({
   description,
   onDismiss,
   dismissLabel = 'Dismiss',
+  durationMs,
   className,
   ...props
 }: ToastProps) {
-  if (!open) return null
+  const [isHeld, setIsHeld] = React.useState(false)
 
+  // Held in a ref so an inline `onDismiss` does not restart the timer on
+  // every render of the parent.
+  const dismissRef = React.useRef(onDismiss)
+  React.useEffect(() => {
+    dismissRef.current = onDismiss
+  }, [onDismiss])
+
+  React.useEffect(() => {
+    if (!open || durationMs === undefined || isHeld) return
+    const timer = window.setTimeout(() => dismissRef.current?.(), durationMs)
+    return () => window.clearTimeout(timer)
+    // `title` is a dependency so a second confirmation gets its full time.
+  }, [open, durationMs, isHeld, title])
+
+  // Fixed and empty when closed, so it never takes part in the page's layout.
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className={cn(
-        'fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3',
-        'rounded-lg border border-border bg-surface px-4 py-3 text-text',
-        className,
-      )}
-      {...props}
-    >
-      <span aria-hidden="true" className="inline-block size-2 shrink-0 rounded-full bg-success" />
-      <span className="flex flex-col">
-        <span className="text-label">{title}</span>
-        {description ? <span className="text-meta text-text-muted">{description}</span> : null}
-      </span>
-      {onDismiss ? (
-        <Button variant="ghost" size="icon" onClick={onDismiss}>
-          <X aria-hidden="true" className="size-4" strokeWidth={2} />
-          <span className="sr-only">{dismissLabel}</span>
-        </Button>
+    <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2">
+      {open ? (
+        <div
+          className={cn(
+            'flex items-center gap-3',
+            'rounded-lg border border-border bg-surface px-4 py-3 text-text',
+            className,
+          )}
+          {...props}
+          onMouseEnter={() => setIsHeld(true)}
+          onMouseLeave={() => setIsHeld(false)}
+          onFocus={() => setIsHeld(true)}
+          onBlur={() => setIsHeld(false)}
+        >
+          <span
+            aria-hidden="true"
+            className="inline-block size-2 shrink-0 rounded-full bg-success"
+          />
+          <span className="flex flex-col">
+            <span className="text-label">{title}</span>
+            {description ? <span className="text-meta text-text-muted">{description}</span> : null}
+          </span>
+          {onDismiss ? (
+            <Button variant="ghost" size="icon" onClick={onDismiss}>
+              <X aria-hidden="true" className="size-4" strokeWidth={2} />
+              <span className="sr-only">{dismissLabel}</span>
+            </Button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   )

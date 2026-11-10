@@ -29,8 +29,15 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // SC 2.4.11: `scroll-pt-20` (80px) keeps whatever Tab scrolls into view clear
+  // of the sticky bars — the 64px marketing header and the ~49px studio top bar
+  // — instead of parking the newly focused control underneath one of them.
   return (
-    <html lang="en" className={`${inter.variable} ${interTight.variable}`} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`scroll-pt-20 ${inter.variable} ${interTight.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         {/* Runs before first paint, so the page never flashes the wrong theme. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />

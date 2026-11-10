@@ -29,7 +29,10 @@ export function OnboardingShell({ children }: OnboardingShellProps) {
           <LogoWordmark size={28} />
           <StepIndicator />
         </header>
-        <main id="main" className={COLUMN}>
+        {/* tabIndex={-1} so the skip link moves focus, not just scroll position.
+            Safari otherwise jumps the viewport and leaves focus at the top of
+            the document, sending the next Tab back to the start. */}
+        <main id="main" tabIndex={-1} className={COLUMN}>
           {children}
         </main>
       </div>

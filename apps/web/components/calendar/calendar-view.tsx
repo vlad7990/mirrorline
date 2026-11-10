@@ -22,7 +22,15 @@ import {
   Toast,
 } from '@mirrorline/ui'
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type Ref,
+} from 'react'
 
 import { PostPanel } from './post-panel'
 import { WeekGrid } from './week-grid'
@@ -120,13 +128,19 @@ export function CalendarView() {
   const [mode, setMode] = useState<string>(DEFAULT_MODE)
   const [toast, setToast] = useState<ToastState | null>(null)
 
+  /** Counts batch approvals rather than holding a boolean, so each one fires. */
+  const [approveAllCount, setApproveAllCount] = useState(0)
+  const batchMessageRef = useRef<HTMLParagraphElement>(null)
+
   const isWide = useIsWide()
 
+  // SC 2.4.3: once nothing is pending the "Approve all" button unmounts, and
+  // focus would land on <body>. The batch bar's own sentence is the thing that
+  // just changed, so focus moves there and it gets read out.
   useEffect(() => {
-    if (!toast) return
-    const timer = window.setTimeout(() => setToast(null), TOAST_MS)
-    return () => window.clearTimeout(timer)
-  }, [toast])
+    if (approveAllCount === 0) return
+    batchMessageRef.current?.focus()
+  }, [approveAllCount])
 
   const statusOf = useCallback(
     (post: ScheduledPost): PostStatus => overrides[post.id] ?? post.status,
@@ -167,6 +181,7 @@ export function CalendarView() {
       title: `Approved ${ids.length} posts`,
       description: `They go out on ${TOMORROW ? (DAY_LABEL_BY_DATE[TOMORROW.date] ?? 'their day') : 'their day'}.`,
     })
+    setApproveAllCount((previous) => previous + 1)
   }, [pendingTomorrow])
 
   const selectedPost = selectedPostId ? (POST_BY_ID.get(selectedPostId) ?? null) : null
@@ -238,6 +253,7 @@ export function CalendarView() {
         readyCount={TOMORROW_POSTS.length}
         pendingCount={pendingTomorrow.length}
         dayLabel={TOMORROW ? (DAY_LABEL_BY_DATE[TOMORROW.date] ?? '') : ''}
+        messageRef={batchMessageRef}
         onApproveAll={handleApproveAll}
       />
 
@@ -256,6 +272,7 @@ export function CalendarView() {
         open={toast !== null}
         title={toast?.title ?? ''}
         description={toast?.description}
+        durationMs={TOAST_MS}
         onDismiss={() => setToast(null)}
         // A fixed element wider than the viewport would scroll the page.
         className="max-w-[calc(100vw-32px)]"
@@ -274,11 +291,19 @@ interface BatchBarProps {
   /** How many of those still wait for a person. */
   pendingCount: number
   dayLabel: string
+  /** Takes focus when the batch button disappears from under the keyboard. */
+  messageRef: Ref<HTMLParagraphElement>
   onApproveAll: () => void
 }
 
 /** DESIGN.md "Ink": the batch-approval bar is one of the screen's dark panels. */
-function BatchBar({ readyCount, pendingCount, dayLabel, onApproveAll }: BatchBarProps) {
+function BatchBar({
+  readyCount,
+  pendingCount,
+  dayLabel,
+  messageRef,
+  onApproveAll,
+}: BatchBarProps) {
   // The counts come from tomorrow's chips, so the sentence changes with them
   // rather than repeating a number from the mockup.
   let message = `Tomorrow is approved. The Publisher will post ${readyCount} videos on ${dayLabel}.`
@@ -296,7 +321,9 @@ function BatchBar({ readyCount, pendingCount, dayLabel, onApproveAll }: BatchBar
       padding="none"
       className="flex flex-wrap items-center justify-between gap-3 px-[18px] py-3.5"
     >
-      <p className="m-0 text-body">{message}</p>
+      <p ref={messageRef} tabIndex={-1} className="m-0 text-body">
+        {message}
+      </p>
       <div className="flex flex-wrap items-center gap-2.5">
         {pendingCount > 0 ? (
           <Button

@@ -88,6 +88,9 @@
   --radius-md: 10px;
   --radius-lg: 12px;
   --radius-xl: 16px;
+  /* DESIGN.md "Shapes": "Video thumbnails 8px". It sits between sm and md, so
+     it is named rather than slotted into the scale. */
+  --radius-thumb: 8px;
 
   /* Space — the 8px grid plus the two fixed sizes DESIGN.md names */
   --spacing-sidebar: 240px;

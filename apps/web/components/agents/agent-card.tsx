@@ -17,6 +17,12 @@ import { AgentStatusPill, Button, Card, ProgressBar, Switch, cn } from '@mirrorl
  * contrast DESIGN.md requires, and its pill says the word "Off".
  */
 
+/**
+ * The "locked" look the `disabled` attribute used to give us, now keyed off
+ * `aria-disabled` so the control keeps its place in the tab order.
+ */
+const LOCKED_SWITCH_CLASSES = 'aria-disabled:cursor-not-allowed aria-disabled:opacity-55'
+
 export interface AgentCardProps {
   agent: Agent
   /** This agent's log is the one on show. */
@@ -95,12 +101,21 @@ export function AgentCard({
         <div className="flex items-center gap-2.5">
           {/* The word carries the state; the switch colour never has to. */}
           <span className="text-meta text-text-muted">{isOn ? 'On' : 'Off'}</span>
+          {/* SC 3.3.2 / 4.1.2: Compliance is locked with `aria-disabled`, not
+              `disabled`. A disabled switch drops out of the tab order, so a
+              keyboard-only person never reached it and never heard the sentence
+              below that explains why it is fixed on. This one keeps focus and
+              still cannot be toggled: the handler returns early. */}
           <Switch
             checked={isOn}
-            disabled={isLocked}
+            aria-disabled={isLocked || undefined}
+            className={isLocked ? LOCKED_SWITCH_CLASSES : undefined}
             aria-labelledby={headingId}
             aria-describedby={showNote ? noteId : undefined}
-            onCheckedChange={(next) => onToggle(agent.id, next)}
+            onCheckedChange={(next) => {
+              if (isLocked) return
+              onToggle(agent.id, next)
+            }}
           />
         </div>
       </div>

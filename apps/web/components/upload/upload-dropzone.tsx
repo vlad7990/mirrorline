@@ -140,30 +140,43 @@ interface FileReadLineProps {
   status: FileReadStatus
 }
 
-/** What happened to the file you just dropped, in one honest line. */
+/**
+ * What happened to the file you just dropped, in one honest line.
+ *
+ * SC 4.1.3: both regions are mounted from the first render, before there is
+ * anything to say. A live region that appears at the same moment as its text
+ * is usually missed, and `role="progressbar"` announces nothing by itself.
+ * Progress is polite; a rejected file is an alert, because the person has to
+ * do something about it.
+ */
 function FileReadLine({ status }: FileReadLineProps) {
-  if (status.state === 'idle') return null
-
-  if (status.state === 'rejected') {
-    return (
-      <p className="m-0 text-meta font-semibold text-on-danger-soft">
-        {ERROR_COPY.title} {ERROR_COPY.description}
-      </p>
-    )
-  }
-
+  const isReading = status.state === 'reading' || status.state === 'done'
   const isDone = status.state === 'done'
 
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="m-0 text-meta text-text-muted">
-        {isDone ? 'Read' : 'Reading'} {status.fileName}. {DROPZONE_COPY.note}
-      </p>
-      <ProgressBar
-        label={`Reading ${status.fileName}`}
-        value={status.percent}
-        valueText={`${status.percent}% read`}
-      />
+      <div role="status" aria-live="polite" className="flex flex-col gap-1.5">
+        {isReading ? (
+          <>
+            <p className="m-0 text-meta text-text-muted">
+              {isDone ? 'Read' : 'Reading'} {status.fileName}. {DROPZONE_COPY.note}
+            </p>
+            <ProgressBar
+              label={`Reading ${status.fileName}`}
+              value={status.percent}
+              valueText={`${status.percent}% read`}
+            />
+          </>
+        ) : null}
+      </div>
+
+      <div role="alert">
+        {status.state === 'rejected' ? (
+          <p className="m-0 text-meta font-semibold text-on-danger-soft">
+            {ERROR_COPY.title} {ERROR_COPY.description}
+          </p>
+        ) : null}
+      </div>
     </div>
   )
 }

@@ -11,6 +11,7 @@
 import { Card } from '@mirrorline/ui'
 import * as React from 'react'
 
+import { SampleDataLabel } from '@/components/marketing/primitives'
 import { AccountsStep } from '@/components/onboarding/accounts-step'
 import { BrandStep } from '@/components/onboarding/brand-step'
 import { LivePreview } from '@/components/onboarding/live-preview'
@@ -77,58 +78,69 @@ export default function OnboardingPage() {
   const canContinue = step !== 2 || draft.rightsConfirmed
 
   return (
-    <div className="flex flex-wrap items-start gap-8">
-      <Card
-        padding="none"
-        className="flex min-w-0 flex-[999_1_520px] flex-col gap-6 rounded-xl p-6 sm:p-9"
-      >
-        {step === 1 ? (
-          <BrandStep
-            colourId={draft.colourId}
-            onColourChange={(colourId) => update('colourId', colourId)}
-            fontValue={draft.fontValue}
-            onFontChange={(fontValue) => update('fontValue', fontValue)}
-            tone={draft.tone}
-            onToneChange={updateTone}
-            logoFileName={draft.logoFileName}
-            onLogoFileNameChange={(fileName) => update('logoFileName', fileName)}
+    <div className="flex flex-col gap-5">
+      {/* The wizard opens on the demo workspace's brand and accounts, not on
+          yours. CLAUDE.md non-negotiable 7: say so, in the fixed wording. */}
+      <div className="flex flex-wrap items-center gap-3">
+        <SampleDataLabel />
+        <p className="m-0 text-meta text-text-muted">
+          Prefilled with sample data from our demo workspace. Change anything you like.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-start gap-8">
+        <Card
+          padding="none"
+          className="flex min-w-0 flex-[999_1_520px] flex-col gap-6 rounded-xl p-5 sm:p-[22px]"
+        >
+          {step === 1 ? (
+            <BrandStep
+              colourId={draft.colourId}
+              onColourChange={(colourId) => update('colourId', colourId)}
+              fontValue={draft.fontValue}
+              onFontChange={(fontValue) => update('fontValue', fontValue)}
+              tone={draft.tone}
+              onToneChange={updateTone}
+              logoFileName={draft.logoFileName}
+              onLogoFileNameChange={(fileName) => update('logoFileName', fileName)}
+            />
+          ) : null}
+
+          {step === 2 ? (
+            <AccountsStep
+              rightsConfirmed={draft.rightsConfirmed}
+              onRightsConfirmedChange={(confirmed) => update('rightsConfirmed', confirmed)}
+            />
+          ) : null}
+
+          {step === 3 ? (
+            <NicheStep
+              niche={draft.niche}
+              onNicheChange={(niche) => update('niche', niche)}
+              nearbyNiches={draft.nearbyNiches}
+              onNearbyNichesChange={(nearbyNiches) => update('nearbyNiches', nearbyNiches)}
+              goal={draft.goal}
+              onGoalChange={(goal) => update('goal', goal)}
+              goalLink={draft.goalLink}
+              onGoalLinkChange={(goalLink) => update('goalLink', goalLink)}
+              postsPerDay={draft.postsPerDay}
+              onPostsPerDayChange={(postsPerDay) => update('postsPerDay', postsPerDay)}
+            />
+          ) : null}
+
+          <WizardFooter
+            isFirstStep={isFirstStep}
+            isLastStep={isLastStep}
+            canContinue={canContinue}
+            onBack={goBack}
+            onContinue={goNext}
           />
-        ) : null}
+        </Card>
 
-        {step === 2 ? (
-          <AccountsStep
-            rightsConfirmed={draft.rightsConfirmed}
-            onRightsConfirmedChange={(confirmed) => update('rightsConfirmed', confirmed)}
-          />
-        ) : null}
-
-        {step === 3 ? (
-          <NicheStep
-            niche={draft.niche}
-            onNicheChange={(niche) => update('niche', niche)}
-            nearbyNiches={draft.nearbyNiches}
-            onNearbyNichesChange={(nearbyNiches) => update('nearbyNiches', nearbyNiches)}
-            goal={draft.goal}
-            onGoalChange={(goal) => update('goal', goal)}
-            goalLink={draft.goalLink}
-            onGoalLinkChange={(goalLink) => update('goalLink', goalLink)}
-            postsPerDay={draft.postsPerDay}
-            onPostsPerDayChange={(postsPerDay) => update('postsPerDay', postsPerDay)}
-          />
-        ) : null}
-
-        <WizardFooter
-          isFirstStep={isFirstStep}
-          isLastStep={isLastStep}
-          canContinue={canContinue}
-          onBack={goBack}
-          onContinue={goNext}
-        />
-      </Card>
-
-      {/* Below the form at 390px: the column wraps, the page never scrolls sideways. */}
-      <div className="min-w-0 flex-[1_1_280px]">
-        <LivePreview colourId={draft.colourId} fontValue={draft.fontValue} tone={draft.tone} />
+        {/* Below the form at 390px: the column wraps, the page never scrolls sideways. */}
+        <div className="min-w-0 flex-[1_1_280px]">
+          <LivePreview colourId={draft.colourId} fontValue={draft.fontValue} tone={draft.tone} />
+        </div>
       </div>
     </div>
   )

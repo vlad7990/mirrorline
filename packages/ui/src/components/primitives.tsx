@@ -147,11 +147,18 @@ const cardVariants = cva('rounded-lg border', {
       /** An empty slot waiting for content. */
       dashed: 'border-dashed border-border-strong bg-surface text-text',
     },
+    /**
+     * DESIGN.md "Layout": "card padding is 18–22px", and `components.card`
+     * fixes the default at 22px. The band has a ceiling, so a large panel gets
+     * the same 22px as a default card — `lg` names the intent, it does not
+     * exceed the scale.
+     */
     padding: {
       none: 'p-0',
+      /** Compact tiles and inset rows, where the card is not the main surface. */
       sm: 'p-4',
       md: 'p-[22px]',
-      lg: 'p-8',
+      lg: 'p-[22px]',
     },
     selected: {
       /** DESIGN.md "Elevation": selection is a 2px ink border, never a shadow. */

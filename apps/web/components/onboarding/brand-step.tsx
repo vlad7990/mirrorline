@@ -68,8 +68,7 @@ export function BrandStep({
       <div className="flex flex-wrap items-center gap-5">
         <span
           aria-hidden="true"
-          className="grid size-[88px] shrink-0 place-items-center rounded-[14px] font-heading text-[30px] font-bold"
-          style={{ backgroundColor: '#12545A', color: '#F3E9DC' }}
+          className="grid size-[88px] shrink-0 place-items-center rounded-xl bg-demo-teal font-heading text-metric text-demo-sand"
         >
           {LOGO_INITIALS}
         </span>

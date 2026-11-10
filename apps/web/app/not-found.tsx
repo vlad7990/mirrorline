@@ -12,8 +12,14 @@ export const metadata: Metadata = { title: 'Page not found' }
  * skip link in the root layout to land on.
  */
 export default function NotFound() {
+  // tabIndex -1: Safari scrolls to a skip-link target without moving focus, so
+  // the next Tab would otherwise start again from the top of the document.
   return (
-    <main id="main" className="flex min-h-dvh items-center justify-center px-[18px] py-10 sm:px-8">
+    <main
+      id="main"
+      tabIndex={-1}
+      className="flex min-h-dvh items-center justify-center px-[18px] py-10 sm:px-8"
+    >
       <EmptyState
         className="w-full max-w-[32rem]"
         title="We can't find that page"

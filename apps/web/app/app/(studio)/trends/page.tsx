@@ -32,6 +32,17 @@ import {
 
 export const metadata: Metadata = { title: 'Trends' }
 
+/**
+ * SC 4.1.3: changing a filter used to swap the whole grid in silence. This one
+ * line is the result count, visible rather than `sr-only` — a sighted person
+ * has the same question, and a live region nobody can see is a region nobody
+ * can check.
+ */
+function matchCountLine(count: number): string {
+  if (count === 0) return 'No formats match these filters'
+  return count === 1 ? '1 format matches these filters' : `${count} formats match these filters`
+}
+
 interface TrendsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
@@ -73,6 +84,10 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
         }
         description="Each card is a recipe of beats, not someone else's video. Every remake gets a new script, your footage and a compliance check."
       />
+
+      <p role="status" className="m-0 text-meta text-text-muted">
+        {matchCountLine(visible.length)}
+      </p>
 
       {visible.length === 0 ? (
         <EmptyState

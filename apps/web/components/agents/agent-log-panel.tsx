@@ -28,30 +28,35 @@ function costLabel(costUsd: number | null): string {
 
 export function AgentLogPanel({ agent, entries, id }: AgentLogPanelProps) {
   return (
-    <Card as="aside" id={id} aria-live="polite" className="flex min-w-0 flex-col gap-3">
+    <Card as="aside" id={id} className="flex min-w-0 flex-col gap-3">
       <h2 className="m-0 font-heading text-subtitle text-text">{agent.name} log</h2>
       <p className="m-0 text-meta text-text-muted">
         Every action is logged with its reason and cost.
       </p>
 
-      {entries.length === 0 ? (
-        <p className="m-0 text-body text-text-muted">
-          Nothing logged for {agent.name} today. Its next action will appear here.
-        </p>
-      ) : (
-        <ol className="m-0 flex list-none flex-col p-0">
-          {entries.map((entry) => (
-            <li key={entry.id} className="flex flex-col gap-1 py-2.5">
-              <Divider className="mb-2" />
-              <span className="tabular text-caption font-normal text-text-muted">
-                {entry.timeLabel} · {costLabel(entry.costUsd)}
-              </span>
-              <span className="text-label text-text">{entry.message}</span>
-              <span className="text-meta text-text-muted">Why: {agent.role}.</span>
-            </li>
-          ))}
-        </ol>
-      )}
+      {/* The live region is the entries, not the whole card. With it on the
+          <Card>, picking an agent re-read the heading and this intro line
+          before every entry — 4.1.3 asks for the change, not the furniture. */}
+      <div aria-live="polite" className="flex min-w-0 flex-col">
+        {entries.length === 0 ? (
+          <p className="m-0 text-body text-text-muted">
+            Nothing logged for {agent.name} today. Its next action will appear here.
+          </p>
+        ) : (
+          <ol className="m-0 flex list-none flex-col p-0">
+            {entries.map((entry) => (
+              <li key={entry.id} className="flex flex-col gap-1 py-2.5">
+                <Divider className="mb-2" />
+                <span className="tabular text-caption font-normal text-text-muted">
+                  {entry.timeLabel} · {costLabel(entry.costUsd)}
+                </span>
+                <span className="text-label text-text">{entry.message}</span>
+                <span className="text-meta text-text-muted">Why: {agent.role}.</span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
     </Card>
   )
 }

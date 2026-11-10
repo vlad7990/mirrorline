@@ -10,7 +10,7 @@
  * screen's one.
  */
 
-import { Card, Eyebrow, LogoMark, MetricTile, StatusChip } from '@mirrorline/ui'
+import { Card, LogoMark, MetricTile, StatusChip } from '@mirrorline/ui'
 import Link from 'next/link'
 
 import {
@@ -144,9 +144,15 @@ export function LearningLoopCard() {
     >
       <div className="flex items-center gap-2.5">
         <LogoMark size={LOOP_MARK_SIZE} />
-        {/* The .eyebrow utility is muted grey, which does not clear 4.5:1 on
-            ink; the accent does, and it is already the loop's colour. */}
-        <Eyebrow className="text-accent">{LEARNING_LOOP.eyebrow}</Eyebrow>
+        {/* Deliberately not <Eyebrow>. The `.eyebrow` utility sets its own
+            muted-grey colour from a later @layer utilities block, which has the
+            same specificity as a Tailwind text colour and therefore wins: the
+            override lost and the words rendered at 3.11:1 on ink. These four
+            utilities reproduce `.eyebrow` exactly and keep the accent, which
+            clears 4.5:1 and is already the learning loop's colour. */}
+        <span className="text-caption font-semibold uppercase tracking-[0.06em] text-accent">
+          {LEARNING_LOOP.eyebrow}
+        </span>
       </div>
       <h2 id="learning-loop-heading" className="m-0 font-heading text-title text-on-ink">
         {LEARNING_LOOP.headline}

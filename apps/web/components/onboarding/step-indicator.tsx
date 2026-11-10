@@ -68,7 +68,10 @@ export function StepIndicator() {
                     'inline-grid size-6 shrink-0 place-items-center rounded-full',
                     'font-body text-caption',
                     isCurrent && 'bg-primary text-on-primary',
-                    isDone && 'bg-success text-on-primary',
+                    // DESIGN.md: white text only on primary or ink. The bright
+                    // success green takes its soft pair, like every other
+                    // success surface in the system.
+                    isDone && 'bg-success-soft text-on-success-soft',
                     !isCurrent && !isDone && 'bg-neutral-soft text-on-neutral-soft',
                   )}
                 >

@@ -16,9 +16,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import * as React from 'react'
 
-/** Where each form lands. The studio routes are built by another part of the app. */
-const STUDIO_HOME = '/app'
-const ONBOARDING = '/app/onboarding'
+import { ONBOARDING, STUDIO_HOME } from '@/lib/routes'
 
 /** The example address used anywhere a placeholder is needed. */
 const EXAMPLE_EMAIL = 'maya@mayatorres.example'
@@ -33,17 +31,13 @@ interface FieldProps {
   label: string
   htmlFor: string
   hint?: string
-  action?: React.ReactNode
   children: React.ReactNode
 }
 
-function Field({ label, htmlFor, hint, action, children }: FieldProps) {
+function Field({ label, htmlFor, hint, children }: FieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-baseline justify-between gap-3">
-        <Label htmlFor={htmlFor}>{label}</Label>
-        {action}
-      </div>
+      <Label htmlFor={htmlFor}>{label}</Label>
       {children}
       {hint ? <span className="text-meta text-text-muted">{hint}</span> : null}
     </div>
@@ -110,15 +104,10 @@ export function SignInForm() {
           />
         </Field>
 
-        <Field
-          label="Password"
-          htmlFor="sign-in-password"
-          action={
-            <Link href="/sign-in" className={`text-meta ${LINK_CLASS}`}>
-              Forgot password?
-            </Link>
-          }
-        >
+        {/* No "Forgot password?" here: there is no reset flow to send anyone
+            to, and a link back to this page is a control that does nothing.
+            "Email me a sign-in link" below is the honest way in. */}
+        <Field label="Password" htmlFor="sign-in-password">
           <Input
             id="sign-in-password"
             name="password"

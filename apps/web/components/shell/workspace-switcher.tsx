@@ -55,9 +55,10 @@ export function WorkspaceSwitcher() {
 
   return (
     <div ref={containerRef} className="relative">
+      {/* A disclosure button, not a menu button: aria-expanded plus
+          aria-controls is the whole contract, and it is one we keep. */}
       <button
         type="button"
-        aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-controls={isOpen ? menuId : undefined}
         onClick={() => setIsOpen((open) => !open)}
@@ -80,29 +81,34 @@ export function WorkspaceSwitcher() {
         <ChevronDownIcon size={16} className="shrink-0 text-text-muted" />
       </button>
 
+      {/* SC 4.1.2: this used to claim role="menu" without ever moving focus
+          into it and without arrow-key support, and its one disabled
+          role="menuitem" was a <span> with no tabindex, so it could not be
+          reached at all. A plain labelled group of real buttons promises only
+          what it delivers: Tab walks it, Escape and an outside click close it. */}
       {isOpen ? (
         <div
           id={menuId}
-          role="menu"
+          role="group"
           aria-label="Switch workspace"
           className="absolute top-full right-0 left-0 z-20 mt-1.5 rounded-lg border border-border bg-surface p-1"
         >
           <button
             type="button"
-            role="menuitemradio"
-            aria-checked="true"
+            aria-current="true"
             onClick={() => setIsOpen(false)}
             className="flex min-h-touch w-full items-center rounded-md bg-accent-soft px-3 text-left text-label text-on-accent-soft"
           >
             {workspace.name}
+            <span className="sr-only"> (current workspace)</span>
           </button>
-          <span
-            role="menuitem"
-            aria-disabled="true"
+          <button
+            type="button"
+            disabled
             className="flex min-h-touch w-full items-center px-3 text-left text-meta text-text-muted"
           >
             Add workspace — coming soon
-          </span>
+          </button>
         </div>
       ) : null}
     </div>

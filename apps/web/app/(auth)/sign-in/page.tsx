@@ -19,12 +19,7 @@ export const metadata: Metadata = {
   description: 'Sign in to your Mirrorline studio.',
 }
 
-/** Enough agents to show the loop is running, without filling the column. */
-const AGENTS_SHOWN = 4
-
 export default function SignInPage() {
-  const shownAgents = agents.slice(0, AGENTS_SHOWN)
-
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:gap-10">
       {/* Form ----------------------------------------------------------- */}
@@ -71,9 +66,11 @@ export default function SignInPage() {
           </ol>
 
           <div className="flex flex-col gap-2 border-t border-border pt-4">
+            {/* All seven, because the heading says seven. They are short pills,
+                so the column still fits. */}
             <h3 className="eyebrow m-0">The seven agents</h3>
             <ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-2 p-0">
-              {shownAgents.map((agent) => (
+              {agents.map((agent) => (
                 <li key={agent.id} className="flex items-center gap-2">
                   <span className="text-meta text-text">{agent.name}</span>
                   <AgentStatusPill status={agent.status} short />

@@ -9,8 +9,7 @@
 import { Button } from '@mirrorline/ui'
 import Link from 'next/link'
 
-/** Where "Open my studio" lands. */
-const STUDIO_HREF = '/app/home'
+import { STUDIO_HOME } from '@/lib/routes'
 
 export interface WizardFooterProps {
   isFirstStep: boolean
@@ -36,7 +35,7 @@ export function WizardFooter({
 
       {isLastStep ? (
         <Button asChild variant="primary" size="lg">
-          <Link href={STUDIO_HREF}>Open my studio</Link>
+          <Link href={STUDIO_HOME}>Open my studio</Link>
         </Button>
       ) : (
         <Button variant="primary" onClick={onContinue} disabled={!canContinue}>

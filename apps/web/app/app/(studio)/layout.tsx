@@ -21,7 +21,9 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
 
       <MobileNav />
 
-      <main id="main" className="min-w-0 px-[18px] py-6 sm:px-8 lg:px-10 lg:py-8">
+      {/* tabIndex -1: Safari scrolls to a skip-link target without moving
+          focus, so the next Tab would start again from the top of the page. */}
+      <main id="main" tabIndex={-1} className="min-w-0 px-[18px] py-6 sm:px-8 lg:px-10 lg:py-8">
         {children}
       </main>
     </div>

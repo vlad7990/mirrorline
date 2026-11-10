@@ -103,9 +103,9 @@ export const PUBLIC_AGENTS: readonly PublicAgent[] = [
 
 /**
  * The last hand-off is the one that closes the loop — and the automated version
- * of it is post-MVP, so the line says what happens today. It is shown next to a
- * `ComingSoonLabel` on both public pages, and the wording matches the caveat on
- * /how-it-works.
+ * of it is post-MVP, so the line itself says what happens today, in the same
+ * words as the "Coming soon" caveat on /how-it-works. On the landing page it
+ * also sits under a `ComingSoonLabel`, because that page has no other caveat.
  */
 export const LOOP_CLOSING_LINE =
   'The Performance Analyst hands its ranking back to the Trend Scout, so next week starts from what worked this week. Today the Performance Analyst writes that plan and a person puts it into effect with you.'

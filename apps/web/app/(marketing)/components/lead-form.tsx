@@ -143,23 +143,7 @@ function LeadForm({ intent, onDone }: LeadFormProps) {
   }
 
   if (state === 'sent') {
-    return (
-      <div className="flex flex-col gap-4">
-        <p className="m-0 flex items-start gap-2.5 text-body text-text">
-          <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-success-soft text-on-success-soft">
-            <Check aria-hidden="true" className="size-3.5" strokeWidth={2.4} />
-          </span>
-          Thanks. We have your note and will reply to {values.email || 'your email address'} within
-          one working day.
-        </p>
-        <p className="m-0 text-meta text-text-muted">
-          Nothing is charged and nothing is scheduled until you say so.
-        </p>
-        <Button variant="secondary" onClick={onDone}>
-          Close
-        </Button>
-      </div>
-    )
+    return <LeadFormSent email={values.email} onDone={onDone} />
   }
 
   const isSending = state === 'sending'
@@ -232,6 +216,55 @@ function LeadForm({ intent, onDone }: LeadFormProps) {
         We use this to reply to you and nothing else. No newsletter, no list.
       </p>
     </form>
+  )
+}
+
+interface LeadFormSentProps {
+  /** Echoed back so the person can see where the reply is going. */
+  email: string
+  onDone: () => void
+}
+
+/**
+ * The confirmation that replaces the form.
+ *
+ * SC 4.1.3 and SC 2.4.3: sending unmounts the submit button the person just
+ * pressed, which used to drop focus onto <body> with nothing announced. The
+ * panel is a live region and its heading takes focus on mount, so the next Tab
+ * continues from here instead of the top of the document.
+ */
+function LeadFormSent({ email, onDone }: LeadFormSentProps) {
+  const headingRef = React.useRef<HTMLHeadingElement>(null)
+
+  React.useEffect(() => {
+    headingRef.current?.focus()
+  }, [])
+
+  return (
+    <div role="status" className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <h3
+          ref={headingRef}
+          tabIndex={-1}
+          className="m-0 flex items-center gap-2.5 font-heading text-title text-text"
+        >
+          <span className="grid size-6 shrink-0 place-items-center rounded-full bg-success-soft text-on-success-soft">
+            <Check aria-hidden="true" className="size-3.5" strokeWidth={2.4} />
+          </span>
+          Thanks
+        </h3>
+        <p className="m-0 text-body text-text">
+          We have your note and will reply to {email || 'your email address'} within one working
+          day.
+        </p>
+      </div>
+      <p className="m-0 text-meta text-text-muted">
+        Nothing is charged and nothing is scheduled until you say so.
+      </p>
+      <Button variant="secondary" onClick={onDone}>
+        Close
+      </Button>
+    </div>
   )
 }
 

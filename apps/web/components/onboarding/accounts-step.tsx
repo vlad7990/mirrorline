@@ -73,7 +73,7 @@ function AccountCard({ account }: AccountCardProps) {
   const hasNote = account.note !== null
 
   return (
-    <Card as="li" padding="sm" className="flex flex-col gap-2.5">
+    <Card as="li" className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between gap-2">
         <h2 className="m-0 font-heading text-label text-text">{account.platform}</h2>
         <AccountStatusChip isConnected={account.isConnected} label={account.statusLabel} />
@@ -85,7 +85,9 @@ function AccountCard({ account }: AccountCardProps) {
         <p
           id={noteId}
           className={cn(
-            'm-0 text-caption leading-[1.4] font-normal',
+            // A sentence, and one of our named trust disclosures — DESIGN.md
+            // keeps 12px for chips and small labels, so this runs at 13px.
+            'm-0 text-meta font-normal',
             account.noteTone === 'warning' ? 'text-on-warning-soft' : 'text-text-muted',
           )}
         >
@@ -94,7 +96,10 @@ function AccountCard({ account }: AccountCardProps) {
       ) : null}
 
       <Button
-        variant={account.isConnected ? 'secondary' : 'primary'}
+        // DESIGN.md "Button primary … One per section": the footer's Continue
+        // owns that slot. A connected account, or a post-MVP one like LinkedIn,
+        // must never be the filled button competing with it.
+        variant={account.isConnected || account.isComingSoon ? 'secondary' : 'primary'}
         // LinkedIn is post-MVP: the button is visible, not live.
         disabled={account.isComingSoon}
         aria-describedby={hasNote ? noteId : undefined}

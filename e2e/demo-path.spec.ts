@@ -80,7 +80,13 @@ test('the whole demo path holds up', async ({ page }) => {
   await expect(preview).toContainText('Calm, direct, warm.')
 
   // The whole point of step 1: the preview repaints as the brand changes.
-  await page.getByRole('radio', { name: 'Warm sand' }).check()
+  // Driven by keyboard because the radio input itself is sr-only — the visible
+  // pill is its label, so a synthetic click on the input is intercepted by the
+  // swatch. Arrow keys are how the control is meant to be used anyway.
+  const warmSand = page.getByRole('radio', { name: 'Warm sand' })
+  await page.getByRole('radio', { name: 'Deep teal' }).focus()
+  await page.keyboard.press('ArrowRight')
+  await expect(warmSand).toBeChecked()
   await expect(previewCard).toHaveCSS('background-color', 'rgb(243, 233, 220)')
 
   await page.getByRole('button', { name: 'Continue' }).click()
@@ -137,9 +143,9 @@ test('the whole demo path holds up', async ({ page }) => {
   await expect(needsYou).toContainText('3 items')
   await expect(page.getByRole('status').filter({ hasText: 'Approved' })).toBeVisible()
 
-  await expect(page.getByRole('region', { name: 'Agents and results', exact: true })).toContainText(
-    '2.1× average views',
-  )
+  await expect(
+    page.getByRole('complementary', { name: 'Agents and results', exact: true }),
+  ).toContainText('2.1× average views')
 
   /* --- 6. Upload and multiply ------------------------------------------- */
 

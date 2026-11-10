@@ -99,6 +99,8 @@ export const THUMBNAIL_COLORS = [
 
 export const RADIUS = {
   sm: '6px',
+  /** DESIGN.md "Shapes": "Video thumbnails 8px". Between sm and md. */
+  thumb: '8px',
   md: '10px',
   lg: '12px',
   xl: '16px',

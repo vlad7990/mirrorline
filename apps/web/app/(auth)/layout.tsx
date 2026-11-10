@@ -32,7 +32,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </div>
       </header>
 
-      <main id="main" className="flex-1">
+      {/* tabIndex -1: Safari scrolls to a skip-link target without moving
+          focus, so the next Tab would start again from the top of the page. */}
+      <main id="main" tabIndex={-1} className="flex-1">
         <div className="mx-auto w-full max-w-[1200px] px-5 py-10 sm:px-8 sm:py-14">{children}</div>
       </main>
 
