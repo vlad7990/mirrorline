@@ -8,18 +8,11 @@
  */
 
 import { Card } from '@mirrorline/ui'
+import { BarChart3, CalendarDays, Check, Scissors, ShieldCheck, Upload } from 'lucide-react'
 import type { Metadata } from 'next'
 
 import { LOOP_CLOSING_LINE, PUBLIC_AGENTS } from '@/components/marketing/agents'
-import {
-  IconCalendar,
-  IconChart,
-  IconCheck,
-  IconScissors,
-  IconShieldCheck,
-  IconUpload,
-} from '@/components/marketing/icons'
-import { Section, SectionHeading } from '@/components/marketing/primitives'
+import { ComingSoonLabel, Section, SectionHeading } from '@/components/marketing/primitives'
 
 import { LeadDialogButton } from '../components/lead-form'
 
@@ -33,7 +26,7 @@ interface ClientStep {
   readonly id: string
   readonly title: string
   readonly line: string
-  readonly Icon: typeof IconUpload
+  readonly Icon: typeof Upload
 }
 
 const CLIENT_STEPS: readonly ClientStep[] = [
@@ -41,31 +34,31 @@ const CLIENT_STEPS: readonly ClientStep[] = [
     id: 'upload',
     title: 'Upload',
     line: 'Drop in one long video — a podcast episode, a webinar, a talk, a demo. One a week is enough to keep the studio fed.',
-    Icon: IconUpload,
+    Icon: Upload,
   },
   {
     id: 'cuts',
     title: 'Cuts',
     line: 'Within the day you have 8 to 15 short vertical videos, captioned in your style, each with its own hook and format tag.',
-    Icon: IconScissors,
+    Icon: Scissors,
   },
   {
     id: 'approve',
     title: 'Approve',
     line: 'You see every cut with its compliance result. Approve, send one back, or block it. Any cut the gate flagged says why.',
-    Icon: IconCheck,
+    Icon: Check,
   },
   {
     id: 'schedule',
     title: 'Schedule',
     line: 'Approved videos land on a calendar across Instagram, TikTok and YouTube Shorts. You can move or cancel any of them.',
-    Icon: IconCalendar,
+    Icon: CalendarDays,
   },
   {
     id: 'report',
     title: 'Report',
     line: 'Once a week you get the same week read from views to profile visits to link clicks to calls, with the real figures.',
-    Icon: IconChart,
+    Icon: BarChart3,
   },
 ]
 
@@ -133,7 +126,7 @@ export default function HowItWorksPage() {
           {CLIENT_STEPS.map((step, index) => (
             <Card as="li" key={step.id} className="flex flex-col gap-3">
               <span className="grid size-10 place-items-center rounded-md bg-accent-soft text-on-accent-soft">
-                <step.Icon size={20} />
+                <step.Icon aria-hidden="true" className="size-5" strokeWidth={1.8} />
               </span>
               <span className="tabular text-caption font-semibold text-text-muted">
                 {index + 1} of {CLIENT_STEPS.length}
@@ -143,17 +136,20 @@ export default function HowItWorksPage() {
             </Card>
           ))}
         </ol>
-        <p className="mt-4 mb-0 max-w-[68ch] text-meta text-text-muted">
-          The learning loop that re-plans your week on its own, the self-serve Studio and the mobile
-          app are coming soon. Today the Performance Analyst writes the plan and a person puts it
-          into effect with you.
-        </p>
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <ComingSoonLabel>Coming soon</ComingSoonLabel>
+          <p className="m-0 max-w-[68ch] text-meta text-text-muted">
+            The learning loop that re-plans your week on its own, the self-serve Studio, LinkedIn
+            publishing and the mobile app. Today the Performance Analyst writes the plan and a
+            person puts it into effect with you.
+          </p>
+        </div>
       </Section>
 
       <Section tone="subtle" aria-labelledby="gate-heading">
         <Card padding="lg" className="flex flex-col gap-4">
           <span className="grid size-11 place-items-center rounded-md bg-success-soft text-on-success-soft">
-            <IconShieldCheck size={22} />
+            <ShieldCheck aria-hidden="true" className="size-6" strokeWidth={1.8} />
           </span>
           <h2 id="gate-heading" className="m-0 font-heading text-headline text-text">
             Nothing posts without passing Compliance

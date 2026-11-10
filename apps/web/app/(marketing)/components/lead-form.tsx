@@ -11,9 +11,9 @@
  */
 
 import { Button, Input, Label, Textarea, cn } from '@mirrorline/ui'
+import { Check } from 'lucide-react'
 import * as React from 'react'
 
-import { IconCheck } from '@/components/marketing/icons'
 import { Modal } from '@/components/marketing/modal'
 
 export type LeadIntent = 'pilot' | 'demo'
@@ -48,8 +48,7 @@ const INTENT_COPY: Record<LeadIntent, IntentCopy> = {
 
 type FormState = 'idle' | 'sending' | 'sent' | 'failed'
 
-const FIELD_NAMES = ['name', 'email', 'company', 'want'] as const
-type FieldName = (typeof FIELD_NAMES)[number]
+type FieldName = 'name' | 'email' | 'company' | 'want'
 type FormValues = Record<FieldName, string>
 
 const EMPTY_VALUES: FormValues = { name: '', email: '', company: '', want: '' }
@@ -148,7 +147,7 @@ function LeadForm({ intent, onDone }: LeadFormProps) {
       <div className="flex flex-col gap-4">
         <p className="m-0 flex items-start gap-2.5 text-body text-text">
           <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-success-soft text-on-success-soft">
-            <IconCheck size={14} strokeWidth={2.4} />
+            <Check aria-hidden="true" className="size-3.5" strokeWidth={2.4} />
           </span>
           Thanks. We have your note and will reply to {values.email || 'your email address'} within
           one working day.

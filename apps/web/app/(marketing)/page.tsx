@@ -10,12 +10,12 @@
 
 import { cuts, funnel, metrics, sourceVideo } from '@mirrorline/mock'
 import { Button, Card, FunnelBar, VideoThumb } from '@mirrorline/ui'
+import { ArrowRight, Film, Plug, Repeat, Tag } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
 import { LOOP_CLOSING_LINE, PUBLIC_AGENTS } from '@/components/marketing/agents'
 import { Faq, type FaqItem } from '@/components/marketing/faq'
-import { IconArrowRight, IconFilm, IconPlug, IconRepeat, IconTag } from '@/components/marketing/icons'
 import { SampleDataLabel, Section, SectionHeading } from '@/components/marketing/primitives'
 import { SELLABLE_TIERS } from '@/components/marketing/pricing-tiers'
 
@@ -35,7 +35,7 @@ interface Rule {
   readonly id: string
   readonly title: string
   readonly line: string
-  readonly Icon: typeof IconFilm
+  readonly Icon: typeof Film
 }
 
 const RULES: readonly Rule[] = [
@@ -43,25 +43,25 @@ const RULES: readonly Rule[] = [
     id: 'own-footage',
     title: 'Your footage only',
     line: 'We work from video you own, or footage we hold the rights to. We never download another creator’s video.',
-    Icon: IconFilm,
+    Icon: Film,
   },
   {
     id: 'format-not-footage',
     title: 'We remake the format, never the footage',
     line: 'When a format is rising in your niche we copy its structure, then write a new script and shoot it with your material.',
-    Icon: IconRepeat,
+    Icon: Repeat,
   },
   {
     id: 'ai-labelled',
     title: 'AI scenes are labelled',
     line: 'Where a scene is generated, it says so — in the studio and on the platform.',
-    Icon: IconTag,
+    Icon: Tag,
   },
   {
     id: 'official-apis',
     title: 'Official platform APIs',
     line: 'We post through Instagram, TikTok and YouTube’s own APIs, to accounts you connect and can disconnect.',
-    Icon: IconPlug,
+    Icon: Plug,
   },
 ]
 
@@ -224,7 +224,7 @@ export default function LandingPage() {
           {RULES.map((rule) => (
             <Card as="li" key={rule.id} className="flex flex-col gap-3">
               <span className="grid size-10 place-items-center rounded-md bg-accent-soft text-on-accent-soft">
-                <rule.Icon size={20} />
+                <rule.Icon aria-hidden="true" className="size-5" strokeWidth={1.8} />
               </span>
               <h3 className="m-0 font-heading text-subtitle text-text">{rule.title}</h3>
               <p className="m-0 text-meta text-text-muted">{rule.line}</p>
@@ -274,7 +274,7 @@ export default function LandingPage() {
             <Button asChild variant="secondary">
               <Link href="/how-it-works">
                 How it works
-                <IconArrowRight size={18} />
+                <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.8} />
               </Link>
             </Button>
           }
@@ -337,7 +337,7 @@ export default function LandingPage() {
             <Button asChild variant="secondary">
               <Link href="/pricing">
                 See what each tier includes
-                <IconArrowRight size={18} />
+                <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.8} />
               </Link>
             </Button>
           }

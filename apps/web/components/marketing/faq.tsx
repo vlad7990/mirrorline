@@ -1,21 +1,21 @@
 'use client'
 
 /**
- * The landing page's six questions.
+ * The landing page's six questions, on a Radix accordion.
  *
- * The WAI-ARIA accordion pattern, built in the app: a heading holding a button
- * with aria-expanded and aria-controls, and a region labelled by that button.
- * @mirrorline/ui exports no accordion, and Radix is not a dependency of this
- * app, so this is the local version the brief allows.
+ * Radix gives the pattern its keyboard behaviour and the heading/button/region
+ * wiring; `type="single" collapsible` means one answer at a time and all of
+ * them closed to start, so the page reads as a list of questions rather than a
+ * wall of answers.
  *
- * One panel open at a time, and all of them closed to start, so the page reads
- * as a list of questions rather than a wall of answers.
+ * Radix renders the trigger inside an <h3>, which sits correctly under the
+ * section's <h2>.
  */
 
+import * as AccordionPrimitive from '@radix-ui/react-accordion'
 import { cn } from '@mirrorline/ui'
-import * as React from 'react'
-
-import { IconChevronDown } from './icons'
+import { ChevronDown } from 'lucide-react'
+import type * as React from 'react'
 
 export interface FaqItem {
   readonly id: string
@@ -28,54 +28,37 @@ export interface FaqProps {
 }
 
 export function Faq({ items }: FaqProps) {
-  const [openId, setOpenId] = React.useState<string | null>(null)
-
   return (
-    <div className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
-      {items.map((item) => {
-        const isOpen = openId === item.id
-        const panelId = `faq-panel-${item.id}`
-        const buttonId = `faq-button-${item.id}`
-
-        return (
-          <div key={item.id}>
-            <h3 className="m-0">
-              <button
-                type="button"
-                id={buttonId}
-                aria-expanded={isOpen}
-                aria-controls={panelId}
-                onClick={() => setOpenId(isOpen ? null : item.id)}
-                className={cn(
-                  'flex w-full items-center justify-between gap-4 px-5 py-4 text-left',
-                  'min-h-touch font-heading text-subtitle text-text',
-                  'transition-colors hover:bg-surface-subtle',
-                )}
-              >
-                {item.question}
-                <IconChevronDown
-                  size={20}
-                  className={cn(
-                    'text-text-muted transition-transform duration-150',
-                    isOpen && 'rotate-180',
-                  )}
-                />
-              </button>
-            </h3>
-            <div
-              id={panelId}
-              role="region"
-              aria-labelledby={buttonId}
-              hidden={!isOpen}
-              className="px-5 pb-5"
+    <AccordionPrimitive.Root
+      type="single"
+      collapsible
+      className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface"
+    >
+      {items.map((item) => (
+        <AccordionPrimitive.Item key={item.id} value={item.id}>
+          <AccordionPrimitive.Header className="m-0">
+            <AccordionPrimitive.Trigger
+              className={cn(
+                'group flex w-full items-center justify-between gap-4 px-5 py-4 text-left',
+                'min-h-touch font-heading text-subtitle text-text',
+                'transition-colors hover:bg-surface-subtle',
+              )}
             >
-              <div className="flex max-w-[68ch] flex-col gap-3 text-body text-text-muted">
-                {item.answer}
-              </div>
+              {item.question}
+              <ChevronDown
+                aria-hidden="true"
+                className="size-5 shrink-0 text-text-muted transition-transform duration-150 group-data-[state=open]:rotate-180"
+                strokeWidth={1.8}
+              />
+            </AccordionPrimitive.Trigger>
+          </AccordionPrimitive.Header>
+          <AccordionPrimitive.Content className="px-5 pb-5">
+            <div className="flex max-w-[68ch] flex-col gap-3 text-body text-text-muted">
+              {item.answer}
             </div>
-          </div>
-        )
-      })}
-    </div>
+          </AccordionPrimitive.Content>
+        </AccordionPrimitive.Item>
+      ))}
+    </AccordionPrimitive.Root>
   )
 }

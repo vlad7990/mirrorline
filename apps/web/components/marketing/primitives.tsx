@@ -11,6 +11,7 @@
  */
 
 import { cn } from '@mirrorline/ui'
+import { TriangleAlert } from 'lucide-react'
 import * as React from 'react'
 
 /* -------------------------------------------------------------------------- */
@@ -135,6 +136,47 @@ export function ComingSoonLabel({ className, children, ...props }: ComingSoonLab
     >
       {children ?? 'Coming soon'}
     </span>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+/* DraftNotice                                                                 */
+/* -------------------------------------------------------------------------- */
+
+export interface DraftNoticeProps {
+  /** What the draft covers, e.g. "privacy notice". */
+  documentName: string
+  className?: string
+}
+
+/**
+ * The warning that opens /privacy and /terms. The wording is fixed, because
+ * the point is that a reader cannot miss it: these pages have not been near a
+ * lawyer.
+ */
+export function DraftNotice({ documentName, className }: DraftNoticeProps) {
+  return (
+    <div
+      role="note"
+      className={cn(
+        'flex items-start gap-3 rounded-lg border border-warning bg-warning-soft p-4 sm:p-5',
+        'text-on-warning-soft',
+        className,
+      )}
+    >
+      <span className="mt-0.5">
+        <TriangleAlert aria-hidden="true" className="size-5" strokeWidth={1.8} />
+      </span>
+      <div className="flex flex-col gap-1">
+        <p className="m-0 text-label font-semibold">
+          Draft, not legal advice. This document has not been reviewed by a lawyer.
+        </p>
+        <p className="m-0 text-meta">
+          It is a plain-language placeholder for the {documentName} while we build. A reviewed version
+          will replace it before anyone is asked to sign anything.
+        </p>
+      </div>
+    </div>
   )
 }
 

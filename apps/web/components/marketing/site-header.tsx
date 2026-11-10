@@ -10,12 +10,12 @@
  */
 
 import { LogoWordmark, cn } from '@mirrorline/ui'
+import { Menu } from 'lucide-react'
 import Link from 'next/link'
 import * as React from 'react'
 
 import { LeadDialogButton } from '@/app/(marketing)/components/lead-form'
 
-import { IconMenu } from './icons'
 import { Modal } from './modal'
 
 export interface NavLink {
@@ -69,7 +69,7 @@ export function SiteHeader() {
           aria-haspopup="dialog"
           aria-expanded={isDrawerOpen}
         >
-          <IconMenu size={22} />
+          <Menu aria-hidden="true" className="size-5" strokeWidth={1.8} />
           <span className="sr-only">Open the menu</span>
         </button>
       </div>

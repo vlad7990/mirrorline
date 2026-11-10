@@ -7,9 +7,9 @@
  */
 
 import { Card } from '@mirrorline/ui'
+import { Check } from 'lucide-react'
 import type { Metadata } from 'next'
 
-import { IconCheck } from '@/components/marketing/icons'
 import { ComingSoonLabel, Section, SectionHeading } from '@/components/marketing/primitives'
 import { PRICING_NOTE, PRICING_TIERS } from '@/components/marketing/pricing-tiers'
 
@@ -87,7 +87,7 @@ export default function PricingPage() {
                   {tier.includes.map((line) => (
                     <li key={line} className="flex items-start gap-2 text-meta text-text">
                       <span className="mt-0.5 text-on-success-soft">
-                        <IconCheck size={16} strokeWidth={2.2} />
+                        <Check aria-hidden="true" className="size-4" strokeWidth={2.2} />
                       </span>
                       {line}
                     </li>
@@ -127,7 +127,7 @@ export default function PricingPage() {
           {ALWAYS_INCLUDED.map((line) => (
             <li key={line} className="flex items-start gap-2.5 text-body text-text-muted">
               <span className="mt-1 text-on-success-soft">
-                <IconCheck size={18} strokeWidth={2.2} />
+                <Check aria-hidden="true" className="size-[18px]" strokeWidth={2.2} />
               </span>
               {line}
             </li>

@@ -1,0 +1,81 @@
+'use client'
+
+/**
+ * One post on the week grid.
+ *
+ * DESIGN.md "Calendar post chip": "time, tiny thumbnail and truncated title,
+ * with a 4px left edge showing status: grey published, blue scheduled, amber
+ * review, green approved."
+ *
+ * DESIGN.md "Elevation": "Selected items: a 2px #14171C (or primary) border
+ * instead of a shadow."
+ *
+ * The chip is a real button with a full sentence for a name, so the status is
+ * never carried by the coloured edge alone.
+ */
+
+import type { PostStatus, ScheduledPost } from '@mirrorline/mock'
+import { STATUS_STYLES, cn } from '@mirrorline/ui'
+
+/** The 4px left edge, one token per lifecycle state. */
+export const STATUS_EDGE_CLASS: Record<PostStatus, string> = {
+  published: 'border-l-text-muted',
+  'published-private': 'border-l-text-muted',
+  scheduled: 'border-l-info',
+  'needs-review': 'border-l-warning',
+  approved: 'border-l-success',
+}
+
+/** The swatch the legend prints beside each word. */
+export const STATUS_SWATCH_CLASS: Record<PostStatus, string> = {
+  published: 'bg-text-muted',
+  'published-private': 'bg-text-muted',
+  scheduled: 'bg-info',
+  'needs-review': 'bg-warning',
+  approved: 'bg-success',
+}
+
+/** The word that always travels with the colour. */
+export function statusWord(status: PostStatus): string {
+  return STATUS_STYLES[status].word
+}
+
+export interface PostChipProps {
+  post: ScheduledPost
+  /** The live status, which may differ from `post.status` after an approval. */
+  status: PostStatus
+  isSelected: boolean
+  onSelect: (postId: string) => void
+}
+
+export function PostChip({ post, status, isSelected, onSelect }: PostChipProps) {
+  const word = statusWord(status)
+
+  return (
+    <button
+      type="button"
+      aria-pressed={isSelected}
+      onClick={() => onSelect(post.id)}
+      aria-label={`${post.timeLabel}, ${post.platformLabel}, ${post.title}, ${word.toLowerCase()}`}
+      className={cn(
+        'flex min-h-11 w-full items-center gap-1.5 rounded-md bg-surface p-1.5 text-left',
+        'transition-colors duration-150 hover:bg-surface-subtle',
+        isSelected ? 'border-2 border-ink' : 'border border-border',
+        'border-l-4',
+        STATUS_EDGE_CLASS[status],
+      )}
+    >
+      {/* The thumbnail is one of the four fixed demo colours, so it stays a
+          plain swatch rather than a theme token. */}
+      <span
+        aria-hidden="true"
+        className="h-[30px] w-[18px] shrink-0 rounded-sm"
+        style={{ backgroundColor: post.thumbnailColor }}
+      />
+      <span aria-hidden="true" className="flex min-w-0 flex-col">
+        <span className="text-[11px] font-bold leading-tight text-text">{post.timeLabel}</span>
+        <span className="truncate text-[11px] leading-tight text-text">{post.title}</span>
+      </span>
+    </button>
+  )
+}
