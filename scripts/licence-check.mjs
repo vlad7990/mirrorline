@@ -34,6 +34,14 @@ const ALLOWED_LICENCES = new Set([
   'BlueOak-1.0.0',
   // Browser-support *data* (caniuse-lite), not code. Attribution only.
   'CC-BY-4.0',
+  // A *font* licence, not a code licence: the Geist families the design
+  // system is built on (docs/DECISIONS.md D18). OFL permits bundling and
+  // redistribution; its only real conditions are that the font is not sold on
+  // its own and that a Reserved Font Name is not reused on a modified build.
+  // We do neither. SPDX writes it OFL-1.1; the geist package writes the long
+  // form, so both spellings are accepted.
+  'OFL-1.1',
+  'SIL OPEN FONT LICENSE',
 ]);
 
 // LGPL is not on the allow-list, and must not be: it is only acceptable for a

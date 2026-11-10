@@ -1,0 +1,21 @@
+{
+  "_comment": "Sample data, from Maya Torres Coaching, a fictional demo client. Mirrors the Brand kit screen (S9) and packages/mock's brandKit. Copy it, change the values, keep the shape.",
+  "logoLabel": "Maya Torres Coaching",
+  "colors": [
+    { "id": "deep-teal", "name": "Deep teal", "hex": "#12545A" },
+    { "id": "warm-sand", "name": "Warm sand", "hex": "#F3E9DC" },
+    { "id": "coral", "name": "Coral", "hex": "#FF5A36" },
+    { "id": "ink", "name": "Ink", "hex": "#14171C" }
+  ],
+  "headingFont": "Inter Tight",
+  "bodyFont": "Inter",
+  "captionStyle": "bold-highlight",
+  "fontFile": "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+  "wordsAlways": ["first-time managers", "burnout", "reframe", "1:1"],
+  "wordsNever": ["hustle", "crush it", "guaranteed"],
+  "rights": {
+    "holder": "Maya Torres Coaching",
+    "recordId": "consent-rights-episode-47",
+    "signedOn": "2026-11-09"
+  }
+}

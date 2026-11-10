@@ -38,3 +38,35 @@ jobs:
 
       - name: Licence check
         run: pnpm licence-check
+
+  # Engine v0. Its own job: a different language, a different toolchain, and
+  # nothing in it depends on the web build passing first.
+  pipeline:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      # The engine shells out to ffmpeg, and the tests generate their own test
+      # footage with it. ubuntu-latest ships neither it nor a TTF that Pillow
+      # can draw captions with, and the caption burner refuses rather than
+      # falling back to an unreadable bitmap font.
+      - name: Install ffmpeg and a caption font
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: services/pipeline/uv.lock
+
+      # --no-editable because this Python ignores the underscore-prefixed .pth
+      # that hatchling's editable wheel writes (docs/DECISIONS.md D17).
+      - name: Install
+        run: uv sync --no-editable --dev
+
+      # No model extras and no API key: the suite runs offline, and the Claude
+      # finder is proved to refuse rather than proved to spend (CLAUDE.md #11).
+      - name: Tests
+        run: uv run --no-editable pytest -q

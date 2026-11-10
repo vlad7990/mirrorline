@@ -1,0 +1,45 @@
+[project]
+name = "mirrorline-pipeline"
+version = "0.1.0"
+description = "Engine v0: one client video becomes 8-12 captioned 9:16 cuts."
+requires-python = ">=3.11"
+
+# Pillow rasterises the captions. This ffmpeg has no drawtext and no libass
+# (see docs/DECISIONS.md D16), so caption pixels are drawn here and composited
+# with the overlay filter.
+dependencies = ["pillow>=11.0"]
+
+[project.optional-dependencies]
+# Real transcription. Not installed by default: the models are large, and CI
+# must stay offline. `uv sync --extra transcribe` turns it on.
+transcribe = ["faster-whisper>=1.1"]
+# WhisperX is preferred when present (word-level timestamps without a second
+# alignment pass) but its licence is unverified, so it is its own extra.
+transcribe-whisperx = ["whisperx>=3.3"]
+# The Claude moment-finder. Installing this does NOT enable it; the CLI still
+# needs --use-claude and an API key. See docs/DECISIONS.md D15.
+claude = ["anthropic>=0.40"]
+
+[project.scripts]
+make-samples = "pipeline.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8.3"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pipeline"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Rendering tests shell out to ffmpeg and take a few seconds each.
+markers = ["ffmpeg: needs the ffmpeg binary on PATH"]
+# Import the package from source rather than from whatever is installed.
+# This Python ignores .pth files whose names begin with an underscore, which
+# is exactly what hatchling's editable wheel writes, so an editable install
+# is not importable here. docs/DECISIONS.md D17 has the detail; `uv sync
+# --no-editable` is the documented setup for running the CLI.
+pythonpath = ["src"]

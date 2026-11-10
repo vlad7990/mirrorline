@@ -26,3 +26,10 @@ blob-report/
 .turbo/
 .vercel
 .env*
+
+# Engine v0. Rendered samples are client footage and can be hundreds of MB;
+# they are made on demand from a video and a brand file, so git never needs
+# them. uv.lock is NOT ignored — CI installs from it.
+.pytest_cache/
+services/pipeline/samples/
+services/pipeline/**/*.mp4

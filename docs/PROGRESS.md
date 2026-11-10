@@ -8,9 +8,18 @@
 
 ## Preview link
 
-**https://mirrorline-id7syd5uv-vn-mn-product-group.vercel.app** — status Ready,
-deployed 10 Nov 2026 06:33 EST. Includes the calendar column fix and the
-design taste pass on the public site.
+**https://mirrorline-75qpw4kgp-vn-mn-product-group.vercel.app** — status Ready,
+deployed 10 Nov 2026 09:43 EST. Includes the glass-box design system across the
+component library, the public site and the studio, and the single shared
+`ViewerPanel` that replaced three implementations of it.
+
+<details>
+<summary>Earlier preview, 10 Nov 06:33 EST</summary>
+
+https://mirrorline-id7syd5uv-vn-mn-product-group.vercel.app — the calendar
+column fix and the design taste pass, before the glass-box system landed.
+
+</details>
 
 Preview only. Nothing was promoted to production, and `.claude/settings.json`
 blocks `vercel --prod` anyway.
@@ -98,6 +107,8 @@ Worth clicking during a demo:
 | GitHub Actions CI: lint, typecheck, test, build, licence check | done, green |
 | Playwright: 87 E2E tests passing; 80 screenshots in docs/screens-built/ | done |
 | "Glass box" design system applied across `packages/ui`, the website and the studio | done |
+| **Engine v0** — `services/pipeline`, Python + uv: transcribe → moments → 9:16 cut → burned-in captions → compliance gate → `summary.json` | done |
+| Engine v0: 108 unit tests, own CI job (ffmpeg + uv on ubuntu) | done, green |
 
 25 routes build. All figures on every screen are derived from `packages/mock` —
 nothing is hardcoded, so the demo story stays consistent across screens.
@@ -110,8 +121,26 @@ nothing is hardcoded, so the demo story stays consistent across screens.
   saying billing is not connected in this preview.
 - **No PDF.** "Download weekly report (PDF)" says the report is coming soon
   rather than pretending to download.
-- **No engine.** The upload screen simulates the pipeline; nothing is
-  transcribed, cut or rendered. That is week 1 work per the 30-day plan.
+- **The engine is real, but not wired to the web app.** `services/pipeline`
+  turns a video into captioned 9:16 cuts from the command line; the upload
+  screen still simulates the pipeline and does not call it. Connecting the two
+  needs a job queue and storage, which is week 3 work.
+- **Engine v0: no speech recognition ran on this machine.** The transcriber
+  chain is whisperx → faster-whisper → a script sidecar, and only the sidecar
+  path has been exercised end to end, because neither model is installed here.
+  Every run records which one answered in `summary.json`, so a sidecar run can
+  never be mistaken for a model run. Nothing invents words: with no model and
+  no script, the engine stops.
+- **Engine v0: no smart reframing.** A centre crop, stated as such. A speaker
+  standing off to one side will be cropped badly.
+- **Engine v0: no intro, outro, B-roll, voice or face.** The brand kit's
+  `introTemplate` and `outroTemplate` are read but not rendered — week 2's
+  Remotion templates. Because nothing is generated, no cut carries an AI scene
+  yet; the AI-label rule is wired and tested so the label is already mandatory
+  the day B-roll arrives.
+- **Engine v0: Claude moment-finding is off.** It exists behind `--use-claude`
+  plus a key plus a non-zero `--max-spend-usd`, and refuses without all three
+  (D15). Nothing in this run spent a cent.
 - **No n8n, no Docker.** Out of scope on instruction (D10).
 - **Mobile app routes** `/m/review` and `/m/home` deliberately not built (D6).
   The web app is responsive to 390px instead.
@@ -134,14 +163,48 @@ nothing is hardcoded, so the demo story stays consistent across screens.
      linted** (they are typechecked and tested). See D12 for the exact config to
      restore once the hook is off.
 
-2. **Licence allow-list was widened by three.** `caniuse-lite` (CC-BY-4.0, data
+2. **Two Python licence questions, before the engine ships anything.**
+   - **Pillow is MIT-CMU**, an HPND-style permissive licence. That is
+     MIT-shaped but not literally on CLAUDE.md rule 10's list. It is in because
+     this machine's ffmpeg cannot draw text at all (D16). Confirm it, or name a
+     replacement.
+   - **whisperx's licence is unverified**, so it is an opt-in extra rather than
+     the default transcriber it otherwise deserves to be. faster-whisper is MIT
+     and is the fallback.
+   - `scripts/licence-check.mjs` reads npm dependencies only. **No Python
+     dependency is covered by any automated check yet.** That is a gap, not a
+     pass, and it wants an equivalent for `uv.lock`.
+
+3. **Install the engine with `uv sync --no-editable`.** An editable install is
+   not importable on this machine: hatchling writes
+   `_editable_impl_mirrorline_pipeline.pth` and this CPython ignores `.pth`
+   files whose names begin with an underscore. Proven by copying the file to
+   another name and watching it work (D17). Nothing is broken in our code, but
+   anyone who runs plain `uv sync` will see `ModuleNotFoundError: No module
+   named 'pipeline'` and should not go hunting.
+
+4. **ffmpeg here is a GPL build, invoked as a separate binary.** That matches
+   the Postiz carve-out in rule 10 — a service alongside us, never linked or
+   vendored. If the engine is ever shipped inside a container image with ffmpeg
+   in it, that needs a licence review first (LGPL build, or a decision).
+
+5. **The licence gate was red and I missed it.** `pnpm licence-check` has been
+   exiting 1 since self-hosted Geist arrived with the glass-box typography:
+   `geist@1.9.2` is SIL OFL, which was not on the allow-list. The commit that
+   introduced it ran lint, typecheck, tests and build — the four CLAUDE.md
+   names — but not the licence gate, which only lives in CI. OFL is now on the
+   list as a font licence (D18) and the gate is green. Two things for you: this
+   is the fourth widening of that list, and the pre-commit routine in CLAUDE.md
+   should probably name `licence-check` too.
+
+6. **Licence allow-list was widened by three.** `caniuse-lite` (CC-BY-4.0, data
    not code), `minimatch` (BlueOak-1.0.0, permissive) and the `sharp`/libvips
    binary (LGPL-3.0, dynamically loaded and unmodified). Reasoning in D11. This
    touches CLAUDE.md non-negotiable #10 and deserves a lawyer's eye before the
    first paying client, alongside the contract and terms work already scheduled
    for week 4.
 
-3. **Accessibility: 12 WCAG AA failures were found and fixed, but a second
+7. **Accessibility: 12 WCAG AA failures were found and fixed, but a second
    fresh audit has not run.** axe now reports **0 violations of any impact** on
    every route in both themes, and the E2E suite is 87 passed / 0 failed. Worth
    knowing *why* that is not the whole story: the auditor's judgement was that
@@ -151,7 +214,7 @@ nothing is hardcoded, so the demo story stays consistent across screens.
    1.17:1). A green axe run would have hidden them. A human keyboard-and-
    screen-reader pass is still the real test.
 
-4. **`pnpm test:e2e` flakes on a cold start.** A first run against a freshly
+8. **`pnpm test:e2e` flakes on a cold start.** A first run against a freshly
    cleared `.next` showed 12 failures (9 studio dark-theme axe audits, 3
    screenshot captures). Every one passed in isolation and on both subsequent
    full runs. Cause is the Next dev server compiling studio routes on first hit
@@ -159,11 +222,11 @@ nothing is hardcoded, so the demo story stays consistent across screens.
    warm-up step to `playwright.config.ts` (hit each studio route once before the
    suite) so CI does not fail spuriously.
 
-5. **`@radix-ui/react-tabs` is now an unused dependency** in
+9. **`@radix-ui/react-tabs` is now an unused dependency** in
    `packages/ui/package.json`, left behind when `SegmentedControl` stopped
    using Radix Tabs. Harmless; remove it next time the lockfile changes anyway.
 
-5. ~~The calendar's day columns.~~ **Fixed.** At 1440px the week grid showed
+10. ~~The calendar's day columns.~~ **Fixed.** At 1440px the week grid showed
    only 2 of 7 days. Cause was `table-layout: auto` — a column sizes to its
    max-content, so the chip's `truncate` plus `white-space: nowrap` made each
    day as wide as its longest full title, and `min-w-0` cannot help an
@@ -171,11 +234,11 @@ nothing is hardcoded, so the demo story stays consistent across screens.
    272–380px → 78px, all seven days visible beside the drawer. Verified in
    `docs/screens-built/app-calendar--1440--light.png`.
 
-7. **`docs/screens-built/` is the evidence.** Compare it against
+11. **`docs/screens-built/` is the evidence.** Compare it against
    `docs/design/claude-design/screens/*.png` and tell me what still looks wrong.
    The references are a floor, not a ceiling, but regressions matter.
 
-8. **Decide on the theme switch's home.** It sits in the sidebar footer (where
+12. **Decide on the theme switch's home.** It sits in the sidebar footer (where
    KICKOFF_PROMPT asked for it) and again on Settings. Neither reference PNG
    shows it in the sidebar, so it will read as a diff against the mockups.
 
@@ -198,22 +261,38 @@ entries.
 
 ---
 
-## Next 5 tasks for Day 2
+## Day 2, as it stands
 
-From `docs/plan/30_DAY_PLAN.md`, week 1:
+From `docs/plan/30_DAY_PLAN.md`, week 1. Four of the five are done:
 
-1. **Submit the Meta, TikTok and YouTube developer apps.** The plan puts this on
-   day 1 and it is the longest pole — TikTok posting stays private until the app
-   is audited, and the product already tells users so.
-2. **Engine v0, step one:** upload → WhisperX transcribe, saving word
-   timestamps. `services/pipeline/` does not exist yet.
-3. **Engine v0, step two:** pick moments with ClipsAI plus Claude hook writing;
-   output 12 candidate cuts from one real video.
-4. **Engine v0, step three:** 9:16 render with burned-in captions from a
-   Remotion brand template, so the first sales samples are real files.
-5. **Compliance v1** with unit tests: rights flag, near-duplicate check, AI-label
-   flag, banned caption phrases. This is the gate everything else depends on,
-   and the 30-day plan builds it alongside the Multiplier in week 1.
+1. ~~**Engine v0, step one:** upload → transcribe, saving word timestamps.~~
+   **Done**, with a caveat worth reading: the adapter chain is whisperx →
+   faster-whisper → script sidecar, and only the sidecar path has run here
+   because no model is installed. The model paths are written and wired but
+   have not transcribed audio on this machine.
+2. ~~**Engine v0, step two:** pick moments, output candidate cuts.~~ **Done**,
+   by a heuristic finder rather than ClipsAI: sentence boundaries from the word
+   timings, scored on question openings, the brand's own vocabulary, figures, a
+   clean ending and a length that suits a vertical cut. Every score carries its
+   reasons into `summary.json`. Claude hook writing exists behind a flag and is
+   off (D15). ClipsAI was not used — a dependency that does roughly this was
+   not worth adding before the simple version was measured.
+3. ~~**Engine v0, step three:** 9:16 render with burned-in captions.~~ **Done**,
+   though not from a Remotion template: this ffmpeg has no text filters at all,
+   so Pillow draws the captions in the brand's colours and ffmpeg composites
+   them (D16). Remotion templates remain week 2.
+4. ~~**Compliance v1** with unit tests.~~ **Done.** All four rules, 108 tests,
+   wired into CI.
+5. **Submit the Meta, TikTok and YouTube developer apps.** Still open, still the
+   longest pole — TikTok posting stays private until the app is audited, and
+   the product already tells users so. This one needs Vlad; it cannot be done
+   from here.
+
+Proof it runs: a 276-second source made **9 captioned 9:16 cuts, 9 passing the
+gate, in 15 seconds** (`make-samples` on a self-generated test clip). Nine, not
+twelve, because the test source only holds nine non-overlapping windows that
+end on a sentence — padding it to twelve would have meant worse cuts.
 
 Then: 30-name warm list and the first 3 free samples, per the plan's week-1
-sell column.
+sell column — and the first real decision, which is whether the samples are
+good enough to send. They are made from a test pattern today.
