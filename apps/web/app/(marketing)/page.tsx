@@ -17,6 +17,7 @@ import { cutSummary, cuts, funnel, metrics, sourceVideo } from '@mirrorline/mock
 import { Button, Card, cn, FunnelBar } from '@mirrorline/ui'
 import { ArrowRight, Film, Plug, Repeat, Tag } from 'lucide-react'
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 
 import { LOOP_CLOSING_LINE, PUBLIC_AGENTS } from '@/components/marketing/agents'
@@ -210,20 +211,61 @@ export default function LandingPage() {
 
   return (
     <>
-      {/* Hero ----------------------------------------------------------- */}
+      {/* Hero -----------------------------------------------------------
+          Asymmetric, not a centred stack: 7 columns of argument against 5 of
+          evidence. The screenshot is the real upload screen, not a drawing of
+          one, because the claim on the left is a claim about a product that
+          exists and the fastest way to support it is to show the thing.
+
+          The headline is five words. It was twelve, which reads fine at the
+          46px the studio uses and breaks into four lines at the size a public
+          page wants. The qualifier it used to carry moved into the subtext. */}
       <Section size="lg">
-        <div className="flex max-w-[52rem] flex-col gap-6">
-          <h1 className="m-0 font-heading text-headline text-text sm:text-display">
-            Turn one long video into daily short-form growth, without losing your voice.
-          </h1>
-          <p className="m-0 max-w-[58ch] text-body text-text-muted sm:text-subtitle sm:font-normal">
-            We rebuild the format, never the footage. Your own video, your own accounts, every cut
-            checked.
-          </p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <LeadDialogButton intent="pilot" />
-            <LeadDialogButton intent="demo" variant="secondary" size="lg" />
+        {/* Aligned to the top, not centred: centring a short text column
+            against a tall figure pushes the headline into the middle of the
+            viewport, which reads as a layout bug rather than as space. */}
+        <div className="grid items-start gap-10 lg:grid-cols-12 lg:gap-12">
+          <div className="flex flex-col gap-6 lg:col-span-7">
+            <h1 className="reveal-lead m-0 text-balance font-heading text-hero text-text">
+              One video. A week of posts.
+            </h1>
+            <p className="reveal m-0 max-w-[46ch] text-subtitle font-normal text-text-muted">
+              We rebuild the format, never the footage. Your voice, your accounts, every cut checked
+              before it can be scheduled.
+            </p>
+            <div className="reveal flex flex-col gap-3 sm:flex-row sm:items-center">
+              <LeadDialogButton intent="pilot" />
+              <LeadDialogButton intent="demo" variant="secondary" size="lg" />
+            </div>
           </div>
+
+          {/* Bleeds past the container on wide screens so the composition is
+              a crop of something larger rather than a card sitting in a box. */}
+          <figure className="reveal m-0 lg:col-span-5 lg:-mr-[6vw] xl:-mr-[10vw]">
+            <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-[0_24px_60px_-28px_rgb(14_17_22_/_0.32)]">
+              <Image
+                src="/shots/studio-cuts-16x10-light.png"
+                alt="The Mirrorline studio after a run: vertical cuts from one upload, each with its hook, length and compliance verdict."
+                width={1440}
+                height={900}
+                priority
+                sizes="(min-width: 1024px) 42vw, 100vw"
+                className="block h-auto w-full dark:hidden"
+              />
+              <Image
+                src="/shots/studio-cuts-16x10-dark.png"
+                alt=""
+                aria-hidden="true"
+                width={1440}
+                height={900}
+                sizes="(min-width: 1024px) 42vw, 100vw"
+                className="hidden h-auto w-full dark:block"
+              />
+            </div>
+            <figcaption className="mt-3 text-meta text-text-muted">
+              The studio, on sample data from a fictional demo client.
+            </figcaption>
+          </figure>
         </div>
       </Section>
 

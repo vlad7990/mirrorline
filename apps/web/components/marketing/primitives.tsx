@@ -79,13 +79,20 @@ export function SectionHeading({
     <div className={cn('flex flex-wrap items-end justify-between gap-4', className)}>
       <div className="flex min-w-0 max-w-[62ch] flex-col gap-2">
         {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}
+        {/* A section head on a public page is a brand surface, so it takes
+            the fluid scale rather than the studio's fixed one. A nested h3
+            stays on the product scale: it is a label inside a section, not
+            the section's own statement. */}
         <Heading
           id={id}
-          className={cn('m-0 font-heading text-text', level === 2 ? 'text-headline' : 'text-title')}
+          className={cn(
+            'reveal-lead m-0 text-balance font-heading text-text',
+            level === 2 ? 'text-section' : 'text-title',
+          )}
         >
           {title}
         </Heading>
-        {lead ? <p className="m-0 text-body text-text-muted">{lead}</p> : null}
+        {lead ? <p className="reveal m-0 max-w-[62ch] text-body text-text-muted">{lead}</p> : null}
       </div>
       {aside ? <div className="flex shrink-0 items-center gap-3">{aside}</div> : null}
     </div>

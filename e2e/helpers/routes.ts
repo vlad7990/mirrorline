@@ -29,7 +29,7 @@ export const ROUTES: readonly RouteEntry[] = [
     slug: 'index',
     name: 'Home (marketing)',
     area: 'marketing',
-    h1: 'Turn one long video into daily short-form growth, without losing your voice.',
+    h1: 'One video. A week of posts.',
   },
   {
     path: '/how-it-works',

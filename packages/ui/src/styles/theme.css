@@ -341,6 +341,103 @@
     }
   }
 
+  /* ---------------------------------------------------------------------
+     The brand scale.
+
+     The studio and the public site are two different registers and they do
+     not want the same type. A product UI wants a fixed scale: the user is in
+     a task, at a known DPI, and a heading that resizes with the window is a
+     distraction. A brand surface wants a fluid one: it is a poster, it is
+     read once, and a 46px headline on a 27-inch monitor reads as a dialog
+     box rather than as a statement.
+
+     Everything above this comment is the product scale and stays fixed.
+     These two are marketing-only, and they are the reason the public pages
+     stopped looking like a settings screen.
+
+     The clamp middle terms are rem + vw, never vw alone, so the type still
+     responds to a browser zoom. Pure vw ignores it, which fails WCAG 1.4.4.
+     --------------------------------------------------------------------- */
+  /* The ceiling is 4.5rem rather than the 6rem this first shipped at. At
+     6rem a five-word headline broke onto three lines in a 7-column hero,
+     and a hero headline gets two. Picked by measuring, not by taste. */
+  .text-hero {
+    font-size: clamp(2.5rem, 1.5rem + 3.6vw, 4.5rem);
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-weight: 700;
+  }
+
+  .text-section {
+    font-size: clamp(2rem, 1.3rem + 2.8vw, 3.25rem);
+    line-height: 1.06;
+    letter-spacing: -0.022em;
+    font-weight: 700;
+  }
+
+  /* ---------------------------------------------------------------------
+     Scroll reveal, with no JavaScript and no library.
+
+     `animation-timeline: view()` ties the animation to the element's own
+     passage through the viewport, and the browser runs it off the main
+     thread. The alternatives were a scroll listener (banned: it fires every
+     frame) or shipping Motion for a fade (a dependency for an opacity
+     change).
+
+     Everything is gated behind @supports, so a browser without the feature
+     shows the content plainly rather than showing nothing. The failure mode
+     of every hand-rolled reveal is content that never arrives.
+     --------------------------------------------------------------------- */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal {
+        animation: mirrorline-reveal linear both;
+        animation-timeline: view();
+        /* Finish by the time the element is a third up the viewport: the
+           reveal is for arriving, not for reading. */
+        animation-range: entry 0% cover 28%;
+      }
+
+      /* A reveal that travels further, for a section's opening line. */
+      .reveal-lead {
+        animation: mirrorline-reveal-lead linear both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 32%;
+      }
+    }
+  }
+
+  /* Movement only. No opacity.
+
+     The first version faded from opacity 0 and it failed the axe contrast
+     audit on every below-the-fold paragraph, in both themes. That is not a
+     test being fussy: a view-timeline animation holds its start state until
+     the element enters, so the text genuinely sits at reduced contrast, and
+     anything that parks an element mid-range leaves it there. Text that is
+     on screen is readable or it is a bug.
+
+     The travel is what reads as arrival anyway. The fade was decoration and
+     it cost legibility, so it is gone. */
+  @keyframes mirrorline-reveal {
+    from {
+      transform: translateY(14px);
+    }
+
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes mirrorline-reveal-lead {
+    from {
+      transform: translateY(28px);
+    }
+
+    to {
+      transform: translateY(0);
+    }
+  }
+
   /* A staggered list. Set --index on each child, in order; the delay derives
      from it, so nothing has to be hand-tuned.
 
