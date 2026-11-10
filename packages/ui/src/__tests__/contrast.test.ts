@@ -75,7 +75,15 @@ const PAIRS: readonly Pair[] = [
   { foreground: 'text-muted', background: 'surface', where: 'metadata in a card' },
   { foreground: 'text-muted', background: 'surface-subtle', where: 'metadata in an inset block' },
   { foreground: 'on-primary', background: 'primary', where: 'the primary button label' },
+  {
+    foreground: 'on-primary',
+    background: 'primary-hover',
+    where: 'the primary button label, hovered',
+  },
   { foreground: 'on-ink', background: 'ink', where: 'the dark insight panel' },
+  // The lightbox. Same hexes in both themes, so this pair is asserted twice on
+  // purpose: the duplicate is the proof it did not drift in one of them.
+  { foreground: 'on-viewer', background: 'viewer', where: 'captions on the 9:16 viewer' },
   { foreground: 'on-accent-soft', background: 'accent-soft', where: 'the active nav item' },
   { foreground: 'on-success-soft', background: 'success-soft', where: 'the "Passed" chip' },
   { foreground: 'on-warning-soft', background: 'warning-soft', where: 'the "Needs review" chip' },
@@ -139,5 +147,30 @@ describe('white text goes only where DESIGN.md allows it', () => {
     expect(contrastRatio(palette['on-primary'], palette.ink)).toBeGreaterThanOrEqual(
       WCAG_AA_NORMAL_TEXT,
     )
+  })
+
+  it.each(THEMES)('%s: white on the viewer passes', (_n, palette) => {
+    expect(contrastRatio(palette['on-primary'], palette.viewer)).toBeGreaterThanOrEqual(
+      WCAG_AA_NORMAL_TEXT,
+    )
+  })
+})
+
+describe('the viewer surface is a lightbox, not a theme surface', () => {
+  // DESIGN.md "Colors": 9:16 video always sits on `viewer`, in both themes, so
+  // a cut looks the same to whoever approves it.
+  it('does not change between light and dark', () => {
+    expect(DARK_COLORS.viewer).toBe(LIGHT_COLORS.viewer)
+    expect(DARK_COLORS['on-viewer']).toBe(LIGHT_COLORS['on-viewer'])
+  })
+
+  it.each(THEMES)('%s: is a genuinely dark panel, not a dim surface', (_n, palette) => {
+    // Anything lighter than this stops reading as a lightbox and starts
+    // competing with the footage.
+    expect(relativeLuminance(palette.viewer)).toBeLessThan(0.01)
+  })
+
+  it.each(THEMES)('%s: is distinct from ink, which is the emphasis panel', (_n, palette) => {
+    expect(palette.viewer).not.toBe(palette.ink)
   })
 })

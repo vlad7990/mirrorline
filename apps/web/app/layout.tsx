@@ -1,22 +1,15 @@
 import type { Metadata } from 'next'
-import { Inter, Inter_Tight } from 'next/font/google'
+import { GeistMono } from 'geist/font/mono'
+import { GeistSans } from 'geist/font/sans'
 import { ThemeProvider, THEME_SCRIPT } from '@mirrorline/ui'
 
 import './globals.css'
 
-/* DESIGN.md "Typography": body is Inter, headings are Inter Tight. The CSS
-   variables are consumed by the @theme inline block in globals.css. */
-const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-inter',
-})
-
-const interTight = Inter_Tight({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-inter-tight',
-})
+/* DESIGN.md "Typography": the product has two voices. Geist is the studio
+   speaking to the user; Geist Mono is the machine reporting — agent logs,
+   costs, timings, similarity percentages, spend caps. Both are self-hosted by
+   the `geist` package, so no font is fetched from a third party.
+   theme.css consumes --font-geist-sans and --font-geist-mono. */
 
 export const metadata: Metadata = {
   title: {
@@ -35,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`scroll-pt-20 ${inter.variable} ${interTight.variable}`}
+      className={`scroll-pt-20 ${GeistSans.variable} ${GeistMono.variable}`}
       suppressHydrationWarning
     >
       <head>

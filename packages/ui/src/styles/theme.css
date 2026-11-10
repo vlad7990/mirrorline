@@ -2,6 +2,16 @@
  * Mirrorline theme — Tailwind v4, CSS-first.
  * Values mirror packages/ui/src/tokens.ts, which mirrors DESIGN.md.
  * DESIGN.md is the law; change it there first.
+ *
+ * The system is "glass box": you can see the machine working, so the surfaces
+ * read like instrumentation. Three things to know before editing:
+ *   1. Two voices. --font-sans (Geist) is the studio talking to the user;
+ *      --font-mono (Geist Mono) is the machine — logs, costs, timings, caps,
+ *      counts, rates. Semantic, not decorative.
+ *   2. --color-viewer is the lightbox 9:16 video always sits on, identical in
+ *      both themes. It is not --color-ink, which is the emphasis panel.
+ *   3. Motion curves are explicit because the CSS defaults are too weak to
+ *      read as intent. Never ease-in on UI; nothing over 300ms.
  */
 
 @import 'tailwindcss';
@@ -11,36 +21,43 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* Colours — light */
+  /* Colours — light. Cool, low-chroma neutrals on one ~220 hue axis, so the
+     unchanged coral brand reads louder and 1px borders read as rules rather
+     than creases. See tokens.ts for the full reasoning. */
   --color-primary: #c8401c;
   --color-primary-hover: #b33716;
   --color-on-primary: #ffffff;
   --color-accent: #ff5a36;
-  --color-accent-soft: #ffe8e1;
+  --color-accent-soft: #ffe7e0;
   --color-on-accent-soft: #8f2c11;
-  --color-background: #fafaf7;
+  --color-background: #f6f7f9;
   --color-surface: #ffffff;
-  --color-surface-subtle: #f4f4f1;
-  --color-border: #e6e4dd;
-  --color-border-strong: #d6d3ca;
-  --color-text: #14171c;
-  --color-text-muted: #5f6672;
-  --color-ink: #14171c;
-  --color-on-ink: #f2f2ee;
-  --color-success: #1f9d6b;
-  --color-success-soft: #e3f4ec;
-  --color-on-success-soft: #145c40;
-  --color-warning: #c98a12;
-  --color-warning-soft: #fbf0d9;
-  --color-on-warning-soft: #6e4a07;
-  --color-danger: #d23f3f;
-  --color-danger-soft: #fbe3e3;
-  --color-on-danger-soft: #8e2626;
-  --color-info: #2f6fde;
-  --color-info-soft: #e3ecfb;
-  --color-on-info-soft: #1f4fa8;
-  --color-neutral-soft: #efede7;
-  --color-on-neutral-soft: #3e444d;
+  --color-surface-subtle: #eff1f4;
+  --color-border: #e2e5ea;
+  --color-border-strong: #cbd0d8;
+  --color-text: #0e1116;
+  --color-text-muted: #596273;
+  --color-ink: #11151b;
+  --color-on-ink: #eef1f6;
+  /* The lightbox. Every 9:16 frame sits on this, in BOTH themes, so a cut
+     looks the same to whoever approves it. Deeper and cooler than --color-ink
+     on purpose: ink belongs to the page, viewer disappears. */
+  --color-viewer: #07090d;
+  --color-on-viewer: #e9ecf2;
+  --color-success: #128a5e;
+  --color-success-soft: #def2e8;
+  --color-on-success-soft: #0e5940;
+  --color-warning: #b7790a;
+  --color-warning-soft: #faefd6;
+  --color-on-warning-soft: #6b4606;
+  --color-danger: #c9343c;
+  --color-danger-soft: #fbe2e3;
+  --color-on-danger-soft: #8c2126;
+  --color-info: #2563d9;
+  --color-info-soft: #e2eafa;
+  --color-on-info-soft: #1c4aa3;
+  --color-neutral-soft: #e9ecf1;
+  --color-on-neutral-soft: #3a4250;
 
   /* Demo brand — inside video thumbnails only */
   --color-demo-teal: #12545a;
@@ -49,89 +66,139 @@
   --color-demo-warm-earth: #6b4f3a;
   --color-demo-sand: #f3e9dc;
 
-  /* Type */
-  --font-heading: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
-  --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  /* Type — two voices. next/font sets --font-geist-sans and --font-geist-mono
+     on <html> (the `geist` package: GeistSans from 'geist/font/sans',
+     GeistMono from 'geist/font/mono'); the literal family names are the
+     fallback for anything rendering outside Next. */
+  --font-sans: var(--font-geist-sans, 'Geist'), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono, 'Geist Mono'), ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Geist covers both roles, so headings and body are one family now. The two
+     names are kept because consumers use `font-heading` and `font-body`. */
+  --font-heading: var(--font-sans);
+  --font-body: var(--font-sans);
 
-  --text-display: 44px;
-  --text-display--line-height: 1.1;
-  --text-display--letter-spacing: -0.01em;
+  --text-display: 46px;
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.025em;
   --text-display--font-weight: 700;
   --text-headline: 32px;
-  --text-headline--line-height: 1.15;
+  --text-headline--line-height: 1.12;
+  --text-headline--letter-spacing: -0.02em;
   --text-headline--font-weight: 700;
   --text-title: 20px;
-  --text-title--line-height: 1.3;
+  --text-title--line-height: 1.28;
+  --text-title--letter-spacing: -0.012em;
   --text-title--font-weight: 600;
-  --text-subtitle: 18px;
-  --text-subtitle--line-height: 1.3;
+  --text-subtitle: 17px;
+  --text-subtitle--line-height: 1.35;
+  --text-subtitle--letter-spacing: -0.008em;
   --text-subtitle--font-weight: 600;
   --text-body: 15px;
-  --text-body--line-height: 1.55;
+  --text-body--line-height: 1.6;
+  --text-body--letter-spacing: -0.002em;
   --text-label: 14px;
   --text-label--line-height: 1.4;
+  --text-label--letter-spacing: -0.004em;
   --text-label--font-weight: 600;
   --text-meta: 13px;
   --text-meta--line-height: 1.45;
   --text-caption: 12px;
-  --text-caption--line-height: 1.35;
+  --text-caption--line-height: 1.3;
+  --text-caption--letter-spacing: 0.004em;
   --text-caption--font-weight: 600;
+  /* Machine voice. Pair these two with font-mono. */
   --text-metric: 30px;
-  --text-metric--line-height: 1.1;
+  --text-metric--line-height: 1.05;
+  --text-metric--letter-spacing: -0.02em;
   --text-metric--font-weight: 600;
+  --text-mono: 13px;
+  --text-mono--line-height: 1.5;
+  --text-mono--font-weight: 500;
   --text-overlay-caption: 17px;
-  --text-overlay-caption--line-height: 1.25;
+  --text-overlay-caption--line-height: 1.22;
+  --text-overlay-caption--letter-spacing: -0.01em;
   --text-overlay-caption--font-weight: 700;
 
-  /* Shape */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  /* DESIGN.md "Shapes": "Video thumbnails 8px". It sits between sm and md, so
-     it is named rather than slotted into the scale. */
-  --radius-thumb: 8px;
+  /* Shape. Tightened ~2px across the scale: softer corners read as consumer,
+     machined corners read as instrument. Nothing below 4px — a 2px corner on a
+     1px border renders as a notch. */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  /* DESIGN.md "Shapes": video thumbnails. It sits between sm and md, so it is
+     named rather than slotted into the scale. */
+  --radius-thumb: 6px;
 
   /* Space — the 8px grid plus the two fixed sizes DESIGN.md names */
   --spacing-sidebar: 240px;
   --spacing-touch: 44px;
 
+  /* Motion — easing. Explicit curves; the CSS keywords are too weak to read
+     as intent. These override Tailwind's `ease-out` and `ease-in-out`. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Motion — duration. Nothing over 300ms for UI. Exits are ~65% of enters,
+     because you have already decided to leave. */
+  --duration-press: 140ms;
+  --duration-tooltip: 160ms;
+  --duration-dropdown: 200ms;
+  --duration-modal: 280ms;
+  --duration-press-exit: 90ms;
+  --duration-tooltip-exit: 110ms;
+  --duration-dropdown-exit: 130ms;
+  --duration-modal-exit: 180ms;
+
+  /* The delay step for a staggered list:
+     animation-delay: calc(var(--index) * var(--stagger-step)) */
+  --stagger-step: 60ms;
+
+  /* Entering is ease-out by default, at dropdown speed. */
+  --default-transition-timing-function: var(--ease-out);
+  --default-transition-duration: var(--duration-dropdown);
+
   /* The one shadow DESIGN.md allows: the active segment of a segmented control */
   --shadow-segment: 0 1px 2px rgb(0 0 0 / 0.08);
 }
 
-/* Dark theme. Only the surfaces and the status pairs move; the primary fill
-   stays put so white-on-primary keeps its 4.99:1 ratio in both themes. */
+/* Dark theme. The same cool axis read from the other end. Two asymmetries:
+   --color-ink steps UP rather than down, because in dark mode there is no room
+   below the page for emphasis; and --color-viewer does not move at all, since
+   a lightbox that changed with the theme would change how the client's footage
+   looks. The primary fill and its hover also stay put, so white-on-primary
+   keeps 4.99:1 in both themes. */
 @layer base {
   .dark {
     /* No --color-primary-hover override: the primary fill and its hover are
        deliberately identical in both themes. Lightening the hover in dark mode
        drops white text to 4.27:1 and fails AA, so it darkens here too. */
     --color-accent: #ff7a5c;
-    --color-accent-soft: #3a2019;
-    --color-on-accent-soft: #ffc0ae;
-    --color-background: #0e1116;
-    --color-surface: #161a21;
-    --color-surface-subtle: #1e242e;
-    --color-border: #2a2f38;
-    --color-border-strong: #3b4250;
-    --color-text: #f2f2ee;
-    --color-text-muted: #a3a9b4;
-    --color-ink: #06080b;
-    --color-success: #3cc98f;
-    --color-success-soft: #10281f;
-    --color-on-success-soft: #7fe3ba;
-    --color-warning: #e8b23a;
-    --color-warning-soft: #2c2411;
-    --color-on-warning-soft: #f3ce7b;
-    --color-danger: #f06a6a;
-    --color-danger-soft: #2e1717;
-    --color-on-danger-soft: #ffa8a8;
+    --color-accent-soft: #3a1e17;
+    --color-on-accent-soft: #ffc2b1;
+    --color-background: #0f141b;
+    --color-surface: #19202a;
+    --color-surface-subtle: #222a36;
+    --color-border: #2d3542;
+    --color-border-strong: #404a59;
+    --color-text: #eef1f6;
+    --color-text-muted: #9ba4b2;
+    --color-ink: #1c2430;
+    --color-success: #35c68c;
+    --color-success-soft: #0c2620;
+    --color-on-success-soft: #79e2b8;
+    --color-warning: #e5ae38;
+    --color-warning-soft: #2a2210;
+    --color-on-warning-soft: #f2cc79;
+    --color-danger: #f0686b;
+    --color-danger-soft: #2d1618;
+    --color-on-danger-soft: #ffa7aa;
     --color-info: #6b9bf2;
-    --color-info-soft: #141f33;
+    --color-info-soft: #121e31;
     --color-on-info-soft: #a9c5fa;
-    --color-neutral-soft: #22272f;
-    --color-on-neutral-soft: #c7ccd5;
+    --color-neutral-soft: #262e3a;
+    --color-on-neutral-soft: #c5cbd5;
   }
 
   html {
@@ -143,7 +210,8 @@
     color: var(--color-text);
     font-family: var(--font-body);
     font-size: var(--text-body);
-    line-height: 1.55;
+    line-height: 1.6;
+    letter-spacing: -0.002em;
     -webkit-font-smoothing: antialiased;
   }
 
@@ -171,12 +239,31 @@
     outline-color: var(--color-accent);
   }
 
-  /* Respect the OS setting. 02_BRAND_AND_VOICE "Motion": subtle, never required. */
+  /* Respect the OS setting. 02_BRAND_AND_VOICE "Motion": subtle, never
+     required. Collapsing the duration tokens at the root means every
+     component built on them goes still too, not just the blanket override. */
   @media (prefers-reduced-motion: reduce) {
+    :root {
+      --duration-press: 0.01ms;
+      --duration-tooltip: 0.01ms;
+      --duration-dropdown: 0.01ms;
+      --duration-modal: 0.01ms;
+      --duration-press-exit: 0.01ms;
+      --duration-tooltip-exit: 0.01ms;
+      --duration-dropdown-exit: 0.01ms;
+      --duration-modal-exit: 0.01ms;
+      --default-transition-duration: 0.01ms;
+      --stagger-step: 0ms;
+      --ease-out: linear;
+      --ease-in-out: linear;
+      --ease-drawer: linear;
+    }
+
     *,
     *::before,
     *::after {
       animation-duration: 0.01ms !important;
+      animation-delay: 0ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
@@ -185,6 +272,14 @@
 }
 
 @layer utilities {
+  /* The machine voice: agent log lines, costs, timings, similarity
+     percentages, spend caps, counts, step rates. DESIGN.md "Typography — two
+     voices". Tabular by default, because these numbers sit in columns. */
+  .machine {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
   /* Small uppercase section eyebrow. DESIGN.md "Typography — Case". */
   .eyebrow {
     font-size: var(--text-caption);
@@ -204,6 +299,40 @@
     position: relative;
     overflow-x: auto;
     overscroll-behavior-x: contain;
+  }
+
+  /* The one press affordance. A 3% dip is enough to feel the click and small
+     enough that text does not visibly resample.
+
+     Gated on a fine pointer with hover: on touch there is no :active window
+     worth animating, and the scale fights the browser's own tap feedback.
+     Under prefers-reduced-motion the transform is dropped entirely — the
+     duration token alone would still move it, just instantly. */
+  @media (hover: hover) and (pointer: fine) {
+    .press {
+      transition: transform var(--duration-press) var(--ease-out);
+    }
+
+    .press:active {
+      transform: scale(0.97);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .press:active {
+        transform: none;
+      }
+    }
+  }
+
+  /* A staggered list. Set --index on each child, in order; the delay derives
+     from it, so nothing has to be hand-tuned.
+
+       <li className="log-in stagger" style={{ '--index': index }}>
+
+     Six items is the practical ceiling: at 60ms a step, the seventh lands past
+     360ms and the list stops feeling like one gesture. */
+  .stagger {
+    animation-delay: calc(var(--index, 0) * var(--stagger-step));
   }
 
   /* The progress shimmer on cuts being generated. */
@@ -244,6 +373,23 @@
   }
 
   .pulse-dot {
-    animation: mirrorline-pulse 2s ease-in-out infinite;
+    animation: mirrorline-pulse 2s var(--ease-in-out) infinite;
+  }
+
+  /* A log line arriving in an agent transcript. Enter only, ease-out, and
+     fast — a log that animates slowly reads as a slow machine. */
+  @keyframes mirrorline-log-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .log-in {
+    animation: mirrorline-log-in var(--duration-dropdown) var(--ease-out) both;
   }
 }

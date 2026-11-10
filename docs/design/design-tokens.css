@@ -1,35 +1,68 @@
-/* Mirrorline (placeholder) design tokens */
+/* Mirrorline (placeholder) design tokens.
+   Generated from DESIGN.md front-matter. DESIGN.md is the source of truth;
+   packages/ui/src/styles/theme.css is the implementation Tailwind consumes.
+   This file is the portable snippet for external tools. */
 :root {
-  --ml-bg: #FAFAF7;
+  --ml-bg: #F6F7F9;
   --ml-surface: #FFFFFF;
-  --ml-border: #E6E4DD;
-  --ml-text: #14171C;
-  --ml-text-muted: #5F6672;
+  --ml-surface-subtle: #EFF1F4;
+  --ml-border: #E2E5EA;
+  --ml-border-strong: #CBD0D8;
+  --ml-text: #0E1116;
+  --ml-text-muted: #596273;
   --ml-accent: #FF5A36;
   --ml-accent-strong: #C8401C;
-  --ml-accent-soft: #FFE8E1;
-  --ml-success: #1F9D6B;
-  --ml-warning: #C98A12;
-  --ml-danger: #D23F3F;
-  --ml-info: #2F6FDE;
-  --ml-font-heading: "Inter Tight", Inter, sans-serif;
-  --ml-font-body: Inter, system-ui, sans-serif;
-  --ml-radius-card: 12px;
-  --ml-radius-button: 10px;
+  --ml-accent-soft: #FFE7E0;
+  --ml-ink: #11151B;
+  --ml-on-ink: #EEF1F6;
+  --ml-success: #128A5E;
+  --ml-warning: #B7790A;
+  --ml-danger: #C9343C;
+  --ml-info: #2563D9;
+
+  /* The lightbox. 9:16 video always sits on this, in BOTH themes, so it is
+     deliberately absent from the dark block below. */
+  --ml-viewer: #07090D;
+  --ml-on-viewer: #E9ECF2;
+
+  /* Two voices: sans is the studio, mono is the machine — logs, costs,
+     timings, spend caps, counts, rates. */
+  --ml-font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --ml-font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --ml-radius-card: 10px;
+  --ml-radius-button: 8px;
+  --ml-radius-thumb: 6px;
+  --ml-radius-small: 4px;
+  --ml-radius-panel: 14px;
   --ml-space: 8px;
   --ml-sidebar: 240px;
+
+  /* Motion. Never ease-in on UI; nothing over 300ms. */
+  --ml-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ml-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ml-ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ml-duration-press: 140ms;
+  --ml-duration-tooltip: 160ms;
+  --ml-duration-dropdown: 200ms;
+  --ml-duration-modal: 280ms;
+  --ml-stagger-step: 60ms;
 }
 [data-theme="dark"] {
-  --ml-bg: #0E1116;
-  --ml-surface: #161A21;
-  --ml-border: #2A2F38;
-  --ml-text: #F2F2EE;
-  --ml-text-muted: #A3A9B4;
+  --ml-bg: #0F141B;
+  --ml-surface: #19202A;
+  --ml-surface-subtle: #222A36;
+  --ml-border: #2D3542;
+  --ml-border-strong: #404A59;
+  --ml-text: #EEF1F6;
+  --ml-text-muted: #9BA4B2;
   --ml-accent: #FF7A5C;
-  --ml-accent-strong: #FF7A5C;
-  --ml-accent-soft: #3A2019;
-  --ml-success: #3CC98F;
-  --ml-warning: #E8B23A;
-  --ml-danger: #F06A6A;
+  --ml-accent-strong: #C8401C;
+  --ml-accent-soft: #3A1E17;
+  /* Emphasis steps up, not down: there is no room below the page. */
+  --ml-ink: #1C2430;
+  --ml-success: #35C68C;
+  --ml-warning: #E5AE38;
+  --ml-danger: #F0686B;
   --ml-info: #6B9BF2;
 }

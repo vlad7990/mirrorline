@@ -1,34 +1,51 @@
 {
   "name": "Mirrorline (placeholder)",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "note": "Generated from DESIGN.md front-matter. DESIGN.md is the source of truth; packages/ui/src/tokens.ts and packages/ui/src/styles/theme.css are the implementation.",
   "color": {
     "light": {
-      "bg": "#FAFAF7", "surface": "#FFFFFF", "border": "#E6E4DD",
-      "text": "#14171C", "text-muted": "#5F6672",
-      "accent": "#FF5A36", "accent-strong": "#C8401C", "accent-soft": "#FFE8E1",
-      "success": "#1F9D6B", "warning": "#C98A12", "danger": "#D23F3F", "info": "#2F6FDE"
+      "bg": "#F6F7F9", "surface": "#FFFFFF", "surface-subtle": "#EFF1F4",
+      "border": "#E2E5EA", "border-strong": "#CBD0D8",
+      "text": "#0E1116", "text-muted": "#596273",
+      "accent": "#FF5A36", "accent-strong": "#C8401C", "accent-soft": "#FFE7E0",
+      "ink": "#11151B", "on-ink": "#EEF1F6",
+      "success": "#128A5E", "warning": "#B7790A", "danger": "#C9343C", "info": "#2563D9"
     },
     "dark": {
-      "bg": "#0E1116", "surface": "#161A21", "border": "#2A2F38",
-      "text": "#F2F2EE", "text-muted": "#A3A9B4",
-      "accent": "#FF7A5C", "accent-strong": "#FF7A5C", "accent-soft": "#3A2019",
-      "success": "#3CC98F", "warning": "#E8B23A", "danger": "#F06A6A", "info": "#6B9BF2"
+      "bg": "#0F141B", "surface": "#19202A", "surface-subtle": "#222A36",
+      "border": "#2D3542", "border-strong": "#404A59",
+      "text": "#EEF1F6", "text-muted": "#9BA4B2",
+      "accent": "#FF7A5C", "accent-strong": "#C8401C", "accent-soft": "#3A1E17",
+      "ink": "#1C2430", "on-ink": "#EEF1F6",
+      "success": "#35C68C", "warning": "#E5AE38", "danger": "#F0686B", "info": "#6B9BF2"
+    },
+    "viewer": {
+      "note": "The lightbox 9:16 video always sits on. Identical in both themes.",
+      "bg": "#07090D", "text": "#E9ECF2"
     },
     "chip": {
-      "passed": { "bg": "#E3F4EC", "text": "#145C40" },
-      "needs-review": { "bg": "#FBF0D9", "text": "#6E4A07" },
-      "blocked": { "bg": "#FBE3E3", "text": "#8E2626" },
-      "scheduled": { "bg": "#E3ECFB", "text": "#1F4FA8" },
-      "published": { "bg": "#EFEDE7", "text": "#3E444D" }
+      "passed": { "bg": "#DEF2E8", "text": "#0E5940" },
+      "needs-review": { "bg": "#FAEFD6", "text": "#6B4606" },
+      "blocked": { "bg": "#FBE2E3", "text": "#8C2126" },
+      "scheduled": { "bg": "#E2EAFA", "text": "#1C4AA3" },
+      "published": { "bg": "#E9ECF1", "text": "#3A4250" }
     },
-    "demo-brand": { "teal": "#12545A", "sand": "#F3E9DC", "coral": "#FF5A36", "ink": "#14171C" }
+    "demo-brand": { "teal": "#12545A", "sand": "#F3E9DC", "coral": "#FF5A36", "ink": "#11151B" }
   },
   "font": {
-    "heading": "Inter Tight, Inter, sans-serif",
-    "body": "Inter, system-ui, sans-serif",
-    "size": { "h1": 32, "h2": 24, "h3": 20, "h4": 18, "body": 15, "meta": 13, "small": 12 }
+    "note": "Two voices: sans is the studio talking to the user, mono is the machine — logs, costs, timings, caps, counts, rates.",
+    "sans": "Geist, ui-sans-serif, system-ui, sans-serif",
+    "mono": "Geist Mono, ui-monospace, SFMono-Regular, Menlo, monospace",
+    "size": { "display": 46, "h1": 32, "h2": 20, "h3": 17, "body": 15, "label": 14, "meta": 13, "small": 12, "metric": 30, "mono": 13 }
   },
-  "radius": { "card": 12, "button": 10, "chip": 999, "thumb": 8 },
+  "radius": { "card": 10, "button": 8, "chip": 999, "thumb": 6, "small": 4, "panel": 14 },
   "space": { "unit": 8, "page-x": 40, "card": 22 },
+  "motion": {
+    "ease-out": "cubic-bezier(0.23, 1, 0.32, 1)",
+    "ease-in-out": "cubic-bezier(0.77, 0, 0.175, 1)",
+    "ease-drawer": "cubic-bezier(0.32, 0.72, 0, 1)",
+    "duration": { "press": 140, "tooltip": 160, "dropdown": 200, "modal": 280 },
+    "stagger-step": 60
+  },
   "layout": { "desktop": 1440, "sidebar": 240, "mobile": 390, "touch-min": 44 }
 }

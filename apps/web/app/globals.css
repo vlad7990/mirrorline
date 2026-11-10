@@ -18,7 +18,6 @@
 
 /* `inline` keeps the var() reference instead of resolving it at build time, so
    the next/font variables set on <html> are what actually apply. */
-@theme inline {
-  --font-heading: var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
-  --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-}
+/* No @theme inline font override here any more. theme.css owns the families
+   and already points --font-heading / --font-body / --font-mono at the Geist
+   variables that layout.tsx puts on <html>, with literal fallbacks. */

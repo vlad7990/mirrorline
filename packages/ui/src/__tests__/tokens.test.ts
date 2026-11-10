@@ -18,7 +18,15 @@ import { fileURLToPath } from 'node:url'
 
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { DARK_COLORS, LIGHT_COLORS } from '../tokens'
+import {
+  DARK_COLORS,
+  DURATION,
+  EASING,
+  FONTS,
+  LIGHT_COLORS,
+  RADIUS,
+  STAGGER_STEP,
+} from '../tokens'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const THEME_CSS = resolve(HERE, '../styles/theme.css')
@@ -43,10 +51,14 @@ function blockBody(css: string, opener: string): string {
   throw new Error(`theme.css has an unterminated "${opener}" block`)
 }
 
-/** Pulls every `--color-x: y;` declaration out of a block, lower-cased. */
-function colorDeclarations(block: string): Map<string, string> {
+/**
+ * Pulls every `--<prefix>-x: y;` declaration out of a block, lower-cased.
+ * `[^;]+` is deliberate: easing curves and font stacks carry commas and
+ * parentheses, and all of that belongs to the value.
+ */
+function declarations(block: string, prefix: string): Map<string, string> {
   const found = new Map<string, string>()
-  const pattern = /--color-([a-z0-9-]+)\s*:\s*([^;]+);/gi
+  const pattern = new RegExp(`--${prefix}-([a-z0-9-]+)\\s*:\\s*([^;]+);`, 'gi')
 
   for (const match of block.matchAll(pattern)) {
     const name = match[1]
@@ -57,13 +69,15 @@ function colorDeclarations(block: string): Map<string, string> {
   return found
 }
 
+let themeBlock: string
 let themeColors: Map<string, string>
 let darkColors: Map<string, string>
 
 beforeAll(() => {
   const css = readFileSync(THEME_CSS, 'utf8')
-  themeColors = colorDeclarations(blockBody(css, '@theme {'))
-  darkColors = colorDeclarations(blockBody(css, '.dark {'))
+  themeBlock = blockBody(css, '@theme {')
+  themeColors = declarations(themeBlock, 'color')
+  darkColors = declarations(blockBody(css, '.dark {'), 'color')
 })
 
 const LIGHT_ENTRIES = Object.entries(LIGHT_COLORS)
@@ -121,5 +135,83 @@ describe('theme.css declares nothing tokens.ts does not know about', () => {
     // DESIGN.md scopes these to "inside thumbnails only", so they are not in
     // LIGHT_COLORS and never follow the theme.
     expect(themeColors.has(name)).toBe(true)
+  })
+})
+
+/* -------------------------------------------------------------------------- */
+/* The non-colour categories                                                   */
+/* -------------------------------------------------------------------------- */
+
+/** `full` is Tailwind's own `rounded-full`; theme.css only names the rest. */
+const RADIUS_IN_CSS = ['sm', 'thumb', 'md', 'lg', 'xl'] as const
+
+describe('theme.css matches tokens.ts (shape)', () => {
+  it.each(RADIUS_IN_CSS)('--radius-%s matches RADIUS', (name) => {
+    expect(declarations(themeBlock, 'radius').get(name)).toBe(RADIUS[name])
+  })
+
+  it('leaves `full` to Tailwind rather than redeclaring it', () => {
+    expect(RADIUS.full).toBe('9999px')
+    expect(declarations(themeBlock, 'radius').has('full')).toBe(false)
+  })
+})
+
+describe('theme.css matches tokens.ts (the two voices)', () => {
+  it('points --font-sans at Geist', () => {
+    const value = declarations(themeBlock, 'font').get('sans')
+    expect(value).toContain(`'${FONTS.sans.toLowerCase()}'`)
+  })
+
+  it('points --font-mono at Geist Mono', () => {
+    const value = declarations(themeBlock, 'font').get('mono')
+    expect(value).toContain(`'${FONTS.mono.toLowerCase()}'`)
+  })
+
+  it.each(['heading', 'body'])('keeps --font-%s, which consumers still use', (name) => {
+    expect(declarations(themeBlock, 'font').has(name)).toBe(true)
+  })
+
+  it.each(['metric', 'mono'])('declares --text-%s for the machine voice', (name) => {
+    expect(declarations(themeBlock, 'text').has(name)).toBe(true)
+  })
+})
+
+describe('theme.css matches tokens.ts (motion)', () => {
+  it.each(Object.entries(EASING))('--ease-%s is %s', (name, value) => {
+    expect(declarations(themeBlock, 'ease').get(name)).toBe(value.toLowerCase())
+  })
+
+  it.each(Object.entries(DURATION))('--duration-%s is %s', (name, value) => {
+    expect(declarations(themeBlock, 'duration').get(name)).toBe(value.toLowerCase())
+  })
+
+  it('declares the stagger step', () => {
+    expect(declarations(themeBlock, 'stagger').get('step')).toBe(STAGGER_STEP)
+  })
+
+  it('declares no UI duration over 300ms', () => {
+    // DESIGN.md "Motion": an interface that takes longer than 300ms to answer
+    // stops feeling like an instrument.
+    for (const value of Object.values(DURATION)) {
+      expect(Number.parseFloat(value)).toBeLessThanOrEqual(300)
+    }
+  })
+
+  it('pairs every enter duration with a faster exit', () => {
+    // Emil Kowalski's rule: you have already decided to leave, so the exit
+    // must not make you wait. ~65% of the enter.
+    for (const name of ['press', 'tooltip', 'dropdown', 'modal'] as const) {
+      const enter = Number.parseFloat(DURATION[name])
+      const exit = Number.parseFloat(DURATION[`${name}-exit`])
+      expect(exit).toBeLessThan(enter)
+      expect(exit / enter).toBeGreaterThanOrEqual(0.55)
+    }
+  })
+
+  it('never uses ease-in on UI', () => {
+    // ease-in starts slow, which reads as lag. The easing scale has no entry
+    // for it, and theme.css must not reintroduce one.
+    expect(Object.keys(EASING)).not.toContain('in')
+    expect(declarations(themeBlock, 'ease').has('in')).toBe(false)
   })
 })

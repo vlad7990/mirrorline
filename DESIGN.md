@@ -1,104 +1,126 @@
 ---
 name: Mirrorline
-description: Calm, editorial design system for an AI content studio that turns a brand's own videos into daily short-form posts. Placeholder product name.
+description: Glass-box design system for an AI content studio that turns a brand's own videos into daily short-form posts. Precision instrumentation you can inspect. Placeholder product name.
 colors:
   primary: "#C8401C"
+  primary-hover: "#B33716"
   on-primary: "#FFFFFF"
   accent: "#FF5A36"
-  accent-soft: "#FFE8E1"
+  accent-soft: "#FFE7E0"
   on-accent-soft: "#8F2C11"
-  background: "#FAFAF7"
+  background: "#F6F7F9"
   surface: "#FFFFFF"
-  border: "#E6E4DD"
-  border-strong: "#D6D3CA"
-  text: "#14171C"
-  text-muted: "#5F6672"
-  ink: "#14171C"
-  on-ink: "#F2F2EE"
-  success: "#1F9D6B"
-  success-soft: "#E3F4EC"
-  on-success-soft: "#145C40"
-  warning: "#C98A12"
-  warning-soft: "#FBF0D9"
-  on-warning-soft: "#6E4A07"
-  danger: "#D23F3F"
-  danger-soft: "#FBE3E3"
-  on-danger-soft: "#8E2626"
-  info: "#2F6FDE"
-  info-soft: "#E3ECFB"
-  on-info-soft: "#1F4FA8"
-  neutral-soft: "#EFEDE7"
-  on-neutral-soft: "#3E444D"
-  dark-background: "#0E1116"
-  dark-surface: "#161A21"
-  dark-border: "#2A2F38"
-  dark-text: "#F2F2EE"
-  dark-text-muted: "#A3A9B4"
+  surface-subtle: "#EFF1F4"
+  border: "#E2E5EA"
+  border-strong: "#CBD0D8"
+  text: "#0E1116"
+  text-muted: "#596273"
+  ink: "#11151B"
+  on-ink: "#EEF1F6"
+  viewer: "#07090D"
+  on-viewer: "#E9ECF2"
+  success: "#128A5E"
+  success-soft: "#DEF2E8"
+  on-success-soft: "#0E5940"
+  warning: "#B7790A"
+  warning-soft: "#FAEFD6"
+  on-warning-soft: "#6B4606"
+  danger: "#C9343C"
+  danger-soft: "#FBE2E3"
+  on-danger-soft: "#8C2126"
+  info: "#2563D9"
+  info-soft: "#E2EAFA"
+  on-info-soft: "#1C4AA3"
+  neutral-soft: "#E9ECF1"
+  on-neutral-soft: "#3A4250"
+  dark-background: "#0F141B"
+  dark-surface: "#19202A"
+  dark-surface-subtle: "#222A36"
+  dark-border: "#2D3542"
+  dark-border-strong: "#404A59"
+  dark-text: "#EEF1F6"
+  dark-text-muted: "#9BA4B2"
+  dark-ink: "#1C2430"
   dark-accent: "#FF7A5C"
   brand-demo-teal: "#12545A"
   brand-demo-sand: "#F3E9DC"
 typography:
   display:
-    fontFamily: Inter Tight
-    fontSize: 44px
+    fontFamily: Geist
+    fontSize: 46px
     fontWeight: 700
-    lineHeight: 1.1
-    letterSpacing: -0.01em
+    lineHeight: 1.05
+    letterSpacing: -0.025em
   headline:
-    fontFamily: Inter Tight
+    fontFamily: Geist
     fontSize: 32px
     fontWeight: 700
-    lineHeight: 1.15
+    lineHeight: 1.12
+    letterSpacing: -0.02em
   title:
-    fontFamily: Inter Tight
+    fontFamily: Geist
     fontSize: 20px
     fontWeight: 600
-    lineHeight: 1.3
+    lineHeight: 1.28
+    letterSpacing: -0.012em
   subtitle:
-    fontFamily: Inter Tight
-    fontSize: 18px
+    fontFamily: Geist
+    fontSize: 17px
     fontWeight: 600
-    lineHeight: 1.3
+    lineHeight: 1.35
+    letterSpacing: -0.008em
   body:
-    fontFamily: Inter
+    fontFamily: Geist
     fontSize: 15px
     fontWeight: 400
-    lineHeight: 1.55
+    lineHeight: 1.6
+    letterSpacing: -0.002em
   body-strong:
-    fontFamily: Inter
+    fontFamily: Geist
     fontSize: 15px
     fontWeight: 600
-    lineHeight: 1.55
+    lineHeight: 1.6
+    letterSpacing: -0.002em
   label:
-    fontFamily: Inter
+    fontFamily: Geist
     fontSize: 14px
     fontWeight: 600
     lineHeight: 1.4
+    letterSpacing: -0.004em
   meta:
-    fontFamily: Inter
+    fontFamily: Geist
     fontSize: 13px
     fontWeight: 400
     lineHeight: 1.45
   caption:
-    fontFamily: Inter
+    fontFamily: Geist
     fontSize: 12px
     fontWeight: 600
-    lineHeight: 1.35
+    lineHeight: 1.3
+    letterSpacing: 0.004em
   metric:
-    fontFamily: Inter
+    fontFamily: Geist Mono
     fontSize: 30px
     fontWeight: 600
-    lineHeight: 1.1
+    lineHeight: 1.05
+    letterSpacing: -0.02em
+  mono:
+    fontFamily: Geist Mono
+    fontSize: 13px
+    fontWeight: 500
+    lineHeight: 1.5
   overlay-caption:
-    fontFamily: Inter Tight
+    fontFamily: Geist
     fontSize: 17px
     fontWeight: 700
-    lineHeight: 1.25
+    lineHeight: 1.22
+    letterSpacing: -0.01em
 rounded:
-  sm: 6px
-  md: 10px
-  lg: 12px
-  xl: 16px
+  sm: 4px
+  thumb: 6px
+  md: 8px
+  lg: 10px
+  xl: 14px
   full: 9999px
 spacing:
   xs: 4px
@@ -112,6 +134,13 @@ spacing:
 components:
   button-primary:
     backgroundColor: "{colors.primary}"
+    textColor: "{colors.on-primary}"
+    typography: "{typography.label}"
+    rounded: "{rounded.md}"
+    height: 48px
+    padding: 0 20px
+  button-primary-hover:
+    backgroundColor: "{colors.primary-hover}"
     textColor: "{colors.on-primary}"
     typography: "{typography.label}"
     rounded: "{rounded.md}"
@@ -159,6 +188,12 @@ components:
     textColor: "{colors.on-neutral-soft}"
     typography: "{typography.caption}"
     rounded: "{rounded.full}"
+  viewer-panel:
+    backgroundColor: "{colors.viewer}"
+    textColor: "{colors.on-viewer}"
+    typography: "{typography.meta}"
+    rounded: "{rounded.lg}"
+    padding: 16px
   video-card:
     backgroundColor: "{colors.surface}"
     rounded: "{rounded.lg}"
@@ -167,13 +202,25 @@ components:
     backgroundColor: "{colors.brand-demo-teal}"
     textColor: "{colors.on-primary}"
     typography: "{typography.overlay-caption}"
-    rounded: "{rounded.sm}"
+    rounded: "{rounded.thumb}"
   metric-tile:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.text}"
     typography: "{typography.metric}"
     rounded: "{rounded.lg}"
     padding: 18px 20px
+  agent-log-line:
+    backgroundColor: "{colors.surface-subtle}"
+    textColor: "{colors.text-muted}"
+    typography: "{typography.mono}"
+    rounded: "{rounded.sm}"
+    padding: 6px 10px
+  spend-cap:
+    backgroundColor: "{colors.surface-subtle}"
+    textColor: "{colors.text}"
+    typography: "{typography.mono}"
+    rounded: "{rounded.full}"
+    height: 24px
   insight-card:
     backgroundColor: "{colors.ink}"
     textColor: "{colors.on-ink}"
@@ -234,38 +281,63 @@ components:
     typography: "{typography.body-strong}"
     rounded: "{rounded.xl}"
     height: 56px
+  mobile-log-line-dark:
+    backgroundColor: "{colors.dark-surface-subtle}"
+    textColor: "{colors.dark-text-muted}"
+    typography: "{typography.mono}"
+    rounded: "{rounded.sm}"
+    padding: 6px 10px
+  mobile-insight-card-dark:
+    backgroundColor: "{colors.dark-ink}"
+    textColor: "{colors.dark-text}"
+    typography: "{typography.body}"
+    rounded: "{rounded.lg}"
+    padding: 22px
+  dark-outline-strong:
+    backgroundColor: "{colors.dark-border-strong}"
+    height: 1px
 ---
 
 ## Overview
 
 Mirrorline is a web app (with a small mobile companion) for coaches, consultants and local service businesses. It turns a client's own long videos, and formats trending in their niche, into original short vertical videos. A team of seven AI agents (Trend Scout, Remake Producer, Multiplier, Compliance, Client Concierge, Publisher, Performance Analyst) then posts them several times a day to the client's own accounts, and learns from the results.
 
-The design should feel like a **calm, expert studio partner**: editorial, light, generous white space, with the client's 9:16 videos as the hero. The interface stays quiet so the content and the numbers stand out.
+The design should feel like a **glass box**: precision instrumentation you are allowed to open. Mirrorline's one real differentiator is that you can watch the machine work — seven agents with logs, costs, spend caps, stated limits, and a compliance gate nothing passes without. So the interface shows its workings instead of hiding them behind a friendly surface. It stays quiet, because the client's 9:16 videos and the numbers are the content, but it is quiet the way a measuring instrument is quiet, not the way a brochure is.
 
 The design also has to make trust visible. AI labels, compliance checks, approvals and honest numbers are part of the product, not fine print.
 
-Personality: clear, alive, trustworthy. Voice: plain verbs, real numbers, sentence case, no exclamation marks, no guarantees. Examples: "12 cuts ready. 3 need your eye before they post." · "We remake the format, never the footage." · "TikTok posts stay private until our app is approved."
+Personality: clear, exact, trustworthy. Voice: plain verbs, real numbers, sentence case, no exclamation marks, no guarantees. Examples: "12 cuts ready. 3 need your eye before they post." · "We remake the format, never the footage." · "TikTok posts stay private until our app is approved."
 
 The demo content belongs to a fictional client, "Maya Torres Coaching". "Mirrorline" is a placeholder name.
 
 ## Colors
 
-- **Primary (#C8401C):** a deep coral for primary buttons and key actions. White text on it passes 4.5:1 contrast.
+- **Primary (#C8401C):** a deep coral for primary buttons and key actions. White text on it passes 4.5:1 (4.99:1). It darkens to #B33716 on hover, in both themes — lightening it in dark mode drops white text below AA.
 - **Accent (#FF5A36):** a bright coral for the loop logo, sparklines, progress and fit bars, and highlights. It never carries white body text.
-- **Accent soft (#FFE8E1):** the active navigation item, selected options and "working" agent states.
-- **Background (#FAFAF7) and surface (#FFFFFF):** a warm off-white page with white cards and 1px #E6E4DD borders.
-- **Text (#14171C) and text muted (#5F6672):** near-black for content, slate grey for metadata.
-- **Ink (#14171C):** dark insight panels, such as the "Learning loop" card and the batch-approval bar.
+- **Accent soft (#FFE7E0):** the active navigation item, selected options and "working" agent states.
+- **Background (#F6F7F9) and surface (#FFFFFF):** a cool, precise near-white page with white cards and 1px #E2E5EA borders. The neutrals sit on one cold, almost chroma-free axis rather than the old warm off-white: a tool you inspect should not read as paper, and the colder ground gives the coral somewhere to be loud. The page-to-card step is 1.07:1, which is what lets a flat card have a visible edge without a shadow.
+- **Surface subtle (#EFF1F4):** inset blocks — agent log wells, read-only fields, storyboard frames.
+- **Text (#0E1116) and text muted (#596273):** a cool near-black for content, cool slate for metadata.
+- **Ink (#11151B):** dark emphasis panels, such as the "Learning loop" card and the batch-approval bar. In dark mode ink steps **up** to #1C2430, not down: there is no room below the page, so emphasis has to sit above the card instead.
+- **Viewer (#07090D) and on-viewer (#E9ECF2):** the lightbox. Every 9:16 frame — the preview, the approvals queue, the player — sits on the viewer surface, and it is **the same near-black in both themes**. A client's footage must not change colour because somebody flipped a theme. The viewer is deliberately deeper and cooler than ink: ink is a panel that belongs to the page, the viewer is meant to disappear and leave only the video.
 - **Status colours:** green = passed or published, amber = needs review, red = blocked or error, blue = scheduled or info. Each one is used as a soft background with darker text in pills, and always paired with a word.
-- **Dark theme:** background #0E1116, surface #161A21, border #2A2F38, text #F2F2EE, muted #A3A9B4, accent #FF7A5C. The mobile approvals screen uses it.
+- **Dark theme:** background #0F141B, surface #19202A, inset #222A36, border #2D3542, text #EEF1F6, muted #9BA4B2, accent #FF7A5C. The same cool axis read from the other end. The mobile approvals screen uses it.
 - **Demo brand colours (inside thumbnails only):** teal #12545A, sand #F3E9DC. Thumbnails rotate #12545A, #1E3A40, #2F3E46 and #6B4F3A.
+
+Every foreground and background pair named here is checked at 4.5:1 or better, in both themes, by `packages/ui/src/__tests__/contrast.test.ts`. If a pair fails, the colour changes, not the test.
 
 ## Typography
 
-- **Headings:** Inter Tight, 600–700. Page titles 32px, card titles 18–20px.
-- **Body:** Inter 15px with a 1.55 line height; metadata 13px; chips and small labels 12px, 600.
-- **Metrics:** Inter 30px, 600, tabular figures, so columns of numbers line up.
-- **Captions on video thumbnails:** Inter Tight 700, white, with the key phrase highlighted on a sand background in teal.
+Mirrorline speaks in **two voices**, and the typeface is how you tell them apart.
+
+- **Geist — the studio's voice.** Everything the product says to a person: headings, body copy, labels, button text, and the captions burned into a video. Page titles 32px, card titles 17–20px, body 15px at a 1.6 line height.
+- **Geist Mono — the machine's voice.** Everything the agents produced or measured: agent log lines, costs ($1.84), timings (0:24, 52:14), similarity percentages (12%), spend caps ($6 / $25), post counts, step rates, and every metric tile. Tabular figures, so columns line up.
+
+This split is semantic, not decorative. A number in mono means "a machine measured this and you can audit it". Never set a sentence of product copy in mono to look technical, and never set a cost in Geist Sans because it happens to sit in a paragraph.
+
+- **Scale:** display 46px/700, headline 32px/700, title 20px/600, subtitle 17px/600, body 15px/400, label 14px/600, meta 13px/400, caption 12px/600, metric 30px/600 mono, mono 13px/500.
+- **Tracking:** Geist runs tighter than Inter, so display sizes take real negative tracking (-0.025em at 46px, -0.02em at 32px), mid sizes a token amount, and 12–13px text goes back to zero or slightly positive.
+- **Captions on video thumbnails:** Geist 700, white, with the key phrase highlighted on a sand background in teal.
 - **Case:** sentence case everywhere. Uppercase only for small section eyebrows (12–13px, letter-spacing 0.06em).
 
 ## Layout
@@ -274,58 +346,82 @@ The demo content belongs to a fictional client, "Maya Torres Coaching". "Mirrorl
   - logo
   - workspace switcher ("Maya Torres Coaching · Growth plan")
   - navigation: Home, Upload, Trends, Calendar, Results, Agents, Brand kit, Settings
-  - usage meter ("63 of 90 posts") at the bottom
+  - usage meter ("63 of 90 posts", the figures in mono) at the bottom
 - **Content layout:** a page header with a small eyebrow, a title and the primary action on the right. Below it sit card grids, 3–4 columns for metric tiles and trend cards, with auto-fill grids of 172px-minimum cards for videos.
 - **Spacing:** an 8px grid. Gaps between cards are 16–24px; card padding is 18–22px.
 - **Mobile at 390 × 844:** single column, 18px side padding, large touch targets, primary actions at the bottom within thumb reach.
-- **Wide content** (the calendar week grid, tables) scrolls horizontally inside its card instead of breaking the page.
+- **Wide content** (the calendar week grid, tables, agent logs) scrolls horizontally inside its card instead of breaking the page.
 
 ## Elevation & Depth
 
-- **Flat by default:** depth comes from 1px borders and the contrast between surface and background, not shadows.
-- **Selected items:** a 2px #14171C (or primary) border instead of a shadow.
+- **Flat by default:** depth comes from 1px borders and the contrast between surface and background, not shadows. The cooler neutrals make that step legible without help.
+- **Three dark roles, in order of depth:** ink (emphasis panel, belongs to the page), viewer (lightbox, carries video, identical in both themes), and the demo thumbnail fills (inside the frame only). Do not substitute one for another.
+- **Selected items:** a 2px #0E1116 (or primary) border instead of a shadow.
 - **Dark ink panels:** the strongest emphasis on a light page. Use at most one or two per screen.
 - **Segmented controls:** the active segment may use a very subtle shadow (0 1px 2px rgba(0,0,0,0.08)).
 - **Avoid:** gradients, glows and glassmorphism.
 
 ## Shapes
 
-- **Cards:** 12px radius; large previews and wizard panels 16px.
-- **Buttons and inputs:** 10px radius. Video thumbnails 8px; tiny thumbnails 4–6px.
+- **Cards:** 10px radius; large previews and wizard panels 14px.
+- **Buttons and inputs:** 8px radius. Video thumbnails 6px; tiny thumbnails and log rows 4px.
 - **Chips, pills and progress bars:** fully rounded.
+- The whole scale tightened by about 2px from the first version. Softer corners read as consumer software; machined corners read as an instrument. Nothing goes below 4px, because a 2px corner on a 1px border renders as a notch rather than a radius.
 - **Logo:** an open circle with an arrow (a loop) in accent coral. The loop motif repeats in empty states and the learning-loop card.
 - **Icons:** simple 1.6–2px stroke icons. No emoji, no 3D, no robots or sparkles.
+
+## Motion
+
+Motion explains state changes. It never decorates.
+
+- **Explicit curves.** The CSS keywords are too weak to read as intent. Entering uses `--ease-out: cubic-bezier(0.23, 1, 0.32, 1)`, the default for UI. Something already on screen moving somewhere else uses `--ease-in-out: cubic-bezier(0.77, 0, 0.175, 1)`. Drawers and sheets use `--ease-drawer: cubic-bezier(0.32, 0.72, 0, 1)`.
+- **Never `ease-in` on UI.** It starts slow, which reads as lag. There is no token for it.
+- **Durations:** press 140ms, tooltip 160ms, dropdown 200ms, modal 280ms. Nothing over 300ms; past that an interface stops feeling like an instrument. Exits run at about 65% of their enter, because the user has already decided to leave.
+- **Press:** interactive surfaces may dip to `scale(0.97)` on `:active` over 140ms, on fine pointers only. Touch has no `:active` window worth animating.
+- **Stagger:** a list may offset its children by 60ms a step (`animation-delay: calc(var(--index) * 60ms)`), up to about six items. Past that it stops feeling like one gesture.
+- **Reduced motion:** everything collapses under `prefers-reduced-motion: reduce`. The duration tokens themselves go to about zero, so components built on them go still too, and the press transform is dropped rather than merely sped up.
 
 ## Components
 
 - **Button primary:** primary fill, white label, 48px tall (44px minimum). One per section. Labels: "New upload", "Remake for my brand", "Approve and make 5 variants".
-- **Button secondary:** white with a #D6D3CA border and dark text. A tertiary text button in deep coral is used for low-emphasis actions.
+- **Button secondary:** white with a #CBD0D8 border and dark text. A tertiary text button in deep coral is used for low-emphasis actions.
 - **Sidebar nav item:** 44px tall; the active one uses accent-soft with dark-coral text.
-- **Metric tile:** label, big number, coral sparkline, and a green delta line ("+18% vs last week").
+- **Metric tile:** label in Geist, big number in Geist Mono, coral sparkline, and a green delta line ("+18% vs last week").
+- **Viewer panel:** a near-black lightbox holding the 9:16 frame, in both themes, with the AI label and any length or cut badges sitting on it. Controls and captions use on-viewer text.
 - **Video card:** 9:16 thumbnail with a burned-in caption, a length badge (top left) and cut number (top right); then format and score, a compliance chip, an optional reason line, and Preview plus Approve/Review/Fix buttons.
 - **Status chip:** a soft background and dark text, always with a word: Passed, Needs review, Blocked, Scheduled, Published, Published (private).
 - **Agent status pill:** a dot plus a word: Working (coral), Idle (grey), Waiting for you (amber), Blocked (red), Off.
+- **Agent log line:** one line per step in an inset well, in Geist Mono — timestamp, agent, what it did, what it cost. Lines may arrive staggered at 60ms a step. This is the glass box; it is never collapsed by default on the Agents screen.
+- **Spend cap:** a mono pill reading spent against limit ("$6 / $25") with a thin bar. It shows wherever an agent can spend money, not only in Settings.
 - **Trend card:** niche chip and growth figure, the format name, an abstract 4-frame storyboard (empty 9:16 frames with a coloured bar and a beat label, never a real video), "why it works", a "Fit for Maya" bar, and the primary "Remake for my brand".
-- **Compliance panel:** green border with a "Passed" pill and a ticked checklist, e.g. "No original footage used" and "New wording · 12% similar (limit 30%)".
-- **Calendar post chip:** time, tiny thumbnail and truncated title, with a 4px left edge showing status: grey published, blue scheduled, amber review, green approved.
+- **Compliance panel:** green border with a "Passed" pill and a ticked checklist, e.g. "No original footage used" and "New wording · 12% similar (limit 30%)" — the figures in mono.
+- **Calendar post chip:** time in mono, tiny thumbnail and truncated title, with a 4px left edge showing status: grey published, blue scheduled, amber review, green approved.
 - **AI label:** a small white badge reading "AI scene" on any thumbnail or preview with AI-generated footage.
-- **Funnel:** horizontal bars on one shared scale, with counts and step rates, so the real drop-off shows.
+- **Funnel:** horizontal bars on one shared scale, with counts and step rates in mono, so the real drop-off shows.
 - **Empty state:** the loop logo, a short title and one helpful line ("Drop a long video. We'll find the moments worth posting.").
 - **Alert bar:** soft red background, dark red text and a solid action button ("Reconnect Instagram").
 
 ## Do's and Don'ts
 
 **Do**
+
 - Keep the client's videos as the visual hero; the interface stays quiet.
+- Put 9:16 video on the viewer surface, in both themes, so footage looks the same to everyone who approves it.
+- Set the machine's output — logs, costs, timings, caps, counts, rates — in Geist Mono, and everything the studio says in Geist.
 - Show trust on screen: AI labels, compliance results, approvals, consent records.
 - Pair every colour-coded status with a word.
-- Use real-looking but fictional data from the demo client, consistently across screens.
-- Keep white text only on primary (#C8401C) or ink; never on the bright accent.
+- Use real-looking but fictional data from the demo client, consistently across screens, and label demo data as sample data on public pages.
+- Keep white text only on primary (#C8401C), ink or the viewer; never on the bright accent.
 - Keep touch targets at 44px or larger and text contrast at 4.5:1 or higher.
+- Animate with the easing tokens, out-curves for entering, and let everything collapse under reduced motion.
 
 **Don't**
+
 - Don't use purple or blue "AI" gradients, glowing robots, sparkles or emoji.
+- Don't set product sentences in mono to look technical, or costs and timings in Geist Sans.
+- Don't swap ink and the viewer, and don't let the viewer surface follow the theme.
 - Don't show real people, real creators' videos or real brand logos (small platform names and icons are fine).
 - Don't promise results: no "go viral", "10x your followers" or guaranteed views.
 - Don't show a trend as someone else's video; show the format as an abstract storyboard.
 - Don't use heavy shadows, glassmorphism or more than one bright accent per area.
+- Don't use `ease-in`, a UI duration over 300ms, or motion a user cannot turn off.

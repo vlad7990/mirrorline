@@ -15,9 +15,21 @@ export {
   THUMBNAIL_COLORS,
   RADIUS,
   SPACING,
+  FONTS,
   TYPOGRAPHY,
+  EASING,
+  DURATION,
+  STAGGER_STEP,
 } from './tokens'
-export type { ColorToken, RadiusToken, SpacingToken, TypographyToken } from './tokens'
+export type {
+  ColorToken,
+  RadiusToken,
+  SpacingToken,
+  FontToken,
+  TypographyToken,
+  EasingToken,
+  DurationToken,
+} from './tokens'
 
 export { ThemeProvider, useTheme, THEME_SCRIPT } from './theme-provider'
 export type { ThemePreference, ResolvedTheme } from './theme-provider'
