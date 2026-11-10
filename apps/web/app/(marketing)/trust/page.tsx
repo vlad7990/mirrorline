@@ -12,6 +12,7 @@ import { AiLabel, Card, VideoThumb, ViewerPanel } from '@mirrorline/ui'
 import type { Metadata } from 'next'
 import * as React from 'react'
 
+import { PageHero } from '@/components/marketing/page-hero'
 import { SampleDataLabel, Section, SectionHeading } from '@/components/marketing/primitives'
 
 import { LeadDialogButton } from '../components/lead-form'
@@ -117,19 +118,23 @@ const NOT_CLAIMED: readonly string[] = [
 export default function TrustPage() {
   return (
     <>
-      <Section size="lg">
-        <div className="flex max-w-[52rem] flex-col gap-5">
-          <h1 className="m-0 font-heading text-headline text-text sm:text-display">
-            The rules we work by, and the ones we will not pretend to
-          </h1>
-          <p className="m-0 max-w-[62ch] text-body text-text-muted">
-            This page is the whole of it. <span className="machine">{RULES.length}</span> rules
-            built into the product, and <span className="machine">{NOT_CLAIMED.length}</span> things
-            we are not claiming, written plainly, because an agency that is vague here is telling
-            you something.
-          </p>
-        </div>
-      </Section>
+      {/* The headline was thirteen words, which is four lines at the size a
+          public page wants. The clause it lost opens the lead instead, so
+          nothing in the argument went missing. */}
+      <PageHero
+        title="The rules we work by"
+        lead={
+          <>
+            And the ones we will not pretend to. <span className="machine">{RULES.length}</span>{' '}
+            rules built into the product, <span className="machine">{NOT_CLAIMED.length}</span>{' '}
+            things we are not claiming, written plainly, because an agency that is vague here is
+            telling you something.
+          </>
+        }
+        shot="calendar-16x10"
+        shotAlt="The approvals queue: a scheduled post with its AI label locked on and the reason it cannot be removed."
+        shotCaption="The approvals queue, on sample data from a fictional demo client."
+      />
 
       <Section tone="subtle" aria-labelledby="rules-heading">
         <h2 id="rules-heading" className="sr-only">

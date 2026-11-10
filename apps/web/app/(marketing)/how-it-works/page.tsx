@@ -20,6 +20,7 @@ import {
   Section,
   SectionHeading,
 } from '@/components/marketing/primitives'
+import { PageHero } from '@/components/marketing/page-hero'
 
 import { LeadDialogButton } from '../components/lead-form'
 
@@ -84,18 +85,13 @@ const CLIENT_STEPS: readonly ClientStep[] = [
 export default function HowItWorksPage() {
   return (
     <>
-      <Section size="lg">
-        <div className="flex max-w-[52rem] flex-col gap-5">
-          <h1 className="m-0 font-heading text-headline text-text sm:text-display">
-            Seven agents, one loop
-          </h1>
-          <p className="m-0 max-w-[62ch] text-body text-text-muted">
-            A format found on Monday becomes your own videos, posted through the week, and the
-            results shape what gets made next. Each agent has one job, its own spend cap and its own
-            log, and you can override any decision it makes.
-          </p>
-        </div>
-      </Section>
+      <PageHero
+        title="Seven agents, one loop"
+        lead="A format found on Monday becomes your own videos, posted through the week, and the results shape what gets made next. Each agent has one job, its own spend cap and its own log."
+        shot="agents-16x10"
+        shotAlt="The agents board: each agent with its own switch, spend cap and log, and Compliance locked on."
+        shotCaption="The agents board, on sample data from a fictional demo client."
+      />
 
       <Section tone="subtle" aria-labelledby="agents-heading">
         <SectionHeading

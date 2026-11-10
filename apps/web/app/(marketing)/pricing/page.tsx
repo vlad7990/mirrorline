@@ -10,6 +10,7 @@ import { Card, cn } from '@mirrorline/ui'
 import { Check } from 'lucide-react'
 import type { Metadata } from 'next'
 
+import { PageHero } from '@/components/marketing/page-hero'
 import { ComingSoonLabel, Section, SectionHeading } from '@/components/marketing/primitives'
 import { PRICING_NOTE, PRICING_TIERS } from '@/components/marketing/pricing-tiers'
 
@@ -34,18 +35,13 @@ const ALWAYS_INCLUDED: readonly string[] = [
 export default function PricingPage() {
   return (
     <>
-      <Section size="lg">
-        <div className="flex max-w-[52rem] flex-col gap-5">
-          <h1 className="m-0 font-heading text-headline text-text sm:text-display">
-            One flat price a month
-          </h1>
-          <p className="m-0 max-w-[62ch] text-body text-text-muted">
-            Start with a two-week pilot. If it is worth continuing, pick a month. No setup fee, no
-            annual contract and no discount for paying a year ahead. We would rather you could
-            leave whenever you like.
-          </p>
-        </div>
-      </Section>
+      <PageHero
+        title="One flat price a month"
+        lead="Start with a two-week pilot. If it is worth continuing, pick a month. No setup fee, no annual contract and no discount for paying a year ahead."
+        shot="results-16x10"
+        shotAlt="The results screen: views, link clicks and calls booked for the week, with the posts that earned them."
+        shotCaption="The weekly report you get, on sample data from a fictional demo client."
+      />
 
       <Section tone="subtle" size="md" aria-labelledby="tiers-heading">
         <h2 id="tiers-heading" className="sr-only">

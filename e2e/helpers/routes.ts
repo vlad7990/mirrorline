@@ -50,7 +50,7 @@ export const ROUTES: readonly RouteEntry[] = [
     slug: 'trust',
     name: 'Trust',
     area: 'marketing',
-    h1: 'The rules we work by, and the ones we will not pretend to',
+    h1: 'The rules we work by',
   },
   {
     path: '/privacy',
