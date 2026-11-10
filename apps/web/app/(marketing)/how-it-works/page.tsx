@@ -89,12 +89,10 @@ export default function HowItWorksPage() {
         <ol className="mt-8 flex list-none flex-col gap-4 p-0">
           {PUBLIC_AGENTS.map((agent) => (
             <Card as="li" key={agent.id} padding="lg" className="flex flex-col gap-4">
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <span className="tabular text-caption font-semibold text-on-accent-soft">
-                  Step {agent.step} of {PUBLIC_AGENTS.length}
-                </span>
-                <h3 className="m-0 font-heading text-title text-text">{agent.name}</h3>
-              </div>
+              {/* No "Step N of 7" counter: the <ol> already carries the order
+                  for assistive tech, and the agents are introduced in sequence
+                  on the page. A counter on every card is furniture. */}
+              <h3 className="m-0 font-heading text-title text-text">{agent.name}</h3>
 
               <p className="m-0 max-w-[68ch] text-body text-text-muted">{agent.does}</p>
 
@@ -123,14 +121,13 @@ export default function HowItWorksPage() {
           lead="Five steps. The longest one is the upload."
         />
         <ol className="mt-8 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 lg:grid-cols-5">
-          {CLIENT_STEPS.map((step, index) => (
+          {CLIENT_STEPS.map((step) => (
             <Card as="li" key={step.id} className="flex flex-col gap-3">
               <span className="grid size-10 place-items-center rounded-md bg-accent-soft text-on-accent-soft">
                 <step.Icon aria-hidden="true" className="size-5" strokeWidth={1.8} />
               </span>
-              <span className="tabular text-caption font-semibold text-text-muted">
-                {index + 1} of {CLIENT_STEPS.length}
-              </span>
+              {/* The icon and the <ol> carry the sequence; an "N of 5" counter
+                  on each tile only repeats what the order already says. */}
               <h3 className="m-0 font-heading text-subtitle text-text">{step.title}</h3>
               <p className="m-0 text-meta text-text-muted">{step.line}</p>
             </Card>

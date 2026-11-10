@@ -115,11 +115,10 @@ export default function TrustPage() {
           Our rules
         </h2>
         <ol className="flex list-none flex-col gap-4 p-0">
-          {RULES.map((rule, index) => (
+          {RULES.map((rule) => (
             <Card as="li" key={rule.id} padding="lg" className="flex flex-col gap-3">
-              <span className="tabular text-caption font-semibold text-text-muted">
-                Rule {index + 1} of {RULES.length}
-              </span>
+              {/* No "Rule N of 7" counter: the <ol> carries the count for
+                  assistive tech, and the rules are not ranked. */}
               <h3 className="m-0 font-heading text-title text-text">{rule.title}</h3>
               {rule.paragraphs.map((paragraph) => (
                 <p key={paragraph} className="m-0 max-w-[68ch] text-body text-text-muted">
