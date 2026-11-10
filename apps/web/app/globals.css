@@ -1,0 +1,24 @@
+/*
+ * The web app's single stylesheet.
+ *
+ * Everything visual comes from packages/ui/src/styles/theme.css, which mirrors
+ * DESIGN.md. This file only does the two things that belong to the app rather
+ * than the design system: it points the heading and body families at the fonts
+ * next/font loads in app/layout.tsx, and it tells Tailwind v4 which folders to
+ * scan for class names.
+ */
+
+@import '@mirrorline/ui/styles/theme.css';
+
+/* Tailwind v4 finds classes by scanning source files. The workspace package
+   lives outside this app's folder, so it has to be named explicitly. */
+@source '../app';
+@source '../components';
+@source '../../../packages/ui/src';
+
+/* `inline` keeps the var() reference instead of resolving it at build time, so
+   the next/font variables set on <html> are what actually apply. */
+@theme inline {
+  --font-heading: var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}

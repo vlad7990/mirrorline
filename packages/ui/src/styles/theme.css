@@ -1,0 +1,239 @@
+/*
+ * Mirrorline theme — Tailwind v4, CSS-first.
+ * Values mirror packages/ui/src/tokens.ts, which mirrors DESIGN.md.
+ * DESIGN.md is the law; change it there first.
+ */
+
+@import 'tailwindcss';
+
+/* Light is the default. `.dark` on <html> switches; the theme provider sets it
+   from the stored preference, or from the OS when the preference is "system". */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Colours — light */
+  --color-primary: #c8401c;
+  --color-primary-hover: #b33716;
+  --color-on-primary: #ffffff;
+  --color-accent: #ff5a36;
+  --color-accent-soft: #ffe8e1;
+  --color-on-accent-soft: #8f2c11;
+  --color-background: #fafaf7;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f4f4f1;
+  --color-border: #e6e4dd;
+  --color-border-strong: #d6d3ca;
+  --color-text: #14171c;
+  --color-text-muted: #5f6672;
+  --color-ink: #14171c;
+  --color-on-ink: #f2f2ee;
+  --color-success: #1f9d6b;
+  --color-success-soft: #e3f4ec;
+  --color-on-success-soft: #145c40;
+  --color-warning: #c98a12;
+  --color-warning-soft: #fbf0d9;
+  --color-on-warning-soft: #6e4a07;
+  --color-danger: #d23f3f;
+  --color-danger-soft: #fbe3e3;
+  --color-on-danger-soft: #8e2626;
+  --color-info: #2f6fde;
+  --color-info-soft: #e3ecfb;
+  --color-on-info-soft: #1f4fa8;
+  --color-neutral-soft: #efede7;
+  --color-on-neutral-soft: #3e444d;
+
+  /* Demo brand — inside video thumbnails only */
+  --color-demo-teal: #12545a;
+  --color-demo-teal-deep: #1e3a40;
+  --color-demo-teal-slate: #2f3e46;
+  --color-demo-warm-earth: #6b4f3a;
+  --color-demo-sand: #f3e9dc;
+
+  /* Type */
+  --font-heading: 'Inter Tight', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --text-display: 44px;
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.01em;
+  --text-display--font-weight: 700;
+  --text-headline: 32px;
+  --text-headline--line-height: 1.15;
+  --text-headline--font-weight: 700;
+  --text-title: 20px;
+  --text-title--line-height: 1.3;
+  --text-title--font-weight: 600;
+  --text-subtitle: 18px;
+  --text-subtitle--line-height: 1.3;
+  --text-subtitle--font-weight: 600;
+  --text-body: 15px;
+  --text-body--line-height: 1.55;
+  --text-label: 14px;
+  --text-label--line-height: 1.4;
+  --text-label--font-weight: 600;
+  --text-meta: 13px;
+  --text-meta--line-height: 1.45;
+  --text-caption: 12px;
+  --text-caption--line-height: 1.35;
+  --text-caption--font-weight: 600;
+  --text-metric: 30px;
+  --text-metric--line-height: 1.1;
+  --text-metric--font-weight: 600;
+  --text-overlay-caption: 17px;
+  --text-overlay-caption--line-height: 1.25;
+  --text-overlay-caption--font-weight: 700;
+
+  /* Shape */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Space — the 8px grid plus the two fixed sizes DESIGN.md names */
+  --spacing-sidebar: 240px;
+  --spacing-touch: 44px;
+
+  /* The one shadow DESIGN.md allows: the active segment of a segmented control */
+  --shadow-segment: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+/* Dark theme. Only the surfaces and the status pairs move; the primary fill
+   stays put so white-on-primary keeps its 4.99:1 ratio in both themes. */
+@layer base {
+  .dark {
+    --color-primary-hover: #d9491f;
+    --color-accent: #ff7a5c;
+    --color-accent-soft: #3a2019;
+    --color-on-accent-soft: #ffc0ae;
+    --color-background: #0e1116;
+    --color-surface: #161a21;
+    --color-surface-subtle: #1e242e;
+    --color-border: #2a2f38;
+    --color-border-strong: #3b4250;
+    --color-text: #f2f2ee;
+    --color-text-muted: #a3a9b4;
+    --color-ink: #06080b;
+    --color-success: #3cc98f;
+    --color-success-soft: #10281f;
+    --color-on-success-soft: #7fe3ba;
+    --color-warning: #e8b23a;
+    --color-warning-soft: #2c2411;
+    --color-on-warning-soft: #f3ce7b;
+    --color-danger: #f06a6a;
+    --color-danger-soft: #2e1717;
+    --color-on-danger-soft: #ffa8a8;
+    --color-info: #6b9bf2;
+    --color-info-soft: #141f33;
+    --color-on-info-soft: #a9c5fa;
+    --color-neutral-soft: #22272f;
+    --color-on-neutral-soft: #c7ccd5;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
+    color: var(--color-text);
+  }
+
+  /* Metrics line up in columns. DESIGN.md "Typography". */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* One visible focus ring everywhere, on both themes. */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  .dark :focus-visible {
+    outline-color: var(--color-accent);
+  }
+
+  /* Respect the OS setting. 02_BRAND_AND_VOICE "Motion": subtle, never required. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Small uppercase section eyebrow. DESIGN.md "Typography — Case". */
+  .eyebrow {
+    font-size: var(--text-caption);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  /* Wide content scrolls inside its card, never breaking the page.
+     DESIGN.md "Layout". */
+  .scroll-x {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  /* The progress shimmer on cuts being generated. */
+  @keyframes mirrorline-shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--color-text) 6%, transparent),
+      transparent
+    );
+    animation: mirrorline-shimmer 1.6s infinite;
+  }
+
+  /* The soft pulse on a working agent. */
+  @keyframes mirrorline-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+
+  .pulse-dot {
+    animation: mirrorline-pulse 2s ease-in-out infinite;
+  }
+}
