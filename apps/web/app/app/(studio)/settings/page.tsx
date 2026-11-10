@@ -1,15 +1,21 @@
 import type { Metadata } from 'next'
+import { PageHeader } from '@mirrorline/ui'
 
-import { ComingSoon } from '@/components/coming-soon'
+import { SettingsBoard } from '@/components/settings/settings-board'
 
-export const metadata: Metadata = { title: 'Settings' }
+/**
+ * S10 · Settings and billing — "Connected accounts with status and disconnect
+ * buttons; plan card …; usage meter …; invoices; team members; data and
+ * rights" (03_SCREENS_SPEC.md).
+ */
+
+export const metadata: Metadata = { title: 'Settings and billing' }
 
 export default function SettingsPage() {
   return (
-    <ComingSoon
-      eyebrow="Settings and billing"
-      title="Settings"
-      description="Connected accounts, posting rules, your team, your plan and your invoices."
-    />
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Settings and billing" />
+      <SettingsBoard />
+    </div>
   )
 }

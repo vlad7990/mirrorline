@@ -32,6 +32,8 @@ export function ReportButton() {
         title="Not ready yet"
         description="The weekly report PDF is coming soon."
         onDismiss={() => setNoticeOpen(false)}
+        // A fixed element wider than the viewport would scroll the page.
+        className="max-w-[calc(100vw-32px)]"
       />
     </>
   )

@@ -202,6 +202,9 @@ export function CalendarView() {
             items={APPROVAL_MODES.map((item) => ({ value: item.value, label: item.label }))}
             value={mode}
             onValueChange={setMode}
+            // At 390px the two labels do not fit on one line; wrapping keeps
+            // the page from scrolling sideways.
+            className="max-w-full flex-wrap"
           />
           <p className="m-0 max-w-[46ch] text-meta text-text-muted lg:text-right">
             {MODE_NOTES[mode] ?? ''}
@@ -254,6 +257,8 @@ export function CalendarView() {
         title={toast?.title ?? ''}
         description={toast?.description}
         onDismiss={() => setToast(null)}
+        // A fixed element wider than the viewport would scroll the page.
+        className="max-w-[calc(100vw-32px)]"
       />
     </div>
   )
