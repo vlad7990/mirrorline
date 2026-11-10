@@ -8,17 +8,23 @@
 
 ## Preview link
 
-**https://mirrorline-9diwjwc5w-vn-mn-product-group.vercel.app** — status Ready,
-deployed 10 Nov 2026 17:54 EST, from `3ade0dc` with a clean tree.
+**https://mirrorline-bh93oz0bd-vn-mn-product-group.vercel.app** — status Ready,
+deployed 10 Nov 2026, from `142569c`.
 
-Everything below, plus the design-engineering pass: the FAQ now animates open
-and shut instead of snapping, the chevron runs on the same duration token as
-the row it sits in, and the shared `Tooltip` works at all (it needed a
-provider nobody had mounted). Worth opening the FAQ on `/` — that is the
-visible one.
+The public pages got a brand type scale (fluid `clamp()`, which the codebase
+had none of), scroll motion that the landing page previously had none of, and
+a real screenshot in every hero instead of half a viewport of nothing. The
+studio keeps its fixed product scale on purpose.
+
+Still placeholder: the cut wall on `/` is coloured blocks rather than reels.
+Generating them needs Higgsfield credits (free plan, 0 credits, about 46
+needed). See "Needs Vlad".
 
 <details>
 <summary>Earlier previews</summary>
+
+https://mirrorline-9diwjwc5w-vn-mn-product-group.vercel.app — 17:54 EST, the
+design-engineering pass: FAQ animation, chevron token, Tooltip provider.
 
 https://mirrorline-75qpw4kgp-vn-mn-product-group.vercel.app — 10 Nov 09:43
 EST. The glass-box design system across the component library, the public site
