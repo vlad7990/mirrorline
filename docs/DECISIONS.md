@@ -122,6 +122,35 @@ table, so a genuinely contaminating dependency cannot slip in quietly.
 **Needs Vlad:** worth a lawyer's eye before the first paying client, alongside
 the contract and terms work already scheduled for week 4.
 
+## 2026-11-09 · D12 · ESLint covers apps/web only — packages are unlinted
+
+`pnpm lint` runs `next lint` over `apps/web`, which is where most of the code
+lives. `packages/ui` and `packages/mock` have **no ESLint config and are not
+linted**. They are still covered by `tsc --noEmit` under
+`--strict --noUncheckedIndexedAccess --noUnusedLocals --noUnusedParameters`,
+and by 163 unit tests, so this is a gap in style enforcement, not in
+correctness.
+
+Why it was not fixed: a second repo hook, `pre:config-protection`, refuses any
+write to `eslint.config.mjs` — "Modifying eslint.config.mjs is not allowed. Fix
+the source code to satisfy linter/formatter rules instead of weakening the
+config." The rule is aimed at someone loosening an existing config to silence
+errors; here there was no config at all and a first one was being added. The
+hook cannot tell those apart, and it is not mine to disable.
+
+Rather than fake it — pointing the packages at the Next-specific app config, or
+replacing their `lint` script with something that always exits 0 — the `lint`
+scripts were removed from both packages so nothing claims a check it is not
+doing.
+
+**Needs Vlad:** allow a root `eslint.config.mjs` (temporarily disable
+`pre:config-protection`, or add the file by hand), then restore
+`"lint": "eslint src --max-warnings=0"` to both packages and set the root script
+back to `pnpm -r --no-bail lint`. The intended config was flat ESLint with
+`js.configs.recommended` + `typescript-eslint` recommended, plus `no-console`,
+`no-explicit-any`, `no-unused-vars` with a `^_` escape hatch, and
+`no-empty` allowing commented empty catches.
+
 ## 2026-11-09 · D10 · Stripe, n8n and Docker out of scope tonight
 
 On Vlad's instruction. The pricing page is static copy with no Stripe objects;

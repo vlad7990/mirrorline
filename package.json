@@ -10,7 +10,7 @@
     "dev": "pnpm --filter @mirrorline/web dev",
     "build": "pnpm --filter @mirrorline/web build",
     "start": "pnpm --filter @mirrorline/web start",
-    "lint": "pnpm -r --no-bail lint",
+    "lint": "pnpm --filter @mirrorline/web lint",
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
