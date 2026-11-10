@@ -8,7 +8,6 @@
  * already implements it, so this file composes rather than redraws.
  */
 
-import type { Cut } from '@mirrorline/mock'
 import {
   Button,
   Card,
@@ -26,6 +25,7 @@ import {
 import { Check, Clock, Loader2 } from 'lucide-react'
 import * as React from 'react'
 
+import type { CutView } from './cut-view'
 import { UploadDropzone } from './upload-dropzone'
 import {
   CUT_ACTIONS,
@@ -165,10 +165,10 @@ const CUT_GRID_CLASSES = 'grid grid-cols-[repeat(auto-fill,minmax(172px,1fr))] g
 const STAGGER_CEILING = 5
 
 export interface CutGridProps {
-  cuts: readonly Cut[]
+  cuts: readonly CutView[]
   approvedIds: readonly string[]
   onToggleApprove: (cutId: string) => void
-  onPreview: (cut: Cut) => void
+  onPreview: (cut: CutView) => void
 }
 
 export function CutGrid({ cuts, approvedIds, onToggleApprove, onPreview }: CutGridProps) {
@@ -222,10 +222,10 @@ export function CutGrid({ cuts, approvedIds, onToggleApprove, onPreview }: CutGr
 }
 
 interface CutActionsProps {
-  cut: Cut
+  cut: CutView
   status: CutStatus
   onToggleApprove: (cutId: string) => void
-  onPreview: (cut: Cut) => void
+  onPreview: (cut: CutView) => void
 }
 
 /**
@@ -297,7 +297,7 @@ export function CutSkeletonGrid({ count }: CutSkeletonGridProps) {
 
 export interface CutPreviewDialogProps {
   /** The cut being looked at, or null when the dialog is closed. */
-  cut: Cut | null
+  cut: CutView | null
   isApproved: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -318,13 +318,27 @@ export function CutPreviewDialog({ cut, isApproved, onOpenChange }: CutPreviewDi
           {/* The player. DESIGN.md "Viewer panel": "a near-black lightbox
               holding the 9:16 frame, in both themes". */}
           <ViewerPanel className="shrink-0 items-center">
-            <VideoThumb
-              caption={cut.hook}
-              index={cut.index - 1}
-              length={cut.lengthLabel}
-              cutNumber={cut.index}
-              className="w-[150px]"
-            />
+            {/* A cut the engine rendered has a file behind it, so it plays.
+                A demo cut has only a painted frame, and showing a dead player
+                for it would promise something that is not there. */}
+            {cut.videoUrl ? (
+              <video
+                src={cut.videoUrl}
+                controls
+                playsInline
+                preload="metadata"
+                aria-label={`Cut ${cut.index}: ${cut.hook}`}
+                className="aspect-[9/16] w-[150px] rounded-thumb bg-black"
+              />
+            ) : (
+              <VideoThumb
+                caption={cut.hook}
+                index={cut.index - 1}
+                length={cut.lengthLabel}
+                cutNumber={cut.index}
+                className="w-[150px]"
+              />
+            )}
           </ViewerPanel>
           <div className="flex min-w-[180px] flex-1 flex-col items-start gap-2.5">
             <p className="m-0 font-heading text-subtitle text-text">{cut.hook}</p>

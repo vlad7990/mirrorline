@@ -17,10 +17,13 @@ import path from 'node:path'
 
 import { brandKit } from '@mirrorline/mock'
 
-import { brandPath, messageOf, samplesDirectory, sourcePath } from './jobs'
+import { REPO_ROOT, brandPath, messageOf, samplesDirectory, sourcePath } from './jobs'
 
-/** Where the Python project lives, relative to the repo root. */
-const PIPELINE_DIRECTORY = path.join('services', 'pipeline')
+/**
+ * Where the Python project lives. Absolute, because `next dev` runs with its
+ * cwd set to apps/web and a relative path finds nothing from there.
+ */
+const PIPELINE_DIRECTORY = path.join(REPO_ROOT, 'services', 'pipeline')
 
 /**
  * How many cuts to ask for. The engine's own default is 12; a source short

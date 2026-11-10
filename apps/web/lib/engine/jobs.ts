@@ -16,12 +16,36 @@
  * the shape above is what it has to reproduce.
  */
 
+import { existsSync } from 'node:fs'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import { type EngineJob, type EngineJobState, parseSummary } from './types'
 
-export const JOBS_DIRECTORY = path.join('.data', 'engine-jobs')
+/**
+ * The repo root, found rather than assumed.
+ *
+ * `process.cwd()` is `apps/web` under `next dev`, so a relative
+ * `services/pipeline` resolves to `apps/web/services/pipeline`, which does not
+ * exist. The availability probe then reports, truthfully, that the engine is
+ * not on this machine, and the upload screen falls back to its demo states on
+ * a machine where everything is installed. Walking up to the workspace file
+ * is the fix; it was found by running the thing, not by reading it.
+ */
+function findRepoRoot(): string {
+  let directory = process.cwd()
+  for (let depth = 0; depth < 8; depth += 1) {
+    if (existsSync(path.join(directory, 'pnpm-workspace.yaml'))) return directory
+    const parent = path.dirname(directory)
+    if (parent === directory) break
+    directory = parent
+  }
+  return process.cwd()
+}
+
+export const REPO_ROOT = findRepoRoot()
+
+export const JOBS_DIRECTORY = path.join(REPO_ROOT, '.data', 'engine-jobs')
 
 const JOB_FILE = 'job.json'
 const SOURCE_FILE = 'source.mp4'

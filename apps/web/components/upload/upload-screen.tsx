@@ -12,13 +12,14 @@
  * URL an end-to-end test can open directly.
  */
 
-import type { Cut } from '@mirrorline/mock'
 import { cuts as allCuts } from '@mirrorline/mock'
 import { AlertBar, Button, EmptyState, Eyebrow, PageHeader, SegmentedControl } from '@mirrorline/ui'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import * as React from 'react'
 
+import type { CutView } from './cut-view'
+import { EngineLive, type EngineLiveResult } from './engine-live'
 import {
   CutGrid,
   CutPreviewDialog,
@@ -52,7 +53,17 @@ export function UploadScreen({ state }: UploadScreenProps) {
 
   const [filterId, setFilterId] = React.useState<string>(ALL_CUTS_FILTER_ID)
   const [approvedIds, setApprovedIds] = React.useState<readonly string[]>([])
-  const [previewCut, setPreviewCut] = React.useState<Cut | null>(null)
+  const [previewCut, setPreviewCut] = React.useState<CutView | null>(null)
+  // A real run, when the engine is on this machine. Null until one finishes.
+  const [live, setLive] = React.useState<EngineLiveResult | null>(null)
+
+  // A live result replaces the demo grid entirely: showing both would leave a
+  // reader guessing which cuts came from their own video.
+  const handleResult = React.useCallback((result: EngineLiveResult | null) => {
+    setLive(result)
+    setApprovedIds([])
+    setPreviewCut(null)
+  }, [])
 
   const counts = countCuts(approvedIds)
   const isReady = state === 'ready'
@@ -104,7 +115,9 @@ export function UploadScreen({ state }: UploadScreenProps) {
         }
       />
 
-      <DemoStateSwitcher state={state} onChange={goToState} />
+      <EngineLive onResult={handleResult} />
+
+      {live === null ? <DemoStateSwitcher state={state} onChange={goToState} /> : null}
 
       {isError ? (
         <AlertBar
@@ -123,7 +136,7 @@ export function UploadScreen({ state }: UploadScreenProps) {
         {isReady || isLoading ? <PipelineCard isRunning={isLoading} /> : null}
       </div>
 
-      {isReady ? (
+      {live === null && isReady ? (
         <SegmentedControl
           label="Filter cuts by format"
           value={filterId}
@@ -133,7 +146,16 @@ export function UploadScreen({ state }: UploadScreenProps) {
         />
       ) : null}
 
-      {isReady ? (
+      {live !== null ? (
+        <CutGrid
+          cuts={live.cuts}
+          approvedIds={approvedIds}
+          onToggleApprove={toggleApprove}
+          onPreview={setPreviewCut}
+        />
+      ) : null}
+
+      {live === null && isReady ? (
         <CutGrid
           cuts={cutsForFilter(filterId)}
           approvedIds={approvedIds}
@@ -142,9 +164,9 @@ export function UploadScreen({ state }: UploadScreenProps) {
         />
       ) : null}
 
-      {isLoading ? <CutSkeletonGrid count={allCuts.length} /> : null}
+      {live === null && isLoading ? <CutSkeletonGrid count={allCuts.length} /> : null}
 
-      {isEmpty ? <EmptyState title={EMPTY_COPY.title} description={EMPTY_COPY.description} /> : null}
+      {live === null && isEmpty ? <EmptyState title={EMPTY_COPY.title} description={EMPTY_COPY.description} /> : null}
 
       <CutPreviewDialog
         cut={previewCut}

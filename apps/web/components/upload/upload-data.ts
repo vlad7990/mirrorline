@@ -12,6 +12,8 @@
 
 import type { Cut, FormatTag } from '@mirrorline/mock'
 import { cutSummary, cuts, sourceVideo, workspace } from '@mirrorline/mock'
+
+import type { CutView } from './cut-view'
 import type { Status } from '@mirrorline/ui'
 
 /* -------------------------------------------------------------------------- */
@@ -221,7 +223,7 @@ export function cutsForFilter(filterId: string): readonly Cut[] {
 export type CutStatus = Extract<Status, 'passed' | 'approved' | 'needs-review' | 'blocked'>
 
 /** Approval is the one thing a person changes here; the verdict is the agent's. */
-export function cutStatus(cut: Cut, isApproved: boolean): CutStatus {
+export function cutStatus(cut: Pick<CutView, 'compliance'>, isApproved: boolean): CutStatus {
   return isApproved ? 'approved' : cut.compliance
 }
 
