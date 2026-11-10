@@ -33,7 +33,7 @@ const CLIENT_STEPS: readonly ClientStep[] = [
   {
     id: 'upload',
     title: 'Upload',
-    line: 'Drop in one long video — a podcast episode, a webinar, a talk, a demo. One a week is enough to keep the studio fed.',
+    line: 'Drop in one long video: a podcast episode, a webinar, a talk, a demo. One a week is enough to keep the studio fed.',
     Icon: Upload,
   },
   {
@@ -156,9 +156,9 @@ export default function HowItWorksPage() {
           </h2>
           <div className="flex max-w-[68ch] flex-col gap-3 text-body text-text-muted">
             <p className="m-0">
-              Every video — a cut from your own upload, a remake of a rising format, anything with a
-              generated scene in it — goes through the same gate before it can reach the calendar.
-              There is no path around it, for us or for you.
+              Every video goes through the same gate before it can reach the calendar. That means a
+              cut from your own upload, a remake of a rising format, and anything with a generated
+              scene in it. There is no path around it, for us or for you.
             </p>
             <p className="m-0">
               The gate checks the video against its source, checks your rights and consent records,

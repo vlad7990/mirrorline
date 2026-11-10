@@ -66,7 +66,7 @@ export const PUBLIC_AGENTS: readonly PublicAgent[] = [
     short: 'Checks every video before it can be scheduled, and says why.',
     does: 'Compares each rendered video against its source script and frames, checks the rights and consent records, checks the licence list, and checks that AI scenes carry their label. It returns passed, needs review, or blocked, with the reason in plain words.',
     limit:
-      'It blocks copied footage, copied audio, copied wording, a copied likeness, a near-duplicate of your own recent posts, and any guarantee written into a caption. It is our own check, not a legal clearance, and you can override it — the override is logged.',
+      'It blocks copied footage, copied audio, copied wording, a copied likeness, a near-duplicate of your own recent posts, and any guarantee written into a caption. It is our own check, not a legal clearance, and you can override it. The override is logged.',
     inLoop: 'The gate in the middle. Nothing reaches the calendar without passing through it.',
   },
   {

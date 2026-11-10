@@ -43,10 +43,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <p className="m-0">&ldquo;Mirrorline&rdquo; is a placeholder product name.</p>
           <span className="flex flex-wrap gap-4">
             <Link href="/privacy" className="hover:text-text">
-              Privacy notice — draft
+              Privacy notice (draft)
             </Link>
             <Link href="/terms" className="hover:text-text">
-              Terms — draft
+              Terms (draft)
             </Link>
             <Link href="/trust" className="hover:text-text">
               Our rules

@@ -42,7 +42,7 @@ export default function PricingPage() {
           </h1>
           <p className="m-0 max-w-[62ch] text-body text-text-muted">
             Start with a two-week pilot. If it is worth continuing, pick a month. No setup fee, no
-            annual contract and no discount for paying a year ahead — we would rather you could
+            annual contract and no discount for paying a year ahead. We would rather you could
             leave whenever you like.
           </p>
         </div>

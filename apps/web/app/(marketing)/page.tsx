@@ -9,7 +9,7 @@
  */
 
 import { cuts, funnel, metrics, sourceVideo } from '@mirrorline/mock'
-import { Button, Card, FunnelBar, VideoThumb } from '@mirrorline/ui'
+import { Button, Card, cn, FunnelBar, VideoThumb } from '@mirrorline/ui'
 import { ArrowRight, Film, Plug, Repeat, Tag } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
@@ -59,7 +59,7 @@ const RULES: readonly Rule[] = [
   {
     id: 'ai-labelled',
     title: 'AI scenes are labelled',
-    line: 'Where a scene is generated, it says so — in the studio and on the platform.',
+    line: 'Where a scene is generated, it says so in the studio and on the platform.',
     Icon: Tag,
   },
   {
@@ -113,7 +113,7 @@ const FAQ_ITEMS: readonly FaqItem[] = [
       <>
         <p className="m-0">
           We only work from material you own or we hold rights to. When a format is rising in your
-          niche we take its structure — the hook pattern, the beats, the pacing — and nothing else:
+          niche we take its structure (the hook pattern, the beats, the pacing) and nothing else:
           new script, your footage, your voice.
         </p>
         <p className="m-0">
@@ -150,8 +150,8 @@ const FAQ_ITEMS: readonly FaqItem[] = [
     answer: (
       <>
         <p className="m-0">
-          Compliance blocks it before it reaches the calendar and tells you why in plain words — for
-          example, background music from a venue, or a claim with nothing behind it.
+          Compliance blocks it before it reaches the calendar and tells you why in plain words. For
+          example: background music from a venue, or a claim with nothing behind it.
         </p>
         <p className="m-0">
           You can fix it and send it back through, or override the block yourself; the override is
@@ -173,8 +173,8 @@ const FAQ_ITEMS: readonly FaqItem[] = [
         <p className="m-0">
           What we can tell you is what you get and when: in a two-week pilot you get 12 videos, a
           posting schedule and one report. After that you get posts out on time, every week, and a
-          report that runs from views to clicks to calls — with the real figures, including the
-          weeks that go badly.
+          report that runs from views to clicks to calls. The figures in it are the real ones,
+          including the weeks that go badly.
         </p>
         <p className="m-0">Judge us on that. If the posts stop or the reporting goes quiet, leave.</p>
       </>
@@ -187,6 +187,13 @@ const FAQ_ITEMS: readonly FaqItem[] = [
 /* -------------------------------------------------------------------------- */
 
 const HERO_CUT_COUNT = 6
+
+/**
+ * CLAUDE.md non-negotiable 6: "every video passes the Compliance agent before
+ * it can be scheduled." That makes one agent in the loop different from the
+ * other six, so the ladder marks it instead of treating all seven alike.
+ */
+const GATE_AGENT_ID = 'compliance'
 
 export default function LandingPage() {
   const heroCuts = cuts.slice(0, HERO_CUT_COUNT)
@@ -202,18 +209,13 @@ export default function LandingPage() {
             Turn one long video into daily short-form growth, without losing your voice.
           </h1>
           <p className="m-0 max-w-[58ch] text-body text-text-muted sm:text-subtitle sm:font-normal">
-            Mirrorline is built for coaches, consultants and local service businesses. You upload
-            one podcast, webinar or talk. Seven agents cut it into short vertical videos, check
-            every one, and post them to the accounts you already own.
+            For coaches, consultants and local service businesses. Upload one talk; seven agents
+            cut, check and post videos to your accounts.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <LeadDialogButton intent="pilot" />
             <LeadDialogButton intent="demo" variant="secondary" size="lg" />
           </div>
-          <p className="m-0 text-meta text-text-muted">
-            You see every video before it goes out. Nothing posts until it passes the compliance
-            gate.
-          </p>
         </div>
       </Section>
 
@@ -225,15 +227,21 @@ export default function LandingPage() {
           title="Four rules we build on"
           lead="These describe how the studio works. They are not guarantees, and they are not certifications."
         />
-        <ul className="mt-8 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 lg:grid-cols-4">
+        {/* One bordered band with hairline dividers, not four cards. DESIGN.md
+            "Elevation & Depth": depth comes from 1px borders and the contrast
+            between surface and background, so a rule does not need a card of
+            its own to read as a separate thing. */}
+        <ul className="mt-8 flex list-none flex-col divide-y divide-border rounded-lg border border-border bg-surface p-0 lg:flex-row lg:divide-x lg:divide-y-0">
           {RULES.map((rule) => (
-            <Card as="li" key={rule.id} className="flex flex-col gap-3">
-              <span className="grid size-10 place-items-center rounded-md bg-accent-soft text-on-accent-soft">
+            <li key={rule.id} className="flex flex-1 items-start gap-4 p-5 lg:flex-col lg:gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-md bg-accent-soft text-on-accent-soft">
                 <rule.Icon aria-hidden="true" className="size-5" strokeWidth={1.8} />
               </span>
-              <h3 className="m-0 font-heading text-subtitle text-text">{rule.title}</h3>
-              <p className="m-0 text-meta text-text-muted">{rule.line}</p>
-            </Card>
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <h3 className="m-0 font-heading text-subtitle text-text">{rule.title}</h3>
+                <p className="m-0 text-meta text-text-muted">{rule.line}</p>
+              </div>
+            </li>
           ))}
         </ul>
       </Section>
@@ -242,7 +250,6 @@ export default function LandingPage() {
       <Section aria-labelledby="multiply-heading">
         <SectionHeading
           id="multiply-heading"
-          eyebrow="Multiply"
           title="One video, many posts"
           lead={`A ${sourceVideo.durationLabel} episode became ${cuts.length} short videos, each with its own moment, hook, length and format. None of them is the same clip with a new title.`}
           aside={<SampleDataLabel />}
@@ -288,21 +295,49 @@ export default function LandingPage() {
             </Button>
           }
         />
-        {/* All seven are visible from 640px up — this is the section the page is
-            named for, so none of them hides behind a scrollbar. Only the 390px
-            column keeps the horizontal strip. */}
-        <ol className="scroll-x mt-8 flex list-none gap-4 p-0 pb-2 sm:grid sm:grid-cols-2 sm:pb-0 md:grid-cols-4">
-          {PUBLIC_AGENTS.map((agent) => (
-            <li key={agent.id} className="w-[260px] shrink-0 sm:w-auto">
-              <Card className="flex h-full flex-col gap-2">
-                <span className="tabular text-caption font-semibold text-on-accent-soft">
-                  Step {agent.step} of {PUBLIC_AGENTS.length}
-                </span>
-                <h3 className="m-0 font-heading text-subtitle text-text">{agent.name}</h3>
-                <p className="m-0 text-meta text-text-muted">{agent.short}</p>
-              </Card>
-            </li>
-          ))}
+        {/* A ladder, not seven tiles: the rail draws the hand-off from one agent
+            down to the next, so the order is in the layout rather than on a
+            counter, and Compliance is marked because nothing gets past it.
+            One column at every width, so all seven are always visible and
+            nothing hides behind a scrollbar. */}
+        <ol className="mt-8 flex list-none flex-col p-0">
+          {PUBLIC_AGENTS.map((agent, index) => {
+            const isGate = agent.id === GATE_AGENT_ID
+            const isLast = index === PUBLIC_AGENTS.length - 1
+
+            return (
+              <li key={agent.id} className="flex gap-4 sm:gap-5">
+                <div className="flex flex-col items-center gap-1.5">
+                  {/* The step number repeats what the <ol> already says, so it
+                      is decoration for the eye only. */}
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      'tabular grid size-8 shrink-0 place-items-center rounded-full border',
+                      'text-caption font-semibold',
+                      isGate
+                        ? 'border-success bg-success-soft text-on-success-soft'
+                        : 'border-border-strong bg-surface text-text-muted',
+                    )}
+                  >
+                    {agent.step}
+                  </span>
+                  {isLast ? null : <span aria-hidden="true" className="w-px flex-1 bg-border" />}
+                </div>
+                <div className={cn('flex min-w-0 flex-col gap-1', isLast ? 'pb-0' : 'pb-6')}>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <h3 className="m-0 font-heading text-subtitle text-text">{agent.name}</h3>
+                    {isGate ? (
+                      <span className="rounded-full bg-success-soft px-2.5 py-0.5 text-caption font-semibold text-on-success-soft">
+                        The gate
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="m-0 max-w-[68ch] text-meta text-text-muted">{agent.short}</p>
+                </div>
+              </li>
+            )
+          })}
         </ol>
         {/* The automated re-plan is post-MVP, so the loop's closing hand-off is
             labelled rather than sold. CLAUDE.md non-negotiable 7. */}
@@ -316,18 +351,17 @@ export default function LandingPage() {
       <Section aria-labelledby="funnel-heading">
         <SectionHeading
           id="funnel-heading"
-          eyebrow="Reporting"
           title="From views to calls"
           lead="The weekly report does not stop at views. It follows the same week all the way to the thing you actually sell."
           aside={<SampleDataLabel />}
         />
         <Card className="mt-8 flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="m-0 font-heading text-subtitle text-text">
-              One week for a fictional demo client
-            </h3>
-            <SampleDataLabel />
-          </div>
+          {/* The section heading already carries the "Sample data" label, and
+              the paragraph below the funnel carries the full disclosure. One
+              label per section is enough to read; two is noise. */}
+          <h3 className="m-0 font-heading text-subtitle text-text">
+            One week for a fictional demo client
+          </h3>
           <div className="scroll-x">
             <div className="min-w-[560px]">
               <FunnelBar steps={funnelSteps} />
@@ -387,7 +421,6 @@ export default function LandingPage() {
       <Section aria-labelledby="faq-heading">
         <SectionHeading
           id="faq-heading"
-          eyebrow="Questions"
           title="The six we are asked most"
           lead="Short answers, including the ones where the honest answer is that we cannot promise."
         />

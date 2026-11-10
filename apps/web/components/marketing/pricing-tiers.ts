@@ -68,7 +68,7 @@ export const PRICING_TIERS: readonly PricingTier[] = [
   {
     id: 'studio',
     name: 'Studio (self-serve)',
-    price: '$49–$149',
+    price: '$49 to $149',
     period: 'a month',
     summary: 'The same engine, run by you. Not built yet, so there is nothing to buy.',
     includes: ['Same engine', 'You approve each post'],

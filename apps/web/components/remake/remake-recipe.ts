@@ -75,7 +75,7 @@ const BEAT_NOTES: Record<string, string> = {
 const FALLBACK_NOTE = 'One beat of the format.'
 
 /** DESIGN.md asks for pacing and caption style under the recipe. */
-export const RECIPE_FOOTER = 'Pacing: a cut every 2–3 s. Captions: two lines, key word highlighted.'
+export const RECIPE_FOOTER = 'Pacing: a cut every 2-3 s. Captions: two lines, key word highlighted.'
 
 /** Quotes are part of a few fixture labels; the note key drops them. */
 function noteKey(label: string): string {
@@ -106,7 +106,7 @@ export function buildRecipe(beats: readonly TrendBeat[]): readonly RecipeBeat[] 
     const duration = durations[index] ?? 0
     const end = start + duration
     const row: RecipeBeat = {
-      timeLabel: `${start}–${end} s`,
+      timeLabel: `${start}-${end} s`,
       name: beatName(beat),
       note: BEAT_NOTES[noteKey(beat.label)] ?? FALLBACK_NOTE,
       startSeconds: start,

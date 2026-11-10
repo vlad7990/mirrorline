@@ -116,7 +116,7 @@ export function WorkspaceSwitcher() {
             disabled
             className="flex min-h-touch w-full items-center px-3 text-left text-meta text-text-muted"
           >
-            Add workspace — coming soon
+            Add workspace (coming soon)
           </button>
         </div>
       ) : null}

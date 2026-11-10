@@ -34,8 +34,8 @@ const COLUMNS: readonly FooterColumn[] = [
   {
     heading: 'Documents (drafts)',
     links: [
-      { href: '/privacy', label: 'Privacy notice — draft' },
-      { href: '/terms', label: 'Terms — draft' },
+      { href: '/privacy', label: 'Privacy notice (draft)' },
+      { href: '/terms', label: 'Terms (draft)' },
     ],
   },
 ]

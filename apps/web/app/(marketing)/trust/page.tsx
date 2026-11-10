@@ -88,7 +88,7 @@ const RULES: readonly Rule[] = [
 const NOT_CLAIMED: readonly string[] = [
   'We do not guarantee views, followers, leads or sales. Nobody honestly can.',
   'We do not guarantee a compliance outcome. Our gate is our own check, not legal clearance, and a platform or a rights holder can still disagree with it.',
-  'We hold no security certification. No SOC 2, no ISO, no audit of any kind — we are new, and claiming otherwise would be the first lie.',
+  'We hold no security certification. No SOC 2, no ISO, no audit of any kind. We are new, and claiming otherwise would be the first lie.',
   'We have no customer results to show you yet, so there are no testimonials, ratings or case studies on this site.',
   'We are not your lawyer. The privacy notice and the terms here are drafts, not reviewed legal documents.',
 ]
@@ -104,7 +104,7 @@ export default function TrustPage() {
           </h1>
           <p className="m-0 max-w-[62ch] text-body text-text-muted">
             This page is the whole of it. Seven rules that are built into the product, and a list of
-            things we are not claiming — written plainly, because an agency that is vague here is
+            things we are not claiming, written plainly, because an agency that is vague here is
             telling you something.
           </p>
         </div>
@@ -148,8 +148,8 @@ export default function TrustPage() {
           </ul>
         </Card>
         <p className="mt-4 mb-0 max-w-[68ch] text-meta text-text-muted">
-          If any of that changes — a real certification, a real client result we are allowed to
-          share — it will appear here with a date on it.
+          If any of that changes, it will appear here with a date on it. That means a real
+          certification, or a real client result we are allowed to share.
         </p>
       </Section>
 

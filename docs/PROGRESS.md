@@ -150,7 +150,15 @@ nothing is hardcoded, so the demo story stays consistent across screens.
    1.17:1). A green axe run would have hidden them. A human keyboard-and-
    screen-reader pass is still the real test.
 
-4. **`@radix-ui/react-tabs` is now an unused dependency** in
+4. **`pnpm test:e2e` flakes on a cold start.** A first run against a freshly
+   cleared `.next` showed 12 failures (9 studio dark-theme axe audits, 3
+   screenshot captures). Every one passed in isolation and on both subsequent
+   full runs. Cause is the Next dev server compiling studio routes on first hit
+   while axe and the screenshot project race it, not the app. Worth adding a
+   warm-up step to `playwright.config.ts` (hit each studio route once before the
+   suite) so CI does not fail spuriously.
+
+5. **`@radix-ui/react-tabs` is now an unused dependency** in
    `packages/ui/package.json`, left behind when `SegmentedControl` stopped
    using Radix Tabs. Harmless; remove it next time the lockfile changes anyway.
 
@@ -162,11 +170,11 @@ nothing is hardcoded, so the demo story stays consistent across screens.
    272–380px → 78px, all seven days visible beside the drawer. Verified in
    `docs/screens-built/app-calendar--1440--light.png`.
 
-6. **`docs/screens-built/` is the evidence.** Compare it against
+7. **`docs/screens-built/` is the evidence.** Compare it against
    `docs/design/claude-design/screens/*.png` and tell me what still looks wrong.
    The references are a floor, not a ceiling, but regressions matter.
 
-7. **Decide on the theme switch's home.** It sits in the sidebar footer (where
+8. **Decide on the theme switch's home.** It sits in the sidebar footer (where
    KICKOFF_PROMPT asked for it) and again on Settings. Neither reference PNG
    shows it in the sidebar, so it will read as a diff against the mockups.
 
