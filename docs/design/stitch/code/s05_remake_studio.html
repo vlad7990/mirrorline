@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mirrorline - Remake: The 3-word reframe</title>
+<!-- Load Tailwind CSS v3 with forms and container queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              coral: '#C94022',
+              'coral-light': '#FDF3EE',
+              'coral-border': '#F6B7A6',
+              teal: '#1A4D4C',
+              'teal-dark': '#0E3B3B',
+              slate: '#1E293B',
+              'slate-muted': '#64748B',
+              subtle: '#F8F9FA',
+              border: '#EBECEF'
+            }
+          }
+        }
+      }
+    }
+  </script>
+<!-- BEGIN: Custom Styles -->
+<style data-purpose="custom-scroll-and-layout">
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #FAFAF9;
+      color: #111827;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
+<!-- END: Custom Styles -->
+</head>
+<body class="min-h-screen flex flex-col md:flex-row antialiased select-none">
+<!-- BEGIN: Sidebar -->
+<aside class="w-full md:w-64 bg-white border-r border-[#EEEEEE] flex flex-col justify-between shrink-0 p-5 min-h-screen" data-purpose="main-navigation-sidebar">
+<div class="space-y-6">
+<!-- Logo Branding -->
+<div class="flex items-center space-x-2.5 px-2 py-1">
+<svg class="w-6 h-6 text-[#C94022]" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewbox="0 0 24 24">
+<circle cx="12" cy="12" r="9"></circle>
+<path d="M12 3v18"></path>
+<path d="M12 7l4 4-4 4"></path>
+</svg>
+<span class="text-xl font-bold tracking-tight text-neutral-900">Mirrorline</span>
+</div>
+<!-- Account Switcher / Info -->
+<div class="flex items-center space-x-3 p-2 bg-[#F9FAFB] rounded-xl border border-gray-100">
+<div class="w-8 h-8 rounded-lg bg-[#113E3B] text-white flex items-center justify-center text-xs font-semibold tracking-wider">
+          MT
+        </div>
+<div class="leading-tight overflow-hidden">
+<p class="text-sm font-semibold text-neutral-900 truncate">Maya Torres Coaching</p>
+<p class="text-xs text-neutral-500 font-medium">Growth plan</p>
+</div>
+</div>
+<!-- Main Navigation Menu -->
+<nav class="space-y-1 text-sm font-medium text-neutral-600">
+<a class="flex items-center px-3 py-2 rounded-lg hover:bg-neutral-50 hover:text-neutral-900 transition-colors" href="#">
+          Home
+        </a>
+<a class="flex items-center px-3 py-2 rounded-lg hover:bg-neutral-50 hover:text-neutral-900 transition-colors" href="#">
+          Upload
+        </a>
+<!-- Active Link: Trends -->
+<a class="flex items-center px-3 py-2 rounded-xl bg-[#FDF0EC] text-[#BA3416] font-semibold transition-colors" href="#">
+          Trends
+        </a>
+<a class="flex items-center px-3 py-2 rounded-lg hover:bg-neutral-50 hover:text-neutral-900 transition-colors" href="#">
+          Calendar
+        </a>
+<a class="flex items-center px-3 py-2 rounded-lg hover:bg-neutral-50 hover:text-neutral-900 transition-colors" href="#">
+          Results
+        </a>
+<a class="flex items-center px-3 py-2 rounded-lg hover:bg-neutral-50 hover:text-neutral-900 transition-colors" href="#">
+          Agents
+        </a>
+<a class="flex items-center px-3 py-2 rounded-lg hover:bg-neutral-50 hover:text-neutral-900 transition-colors" href="#">
+          Brand kit
+        </a>
+<a class="flex items-center px-3 py-2 rounded-lg hover:bg-neutral-50 hover:text-neutral-900 transition-colors" href="#">
+          Settings
+        </a>
+</nav>
+</div>
+<!-- Monthly Post Meter Widget -->
+<div class="p-4 bg-white rounded-2xl border border-gray-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.02)] space-y-3">
+<div class="flex justify-between items-baseline text-xs">
+<span class="text-neutral-500 font-normal">Posts this month</span>
+<span class="font-bold text-neutral-900">63 of 90</span>
+</div>
+<div class="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+<div class="h-full bg-[#E54823] rounded-full" style="width: 70%;"></div>
+</div>
+</div>
+</aside>
+<!-- END: Sidebar -->
+<!-- BEGIN: MainContent Area -->
+<main class="flex-1 px-6 lg:px-12 py-8 overflow-y-auto">
+<div class="max-w-7xl mx-auto space-y-8">
+<!-- Top Navigation & Action Header -->
+<header class="space-y-4">
+<div>
+<a class="text-xs font-semibold text-neutral-900 hover:underline underline-offset-4 decoration-neutral-300" href="#">
+            ← Back to trends
+          </a>
+</div>
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+<div>
+<h1 class="text-3xl font-extrabold tracking-tight text-neutral-900">Remake: The 3-word reframe</h1>
+<p class="text-sm text-neutral-500 mt-1 font-normal">
+              Remake Producer agent <span class="mx-1">·</span> format from Leadership (+340%) <span class="mx-1">·</span> made for Maya Torres Coaching
+            </p>
+</div>
+<!-- Action Buttons Group -->
+<div class="flex items-center space-x-3 shrink-0">
+<button class="px-4 py-2.5 text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors" type="button">
+              Discard
+            </button>
+<button class="px-5 py-2.5 bg-white border border-neutral-300 rounded-xl text-sm font-semibold text-neutral-800 shadow-sm hover:bg-neutral-50 transition-colors" type="button">
+              Edit script
+            </button>
+<button class="px-5 py-2.5 bg-[#C94022] hover:bg-[#B33418] text-white rounded-xl text-sm font-semibold shadow-sm transition-colors" type="button">
+              Approve and make 5 variants
+            </button>
+</div>
+</div>
+</header>
+<!-- BEGIN: Three-Column Studio Workspace -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 items-start" data-purpose="studio-columns-grid">
+<!-- Column 1: Format Recipe -->
+<div class="lg:col-span-4 bg-white rounded-2xl border border-neutral-200/90 p-6 flex flex-col justify-between shadow-xs">
+<div>
+<h2 class="text-xs font-semibold tracking-wider text-neutral-400 uppercase mb-4">
+              1 · Format Recipe
+            </h2>
+<div class="divide-y divide-neutral-100">
+<!-- Beat 1 -->
+<div class="py-3.5 flex gap-4 text-xs leading-relaxed">
+<span class="w-14 shrink-0 font-medium text-neutral-500">0–2 s</span>
+<div>
+<p class="font-bold text-neutral-900">Hook question</p>
+<p class="text-neutral-500">A yes/no question the viewer feels.</p>
+</div>
+</div>
+<!-- Beat 2 -->
+<div class="py-3.5 flex gap-4 text-xs leading-relaxed">
+<span class="w-14 shrink-0 font-medium text-neutral-500">2–8 s</span>
+<div>
+<p class="font-bold text-neutral-900">Common belief</p>
+<p class="text-neutral-500">What most people in the niche think.</p>
+</div>
+</div>
+<!-- Beat 3 -->
+<div class="py-3.5 flex gap-4 text-xs leading-relaxed">
+<span class="w-14 shrink-0 font-medium text-neutral-500">8–20 s</span>
+<div>
+<p class="font-bold text-neutral-900">3-word reframe</p>
+<p class="text-neutral-500">Short, quotable, on screen in big type.</p>
+</div>
+</div>
+<!-- Beat 4 -->
+<div class="py-3.5 flex gap-4 text-xs leading-relaxed">
+<span class="w-14 shrink-0 font-medium text-neutral-500">20–35 s</span>
+<div>
+<p class="font-bold text-neutral-900">One example</p>
+<p class="text-neutral-500">A concrete thing to try this week.</p>
+</div>
+</div>
+<!-- Beat 5 -->
+<div class="py-3.5 flex gap-4 text-xs leading-relaxed">
+<span class="w-14 shrink-0 font-medium text-neutral-500">35–40 s</span>
+<div>
+<p class="font-bold text-neutral-900">Call to action</p>
+<p class="text-neutral-500">One next step, linked.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Recipe Footer / Pacing Note -->
+<div class="mt-8 pt-4 border-t border-neutral-100">
+<p class="text-xs text-neutral-500 leading-normal">
+              Pacing: a cut every 2–3 s. Captions: two lines, key word highlighted.
+            </p>
+</div>
+</div>
+<!-- Column 2: Maya's Version Script & Shot List -->
+<div class="lg:col-span-5 bg-white rounded-2xl border border-neutral-200/90 p-6 space-y-6 shadow-xs">
+<h2 class="text-xs font-semibold tracking-wider text-neutral-400 uppercase">
+            2 · Maya's Version · New Script
+          </h2>
+<!-- Script Breakdown Container -->
+<div class="bg-[#F8F9FA] rounded-2xl p-5 space-y-3.5 text-xs text-neutral-800 leading-relaxed border border-neutral-100">
+<p>
+<strong class="font-bold text-neutral-900">Hook:</strong> Do you feel like you have to fix everything for your team?
+            </p>
+<p>
+<strong class="font-bold text-neutral-900">Belief:</strong> Most new managers think being needed means being good at the job.
+            </p>
+<p>
+<strong class="font-bold text-neutral-900">Reframe:</strong> Three words: <span class="font-bold text-neutral-900">coach, don't carry.</span>
+</p>
+<p>
+<strong class="font-bold text-neutral-900">Example:</strong> Next time someone brings you a problem, ask "What have you tried?" before you answer.
+            </p>
+<p>
+<strong class="font-bold text-neutral-900">Call to action:</strong> Want more? Book a free call. The link is in my bio.
+            </p>
+</div>
+<!-- Shot List Section -->
+<div class="space-y-3">
+<h3 class="text-xs font-bold text-neutral-900">Shot list</h3>
+<div class="divide-y divide-neutral-100 text-xs">
+<!-- Shot Item 1 -->
+<div class="py-3 flex items-center justify-between gap-3">
+<div class="flex items-center gap-3">
+<span class="font-medium text-neutral-400 w-3">1</span>
+<span class="text-neutral-700">Maya to camera, office, medium close-up (her footage, Ep. 44)</span>
+</div>
+<span class="bg-neutral-100 text-neutral-600 px-2.5 py-1 rounded-md text-[11px] font-medium shrink-0">Client footage</span>
+</div>
+<!-- Shot Item 2 -->
+<div class="py-3 flex items-center justify-between gap-3">
+<div class="flex items-center gap-3">
+<span class="font-medium text-neutral-400 w-3">2</span>
+<span class="text-neutral-700">Overhead desk, many notifications popping up</span>
+</div>
+<span class="bg-[#FBEBE7] text-[#C94022] px-2.5 py-1 rounded-md text-[11px] font-semibold shrink-0">AI scene</span>
+</div>
+<!-- Shot Item 3 -->
+<div class="py-3 flex items-center justify-between gap-3">
+<div class="flex items-center gap-3">
+<span class="font-medium text-neutral-400 w-3">3</span>
+<span class="text-neutral-700">“Coach, don't carry.” in large type over teal</span>
+</div>
+<span class="bg-neutral-100 text-neutral-600 px-2.5 py-1 rounded-md text-[11px] font-medium shrink-0">Graphic</span>
+</div>
+<!-- Shot Item 4 -->
+<div class="py-3 flex items-center justify-between gap-3">
+<div class="flex items-center gap-3">
+<span class="font-medium text-neutral-400 w-3">4</span>
+<span class="text-neutral-700">Maya in a 1:1, asking a question (her footage, Ep. 39)</span>
+</div>
+<span class="bg-neutral-100 text-neutral-600 px-2.5 py-1 rounded-md text-[11px] font-medium shrink-0">Client footage</span>
+</div>
+<!-- Shot Item 5 -->
+<div class="py-3 flex items-center justify-between gap-3">
+<div class="flex items-center gap-3">
+<span class="font-medium text-neutral-400 w-3">5</span>
+<span class="text-neutral-700">End card with booking link</span>
+</div>
+<span class="bg-neutral-100 text-neutral-600 px-2.5 py-1 rounded-md text-[11px] font-medium shrink-0">Graphic</span>
+</div>
+</div>
+<!-- Voice Consent Status Footer -->
+<div class="pt-2 flex items-center justify-between text-xs">
+<span class="text-neutral-900 font-semibold">Voice: <span class="font-normal text-neutral-600">Maya's own recording</span></span>
+<span class="bg-[#EBF7F2] text-[#1D7953] px-2.5 py-1 rounded-md text-[11px] font-semibold">
+                Consent on file · 9 Nov 2026
+              </span>
+</div>
+</div>
+</div>
+<!-- Column 3: 9:16 Video Preview & Hooks Selection -->
+<div class="lg:col-span-3 space-y-5">
+<div class="bg-white rounded-2xl border border-neutral-200/90 p-5 shadow-xs space-y-5">
+<h2 class="text-xs font-semibold tracking-wider text-neutral-400 uppercase">
+              3 · Preview
+            </h2>
+<!-- Mobile 9:16 Video Simulator -->
+<div class="relative w-full aspect-[9/16] bg-[#164242] rounded-2xl overflow-hidden p-5 flex flex-col justify-between text-white shadow-inner">
+<!-- Top Badge -->
+<div class="flex justify-end">
+<span class="bg-white/95 text-neutral-900 text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">
+                  AI scene
+                </span>
+</div>
+<!-- Caption Highlight Overlay & Bottom Metadata -->
+<div class="space-y-5 mb-1">
+<h3 class="text-xl sm:text-2xl font-black leading-snug tracking-tight">
+                  Do you feel like you have to fix everything for your team?
+                </h3>
+<p class="text-[11px] font-medium text-neutral-300">
+                  0:40 · @mayatorres.coach
+                </p>
+</div>
+</div>
+<!-- Hooks to A/B Test List -->
+<div class="space-y-2.5 pt-1">
+<label class="text-xs font-bold text-neutral-900 block">
+                Hooks to A/B test
+              </label>
+<!-- Option 1: Selected hook -->
+<div class="p-3 bg-[#FDF0EC] border-2 border-[#C94022] rounded-xl text-xs font-semibold text-neutral-900 leading-snug cursor-pointer transition-all">
+                Do you feel like you have to fix everything for your team?
+              </div>
+<!-- Option 2 -->
+<div class="p-3 bg-white border border-neutral-200 hover:border-neutral-300 rounded-xl text-xs font-medium text-neutral-800 leading-snug cursor-pointer transition-all">
+                Your team doesn't need a hero. Three words instead:
+              </div>
+<!-- Option 3 -->
+<div class="p-3 bg-white border border-neutral-200 hover:border-neutral-300 rounded-xl text-xs font-medium text-neutral-800 leading-snug cursor-pointer transition-all">
+                The 3 words I wish I'd heard as a new manager
+              </div>
+</div>
+</div>
+</div>
+</section>
+<!-- END: Three-Column Studio Workspace -->
+<!-- BEGIN: Compliance Agent Card -->
+<footer class="bg-white rounded-2xl border border-neutral-200/90 p-6 shadow-xs" data-purpose="compliance-status-banner">
+<div class="flex items-center justify-between mb-5">
+<h2 class="text-base font-bold text-neutral-900 tracking-tight">Compliance agent</h2>
+<span class="bg-[#EBF7F2] text-[#1D7953] px-3.5 py-1 rounded-full text-xs font-bold tracking-wide">
+            Passed
+          </span>
+</div>
+<!-- Compliance Checklist Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 pt-1 text-xs text-neutral-800 font-medium">
+<!-- Check 1 -->
+<div class="flex items-start space-x-2">
+<svg class="w-4 h-4 text-[#1D7953] mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewbox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="leading-normal">No original footage used</span>
+</div>
+<!-- Check 2 -->
+<div class="flex items-start space-x-2">
+<svg class="w-4 h-4 text-[#1D7953] mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewbox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="leading-normal">No original audio used</span>
+</div>
+<!-- Check 3 -->
+<div class="flex items-start space-x-2">
+<svg class="w-4 h-4 text-[#1D7953] mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewbox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="leading-normal">New wording · 12% similar (limit 30%)</span>
+</div>
+<!-- Check 4 -->
+<div class="flex items-start space-x-2">
+<svg class="w-4 h-4 text-[#1D7953] mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewbox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="leading-normal">AI scene labelled on screen and on the platform</span>
+</div>
+<!-- Check 5 -->
+<div class="flex items-start space-x-2">
+<svg class="w-4 h-4 text-[#1D7953] mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewbox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="leading-normal">No real person's likeness besides Maya (consent on file)</span>
+</div>
+</div>
+</footer>
+<!-- END: Compliance Agent Card -->
+</div>
+</main>
+<!-- END: MainContent Area -->
+</body></html>

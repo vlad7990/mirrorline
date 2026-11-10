@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings and billing</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Inter+Tight:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#FAFAF7}
+a{color:#B83A18}a:hover{color:#8F2C11}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1050px; font-family: Inter, system-ui, sans-serif; color: #14171C; background: #FAFAF7;">
+<div style="flex: 1 1 240px; max-width: 100%; display: flex;"><dc-import name="Sidebar" active="Settings" hint-size="100%,1050px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 22px;">
+
+<h1 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 32px; font-weight: 700;">Settings and billing</h1>
+
+<div role="alert" style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-radius: 12px; background: #FBE3E3; color: #8E2626; font-size: 14px;">
+<span><b>Instagram needs to reconnect.</b> Instagram asked you to sign in again. Instagram posts are paused until then.</span>
+<button type="button" style="min-height: 40px; padding: 0 14px; border-radius: 10px; border: none; background: #8E2626; color: #FFFFFF; font: 600 13px Inter, sans-serif;">Reconnect Instagram</button>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; align-items: start;">
+
+<section style="display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 18px; font-weight: 600;">Connected accounts</h2>
+<sc-for list="{{accounts}}" as="a" hint-placeholder-count="4">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #F0EEE8;">
+<span style="flex: 1 1 160px; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 14px; font-weight: 600;">{{a.platform}}</span><span style="font-size: 12px; color: #5F6672;">{{a.handle}}</span></span>
+<span style="{{a.chip}}">{{a.status}}</span>
+<button type="button" style="min-height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid #D6D3CA; background: #FFFFFF; font: 600 13px Inter, sans-serif; color: #14171C;">{{a.action}}</button>
+</div>
+</sc-for>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 14px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<div style="display: flex; justify-content: space-between; align-items: flex-start;">
+<div style="display: flex; flex-direction: column; gap: 4px;"><h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 18px; font-weight: 600;">Growth plan</h2><span style="font-size: 14px; color: #5F6672;">$1,500 a month · 90 posts · 3 platforms</span></div>
+<button type="button" style="min-height: 40px; padding: 0 14px; border-radius: 10px; border: none; background: #C8401C; color: #FFFFFF; font: 600 13px Inter, sans-serif;">Upgrade to Scale</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: #5F6672;">Posts used this month</span><span style="font-weight: 600;">63 of 90</span></div>
+<span style="height: 8px; border-radius: 999px; background: #EFEDE7;"><span style="display: block; height: 8px; width: 70%; border-radius: 999px; background: #FF5A36;"></span></span>
+</div>
+<h3 style="margin: 6px 0 0; font-size: 14px; font-weight: 600;">Invoices</h3>
+<sc-for list="{{invoices}}" as="i" hint-placeholder-count="3">
+<div style="display: flex; justify-content: space-between; font-size: 14px; padding: 8px 0; border-top: 1px solid #F0EEE8;"><span>{{i.date}}</span><span>{{i.what}}</span><span style="font-weight: 600;">{{i.amount}}</span></div>
+</sc-for>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 18px; font-weight: 600;">Team</h2>
+<div style="display: flex; justify-content: space-between; font-size: 14px; padding: 8px 0; border-top: 1px solid #F0EEE8;"><span>Maya Torres</span><span style="color: #5F6672;">Owner · approves posts</span></div>
+<div style="display: flex; justify-content: space-between; font-size: 14px; padding: 8px 0; border-top: 1px solid #F0EEE8;"><span>Sam Lee</span><span style="color: #5F6672;">Assistant · can edit captions</span></div>
+<button type="button" style="align-self: flex-start; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #D6D3CA; background: #FFFFFF; font: 600 13px Inter, sans-serif; color: #14171C;">Invite someone</button>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 18px; font-weight: 600;">Data and rights</h2>
+<sc-for list="{{rights}}" as="r" hint-placeholder-count="4">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 14px; padding: 8px 0; border-top: 1px solid #F0EEE8;"><span>{{r.what}}</span><span style="color: #5F6672;">{{r.detail}}</span></div>
+</sc-for>
+<div style="display: flex; flex-wrap: wrap; gap: 8px;">
+<button type="button" style="min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #D6D3CA; background: #FFFFFF; font: 600 13px Inter, sans-serif; color: #14171C;">Export my data</button>
+<button type="button" style="min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #E8B8B8; background: #FFFFFF; font: 600 13px Inter, sans-serif; color: #8E2626;">Withdraw voice consent</button>
+</div>
+</section>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1050}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const chip = (bg, fg) => 'font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: ' + bg + '; color: ' + fg + ';';
+    const accounts = [
+      { platform: 'Instagram', handle: '@mayatorres.coach', status: 'Reconnect needed', chip: chip('#FBE3E3', '#8E2626'), action: 'Reconnect' },
+      { platform: 'TikTok', handle: '@mayaleads · private posting until app approval', status: 'Connected', chip: chip('#E3F4EC', '#145C40'), action: 'Disconnect' },
+      { platform: 'YouTube', handle: 'Maya Torres', status: 'Connected', chip: chip('#E3F4EC', '#145C40'), action: 'Disconnect' },
+      { platform: 'LinkedIn', handle: 'Not connected', status: 'Off', chip: chip('#EFEDE7', '#3E444D'), action: 'Connect' }
+    ];
+    const invoices = [
+      { date: '1 Nov 2026', what: 'Growth, November', amount: '$1,500.00' },
+      { date: '15 Oct 2026', what: 'Pilot, 2 weeks', amount: '$750.00' }
+    ];
+    const rights = [
+      { what: 'Rights confirmations', detail: '4 uploads, all confirmed' },
+      { what: 'Consent releases', detail: 'Maya Torres, voice and likeness, 9 Nov 2026' },
+      { what: 'AI labelling', detail: 'Always on for AI scenes' },
+      { what: 'Data location', detail: 'United States' }
+    ];
+    return { accounts, invoices, rights };
+  }
+}
+</script>
+</body>
+</html>

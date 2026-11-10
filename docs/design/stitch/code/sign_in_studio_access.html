@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mirrorline — Sign In to Studio</title>
+<!-- Inter Google Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration verbatim -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-fixed-dim": "#ffb4a2",
+            "info-soft": "#E3ECFB",
+            "dark-surface": "#161A21",
+            "outline-variant": "#e2bfb6",
+            "border": "#E6E4DD",
+            "on-tertiary-fixed": "#191c21",
+            "surface-container": "#eeeeeb",
+            "surface-container-high": "#e8e8e5",
+            "info": "#2F6FDE",
+            "on-primary": "#ffffff",
+            "tertiary-fixed": "#e1e2e9",
+            "on-danger-soft": "#8E2626",
+            "outline": "#8e7069",
+            "tertiary-fixed-dim": "#c4c6cd",
+            "on-secondary-container": "#570c00",
+            "on-secondary-fixed": "#3d0600",
+            "secondary-fixed": "#ffdad2",
+            "secondary": "#b52603",
+            "warning-soft": "#FBF0D9",
+            "primary-fixed": "#ffdbd2",
+            "primary": "#a52803",
+            "on-secondary": "#ffffff",
+            "surface-dim": "#dadad7",
+            "on-tertiary-fixed-variant": "#44474d",
+            "on-tertiary": "#ffffff",
+            "danger": "#D23F3F",
+            "background": "#f9f9f6",
+            "on-primary-fixed-variant": "#891e00",
+            "on-surface-variant": "#5a413b",
+            "ink": "#14171C",
+            "surface-container-lowest": "#ffffff",
+            "dark-accent": "#FF7A5C",
+            "surface-tint": "#b02f0a",
+            "error": "#ba1a1a",
+            "on-accent-soft": "#8F2C11",
+            "dark-text": "#F2F2EE",
+            "dark-text-muted": "#A3A9B4",
+            "surface-container-highest": "#e2e3e0",
+            "primary-container": "#c8401c",
+            "on-secondary-fixed-variant": "#8c1900",
+            "on-ink": "#F2F2EE",
+            "danger-soft": "#FBE3E3",
+            "dark-background": "#0E1116",
+            "secondary-container": "#fd5835",
+            "demo-sand": "#F3E9DC",
+            "inverse-on-surface": "#f1f1ee",
+            "text-muted": "#5F6672",
+            "on-info-soft": "#1F4FA8",
+            "border-strong": "#D6D3CA",
+            "accent-soft": "#FFE8E1",
+            "surface-bright": "#f9f9f6",
+            "tertiary-container": "#6d6f75",
+            "surface": "#FFFFFF",
+            "inverse-surface": "#2f312f",
+            "on-error-container": "#93000a",
+            "on-success-soft": "#145C40",
+            "surface-variant": "#e2e3e0",
+            "success": "#1F9D6B",
+            "success-soft": "#E3F4EC",
+            "demo-teal": "#12545A",
+            "on-primary-fixed": "#3c0800",
+            "surface-container-low": "#f4f4f1",
+            "warning": "#C98A12",
+            "on-background": "#1a1c1b",
+            "secondary-fixed-dim": "#ffb4a3",
+            "on-primary-container": "#fff1ee",
+            "on-surface": "#1a1c1b",
+            "tertiary": "#54575d",
+            "error-container": "#ffdad6",
+            "on-error": "#ffffff",
+            "inverse-primary": "#ffb4a2",
+            "on-tertiary-container": "#f2f3fb",
+            "neutral-soft": "#EFEDE7",
+            "on-neutral-soft": "#3E444D",
+            "dark-border": "#2A2F38",
+            "on-warning-soft": "#6E4A07"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "margin": "1.125rem",
+            "space-sm": "0.5rem",
+            "margin-desktop": "2.25rem",
+            "space-lg": "1.375rem",
+            "space-xs": "0.25rem",
+            "gutter-desktop": "1.5rem",
+            "space-md": "1rem",
+            "space-xl": "2rem",
+            "gutter": "1.25rem"
+          },
+          "fontFamily": {
+            "headline-lg-mobile": ["Inter"],
+            "body-medium": ["Inter"],
+            "title-sm": ["Inter"],
+            "caption": ["Inter"],
+            "headline-lg": ["Inter"],
+            "label-md": ["Inter"],
+            "headline-md": ["Inter"],
+            "meta": ["Inter"],
+            "overlay-caption": ["Inter"],
+            "body-regular": ["Inter"],
+            "eyebrow": ["Inter"],
+            "title-md": ["Inter"],
+            "metric-display": ["Inter"],
+            "display": ["Inter"]
+          },
+          "fontSize": {
+            "headline-lg-mobile": ["26px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+            "body-medium": ["15px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "title-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "caption": ["12px", { "lineHeight": "16px", "fontWeight": "600" }],
+            "headline-lg": ["32px", { "lineHeight": "38px", "letterSpacing": "-0.015em", "fontWeight": "700" }],
+            "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "headline-md": ["24px", { "lineHeight": "30px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "meta": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "overlay-caption": ["17px", { "lineHeight": "22px", "fontWeight": "700" }],
+            "body-regular": ["15px", { "lineHeight": "24px", "fontWeight": "400" }],
+            "eyebrow": ["12px", { "lineHeight": "16px", "letterSpacing": "0.06em", "fontWeight": "600" }],
+            "title-md": ["20px", { "lineHeight": "26px", "fontWeight": "600" }],
+            "metric-display": ["30px", { "lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "display": ["44px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-background text-ink font-body-regular text-body-regular min-h-screen flex flex-col justify-between antialiased selection:bg-accent-soft selection:text-primary">
+<!-- TOP HEADER / MINIMAL ACCESS BAR -->
+<header class="w-full bg-surface border-b border-border sticky top-0 z-50">
+<div class="w-full max-w-7xl mx-auto px-gutter-desktop h-18 flex items-center justify-between">
+<!-- Left: Logo & Back link -->
+<div class="flex items-center gap-6">
+<a class="flex items-center gap-2 group text-title-md font-title-md font-bold text-ink tracking-tight" href="#">
+<span class="w-7 h-7 rounded-lg bg-ink text-surface flex items-center justify-center font-bold text-sm tracking-tighter shadow-none">
+            M
+          </span>
+<span>Mirrorline</span>
+</a>
+<div class="h-4 w-px bg-border hidden sm:block"></div>
+<a class="hidden sm:inline-flex items-center gap-1.5 text-meta font-meta text-text-muted hover:text-ink transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[16px]">arrow_back</span>
+<span>Back to studio overview</span>
+</a>
+</div>
+<!-- Right: Direct Sign Up prompt -->
+<div class="flex items-center gap-2 text-label-md font-label-md">
+<span class="text-text-muted hidden md:inline">Don't have an account?</span>
+<a class="text-primary hover:text-secondary inline-flex items-center gap-1 transition-colors duration-150" href="#">
+<span>Start trial / Sign up</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</a>
+</div>
+</div>
+</header>
+<!-- MAIN AUTH WORKSPACE CANVAS -->
+<main class="w-full max-w-7xl mx-auto px-gutter-desktop py- space-xl my-auto">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- LEFT COLUMN: MAIN AUTHENTICATION CARD -->
+<section class="lg:col-span-7 bg-surface border border-border rounded-2xl p-8 md:p-10">
+<!-- Eyebrow Chip & Security Indicator -->
+<div class="flex items-center justify-between mb-4">
+<div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-neutral-soft border border-border text-on-neutral-soft text-caption font-caption">
+<span class="material-symbols-outlined text-[14px] text-text-muted" data-weight="fill">lock</span>
+<span class="tracking-wide">STUDIO ACCESS · SECURE VAULT</span>
+</div>
+<span class="text-meta font-meta text-text-muted flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-success"></span>
+<span>Auth Node 04 Online</span>
+</span>
+</div>
+<!-- Headline & Subtitle -->
+<h1 class="text-headline-lg font-headline-lg text-ink mb-2 tracking-tight">
+          Welcome back to your studio
+        </h1>
+<p class="text-body-regular font-body-regular text-text-muted mb-8 leading-relaxed">
+          Sign in to review today's pending cuts, monitor your 7 agents, and check weekly conversion metrics.
+        </p>
+<!-- SSO Action Cluster -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+<button class="h-11 px-4 border border-border-strong rounded-xl bg-surface hover:bg-surface-container-low text-ink font-label-md text-label-md flex items-center justify-center gap-3 transition-colors duration-150" type="button">
+<svg class="w-4 h-4" viewbox="0 0 24 24">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"></path>
+</svg>
+<span>Continue with Google</span>
+</button>
+<button class="h-11 px-4 border border-border-strong rounded-xl bg-surface hover:bg-surface-container-low text-ink font-label-md text-label-md flex items-center justify-center gap-3 transition-colors duration-150" type="button">
+<svg class="w-4 h-4 fill-current text-ink" viewbox="0 0 24 24">
+<path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.61-.75 1.04-1.8 1.01-2.87-.96.04-2.1.65-2.77 1.44-.59.68-1.11 1.76-.97 2.8.07.01 2.12-.62 2.73-1.37z"></path>
+</svg>
+<span>Continue with Apple</span>
+</button>
+</div>
+<!-- Divider with restrained typography -->
+<div class="relative flex items-center justify-center my-6">
+<div class="w-full border-t border-border"></div>
+<span class="absolute bg-surface px-3 text-caption font-caption text-text-muted uppercase tracking-wider">
+            or sign in with work email
+          </span>
+</div>
+<!-- Main Input Form -->
+<form class="space-y-4" onsubmit="event.preventDefault();">
+<!-- Email Input -->
+<div>
+<label class="block text-meta font-meta text-ink font-medium mb-1.5" for="work-email">
+              Work email address
+            </label>
+<div class="relative">
+<input class="w-full h-11 px-3.5 rounded-xl border border-border-strong bg-surface text-ink text-body-regular font-body-regular focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition-colors" id="work-email" name="email" placeholder="name@firm.com" type="email" value="maya@torresadvisory.com"/>
+<span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-success material-symbols-outlined text-[18px]">
+                check_circle
+              </span>
+</div>
+</div>
+<!-- Password Input -->
+<div>
+<div class="flex items-center justify-between mb-1.5">
+<label class="block text-meta font-meta text-ink font-medium" for="studio-password">
+                Studio master password
+              </label>
+<a class="text-caption font-caption text-primary hover:text-secondary transition-colors" href="#">
+                Forgot password?
+              </a>
+</div>
+<div class="relative">
+<input class="w-full h-11 px-3.5 pr-11 rounded-xl border border-border-strong bg-surface text-ink text-body-regular font-body-regular focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition-colors" id="studio-password" name="password" type="password" value="••••••••••••••••"/>
+<button aria-label="Toggle password visibility" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-ink transition-colors" id="toggle-password" type="button">
+<span class="material-symbols-outlined text-[18px]" id="password-icon">visibility</span>
+</button>
+</div>
+</div>
+<!-- Options Row (Remember device + Passkey) -->
+<div class="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+<label class="flex items-center gap-2 cursor-pointer select-none">
+<input checked="" class="w-4 h-4 rounded border-border-strong text-primary focus:ring-primary focus:ring-offset-0 focus:ring-1 cursor-pointer" type="checkbox"/>
+<span class="text-meta font-meta text-text-muted">Remember this device for 30 days</span>
+</label>
+<a class="inline-flex items-center gap-1.5 text-meta font-meta text-ink hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-[16px] text-text-muted">fingerprint</span>
+<span>Use passkey / biometric login</span>
+</a>
+</div>
+<!-- Primary CTA Button (height 48px, bg #C8401C, text white, rounded-10px) -->
+<div class="pt-2">
+<button class="w-full h-12 px-5 bg-primary-container hover:bg-primary text-on-primary rounded-[10px] text-label-md font-label-md font-semibold tracking-wide flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-ink focus:ring-offset-2" type="submit">
+<span>Sign In to Studio</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+<!-- Alternative Magic Link Action -->
+<div class="pt-1">
+<button class="w-full h-11 px-4 border border-border-strong rounded-xl bg-surface hover:bg-surface-container-low text-ink text-label-md font-label-md flex items-center justify-center gap-2 transition-colors duration-150" type="button">
+<span class="material-symbols-outlined text-[18px] text-text-muted">mail</span>
+<span>Send passwordless Magic Link</span>
+</button>
+</div>
+</form>
+<!-- Trust Badges Footer -->
+<div class="mt-8 pt-6 border-t border-border flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-caption font-caption text-text-muted">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-success">verified_user</span>
+<span>SOC-2 Type II Certified</span>
+</div>
+<span class="hidden sm:inline text-border-strong">•</span>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-ink">key</span>
+<span>End-to-end token encryption</span>
+</div>
+<span class="hidden sm:inline text-border-strong">•</span>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-info">api</span>
+<span>Official Graph APIs</span>
+</div>
+</div>
+</section>
+<!-- RIGHT COLUMN: STUDIO SNAPSHOT & CRYPTOGRAPHIC VAULT REASSURANCE -->
+<aside class="lg:col-span-5 space-y-6">
+<!-- CARD 1: TODAY'S STUDIO SNAPSHOT CARD -->
+<div class="bg-surface border border-border rounded-2xl p-6 relative">
+<!-- Context Pill & Title -->
+<div class="flex items-center justify-between pb-4 border-b border-border mb-4">
+<div>
+<span class="text-eyebrow font-eyebrow text-text-muted uppercase tracking-wider block mb-0.5">Live Session Teaser</span>
+<h2 class="text-title-sm font-title-sm text-ink">Today's Studio Status</h2>
+</div>
+<div class="text-right">
+<span class="text-caption font-caption text-text-muted block">Maya Torres Coaching</span>
+<span class="text-caption font-caption text-success font-semibold">Workspace Sync: 100%</span>
+</div>
+</div>
+<!-- Urgent Alert Notice -->
+<div class="mb-4 p-3 bg-warning-soft border border-[#E9D8A6] rounded-xl flex items-start gap-2.5 text-on-warning-soft">
+<span class="material-symbols-outlined text-[18px] text-warning flex-shrink-0 mt-0.5" data-weight="fill">warning</span>
+<div class="text-caption font-caption">
+<span class="font-bold">1 urgent cut needs review</span> before 7:45pm to maintain scheduled dispatch on TikTok.
+            </div>
+</div>
+<!-- Scheduled Releases Matrix -->
+<div class="space-y-2.5 mb-5">
+<div class="text-meta font-meta text-text-muted font-medium">3 posts scheduled for today:</div>
+<!-- Item 1: Instagram -->
+<div class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low border border-border text-meta font-meta">
+<div class="flex items-center gap-2.5">
+<span class="w-6 h-6 rounded bg-neutral-soft flex items-center justify-center text-[12px] font-bold text-ink">IG</span>
+<span class="text-ink font-medium">Instagram Reels</span>
+<span class="text-text-muted text-caption">#04 Executive Burnout</span>
+</div>
+<span class="font-mono text-caption text-text-muted">2:15pm</span>
+</div>
+<!-- Item 2: YouTube Shorts -->
+<div class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-low border border-border text-meta font-meta">
+<div class="flex items-center gap-2.5">
+<span class="w-6 h-6 rounded bg-neutral-soft flex items-center justify-center text-[12px] font-bold text-ink">YT</span>
+<span class="text-ink font-medium">YouTube Shorts</span>
+<span class="text-text-muted text-caption">#05 Delegating Rule</span>
+</div>
+<span class="font-mono text-caption text-text-muted">5:00pm</span>
+</div>
+<!-- Item 3: TikTok (Pending Approval) -->
+<div class="flex items-center justify-between p-2.5 rounded-lg bg-warning-soft/40 border border-[#f3e3be] text-meta font-meta">
+<div class="flex items-center gap-2.5">
+<span class="w-6 h-6 rounded bg-neutral-soft flex items-center justify-center text-[12px] font-bold text-ink">TT</span>
+<span class="text-ink font-medium">TikTok Vertical</span>
+<span class="text-warning text-caption font-semibold">Needs Approval</span>
+</div>
+<span class="font-mono text-caption text-text-muted">7:45pm</span>
+</div>
+</div>
+<!-- 3 Agent Status Mini Pills -->
+<div class="pt-4 border-t border-border">
+<div class="text-caption font-caption text-text-muted mb-2">Autonomous Agent Fleet (7 Total):</div>
+<div class="flex flex-wrap items-center gap-2">
+<!-- Multiplier Pill -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-soft text-meta font-meta text-on-neutral-soft">
+<span class="w-2 h-2 rounded-full bg-[#A3A9B4]"></span>
+<span class="text-caption font-caption">Multiplier: <strong class="font-semibold">Idle</strong></span>
+</div>
+<!-- Compliance Pill -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success-soft text-meta font-meta text-on-success-soft">
+<span class="w-2 h-2 rounded-full bg-success"></span>
+<span class="text-caption font-caption">Compliance: <strong class="font-semibold">Passed</strong></span>
+</div>
+<!-- Publisher Pill -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-soft text-meta font-meta text-on-accent-soft">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></span>
+<span class="text-caption font-caption">Publisher: <strong class="font-semibold">Active</strong></span>
+</div>
+</div>
+</div>
+</div>
+<!-- CARD 2: SECURITY & SOVEREIGNTY NOTE (INK PANEL) -->
+<div class="bg-ink text-on-ink rounded-xl p-6 border border-dark-border">
+<div class="flex items-center gap-2.5 mb-3">
+<span class="material-symbols-outlined text-[20px] text-dark-accent" data-weight="fill">shield_locked</span>
+<h3 class="text-title-sm font-title-sm text-dark-text tracking-tight">Cryptographic Client Vault</h3>
+</div>
+<p class="text-meta font-meta text-dark-text-muted leading-relaxed mb-4">
+            Mirrorline credentials physically isolate your raw client training vector database. Your master videos, raw consulting sessions, and proprietary frameworks are never sent to third-party public LLMs or web scrapers.
+          </p>
+<div class="flex items-center justify-between pt-2">
+<a class="inline-flex items-center gap-1 text-caption font-caption text-dark-accent hover:underline" href="#">
+<span>View AI Security Whitepaper</span>
+<span class="material-symbols-outlined text-[14px]">open_in_new</span>
+</a>
+<span class="text-[11px] font-mono text-dark-text-muted">Protocol v3.8</span>
+</div>
+</div>
+</aside>
+</div>
+</main>
+<!-- EDITORIAL FOOTER (from Shared Components JSON) -->
+<footer class="w-full bg-background border-t border-border mt-auto">
+<div class="w-full max-w-7xl mx-auto px-gutter-desktop py-space-xl flex flex-col md:flex-row items-center justify-between gap-4">
+<!-- Brand & Copyright -->
+<div class="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left">
+<span class="text-title-sm font-title-sm font-bold text-ink">Mirrorline</span>
+<span class="hidden sm:inline text-border-strong">|</span>
+<p class="text-meta font-meta text-text-muted">
+          © 2025 Mirrorline AI Studio Inc. Calm, transparent content operations. All rights reserved.
+        </p>
+</div>
+<!-- Footer Policy Links -->
+<nav class="flex flex-wrap items-center justify-center gap-5">
+<a class="text-meta font-meta text-text-muted hover:text-ink transition-colors duration-150" href="#">Architecture</a>
+<a class="text-meta font-meta text-text-muted hover:text-ink transition-colors duration-150" href="#">Privacy &amp; AI Ethics</a>
+<a class="text-meta font-meta text-text-muted hover:text-ink transition-colors duration-150" href="#">Commercial Audio Policy</a>
+<a class="text-meta font-meta text-text-muted hover:text-ink transition-colors duration-150" href="#">Status</a>
+<a class="text-meta font-meta text-text-muted hover:text-ink transition-colors duration-150" href="#">Contact</a>
+</nav>
+</div>
+</footer>
+<!-- Vanilla JS for Micro-Interactions (Eye password toggle) -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const toggleBtn = document.getElementById('toggle-password');
+      const passwordInput = document.getElementById('studio-password');
+      const passwordIcon = document.getElementById('password-icon');
+
+      if (toggleBtn && passwordInput && passwordIcon) {
+        toggleBtn.addEventListener('click', () => {
+          const isPassword = passwordInput.type === 'password';
+          passwordInput.type = isPassword ? 'text' : 'password';
+          passwordIcon.textContent = isPassword ? 'visibility_off' : 'visibility';
+        });
+      }
+    });
+  </script>
+</body></html>

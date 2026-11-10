@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Agents</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Inter+Tight:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#FAFAF7}
+a{color:#B83A18}a:hover{color:#8F2C11}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1150px; font-family: Inter, system-ui, sans-serif; color: #14171C; background: #FAFAF7;">
+<div style="flex: 1 1 240px; max-width: 100%; display: flex;"><dc-import name="Sidebar" active="Agents" hint-size="100%,1150px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 22px;">
+
+<header style="display: flex; flex-direction: column; gap: 6px;">
+<span style="font-size: 13px; color: #5F6672;">Your AI team · spend this month $43 of $180 in caps</span>
+<h1 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 32px; font-weight: 700;">Seven agents, one loop</h1>
+</header>
+
+<section aria-label="How the agents hand work on" style="display: flex; flex-direction: column; gap: 14px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+<sc-for list="{{loop}}" as="l" hint-placeholder-count="7">
+<span style="display: inline-flex; align-items: center; gap: 8px;">
+<span style="{{l.pill}}">{{l.name}}</span>
+<sc-if value="{{l.arrow}}" hint-placeholder-val="{{true}}"><svg width="22" height="12" viewBox="0 0 22 12" aria-hidden="true"><path d="M1 6h18M14 1l5 5-5 5" fill="none" stroke="#8A909A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+</span>
+</sc-for>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #3E444D;">
+<svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M26 16a10 10 0 1 1-4.2-8.1" fill="none" stroke="#FF5A36" stroke-width="3" stroke-linecap="round"></path><path d="M22.5 3.5l-0.6 4.6 4.6 0.4" fill="none" stroke="#FF5A36" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span>The Performance Analyst feeds results back to the Trend Scout and the Remake Producer. Nothing posts without passing Compliance.</span>
+</div>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+<section aria-label="Agents" style="flex: 999 1 560px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px;">
+<sc-for list="{{agents}}" as="a" hint-placeholder-count="7">
+<article style="{{a.card}}">
+<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 17px; font-weight: 600;">{{a.name}}</h2>
+<span style="{{a.pill}}"><span style="{{a.dot}}"></span>{{a.statusText}}</span>
+</div>
+<p style="margin: 0; font-size: 13px; line-height: 1.45; color: #3E444D;">{{a.last}}</p>
+<div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: #5F6672;">This week</span><span style="font-weight: 600;">{{a.done}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="color: #5F6672;">Spend / cap</span><span style="font-weight: 600; font-variant-numeric: tabular-nums;">${{a.spend}} / ${{a.cap}}</span></div>
+<span style="height: 6px; border-radius: 999px; background: #EFEDE7;"><span style="{{a.bar}}"></span></span>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+<button type="button" onClick="{{a.open}}" style="min-height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid #D6D3CA; background: #FFFFFF; font: 600 13px Inter, sans-serif; color: #14171C;">View log</button>
+<label style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #3E444D;"><input type="checkbox" checked="{{a.enabled}}" onChange="{{a.toggle}}" style="width: 20px; height: 20px; accent-color: #C8401C;">On</label>
+</div>
+</article>
+</sc-for>
+</section>
+
+<aside aria-label="Agent log" style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 18px; font-weight: 600;">{{logTitle}}</h2>
+<span style="font-size: 13px; color: #5F6672;">Every action is logged with its reason and cost.</span>
+<sc-for list="{{log}}" as="e" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 3px; padding: 10px 0; border-top: 1px solid #F0EEE8;">
+<span style="font-size: 12px; color: #5F6672;">{{e.time}} · {{e.cost}}</span>
+<span style="font-size: 14px; font-weight: 600;">{{e.what}}</span>
+<span style="font-size: 13px; color: #3E444D; line-height: 1.4;">Why: {{e.why}}</span>
+</div>
+</sc-for>
+</aside>
+</div>
+<a href="Main.dc.html" style="align-self: flex-start; font-size: 14px; font-weight: 600;">Back to the start of the demo</a>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1150}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { open: 'Remake Producer', off: [] }; }
+  renderVals() {
+    const st = this.state;
+    const meta = {
+      Working: ['#FFE8E1', '#8F2C11', '#FF5A36'], Idle: ['#EFEDE7', '#3E444D', '#8A909A'],
+      Waiting: ['#FBF0D9', '#6E4A07', '#C98A12'], Off: ['#EFEDE7', '#5F6672', '#B8B4AA']
+    };
+    const raw = [
+      ['Trend Scout', 'Working', 'Scoring 3 new formats in Productivity.', '14 trends scored', 6, 25],
+      ['Remake Producer', 'Waiting', 'Waiting for your approval on “The 3-word reframe”.', '3 remakes', 18, 60],
+      ['Multiplier', 'Idle', 'Cut 12 clips from Episode 47.', '36 cuts', 9, 40],
+      ['Compliance', 'Working', 'Checking 5 variants of the reframe remake.', '41 checks, 2 blocked', 3, 15],
+      ['Client Concierge', 'Idle', 'Sent Friday’s report; 5 approvals collected.', '1 report, 5 approvals', 2, 10],
+      ['Publisher', 'Working', 'Next post: Instagram at 2:15 pm.', '21 posts', 1, 10],
+      ['Performance Analyst', 'Working', 'Question hooks beat the average by 2.1×.', '21 posts analysed', 4, 20]
+    ];
+    const agents = raw.map(([name, status, last, done, spend, cap]) => {
+      const off = st.off.includes(name);
+      const s = off ? 'Off' : status;
+      const m = meta[s];
+      return {
+        name, last, done, spend, cap, enabled: !off, statusText: s === 'Waiting' ? 'Waiting for you' : s,
+        pill: 'display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: ' + m[0] + '; color: ' + m[1] + ';',
+        dot: 'width: 8px; height: 8px; border-radius: 50%; background: ' + m[2] + ';',
+        bar: 'display: block; height: 6px; border-radius: 999px; width: ' + Math.round(spend / cap * 100) + '%; background: ' + (spend / cap > 0.8 ? '#D23F3F' : '#FF5A36') + ';',
+        card: 'display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border-radius: 12px; padding: 18px; border: ' + (st.open === name ? '2px solid #14171C' : '1px solid #E6E4DD') + '; opacity: ' + (off ? 0.6 : 1) + ';',
+        open: () => this.setState({ open: name }),
+        toggle: () => this.setState({ off: off ? st.off.filter((x) => x !== name) : st.off.concat([name]) })
+      };
+    });
+    const order = ['Trend Scout', 'Remake Producer', 'Multiplier', 'Compliance', 'Client Concierge', 'Publisher', 'Performance Analyst'];
+    const loop = order.map((name, i) => ({
+      name, arrow: i < order.length - 1,
+      pill: 'display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 600; ' + (name === 'Compliance' ? 'background: #E3F4EC; color: #145C40;' : name === 'Performance Analyst' ? 'background: #FFE8E1; color: #8F2C11;' : 'background: #F4F2EC; color: #14171C;')
+    }));
+    const logs = {
+      'Remake Producer': [
+        { time: '10:20 am', cost: '$2.10', what: 'Draft “The 3-word reframe” for Maya', why: 'Fit 94 for her niche; question hooks are her best type.' },
+        { time: '10:18 am', cost: '$0.40', what: 'Wrote 3 alternative hooks', why: 'A/B test planned on Instagram and TikTok.' },
+        { time: '10:12 am', cost: '$1.30', what: 'Generated 1 AI scene (desk notifications)', why: 'No matching client footage; labelled as AI.' },
+        { time: '10:06 am', cost: '$0.10', what: 'Picked 2 clips from Episodes 39 and 44', why: 'Maya on camera, matching the reframe beat.' }
+      ]
+    };
+    const generic = [
+      { time: 'Today', cost: '—', what: 'Recent actions appear here', why: 'Each entry records input, output, cost and reason.' }
+    ];
+    return { agents, loop, log: logs[st.open] || generic, logTitle: st.open + ' log' };
+  }
+}
+</script>
+</body>
+</html>

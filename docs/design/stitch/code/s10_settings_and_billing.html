@@ -1,0 +1,287 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Settings and billing - Mirrorline</title>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              coral: '#E1523D',
+              'coral-hover': '#cf4531',
+              'coral-soft': '#FFEAE3',
+              'coral-dark': '#9A3423',
+              dark: '#1C1917',
+              gray: '#666663',
+              'light-gray': '#F9F9F8',
+              border: '#E8E6E1',
+              maroon: '#892323',
+              'maroon-hover': '#741d1d',
+              'alert-bg': '#FCE9E9',
+              'success-bg': '#E6F4EA',
+              'success-text': '#137333',
+              'warning-bg': '#FCE8E6',
+              'warning-text': '#C5221F',
+            }
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="base-typography">
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background-color: #FAFAF9;
+      color: #1A1A1A;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex text-[#1A1A1A]">
+<!-- BEGIN: Sidebar -->
+<aside class="w-64 border-r border-[#E8E6E1] bg-[#FAFAF9] flex flex-col justify-between shrink-0 h-screen sticky top-0 px-4 py-6" data-purpose="sidebar">
+<div class="flex flex-col gap-6">
+<!-- App Brand Logo -->
+<div class="flex items-center gap-2.5 px-3">
+<svg class="w-6 h-6 text-[#E1523D]" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-dasharray="45 15" stroke-width="2.5"></circle>
+<path d="M12 3v3" stroke-width="2.5"></path>
+</svg>
+<span class="font-bold text-lg tracking-tight text-[#111]">Mirrorline</span>
+</div>
+<!-- Workspace Switcher Pill -->
+<div class="bg-[#F0EEEB] rounded-xl p-2.5 flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-[#27443E] text-white flex items-center justify-center font-medium text-xs tracking-wider">
+          MT
+        </div>
+<div class="flex flex-col min-w-0">
+<span class="text-xs font-semibold text-[#1A1A1A] truncate leading-tight">Maya Torres Coaching</span>
+<span class="text-[11px] text-[#737370] leading-tight">Growth plan</span>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="flex flex-col space-y-1">
+<a class="px-3 py-2 text-sm text-[#4A4A48] hover:text-[#1A1A1A] hover:bg-[#F2F0EC] rounded-lg transition-colors font-medium" href="#">Home</a>
+<a class="px-3 py-2 text-sm text-[#4A4A48] hover:text-[#1A1A1A] hover:bg-[#F2F0EC] rounded-lg transition-colors font-medium" href="#">Upload</a>
+<a class="px-3 py-2 text-sm text-[#4A4A48] hover:text-[#1A1A1A] hover:bg-[#F2F0EC] rounded-lg transition-colors font-medium" href="#">Trends</a>
+<a class="px-3 py-2 text-sm text-[#4A4A48] hover:text-[#1A1A1A] hover:bg-[#F2F0EC] rounded-lg transition-colors font-medium" href="#">Calendar</a>
+<a class="px-3 py-2 text-sm text-[#4A4A48] hover:text-[#1A1A1A] hover:bg-[#F2F0EC] rounded-lg transition-colors font-medium" href="#">Results</a>
+<a class="px-3 py-2 text-sm text-[#4A4A48] hover:text-[#1A1A1A] hover:bg-[#F2F0EC] rounded-lg transition-colors font-medium" href="#">Agents</a>
+<a class="px-3 py-2 text-sm text-[#4A4A48] hover:text-[#1A1A1A] hover:bg-[#F2F0EC] rounded-lg transition-colors font-medium" href="#">Brand kit</a>
+<!-- Active Nav Item -->
+<a class="px-3 py-2 text-sm font-medium rounded-lg bg-[#FFEAE3] text-[#B83824] transition-colors" href="#">Settings</a>
+</nav>
+</div>
+<!-- Bottom Usage Tracker -->
+<div class="border border-[#E8E6E1] bg-white rounded-xl p-3.5 shadow-sm">
+<div class="flex justify-between items-center text-xs mb-2">
+<span class="text-[#737370]">Posts this month</span>
+<span class="font-semibold text-[#1A1A1A]">63 of 90</span>
+</div>
+<div class="w-full bg-[#EAE8E3] h-1.5 rounded-full overflow-hidden">
+<div class="bg-[#E1523D] h-full rounded-full" style="width: 70%"></div>
+</div>
+</div>
+</aside>
+<!-- END: Sidebar -->
+<!-- BEGIN: MainContent -->
+<main class="flex-1 overflow-y-auto px-10 py-9" data-purpose="main-layout">
+<!-- Main Title -->
+<h1 class="text-3xl font-bold tracking-tight text-[#111] mb-6">Settings and billing</h1>
+<!-- Top Alert Notification Banner -->
+<section class="mb-8 rounded-xl bg-[#FCE9E9] px-5 py-3.5 flex items-center justify-between" data-purpose="status-alert">
+<p class="text-sm text-[#892323]">
+<span class="font-semibold">Instagram needs to reconnect.</span> Instagram asked you to sign in again. Instagram posts are paused until then.
+      </p>
+<button class="ml-4 shrink-0 rounded-lg bg-[#892323] hover:bg-[#741d1d] text-white px-4 py-2 text-xs font-semibold transition-colors" type="button">
+        Reconnect Instagram
+      </button>
+</section>
+<!-- Content Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+<!-- BEGIN: Column 1 - Connected Accounts & Data Rights -->
+<div class="flex flex-col gap-6">
+<!-- Connected Accounts Card -->
+<section class="bg-white border border-[#E8E6E1] rounded-2xl p-6 shadow-sm" data-purpose="connected-accounts">
+<h2 class="text-base font-bold text-[#1A1A1A] mb-5 tracking-tight">Connected accounts</h2>
+<div class="flex flex-col divide-y divide-[#F0EEEB]">
+<!-- Instagram -->
+<div class="pb-4">
+<div class="flex items-center justify-between mb-0.5">
+<span class="text-sm font-semibold text-[#1A1A1A]">Instagram</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#FCE8E6] text-[#C5221F]">
+                  Reconnect needed
+                </span>
+</div>
+<p class="text-xs text-[#737370] mb-3">@mayatorres.coach</p>
+<button class="rounded-lg border border-[#D5D3CD] px-3.5 py-1.5 text-xs font-medium text-[#1A1A1A] hover:bg-[#F9F9F8] transition-colors" type="button">
+                Reconnect
+              </button>
+</div>
+<!-- TikTok -->
+<div class="py-4">
+<div class="flex items-center justify-between mb-0.5">
+<span class="text-sm font-semibold text-[#1A1A1A]">TikTok</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#E6F4EA] text-[#137333]">
+                  Connected
+                </span>
+</div>
+<p class="text-xs text-[#737370] mb-3 leading-relaxed">@mayaleads · private posting until app approval</p>
+<button class="rounded-lg border border-[#D5D3CD] px-3.5 py-1.5 text-xs font-medium text-[#1A1A1A] hover:bg-[#F9F9F8] transition-colors" type="button">
+                Disconnect
+              </button>
+</div>
+<!-- YouTube -->
+<div class="py-4">
+<div class="flex items-center justify-between mb-0.5">
+<span class="text-sm font-semibold text-[#1A1A1A]">YouTube</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#E6F4EA] text-[#137333]">
+                  Connected
+                </span>
+</div>
+<p class="text-xs text-[#737370] mb-3">Maya Torres</p>
+<button class="rounded-lg border border-[#D5D3CD] px-3.5 py-1.5 text-xs font-medium text-[#1A1A1A] hover:bg-[#F9F9F8] transition-colors" type="button">
+                Disconnect
+              </button>
+</div>
+<!-- LinkedIn -->
+<div class="pt-4">
+<div class="flex items-center justify-between">
+<div>
+<div class="flex items-center gap-2 mb-0.5">
+<span class="text-sm font-semibold text-[#1A1A1A]">LinkedIn</span>
+</div>
+<p class="text-xs text-[#737370]">Not connected</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#F0EEEB] text-[#737370]">
+                    Off
+                  </span>
+<button class="rounded-lg border border-[#D5D3CD] px-3.5 py-1.5 text-xs font-medium text-[#1A1A1A] hover:bg-[#F9F9F8] transition-colors" type="button">
+                    Connect
+                  </button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Data and Rights Card -->
+<section class="bg-white border border-[#E8E6E1] rounded-2xl p-6 shadow-sm" data-purpose="data-and-rights">
+<h2 class="text-base font-bold text-[#1A1A1A] mb-5 tracking-tight">Data and rights</h2>
+<div class="space-y-4 text-xs">
+<div class="flex justify-between items-start gap-4">
+<span class="font-medium text-[#1A1A1A]">Rights confirmations</span>
+<span class="text-[#737370] text-right">4 uploads, all confirmed</span>
+</div>
+<div>
+<div class="font-medium text-[#1A1A1A] mb-1">Consent releases</div>
+<div class="text-[#737370]">Maya Torres, voice and likeness, 9 Nov 2026</div>
+</div>
+<div class="flex justify-between items-start gap-4">
+<span class="font-medium text-[#1A1A1A]">AI labelling</span>
+<span class="text-[#737370] text-right">Always on for AI scenes</span>
+</div>
+<div class="flex justify-between items-start gap-4">
+<span class="font-medium text-[#1A1A1A]">Data location</span>
+<span class="text-[#737370] text-right">United States</span>
+</div>
+</div>
+<div class="mt-6 flex flex-col gap-2.5">
+<button class="w-fit rounded-lg border border-[#D5D3CD] px-3.5 py-1.5 text-xs font-medium text-[#1A1A1A] hover:bg-[#F9F9F8] transition-colors" type="button">
+              Export my data
+            </button>
+<button class="w-fit rounded-lg border border-[#E5B5B5] px-3.5 py-1.5 text-xs font-medium text-[#A92A2A] hover:bg-[#FDF2F2] transition-colors" type="button">
+              Withdraw voice consent
+            </button>
+</div>
+</section>
+</div>
+<!-- END: Column 1 -->
+<!-- BEGIN: Column 2 - Growth Plan & Invoices -->
+<div class="flex flex-col gap-6">
+<section class="bg-white border border-[#E8E6E1] rounded-2xl p-6 shadow-sm" data-purpose="subscription-plan">
+<!-- Card Header -->
+<div class="flex items-start justify-between mb-4">
+<div>
+<h2 class="text-base font-bold text-[#1A1A1A] tracking-tight">Growth plan</h2>
+<p class="text-xs text-[#737370] mt-0.5 leading-relaxed">$1,500 a month · 90 posts · 3 platforms</p>
+</div>
+<button class="rounded-lg bg-[#C83F29] hover:bg-[#B33520] text-white px-3.5 py-1.5 text-xs font-medium shadow-sm transition-colors shrink-0" type="button">
+              Upgrade to Scale
+            </button>
+</div>
+<!-- Usage Bar -->
+<div class="mb-7">
+<div class="flex justify-between items-center text-xs mb-2">
+<span class="text-[#737370]">Posts used this month</span>
+<span class="font-semibold text-[#1A1A1A]">63 of 90</span>
+</div>
+<div class="w-full bg-[#EAE8E3] h-1.5 rounded-full overflow-hidden">
+<div class="bg-[#E1523D] h-full rounded-full" style="width: 70%"></div>
+</div>
+</div>
+<!-- Invoices Subsection -->
+<div>
+<h3 class="text-xs font-bold text-[#1A1A1A] mb-3">Invoices</h3>
+<div class="flex flex-col space-y-3 text-xs">
+<div class="flex items-center justify-between text-[#1A1A1A]">
+<div class="flex items-center gap-3">
+<span class="text-[#737370]">1 Nov 2026</span>
+<span class="text-[#737370]">Growth, November</span>
+</div>
+<span class="font-semibold text-right">$1,500.00</span>
+</div>
+<div class="flex items-center justify-between text-[#1A1A1A]">
+<div class="flex items-center gap-3">
+<span class="text-[#737370]">15 Oct 2026</span>
+<span class="text-[#737370]">Pilot, 2 weeks</span>
+</div>
+<span class="font-semibold text-right">$750.00</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- END: Column 2 -->
+<!-- BEGIN: Column 3 - Team -->
+<div class="flex flex-col gap-6">
+<section class="bg-white border border-[#E8E6E1] rounded-2xl p-6 shadow-sm theme-card" data-purpose="theme-appearance"><div class="mb-4"><h2 class="text-base font-bold text-[#1A1A1A] tracking-tight">Theme &amp; appearance</h2><p class="text-xs text-[#737370] mt-0.5 leading-relaxed">Choose your interface theme or sync with system preferences.</p></div><div class="grid grid-cols-1 gap-2.5"><button type="button" id="theme-btn-light" onclick="setAppTheme('light')" class="theme-option-btn w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all border-[#C83F29] bg-[#FFEAE3]/30 ring-1 ring-[#C83F29]"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-lg bg-[#F0EEEB] text-[#1A1A1A] flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg></div><div><div class="text-xs font-semibold text-[#1A1A1A]">Light</div><div class="text-[11px] text-[#737370]">Calm editorial warm surface</div></div></div><div class="radio-indicator w-4 h-4 rounded-full border-2 border-[#C83F29] flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-[#C83F29]"></div></div></button><button type="button" id="theme-btn-dark" onclick="setAppTheme('dark')" class="theme-option-btn w-full flex items-center justify-between p-3 rounded-xl border border-[#E8E6E1] text-left hover:bg-[#F9F9F8] transition-all"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-lg bg-[#F0EEEB] text-[#1A1A1A] flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></div><div><div class="text-xs font-semibold text-[#1A1A1A]">Dark</div><div class="text-[11px] text-[#737370]">Focused studio night mode (#0E1116)</div></div></div><div class="radio-indicator w-4 h-4 rounded-full border border-[#D5D3CD]"></div></button><button type="button" id="theme-btn-system" onclick="setAppTheme('system')" class="theme-option-btn w-full flex items-center justify-between p-3 rounded-xl border border-[#E8E6E1] text-left hover:bg-[#F9F9F8] transition-all"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-lg bg-[#F0EEEB] text-[#1A1A1A] flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line></svg></div><div><div class="text-xs font-semibold text-[#1A1A1A]">System</div><div class="text-[11px] text-[#737370]">Sync with OS theme</div></div></div><div class="radio-indicator w-4 h-4 rounded-full border border-[#D5D3CD]"></div></button></div></section><section class="bg-white border border-[#E8E6E1] rounded-2xl p-6 shadow-sm" data-purpose="team-management">
+<h2 class="text-base font-bold text-[#1A1A1A] mb-5 tracking-tight">Team</h2>
+<div class="flex flex-col divide-y divide-[#F0EEEB]">
+<!-- Member 1 -->
+<div class="pb-3.5 flex items-center justify-between text-xs">
+<span class="font-medium text-[#1A1A1A]">Maya Torres</span>
+<span class="text-[#737370]">Owner · approves posts</span>
+</div>
+<!-- Member 2 -->
+<div class="pt-3.5 pb-4 flex items-center justify-between text-xs">
+<span class="font-medium text-[#1A1A1A]">Sam Lee</span>
+<span class="text-[#737370]">Assistant · can edit captions</span>
+</div>
+</div>
+<!-- Invite Button -->
+<div class="mt-2">
+<button class="rounded-lg border border-[#D5D3CD] px-3.5 py-1.5 text-xs font-medium text-[#1A1A1A] hover:bg-[#F9F9F8] transition-colors" type="button">
+              Invite someone
+            </button>
+</div>
+</section>
+</div>
+<!-- END: Column 3 -->
+</div>
+</main>
+<!-- END: MainContent -->
+
+
+<style id="theme-controller-style">body.theme-dark { background-color: #0E1116 !important; color: #F2F2EE !important; } body.theme-dark aside { background-color: #0E1116 !important; border-color: #2A2F38 !important; } body.theme-dark aside .bg-\[\#F0EEEB\] { background-color: #161A21 !important; } body.theme-dark aside .text-\[\#111\], body.theme-dark aside .text-\[\#1A1A1A\] { color: #F2F2EE !important; } body.theme-dark aside .text-\[\#4A4A48\], body.theme-dark aside .text-\[\#737370\] { color: #A3A9B4 !important; } body.theme-dark aside a:hover { background-color: #1D232C !important; color: #F2F2EE !important; } body.theme-dark main { background-color: #0E1116 !important; } body.theme-dark main h1 { color: #F2F2EE !important; } body.theme-dark section.bg-white, body.theme-dark aside .bg-white { background-color: #161A21 !important; border-color: #2A2F38 !important; } body.theme-dark section h2, body.theme-dark section h3, body.theme-dark .text-\[\#1A1A1A\] { color: #F2F2EE !important; } body.theme-dark .text-\[\#737370\] { color: #A3A9B4 !important; } body.theme-dark .border-\[\#D5D3CD\], body.theme-dark .divide-\[\#F0EEEB\] > :not([hidden]) ~ :not([hidden]) { border-color: #2A2F38 !important; } body.theme-dark .bg-\[\#F0EEEB\] { background-color: #202631 !important; color: #A3A9B4 !important; } body.theme-dark .bg-\[\#EAE8E3\] { background-color: #2A2F38 !important; } body.theme-dark button.border-\[\#D5D3CD\]:hover { background-color: #202631 !important; } body.theme-dark .theme-option-btn:not(.active-theme) { border-color: #2A2F38 !important; } body.theme-dark .theme-option-btn:not(.active-theme):hover { background-color: #202631 !important; } body.theme-dark .theme-option-btn.active-theme { background-color: rgba(200, 63, 41, 0.15) !important; border-color: #E1523D !important; } body.theme-dark .theme-option-btn .bg-\[\#F0EEEB\] { background-color: #202631 !important; color: #F2F2EE !important; }</style><script>function updateActiveButtonUI(mode) { ['light', 'dark', 'system'].forEach(function(m) { var btn = document.getElementById('theme-btn-' + m); if (!btn) return; var ind = btn.querySelector('.radio-indicator'); if (m === mode) { btn.classList.add('border-[#C83F29]', 'bg-[#FFEAE3]/30', 'ring-1', 'ring-[#C83F29]', 'active-theme'); btn.classList.remove('border-[#E8E6E1]'); if (ind) ind.innerHTML = '<div class="w-2 h-2 rounded-full bg-[#C83F29]"></div>'; if (ind) ind.className = 'radio-indicator w-4 h-4 rounded-full border-2 border-[#C83F29] flex items-center justify-center'; } else { btn.classList.remove('border-[#C83F29]', 'bg-[#FFEAE3]/30', 'ring-1', 'ring-[#C83F29]', 'active-theme'); btn.classList.add('border-[#E8E6E1]'); if (ind) ind.innerHTML = ''; if (ind) ind.className = 'radio-indicator w-4 h-4 rounded-full border border-[#D5D3CD]'; } }); } var systemMediaListener = null; function setAppTheme(mode) { if (systemMediaListener) { window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', systemMediaListener); systemMediaListener = null; } updateActiveButtonUI(mode); if (mode === 'dark') { document.body.classList.add('theme-dark'); } else if (mode === 'light') { document.body.classList.remove('theme-dark'); } else if (mode === 'system') { var media = window.matchMedia('(prefers-color-scheme: dark)'); if (media.matches) { document.body.classList.add('theme-dark'); } else { document.body.classList.remove('theme-dark'); } systemMediaListener = function(e) { if (e.matches) { document.body.classList.add('theme-dark'); } else { document.body.classList.remove('theme-dark'); } }; media.addEventListener('change', systemMediaListener); } }</script></body></html>

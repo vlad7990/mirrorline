@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Upload and multiply</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Inter+Tight:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#FAFAF7}
+a{color:#B83A18}a:hover{color:#8F2C11}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1300px; font-family: Inter, system-ui, sans-serif; color: #14171C; background: #FAFAF7;">
+<div style="flex: 1 1 240px; max-width: 100%; display: flex;"><dc-import name="Sidebar" active="Upload" hint-size="100%,1300px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 24px;">
+
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px;">
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<span style="font-size: 13px; color: #5F6672;">Create · Multiplier agent</span>
+<h1 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 32px; font-weight: 700;">One video, 12 posts</h1>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+<span style="font-size: 14px; color: #5F6672;"><b style="color: #14171C;">12 cuts ready</b> · 9 passed · 2 need your eye · 1 blocked</span>
+<a href="S6-Calendar.dc.html" style="display: inline-flex; align-items: center; min-height: 48px; padding: 0 20px; border-radius: 10px; background: #C8401C; color: #FFFFFF; font-weight: 600; font-size: 15px; text-decoration: none;">Schedule 9 passed cuts</a>
+</div>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px;">
+<section aria-label="Source video" style="flex: 1 1 340px; display: flex; flex-direction: column; gap: 14px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 120px; border: 2px dashed #D6D3CA; border-radius: 12px; background: #FAFAF7; text-align: center; padding: 16px;">
+<span style="font-size: 15px; font-weight: 600;">Drop a long video</span>
+<span style="font-size: 13px; color: #5F6672;">or <a href="#import" style="font-weight: 600;">import from my YouTube channel</a></span>
+</div>
+<div style="display: flex; gap: 14px; align-items: center;">
+<span style="width: 96px; height: 54px; border-radius: 8px; background: #12545A; display: flex; align-items: center; justify-content: center; color: #F3E9DC; font-size: 12px; font-weight: 700;">52:14</span>
+<span style="display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 15px; font-weight: 600;">Episode 47: Why good managers burn out</span><span style="font-size: 13px; color: #5F6672;">Lead Without Burnout · uploaded today 9:12 am</span></span>
+</div>
+</section>
+<section aria-label="Progress" style="flex: 2 1 420px; display: flex; flex-direction: column; gap: 14px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 18px; font-weight: 600;">Done in 3 min 41 s</h2>
+<ol style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="5">
+<li style="display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 10px; background: #F4FAF7; border: 1px solid #CDEBDD;">
+<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #145C40;"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="#1F9D6B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>{{s.name}}</span>
+<span style="font-size: 12px; color: #3E444D;">{{s.detail}}</span>
+</li>
+</sc-for>
+</ol>
+</section>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; font-weight: 600;">
+<span style="padding: 8px 14px; border-radius: 999px; background: #14171C; color: #FFFFFF;">All 12</span>
+<span style="padding: 8px 14px; border-radius: 999px; border: 1px solid #E6E4DD; background: #FFFFFF;">Hook clips 5</span>
+<span style="padding: 8px 14px; border-radius: 999px; border: 1px solid #E6E4DD; background: #FFFFFF;">Stories 3</span>
+<span style="padding: 8px 14px; border-radius: 999px; border: 1px solid #E6E4DD; background: #FFFFFF;">Tips 2</span>
+<span style="padding: 8px 14px; border-radius: 999px; border: 1px solid #E6E4DD; background: #FFFFFF;">Quote, carousel, reply 3</span>
+</div>
+
+<section aria-label="Cuts" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); gap: 18px;">
+<sc-for list="{{cuts}}" as="c" hint-placeholder-count="12">
+<article style="display: flex; flex-direction: column; gap: 8px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 10px;">
+<div style="position: relative; aspect-ratio: 9 / 16; border-radius: 8px; background: {{c.bg}}; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; padding: 12px; box-sizing: border-box;">
+<span style="position: absolute; top: 8px; left: 8px; font-size: 11px; font-weight: 700; color: #14171C; background: #FFFFFF; border-radius: 6px; padding: 2px 6px;">{{c.len}}</span>
+<span style="position: absolute; top: 8px; right: 8px; font-size: 11px; font-weight: 700; color: #FFFFFF; background: rgba(20,23,28,0.7); border-radius: 6px; padding: 2px 6px;">#{{c.n}}</span>
+<span style="font-family: 'Inter Tight', Inter, sans-serif; font-size: 15px; font-weight: 700; line-height: 1.25; color: #FFFFFF;">{{c.hook}}</span>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 12px; color: #5F6672;"><span>{{c.format}}</span><span style="font-weight: 600; color: #14171C;">Score {{c.score}}</span></div>
+<span style="{{c.chip}}">{{c.status}}</span>
+<sc-if value="{{c.hasReason}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; line-height: 1.35; color: #3E444D;">{{c.reason}}</span></sc-if>
+<div style="display: flex; gap: 6px;">
+<button type="button" aria-label="Preview cut {{c.n}}" style="flex: 1; min-height: 40px; border-radius: 8px; border: 1px solid #D6D3CA; background: #FFFFFF; font: 600 12px Inter, sans-serif; color: #14171C;">Preview</button>
+<button type="button" style="{{c.btn}}">{{c.action}}</button>
+</div>
+</article>
+</sc-for>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const chip = (bg, fg) => 'align-self: flex-start; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: ' + bg + '; color: ' + fg + ';';
+    const S = {
+      Passed: chip('#E3F4EC', '#145C40'),
+      'Needs review': chip('#FBF0D9', '#6E4A07'),
+      Blocked: chip('#FBE3E3', '#8E2626')
+    };
+    const bgs = ['#12545A', '#1E3A40', '#2F3E46', '#6B4F3A'];
+    const raw = [
+      [1, 'You’re not tired. You’re over-responsible.', '0:24', 'Hook clip', 92, 'Passed', ''],
+      [2, 'The meeting that cost me my best engineer', '0:52', 'Story', 88, 'Passed', ''],
+      [3, '3 words that stop a team from burning out', '0:31', 'Hook clip', 86, 'Passed', ''],
+      [4, 'If your 1:1s feel like status updates, try this', '0:44', 'Tip', 84, 'Passed', ''],
+      [5, 'New managers: stop saying “let me know if you need anything”', '0:28', 'Hook clip', 83, 'Passed', ''],
+      [6, 'What I’d tell myself in my first month as a manager', '0:58', 'Story', 80, 'Needs review', 'Mentions a former employer by name.'],
+      [7, 'Burnout isn’t a workload problem', '0:19', 'Quote card', 79, 'Passed', ''],
+      [8, 'Why your best people go quiet', '0:36', 'Hook clip', 77, 'Passed', ''],
+      [9, 'A listener asked: how do I say no to my boss?', '0:47', 'Reply', 75, 'Needs review', 'A listener’s name is visible on screen.'],
+      [10, 'The 10-minute Friday habit', '0:33', 'Tip', 74, 'Passed', ''],
+      [11, '5 signs you’re managing, not leading', '0:40', 'Carousel', 72, 'Passed', ''],
+      [12, 'Funny story about my first team offsite', '0:29', 'Story', 61, 'Blocked', 'Venue background music. Swap in a library track or your own voice-over.']
+    ];
+    const cuts = raw.map(([n, hook, len, format, score, status, reason], i) => {
+      const ok = status === 'Passed';
+      return {
+        n, hook, len, format, score, status, reason, hasReason: !!reason,
+        bg: bgs[i % bgs.length], chip: S[status],
+        action: ok ? 'Approve' : status === 'Blocked' ? 'Fix' : 'Review',
+        btn: 'flex: 1; min-height: 40px; border-radius: 8px; font: 600 12px Inter, sans-serif; ' + (ok ? 'border: none; background: #C8401C; color: #FFFFFF;' : 'border: 1px solid #D6D3CA; background: #FFFFFF; color: #14171C;')
+      };
+    });
+    const steps = [
+      { name: 'Transcribing', detail: '52 min, word timings' },
+      { name: 'Finding moments', detail: '31 candidates' },
+      { name: 'Cutting', detail: '12 kept, 9:16' },
+      { name: 'Captioning', detail: 'Maya’s caption style' },
+      { name: 'Compliance check', detail: '9 · 2 · 1' }
+    ];
+    return { cuts, steps };
+  }
+}
+</script>
+</body>
+</html>

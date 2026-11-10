@@ -1,0 +1,34 @@
+{
+  "name": "Mirrorline (placeholder)",
+  "version": "1.0.0",
+  "color": {
+    "light": {
+      "bg": "#FAFAF7", "surface": "#FFFFFF", "border": "#E6E4DD",
+      "text": "#14171C", "text-muted": "#5F6672",
+      "accent": "#FF5A36", "accent-strong": "#C8401C", "accent-soft": "#FFE8E1",
+      "success": "#1F9D6B", "warning": "#C98A12", "danger": "#D23F3F", "info": "#2F6FDE"
+    },
+    "dark": {
+      "bg": "#0E1116", "surface": "#161A21", "border": "#2A2F38",
+      "text": "#F2F2EE", "text-muted": "#A3A9B4",
+      "accent": "#FF7A5C", "accent-strong": "#FF7A5C", "accent-soft": "#3A2019",
+      "success": "#3CC98F", "warning": "#E8B23A", "danger": "#F06A6A", "info": "#6B9BF2"
+    },
+    "chip": {
+      "passed": { "bg": "#E3F4EC", "text": "#145C40" },
+      "needs-review": { "bg": "#FBF0D9", "text": "#6E4A07" },
+      "blocked": { "bg": "#FBE3E3", "text": "#8E2626" },
+      "scheduled": { "bg": "#E3ECFB", "text": "#1F4FA8" },
+      "published": { "bg": "#EFEDE7", "text": "#3E444D" }
+    },
+    "demo-brand": { "teal": "#12545A", "sand": "#F3E9DC", "coral": "#FF5A36", "ink": "#14171C" }
+  },
+  "font": {
+    "heading": "Inter Tight, Inter, sans-serif",
+    "body": "Inter, system-ui, sans-serif",
+    "size": { "h1": 32, "h2": 24, "h3": 20, "h4": 18, "body": 15, "meta": 13, "small": 12 }
+  },
+  "radius": { "card": 12, "button": 10, "chip": 999, "thumb": 8 },
+  "space": { "unit": 8, "page-x": 40, "card": 22 },
+  "layout": { "desktop": 1440, "sidebar": 240, "mobile": 390, "touch-min": 44 }
+}

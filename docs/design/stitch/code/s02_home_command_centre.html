@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mirrorline — Home (Command Centre)</title>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter & Inter Tight -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Inter+Tight:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            tight: ['"Inter Tight"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              coral: '#FF5A36',
+              deepCoral: '#C8401C',
+              coralLight: '#FFE8E1',
+              dark: '#14171C',
+            },
+            surface: {
+              DEFAULT: '#FAFAF7',
+              card: '#FFFFFF',
+              border: '#E6E4DD',
+            },
+            body: '#5F6672',
+          }
+        }
+      }
+    }
+  </script>
+<!-- Typography and Custom Layout Styles -->
+<style data-purpose="base-styling">
+    body {
+      background-color: #FAFAF7;
+      color: #14171C;
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
+<!-- Mini Sparkline and Card Aesthetics -->
+<style data-purpose="card-decorations">
+    .sparkline-svg {
+      width: 100%;
+      height: 28px;
+      overflow: visible;
+    }
+    .agent-timeline-item:not(:last-child) {
+      margin-bottom: 1.15rem;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex text-[#14171C] bg-[#FAFAF7]">
+<!-- BEGIN: Sidebar Navigation -->
+<aside class="w-[240px] flex-shrink-0 min-h-screen border-r border-[#E6E4DD] bg-[#FAFAF7] flex flex-col justify-between p-5 select-none" data-purpose="primary-sidebar">
+<div class="space-y-6">
+<!-- Brand Logo Header -->
+<div class="flex items-center gap-2.5 px-2 pt-1" data-purpose="sidebar-brand">
+<!-- Coral Circular Loop Icon -->
+<svg class="w-6 h-6 text-[#FF5A36] flex-shrink-0" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24">
+<path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+<polyline points="21 3 21 9 15 9"></polyline>
+</svg>
+<span class="font-tight font-bold text-xl tracking-tight text-[#14171C]">Mirrorline</span>
+</div>
+<!-- Workspace Selector Card -->
+<div class="bg-transparent hover:bg-neutral-100/60 transition-colors rounded-xl p-2 flex items-center gap-3 cursor-pointer" data-purpose="workspace-profile">
+<div class="w-9 h-9 rounded-lg bg-[#143B3B] flex items-center justify-center text-white text-xs font-semibold tracking-wider flex-shrink-0">
+          MT
+        </div>
+<div class="min-w-0 flex-1 leading-tight">
+<p class="text-sm font-semibold text-[#14171C] truncate">Maya Torres Coaching</p>
+<p class="text-[12px] text-[#5F6672] mt-0.5">Growth plan</p>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="space-y-1" data-purpose="sidebar-menu">
+<!-- Active Home Link -->
+<a class="flex items-center px-3.5 h-[42px] rounded-lg bg-[#FFE8E1] text-[#C8401C] font-semibold text-sm transition-colors" href="#">
+          Home
+        </a>
+<!-- Normal Inactive Links -->
+<a class="flex items-center px-3.5 h-[42px] rounded-lg text-[#5F6672] hover:text-[#14171C] hover:bg-neutral-100/70 font-medium text-sm transition-colors" href="#">
+          Upload
+        </a>
+<a class="flex items-center px-3.5 h-[42px] rounded-lg text-[#5F6672] hover:text-[#14171C] hover:bg-neutral-100/70 font-medium text-sm transition-colors" href="#">
+          Trends
+        </a>
+<a class="flex items-center px-3.5 h-[42px] rounded-lg text-[#5F6672] hover:text-[#14171C] hover:bg-neutral-100/70 font-medium text-sm transition-colors" href="#">
+          Calendar
+        </a>
+<a class="flex items-center px-3.5 h-[42px] rounded-lg text-[#5F6672] hover:text-[#14171C] hover:bg-neutral-100/70 font-medium text-sm transition-colors" href="#">
+          Results
+        </a>
+<a class="flex items-center px-3.5 h-[42px] rounded-lg text-[#5F6672] hover:text-[#14171C] hover:bg-neutral-100/70 font-medium text-sm transition-colors" href="#">
+          Agents
+        </a>
+<a class="flex items-center px-3.5 h-[42px] rounded-lg text-[#5F6672] hover:text-[#14171C] hover:bg-neutral-100/70 font-medium text-sm transition-colors" href="#">
+          Brand kit
+        </a>
+<a class="flex items-center px-3.5 h-[42px] rounded-lg text-[#5F6672] hover:text-[#14171C] hover:bg-neutral-100/70 font-medium text-sm transition-colors" href="#">
+          Settings
+        </a>
+</nav>
+</div>
+<!-- Bottom Usage Progress Indicator -->
+<div class="p-3 bg-white/70 border border-[#E6E4DD] rounded-xl" data-purpose="monthly-post-meter">
+<div class="flex items-center justify-between text-xs mb-2">
+<span class="text-[#5F6672]">Posts this month</span>
+<span class="font-semibold text-[#14171C]">63 of 90</span>
+</div>
+<!-- Progress Track -->
+<div class="w-full bg-[#E5E5E0] h-1.5 rounded-full overflow-hidden">
+<div class="bg-[#FF5A36] h-full rounded-full w-[70%]"></div>
+</div>
+</div>
+</aside>
+<!-- END: Sidebar Navigation -->
+<!-- BEGIN: Main Dashboard Content Area -->
+<main class="flex-1 min-w-0 py-9 px-10 max-w-[1240px] mx-auto overflow-y-auto" data-purpose="dashboard-main">
+<!-- Top Greetings & Primary Action Header -->
+<header class="flex items-start justify-between mb-8" data-purpose="dashboard-header">
+<div>
+<span class="text-[13px] font-medium text-[#5F6672] tracking-wide">Monday, 9 November</span>
+<h1 class="text-[32px] font-tight font-bold text-[#14171C] tracking-tight leading-tight mt-0.5">Good morning, Maya</h1>
+<p class="text-[15px] text-[#5F6672] mt-1.5">3 posts are out, 3 more go today. 3 cuts need your eye.</p>
+</div>
+<button class="inline-flex items-center justify-center bg-[#C8401C] hover:bg-[#B33514] active:scale-[0.99] text-white font-medium text-sm px-5 h-[42px] rounded-lg shadow-sm transition-all duration-150" data-purpose="cta-upload-button" type="button">
+        New upload
+      </button>
+</header>
+<!-- Key Performance Metrics 4-Column Grid -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8" data-purpose="stats-overview-grid">
+<!-- Metric Tile: Posts this week -->
+<div class="bg-white border border-[#E6E4DD] rounded-xl p-5 flex flex-col justify-between shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+<div>
+<span class="text-xs font-medium text-[#5F6672]">Posts this week</span>
+<div class="text-[28px] font-tight font-bold text-[#14171C] mt-1">21</div>
+</div>
+<div class="my-3">
+<svg class="sparkline-svg" preserveaspectratio="none" viewbox="0 0 100 24">
+<path d="M0,18 L30,17 L60,15 L100,12" fill="none" stroke="#FF5A36" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+</div>
+<div class="text-xs font-medium text-[#1E7E55]">
+          On plan: 3 a day
+        </div>
+</div>
+<!-- Metric Tile: Views -->
+<div class="bg-white border border-[#E6E4DD] rounded-xl p-5 flex flex-col justify-between shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+<div>
+<span class="text-xs font-medium text-[#5F6672]">Views</span>
+<div class="text-[28px] font-tight font-bold text-[#14171C] mt-1">48.3K</div>
+</div>
+<div class="my-3">
+<svg class="sparkline-svg" preserveaspectratio="none" viewbox="0 0 100 24">
+<path d="M0,20 L18,18 L35,14 L55,12 L75,15 L85,13 L100,8" fill="none" stroke="#FF5A36" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+</div>
+<div class="text-xs font-medium text-[#1E7E55]">
+          +18% vs last week
+        </div>
+</div>
+<!-- Metric Tile: Link clicks -->
+<div class="bg-white border border-[#E6E4DD] rounded-xl p-5 flex flex-col justify-between shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+<div>
+<span class="text-xs font-medium text-[#5F6672]">Link clicks</span>
+<div class="text-[28px] font-tight font-bold text-[#14171C] mt-1">214</div>
+</div>
+<div class="my-3">
+<svg class="sparkline-svg" preserveaspectratio="none" viewbox="0 0 100 24">
+<path d="M0,19 L25,18 L45,16 L65,13 L80,14 L100,11" fill="none" stroke="#FF5A36" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+</div>
+<div class="text-xs font-medium text-[#1E7E55]">
+          +22% vs last week
+        </div>
+</div>
+<!-- Metric Tile: Calls booked -->
+<div class="bg-white border border-[#E6E4DD] rounded-xl p-5 flex flex-col justify-between shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+<div>
+<span class="text-xs font-medium text-[#5F6672]">Calls booked</span>
+<div class="text-[28px] font-tight font-bold text-[#14171C] mt-1">6</div>
+</div>
+<div class="my-3">
+<svg class="sparkline-svg" preserveaspectratio="none" viewbox="0 0 100 24">
+<path d="M0,20 L25,19 L50,17 L75,16 L100,12" fill="none" stroke="#FF5A36" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+</div>
+<div class="text-xs font-medium text-[#1E7E55]">
+          +2 vs last week
+        </div>
+</div>
+</section>
+<!-- Two-Column Editorial Workplace Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-7" data-purpose="operational-columns">
+<!-- Primary Tasks & Schedule Column (Left: ~68% width) -->
+<div class="lg:col-span-8 space-y-6">
+<!-- Card 1: Needs You Action Items -->
+<section class="bg-white border border-[#E6E4DD] rounded-xl p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)]" data-purpose="needs-you-section">
+<!-- Card Header -->
+<div class="flex items-center justify-between pb-4 border-b border-[#F0EFEA] mb-4">
+<h2 class="text-lg font-tight font-bold text-[#14171C]">Needs you</h2>
+<span class="text-xs font-medium text-[#5F6672]">4 items</span>
+</div>
+<!-- Items Stack -->
+<div class="space-y-4">
+<!-- Row 1 -->
+<div class="flex items-center justify-between gap-4 py-1">
+<div class="flex items-center gap-3.5 min-w-0">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FBF0D9] text-[#7A4F01] flex-shrink-0">
+                  Needs review
+                </span>
+<p class="text-sm text-[#14171C] truncate font-normal">
+                  Cut 6, “What I’d tell myself in my first month as a manager”, mentions a former employer.
+                </p>
+</div>
+<button class="px-3.5 py-1.5 border border-[#D5D3CA] hover:bg-neutral-50 active:bg-neutral-100 text-xs font-semibold text-[#14171C] rounded-lg transition-colors flex-shrink-0">
+                Review
+              </button>
+</div>
+<!-- Row 2 -->
+<div class="flex items-center justify-between gap-4 py-1">
+<div class="flex items-center gap-3.5 min-w-0">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FBF0D9] text-[#7A4F01] flex-shrink-0">
+                  Needs review
+                </span>
+<p class="text-sm text-[#14171C] truncate font-normal">
+                  Cut 9, “A listener asked…”, shows a listener’s name on screen.
+                </p>
+</div>
+<button class="px-3.5 py-1.5 border border-[#D5D3CA] hover:bg-neutral-50 active:bg-neutral-100 text-xs font-semibold text-[#14171C] rounded-lg transition-colors flex-shrink-0">
+                Review
+              </button>
+</div>
+<!-- Row 3 -->
+<div class="flex items-center justify-between gap-4 py-1">
+<div class="flex items-center gap-3.5 min-w-0">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FBF0D9] text-[#7A4F01] flex-shrink-0">
+                  Needs review
+                </span>
+<p class="text-sm text-[#14171C] truncate font-normal">
+                  7:45 pm TikTok post is waiting for approval.
+                </p>
+</div>
+<button class="px-3.5 py-1.5 border border-[#D5D3CA] hover:bg-neutral-50 active:bg-neutral-100 text-xs font-semibold text-[#14171C] rounded-lg transition-colors flex-shrink-0">
+                Approve
+              </button>
+</div>
+<!-- Row 4 -->
+<div class="flex items-center justify-between gap-4 py-1">
+<div class="flex items-center gap-3.5 min-w-0">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FDE8E8] text-[#9B1C1C] flex-shrink-0">
+                  Blocked
+                </span>
+<p class="text-sm text-[#14171C] truncate font-normal">
+                  Cut 12 uses background music from a venue. Swap in a library track or your own voice-over.
+                </p>
+</div>
+<button class="px-3.5 py-1.5 border border-[#D5D3CA] hover:bg-neutral-50 active:bg-neutral-100 text-xs font-semibold text-[#14171C] rounded-lg transition-colors flex-shrink-0">
+                Fix audio
+              </button>
+</div>
+</div>
+</section>
+<!-- Card 2: Today Schedule Section -->
+<section class="bg-white border border-[#E6E4DD] rounded-xl p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)]" data-purpose="schedule-section">
+<!-- Card Header -->
+<div class="flex items-center justify-between pb-4 border-b border-[#F0EFEA] mb-2">
+<h2 class="text-lg font-tight font-bold text-[#14171C]">Today</h2>
+<a class="text-xs font-semibold text-[#14171C] hover:text-[#C8401C] transition-colors" href="#">
+              Open calendar
+            </a>
+</div>
+<!-- Schedule List -->
+<div class="divide-y divide-[#F6F5F0]">
+<!-- Item 1: 7:30 am -->
+<div class="flex items-center justify-between py-3.5 gap-4">
+<div class="flex items-center gap-4 min-w-0">
+<span class="text-xs font-semibold text-[#14171C] w-14 flex-shrink-0">7:30 am</span>
+<!-- Thumbnail Placeholder (9:16 aspect ratio miniature) -->
+<div class="w-6 h-9 rounded bg-[#1D3E3E] flex-shrink-0"></div>
+<div class="min-w-0">
+<p class="text-sm font-medium text-[#14171C] truncate">You’re not tired. You’re over-responsible.</p>
+<p class="text-xs text-[#5F6672]">Instagram</p>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded-full text-xs font-medium bg-[#EFEFEA] text-[#4A4F59] flex-shrink-0">
+                Published
+              </span>
+</div>
+<!-- Item 2: 9:00 am -->
+<div class="flex items-center justify-between py-3.5 gap-4">
+<div class="flex items-center gap-4 min-w-0">
+<span class="text-xs font-semibold text-[#14171C] w-14 flex-shrink-0">9:00 am</span>
+<div class="w-6 h-9 rounded bg-[#203D42] flex-shrink-0"></div>
+<div class="min-w-0">
+<p class="text-sm font-medium text-[#14171C] truncate">3 words that stop a team from burning out</p>
+<p class="text-xs text-[#5F6672]">YouTube Shorts</p>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded-full text-xs font-medium bg-[#EFEFEA] text-[#4A4F59] flex-shrink-0">
+                Published
+              </span>
+</div>
+<!-- Item 3: 12:15 pm -->
+<div class="flex items-center justify-between py-3.5 gap-4">
+<div class="flex items-center gap-4 min-w-0">
+<span class="text-xs font-semibold text-[#14171C] w-14 flex-shrink-0">12:15 pm</span>
+<div class="w-6 h-9 rounded bg-[#354348] flex-shrink-0"></div>
+<div class="min-w-0">
+<p class="text-sm font-medium text-[#14171C] truncate">Why your best people go quiet</p>
+<p class="text-xs text-[#5F6672]">TikTok</p>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded-full text-xs font-medium bg-[#EFEFEA] text-[#4A4F59] flex-shrink-0">
+                Published (private)
+              </span>
+</div>
+<!-- Item 4: 2:15 pm -->
+<div class="flex items-center justify-between py-3.5 gap-4">
+<div class="flex items-center gap-4 min-w-0">
+<span class="text-xs font-semibold text-[#14171C] w-14 flex-shrink-0">2:15 pm</span>
+<div class="w-6 h-9 rounded bg-[#6A4D3B] flex-shrink-0"></div>
+<div class="min-w-0">
+<p class="text-sm font-medium text-[#14171C] truncate">The 3-word reframe (remake)</p>
+<p class="text-xs text-[#5F6672]">Instagram · AI scenes labelled</p>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded-full text-xs font-medium bg-[#E8F1FC] text-[#1E57A8] flex-shrink-0">
+                Scheduled
+              </span>
+</div>
+<!-- Item 5: 5:00 pm -->
+<div class="flex items-center justify-between py-3.5 gap-4">
+<div class="flex items-center gap-4 min-w-0">
+<span class="text-xs font-semibold text-[#14171C] w-14 flex-shrink-0">5:00 pm</span>
+<div class="w-6 h-9 rounded bg-[#1D3E3E] flex-shrink-0"></div>
+<div class="min-w-0">
+<p class="text-sm font-medium text-[#14171C] truncate">The 10-minute Friday habit</p>
+<p class="text-xs text-[#5F6672]">YouTube Shorts</p>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded-full text-xs font-medium bg-[#E8F1FC] text-[#1E57A8] flex-shrink-0">
+                Scheduled
+              </span>
+</div>
+<!-- Item 6: 7:45 pm -->
+<div class="flex items-center justify-between py-3.5 gap-4">
+<div class="flex items-center gap-4 min-w-0">
+<span class="text-xs font-semibold text-[#14171C] w-14 flex-shrink-0">7:45 pm</span>
+<div class="w-6 h-9 rounded bg-[#1D3539] flex-shrink-0"></div>
+<div class="min-w-0">
+<p class="text-sm font-medium text-[#14171C] truncate">New managers: stop saying “let me know if you need anything”</p>
+<p class="text-xs text-[#5F6672]">TikTok</p>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded-full text-xs font-medium bg-[#FBF0D9] text-[#7A4F01] flex-shrink-0">
+                Needs review
+              </span>
+</div>
+</div>
+</section>
+</div>
+<!-- Secondary Right Column: Activity Stream & System Insights (~32% width) -->
+<div class="lg:col-span-4 space-y-6">
+<!-- Card: Agent Activity Stream -->
+<section class="bg-white border border-[#E6E4DD] rounded-xl p-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)]" data-purpose="agent-activity-card">
+<!-- Card Header -->
+<div class="flex items-center justify-between pb-3.5 border-b border-[#F0EFEA] mb-4">
+<h2 class="text-lg font-tight font-bold text-[#14171C]">Agent activity</h2>
+<a class="text-xs font-semibold text-[#14171C] hover:text-[#C8401C] transition-colors" href="#">
+              All agents
+            </a>
+</div>
+<!-- Activity Log Items -->
+<div class="space-y-4">
+<!-- Activity 1 -->
+<div class="agent-timeline-item">
+<div class="flex items-center gap-2 mb-1">
+<span class="w-1.5 h-1.5 rounded-full bg-[#FF5A36] flex-shrink-0"></span>
+<span class="text-[11px] font-medium text-[#5F6672]">1:00 pm · Performance Analyst</span>
+</div>
+<p class="text-xs text-[#14171C] pl-3.5 leading-relaxed font-normal">
+                Question hooks beat the average by 2.1×. Raising their share next week.
+              </p>
+</div>
+<!-- Activity 2 -->
+<div class="agent-timeline-item">
+<div class="flex items-center gap-2 mb-1">
+<span class="w-1.5 h-1.5 rounded-full bg-[#FF5A36] flex-shrink-0"></span>
+<span class="text-[11px] font-medium text-[#5F6672]">12:15 pm · Publisher</span>
+</div>
+<p class="text-xs text-[#14171C] pl-3.5 leading-relaxed font-normal">
+                Posted to TikTok (private until app approval).
+              </p>
+</div>
+<!-- Activity 3 -->
+<div class="agent-timeline-item">
+<div class="flex items-center gap-2 mb-1">
+<span class="w-1.5 h-1.5 rounded-full bg-[#FF5A36] flex-shrink-0"></span>
+<span class="text-[11px] font-medium text-[#5F6672]">10:20 am · Remake Producer</span>
+</div>
+<p class="text-xs text-[#14171C] pl-3.5 leading-relaxed font-normal">
+                Draft ready: “The 3-word reframe” for Maya (similarity 12%).
+              </p>
+</div>
+<!-- Activity 4 -->
+<div class="agent-timeline-item">
+<div class="flex items-center gap-2 mb-1">
+<span class="w-1.5 h-1.5 rounded-full bg-[#FF5A36] flex-shrink-0"></span>
+<span class="text-[11px] font-medium text-[#5F6672]">10:05 am · Trend Scout</span>
+</div>
+<p class="text-xs text-[#14171C] pl-3.5 leading-relaxed font-normal">
+                Found “The 3-word reframe” rising in Leadership (+340%).
+              </p>
+</div>
+<!-- Activity 5 -->
+<div class="agent-timeline-item">
+<div class="flex items-center gap-2 mb-1">
+<span class="w-1.5 h-1.5 rounded-full bg-[#FF5A36] flex-shrink-0"></span>
+<span class="text-[11px] font-medium text-[#5F6672]">9:44 am · Compliance</span>
+</div>
+<p class="text-xs text-[#14171C] pl-3.5 leading-relaxed font-normal">
+                9 passed, 2 need review, 1 blocked (venue music).
+              </p>
+</div>
+<!-- Activity 6 -->
+<div class="agent-timeline-item">
+<div class="flex items-center gap-2 mb-1">
+<span class="w-1.5 h-1.5 rounded-full bg-[#FF5A36] flex-shrink-0"></span>
+<span class="text-[11px] font-medium text-[#5F6672]">9:41 am · Multiplier</span>
+</div>
+<p class="text-xs text-[#14171C] pl-3.5 leading-relaxed font-normal">
+                Cut 12 clips from Episode 47 (cost $1.84).
+              </p>
+</div>
+</div>
+</section>
+<!-- Card: Dark Learning Loop Banner -->
+<section class="bg-[#14171C] text-white rounded-xl p-6 shadow-md relative overflow-hidden" data-purpose="learning-loop-card">
+<!-- Top Tag with Circular Arrow Icon -->
+<div class="flex items-center gap-2 mb-3">
+<svg class="w-4 h-4 text-[#FF5A36] flex-shrink-0" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24">
+<path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+<polyline points="21 3 21 9 15 9"></polyline>
+</svg>
+<span class="text-[11px] font-bold tracking-widest text-[#E1E4EA] uppercase">LEARNING LOOP</span>
+</div>
+<!-- Headline Insight -->
+<h3 class="text-[17px] font-tight font-bold text-white leading-snug tracking-tight mb-2">
+            This week's winner: question hooks, 2.1× average views.
+          </h3>
+<!-- Description Body -->
+<p class="text-xs text-[#9DA5B2] leading-relaxed mb-4">
+            Next week we're making more of them, and trying them on TikTok first.
+          </p>
+<!-- Action Footer -->
+<div>
+<a class="text-xs font-semibold text-white underline underline-offset-4 decoration-neutral-500 hover:decoration-white transition-colors" href="#">
+              See results
+            </a>
+</div>
+</section>
+</div>
+</div>
+</main>
+<!-- END: Main Dashboard Content Area -->
+</body></html>

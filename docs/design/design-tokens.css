@@ -1,0 +1,35 @@
+/* Mirrorline (placeholder) design tokens */
+:root {
+  --ml-bg: #FAFAF7;
+  --ml-surface: #FFFFFF;
+  --ml-border: #E6E4DD;
+  --ml-text: #14171C;
+  --ml-text-muted: #5F6672;
+  --ml-accent: #FF5A36;
+  --ml-accent-strong: #C8401C;
+  --ml-accent-soft: #FFE8E1;
+  --ml-success: #1F9D6B;
+  --ml-warning: #C98A12;
+  --ml-danger: #D23F3F;
+  --ml-info: #2F6FDE;
+  --ml-font-heading: "Inter Tight", Inter, sans-serif;
+  --ml-font-body: Inter, system-ui, sans-serif;
+  --ml-radius-card: 12px;
+  --ml-radius-button: 10px;
+  --ml-space: 8px;
+  --ml-sidebar: 240px;
+}
+[data-theme="dark"] {
+  --ml-bg: #0E1116;
+  --ml-surface: #161A21;
+  --ml-border: #2A2F38;
+  --ml-text: #F2F2EE;
+  --ml-text-muted: #A3A9B4;
+  --ml-accent: #FF7A5C;
+  --ml-accent-strong: #FF7A5C;
+  --ml-accent-soft: #3A2019;
+  --ml-success: #3CC98F;
+  --ml-warning: #E8B23A;
+  --ml-danger: #F06A6A;
+  --ml-info: #6B9BF2;
+}

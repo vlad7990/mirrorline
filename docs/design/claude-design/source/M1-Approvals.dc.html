@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mobile approvals</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Inter+Tight:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#0E1116}
+a{color:#FFB8A6}a:hover{color:#FFD3C7}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 20px 18px 24px; display: flex; flex-direction: column; gap: 14px; background: #0E1116; color: #F2F2EE; font-family: Inter, system-ui, sans-serif;">
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<a href="M2-Home.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; text-decoration: none;">Home</a>
+<span style="font-size: 14px; font-weight: 600;">{{counter}}</span>
+<span style="width: 44px;"></span>
+</div>
+
+<sc-if value="{{hasItem}}" hint-placeholder-val="{{true}}">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 12px;">
+<div style="position: relative; flex-grow: 1; border-radius: 18px; background: {{item.bg}}; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; padding: 22px; box-sizing: border-box;">
+<span style="position: absolute; top: 14px; left: 14px; font-size: 12px; font-weight: 700; color: #14171C; background: #FFFFFF; border-radius: 6px; padding: 3px 8px;">{{item.platform}} · {{item.time}}</span>
+<sc-if value="{{item.ai}}" hint-placeholder-val="{{false}}"><span style="position: absolute; top: 14px; right: 14px; font-size: 12px; font-weight: 700; color: #14171C; background: #FFFFFF; border-radius: 6px; padding: 3px 8px;">AI scene</span></sc-if>
+<span style="font-family: 'Inter Tight', Inter, sans-serif; font-size: 26px; font-weight: 700; line-height: 1.2; color: #FFFFFF;">{{item.hook}}</span>
+<span style="font-size: 14px; line-height: 1.45; color: #E7EEF0;">{{item.caption}}</span>
+</div>
+<div role="group" aria-label="Reason to send back" style="display: flex; flex-wrap: wrap; gap: 8px;">
+<sc-for list="{{reasons}}" as="r" hint-placeholder-count="3"><button type="button" onClick="{{r.pick}}" style="{{r.style}}">{{r.label}}</button></sc-for>
+</div>
+<div style="display: flex; gap: 12px;">
+<button type="button" onClick="{{sendBack}}" style="flex: 1; min-height: 56px; border-radius: 14px; border: 1px solid #3A404B; background: #161A21; color: #F2F2EE; font: 600 16px Inter, sans-serif;">Send back</button>
+<button type="button" onClick="{{approve}}" style="flex: 1; min-height: 56px; border-radius: 14px; border: none; background: #FF7A5C; color: #14171C; font: 700 16px Inter, sans-serif;">Approve</button>
+</div>
+<span style="text-align: center; font-size: 12px; color: #A3A9B4;">Swipe right to approve, left to send back</span>
+</div>
+</sc-if>
+
+<sc-if value="{{done}}" hint-placeholder-val="{{false}}">
+<div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 24px;">
+<svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true"><path d="M26 16a10 10 0 1 1-4.2-8.1" fill="none" stroke="#FF7A5C" stroke-width="2.4" stroke-linecap="round"></path><path d="M22.5 3.5l-0.6 4.6 4.6 0.4" fill="none" stroke="#FF7A5C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span style="font-family: 'Inter Tight', Inter, sans-serif; font-size: 24px; font-weight: 700;">All caught up</span>
+<span style="font-size: 15px; color: #A3A9B4; line-height: 1.5;">{{summary}}</span>
+<button type="button" onClick="{{reset}}" style="min-height: 48px; padding: 0 20px; border-radius: 12px; border: 1px solid #3A404B; background: #161A21; color: #F2F2EE; font: 600 15px Inter, sans-serif;">Start over</button>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { i: 0, approved: 0, back: 0, reason: '' }; }
+  renderVals() {
+    const st = this.state;
+    const items = [
+      { platform: 'TikTok', time: 'Today 7:45 pm', hook: 'New managers: stop saying “let me know if you need anything”', caption: 'Try this instead: “What’s one thing I can take off your plate this week?” Book a free call, link in bio.', bg: '#1E3A40', ai: false },
+      { platform: 'Instagram', time: 'Tue 2:15 pm', hook: 'Coach, don’t carry.', caption: 'The 3 words I wish I’d heard as a new manager. #leadership #newmanager', bg: '#12545A', ai: true },
+      { platform: 'TikTok', time: 'Tue 8:00 am', hook: 'Why your best people go quiet', caption: 'It’s rarely about the work. Here’s what to ask in your next 1:1.', bg: '#2F3E46', ai: false }
+    ];
+    const has = st.i < items.length;
+    const next = (key) => this.setState({ i: st.i + 1, [key]: st[key] + 1, reason: '' });
+    const reasons = ['Wrong tone', 'Wrong fact', 'Change the hook'].map((label) => ({
+      label,
+      pick: () => this.setState({ reason: label }),
+      style: 'min-height: 40px; padding: 0 14px; border-radius: 999px; font: 600 13px Inter, sans-serif; ' + (st.reason === label ? 'border: 1px solid #FF7A5C; background: #3A2019; color: #FFD3C7;' : 'border: 1px solid #3A404B; background: #161A21; color: #F2F2EE;')
+    }));
+    return {
+      hasItem: has, done: !has, item: has ? items[st.i] : items[0], reasons,
+      counter: has ? (items.length - st.i) + ' to review' : 'Done',
+      approve: () => next('approved'),
+      sendBack: () => next('back'),
+      reset: () => this.setState({ i: 0, approved: 0, back: 0, reason: '' }),
+      summary: st.approved + ' approved, ' + st.back + ' sent back with notes. The Publisher has the schedule.'
+    };
+  }
+}
+</script>
+</body>
+</html>

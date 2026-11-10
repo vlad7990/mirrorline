@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Results</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Inter+Tight:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#FAFAF7}
+a{color:#B83A18}a:hover{color:#8F2C11}
+th,td{text-align:left;padding:10px 12px;border-top:1px solid #F0EEE8;font-size:14px}
+th{font-size:12px;font-weight:600;color:#5F6672;border-top:none}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1200px; font-family: Inter, system-ui, sans-serif; color: #14171C; background: #FAFAF7;">
+<div style="flex: 1 1 240px; max-width: 100%; display: flex;"><dc-import name="Sidebar" active="Results" hint-size="100%,1200px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 22px;">
+
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px;">
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<span style="font-size: 13px; color: #5F6672;">Performance Analyst agent · last 7 days</span>
+<h1 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 32px; font-weight: 700;">21 posts, 6 calls booked</h1>
+</div>
+<button type="button" style="min-height: 48px; padding: 0 20px; border-radius: 10px; border: none; background: #C8401C; color: #FFFFFF; font: 600 15px Inter, sans-serif;">Download weekly report (PDF)</button>
+</header>
+
+<section aria-label="Funnel" style="display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 20px; font-weight: 600;">From views to calls</h2>
+<sc-for list="{{funnel}}" as="f" hint-placeholder-count="5">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px;">
+<span style="width: 120px; font-size: 14px; font-weight: 600;">{{f.stage}}</span>
+<span style="flex: 1 1 300px; height: 28px; border-radius: 6px; background: #F4F2EC; position: relative;"><span style="{{f.bar}}"></span></span>
+<span style="width: 80px; text-align: right; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums;">{{f.countText}}</span>
+<span style="width: 130px; font-size: 13px; color: #5F6672;">{{f.rate}}</span>
+</div>
+</sc-for>
+<p style="margin: 4px 0 0; font-size: 13px; color: #5F6672;">Clicks counted through Maya's tracked link; calls from her booking tool. Bars share one scale, so the drop between stages is real.</p>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+<section aria-label="Top posts" style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 8px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px; overflow-x: auto;">
+<h2 style="margin: 0 0 6px; font-family: 'Inter Tight', Inter, sans-serif; font-size: 20px; font-weight: 600;">Top posts</h2>
+<table style="border-collapse: collapse; width: 100%; min-width: 520px;">
+<thead><tr><th>Post</th><th>Platform</th><th style="text-align: right;">Views</th><th style="text-align: right;">Clicks</th><th style="text-align: right;">Calls</th></tr></thead>
+<tbody>
+<sc-for list="{{top}}" as="t" hint-placeholder-count="5">
+<tr><td><span style="display: inline-flex; align-items: center; gap: 10px;"><span style="width: 22px; height: 36px; border-radius: 4px; background: {{t.thumb}};"></span>{{t.hook}}</span></td><td>{{t.platform}}</td><td style="text-align: right; font-variant-numeric: tabular-nums;">{{t.views}}</td><td style="text-align: right; font-variant-numeric: tabular-nums;">{{t.clicks}}</td><td style="text-align: right; font-variant-numeric: tabular-nums; font-weight: 600;">{{t.calls}}</td></tr>
+</sc-for>
+</tbody>
+</table>
+</section>
+
+<div style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 20px;">
+<section aria-label="Hook types" style="display: flex; flex-direction: column; gap: 10px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 20px; font-weight: 600;">What's working</h2>
+<span style="font-size: 13px; color: #5F6672;">Average views per post, by hook type</span>
+<sc-for list="{{hooks}}" as="h" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<div style="display: flex; justify-content: space-between; font-size: 14px;"><span style="{{h.labelStyle}}">{{h.type}}</span><span style="font-variant-numeric: tabular-nums;">{{h.views}}</span></div>
+<span style="height: 8px; border-radius: 999px; background: #F4F2EC;"><span style="{{h.bar}}"></span></span>
+</div>
+</sc-for>
+</section>
+<section aria-label="Best times" style="display: flex; flex-direction: column; gap: 10px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 20px; font-weight: 600;">Best times</h2>
+<div style="display: grid; grid-template-columns: 64px repeat(7, minmax(0, 1fr)); gap: 4px; font-size: 11px; color: #5F6672;">
+<span></span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+<sc-for list="{{heat}}" as="row" hint-placeholder-count="3">
+<span style="font-size: 12px; color: #3E444D;">{{row.time}}</span>
+<sc-for list="{{row.cells}}" as="c" hint-placeholder-count="7"><span style="{{c}}"></span></sc-for>
+</sc-for>
+</div>
+<span style="font-size: 13px; color: #3E444D;">Darker means more views per post. Best: 7:30 am, 12:15 pm, 7:45 pm.</span>
+</section>
+</div>
+</div>
+<a href="S8-Agents.dc.html" style="align-self: flex-start; font-size: 14px; font-weight: 600;">See how the agents used these results</a>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const stages = [['Views', 48300], ['Profile visits', 1930], ['Link clicks', 214], ['Leads', 31], ['Calls booked', 6]];
+    const first = stages[0][1];
+    const funnel = stages.map(([stage, count], i) => {
+      const pct = Math.max(count / first * 100, 0.6);
+      const prev = i ? stages[i - 1][1] : null;
+      return {
+        stage, countText: count.toLocaleString('en-US'),
+        rate: prev ? (count / prev * 100).toFixed(1) + '% of ' + stages[i - 1][0].toLowerCase() : 'all views',
+        bar: 'position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; width: ' + pct + '%; background: ' + (i === 4 ? '#C8401C' : '#FF5A36') + '; opacity: ' + (i === 4 ? 1 : 0.85 - i * 0.12) + ';'
+      };
+    });
+    const top = [
+      { hook: 'You’re not tired. You’re over-responsible.', platform: 'Instagram', views: '9,840', clicks: 52, calls: 2, thumb: '#12545A' },
+      { hook: '3 words that stop a team from burning out', platform: 'YouTube Shorts', views: '7,210', clicks: 38, calls: 1, thumb: '#1E3A40' },
+      { hook: 'Why your best people go quiet', platform: 'TikTok', views: '6,560', clicks: 29, calls: 1, thumb: '#2F3E46' },
+      { hook: 'If your 1:1s feel like status updates, try this', platform: 'Instagram', views: '5,120', clicks: 31, calls: 1, thumb: '#6B4F3A' },
+      { hook: 'Burnout isn’t a workload problem', platform: 'Instagram', views: '3,980', clicks: 17, calls: 1, thumb: '#12545A' }
+    ];
+    const hookRaw = [['Question', 4410], ['Bold claim', 2530], ['Story opener', 2180], ['List', 1650]];
+    const maxH = hookRaw[0][1];
+    const hooks = hookRaw.map(([type, v], i) => ({
+      type, views: v.toLocaleString('en-US'),
+      labelStyle: i === 0 ? 'font-weight: 700;' : '',
+      bar: 'display: block; height: 8px; border-radius: 999px; width: ' + (v / maxH * 100) + '%; background: ' + (i === 0 ? '#C8401C' : '#B8B4AA') + ';'
+    }));
+    const levels = [[0.9, 0.7, 0.8, 0.95, 0.6, 0.3, 0.35], [0.6, 0.85, 0.65, 0.7, 0.75, 0.4, 0.3], [0.8, 0.75, 0.9, 0.85, 0.5, 0.55, 0.7]];
+    const heat = ['7:30 am', '12:15 pm', '7:45 pm'].map((time, r) => ({
+      time, cells: levels[r].map((v) => 'height: 22px; border-radius: 4px; background: #C8401C; opacity: ' + (0.12 + v * 0.8).toFixed(2) + ';')
+    }));
+    return { funnel, top, hooks, heat };
+  }
+}
+</script>
+</body>
+</html>

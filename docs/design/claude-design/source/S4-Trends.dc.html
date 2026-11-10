@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Trend board</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Inter+Tight:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#FAFAF7}
+a{color:#B83A18}a:hover{color:#8F2C11}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1150px; font-family: Inter, system-ui, sans-serif; color: #14171C; background: #FAFAF7;">
+<div style="flex: 1 1 240px; max-width: 100%; display: flex;"><dc-import name="Sidebar" active="Trends" hint-size="100%,1150px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 22px;">
+
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px;">
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<span style="font-size: 13px; color: #5F6672;">Create · Trend Scout agent · updated 10:05 am</span>
+<h1 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 32px; font-weight: 700;">Formats rising now</h1>
+</div>
+<div role="group" aria-label="Filters" style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; font-weight: 600;">
+<sc-for list="{{scopes}}" as="f" hint-placeholder-count="3"><button type="button" onClick="{{f.pick}}" style="{{f.style}}">{{f.label}}</button></sc-for>
+<span style="width: 1px; background: #E6E4DD; margin: 0 4px;"></span>
+<button type="button" style="min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid #E6E4DD; background: #FFFFFF; font: 600 13px Inter, sans-serif; color: #14171C;">All platforms</button>
+<button type="button" style="min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid #E6E4DD; background: #FFFFFF; font: 600 13px Inter, sans-serif; color: #14171C;">Last 7 days</button>
+</div>
+</header>
+
+<div role="note" style="display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 12px; background: #E3ECFB; color: #173E85; font-size: 14px; line-height: 1.45;">
+<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="#2F6FDE" stroke-width="1.8"></circle><path d="M10 9v5M10 6.2v.1" stroke="#2F6FDE" stroke-width="1.8" stroke-linecap="round"></path></svg>
+<span><b>We remake the format, never the footage.</b> Each card is a recipe of beats, not someone else's video. Every remake gets a new script, your footage and a compliance check.</span>
+</div>
+
+<section aria-label="Trends" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px;">
+<sc-for list="{{shown}}" as="t" hint-placeholder-count="8">
+<article style="display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 18px;">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+<span style="font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #EFEDE7; color: #3E444D;">{{t.niche}}</span>
+<span style="font-size: 13px; font-weight: 700; color: #145C40;">{{t.growth}}</span>
+</div>
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 18px; font-weight: 600; line-height: 1.3;">{{t.name}}</h2>
+<div aria-label="Beats" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;">
+<sc-for list="{{t.beats}}" as="b" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<div style="aspect-ratio: 9 / 16; border-radius: 6px; border: 1px solid #D6D3CA; background: #FAFAF7; display: flex; align-items: flex-end; padding: 5px; box-sizing: border-box;"><span style="display: block; width: 100%; height: 4px; border-radius: 2px; background: {{b.bar}};"></span></div>
+<span style="font-size: 11px; line-height: 1.25; color: #5F6672;">{{b.label}}</span>
+</div>
+</sc-for>
+</div>
+<p style="margin: 0; font-size: 13px; line-height: 1.45; color: #3E444D;">{{t.why}}</p>
+<div style="display: flex; align-items: center; gap: 10px;">
+<span style="font-size: 12px; color: #5F6672;">Fit for Maya</span>
+<span style="flex-grow: 1; height: 6px; border-radius: 999px; background: #EFEDE7;"><span style="display: block; height: 6px; border-radius: 999px; width: {{t.fit}}%; background: #FF5A36;"></span></span>
+<span style="font-size: 13px; font-weight: 700;">{{t.fit}}</span>
+</div>
+<a href="S5-Remake.dc.html" style="display: inline-flex; justify-content: center; align-items: center; min-height: 44px; border-radius: 10px; background: #C8401C; color: #FFFFFF; font-weight: 600; font-size: 14px; text-decoration: none;">Remake for my brand</a>
+</article>
+</sc-for>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1150}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { scope: 'All' }; }
+  renderVals() {
+    const scope = this.state.scope;
+    const mine = ['Coaching'];
+    const tones = ['#FF5A36', '#2F6FDE', '#1F9D6B', '#C98A12'];
+    const raw = [
+      ['The 3-word reframe', 'Leadership', '+340%', 94, ['Hook question', 'Common belief', '3-word reframe', 'Call to action'], 'Short, quotable, and saves well. Fits Maya’s “reframe” language.'],
+      ['One question that changes a 1:1', 'Coaching', '+95%', 91, ['Question', 'Why it works', 'How to ask it', 'Call to action'], 'Practical and specific. Question hooks already win on Maya’s account.'],
+      ['“Things I stopped doing” list', 'Productivity', '+210%', 88, ['Bold claim', 'Quick cut 1', 'Quick cuts 2–3', 'Payoff'], 'Fast pacing; works from podcast clips plus text on screen.'],
+      ['POV: your first day as a manager', 'Leadership', '+160%', 86, ['POV text', 'Scene 1', 'Twist', 'Lesson'], 'Speaks straight to first-time managers, Maya’s audience.'],
+      ['Stitch-style reply to a common question', 'Coaching', '+90%', 83, ['Question on screen', 'Answer', 'Example', 'Call to action'], 'Turns listener questions into posts, with names removed.'],
+      ['Green-screen myth buster', 'Wellness', '+180%', 81, ['Myth on screen', 'What’s true', 'Proof', 'Call to action'], 'Strong for burnout myths; needs a clear source for the proof beat.'],
+      ['Before and after a reframe', 'Wellness', '+70%', 72, ['Before line', 'Reframe', 'After line', 'Invite'], 'Simple to film; best as a carousel.'],
+      ['Day in the life, sped up', 'Productivity', '+120%', 64, ['Time-lapse', 'Caption 1', 'Caption 2', 'Reflection'], 'Needs new footage of Maya’s day; lower fit for now.']
+    ];
+    const trends = raw.map(([name, niche, growth, fit, beats, why]) => ({
+      name, niche, growth, fit, why,
+      beats: beats.map((label, i) => ({ label, bar: tones[i] }))
+    }));
+    const shown = trends.filter((t) => scope === 'All' || (scope === 'My niche' ? mine.includes(t.niche) : !mine.includes(t.niche)));
+    const scopes = ['My niche', 'Nearby niches', 'All'].map((label) => ({
+      label,
+      pick: () => this.setState({ scope: label }),
+      style: 'min-height: 40px; padding: 0 14px; border-radius: 999px; font: 600 13px Inter, sans-serif; ' + (label === scope ? 'border: 1px solid #14171C; background: #14171C; color: #FFFFFF;' : 'border: 1px solid #E6E4DD; background: #FFFFFF; color: #14171C;')
+    }));
+    return { shown, scopes };
+  }
+}
+</script>
+</body>
+</html>

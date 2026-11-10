@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.env
+.env.local
+.env.*.local
+.vercel/
+dist/
+coverage/
+__pycache__/
+.venv/
+automation/n8n/data/
+.DS_Store

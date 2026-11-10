@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mobile home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Inter+Tight:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#FAFAF7}
+a{color:#B83A18}a:hover{color:#8F2C11}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 22px 18px 24px; display: flex; flex-direction: column; gap: 18px; background: #FAFAF7; color: #14171C; font-family: Inter, system-ui, sans-serif; overflow: hidden;">
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<div style="display: flex; align-items: center; gap: 8px;">
+<svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true"><path d="M26 16a10 10 0 1 1-4.2-8.1" fill="none" stroke="#FF5A36" stroke-width="3" stroke-linecap="round"></path><path d="M22.5 3.5l-0.6 4.6 4.6 0.4" fill="none" stroke="#FF5A36" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span style="font-family: 'Inter Tight', Inter, sans-serif; font-size: 17px; font-weight: 700;">Mirrorline</span>
+</div>
+<span style="width: 36px; height: 36px; border-radius: 10px; background: #12545A; color: #F3E9DC; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;">MT</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<span style="font-size: 13px; color: #5F6672;">Monday, 9 November</span>
+<h1 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 26px; font-weight: 700;">Good morning, Maya</h1>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+<sc-for list="{{metrics}}" as="m" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 2px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 12px 14px;">
+<span style="font-size: 12px; color: #5F6672;">{{m.label}}</span>
+<span style="font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums;">{{m.value}}</span>
+<span style="font-size: 12px; color: #145C40; font-weight: 600;">{{m.delta}}</span>
+</div>
+</sc-for>
+</div>
+<a href="M1-Approvals.dc.html" style="display: flex; justify-content: space-between; align-items: center; min-height: 56px; padding: 0 16px; border-radius: 12px; background: #14171C; color: #F2F2EE; text-decoration: none;"><span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; font-weight: 600;">3 posts need your eye</span><span style="font-size: 12px; color: #C9CDD3;">1 blocked: venue music in cut 12</span></span><span style="font-size: 14px; font-weight: 700; color: #FFB8A6;">Review</span></a>
+<section style="display: flex; flex-direction: column; gap: 8px;">
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 17px; font-weight: 600;">Next up</h2>
+<sc-for list="{{next}}" as="p" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px;">
+<span style="width: 30px; height: 48px; border-radius: 6px; background: {{p.thumb}}; flex-shrink: 0;"></span>
+<span style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span style="font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{p.title}}</span><span style="font-size: 12px; color: #5F6672;">{{p.when}}</span></span>
+<span style="{{p.chip}}">{{p.status}}</span>
+</div>
+</sc-for>
+</section>
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 12px; background: #FFE8E1;">
+<span style="font-size: 12px; font-weight: 700; color: #8F2C11; text-transform: uppercase; letter-spacing: 0.06em;">Learning loop</span>
+<span style="font-size: 14px; line-height: 1.4; color: #14171C;">Question hooks got 2.1× average views. More of them next week.</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const chip = (bg, fg) => 'flex-shrink: 0; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: ' + bg + '; color: ' + fg + ';';
+    const metrics = [
+      { label: 'Posts this week', value: '21', delta: 'On plan' },
+      { label: 'Views', value: '48.3K', delta: '+18%' },
+      { label: 'Link clicks', value: '214', delta: '+22%' },
+      { label: 'Calls booked', value: '6', delta: '+2' }
+    ];
+    const next = [
+      { title: 'The 3-word reframe (remake)', when: 'Instagram · 2:15 pm', status: 'Scheduled', chip: chip('#E3ECFB', '#1F4FA8'), thumb: '#6B4F3A' },
+      { title: 'The 10-minute Friday habit', when: 'YouTube Shorts · 5:00 pm', status: 'Scheduled', chip: chip('#E3ECFB', '#1F4FA8'), thumb: '#12545A' },
+      { title: 'New managers: stop saying “let me know…”', when: 'TikTok · 7:45 pm', status: 'Needs review', chip: chip('#FBF0D9', '#6E4A07'), thumb: '#1E3A40' }
+    ];
+    return { metrics, next };
+  }
+}
+</script>
+</body>
+</html>

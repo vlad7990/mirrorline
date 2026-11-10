@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Onboarding</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Inter+Tight:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#FAFAF7}
+a{color:#B83A18}a:hover{color:#8F2C11}
+</style>
+</helmet>
+<div style="box-sizing: border-box; min-height: 900px; padding: 40px 24px 64px; display: flex; flex-direction: column; align-items: center; gap: 32px; font-family: Inter, system-ui, sans-serif; color: #14171C; background: #FAFAF7;">
+
+<div style="width: 100%; max-width: 1080px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;">
+<div style="display: flex; align-items: center; gap: 10px;">
+<svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M26 16a10 10 0 1 1-4.2-8.1" fill="none" stroke="#FF5A36" stroke-width="3" stroke-linecap="round"></path><path d="M22.5 3.5l-0.6 4.6 4.6 0.4" fill="none" stroke="#FF5A36" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span style="font-family: 'Inter Tight', Inter, sans-serif; font-size: 19px; font-weight: 700;">Mirrorline</span>
+</div>
+<ol aria-label="Setup steps" style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px;">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="3">
+<li><button type="button" onClick="{{s.go}}" style="{{s.style}}"><span style="{{s.dot}}">{{s.n}}</span>{{s.label}}</button></li>
+</sc-for>
+</ol>
+</div>
+
+<div style="width: 100%; max-width: 1080px; display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+
+<div style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 24px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 16px; padding: 36px;">
+
+<sc-if value="{{isStep1}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 24px;">
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<h1 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 32px; font-weight: 700;">Your brand</h1>
+<p style="margin: 0; font-size: 15px; color: #5F6672; line-height: 1.5;">We use this on every caption, intro and thumbnail, so your videos always look like you.</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center;">
+<div style="width: 88px; height: 88px; border-radius: 14px; background: #12545A; color: #F3E9DC; display: flex; align-items: center; justify-content: center; font-family: 'Inter Tight', Inter, sans-serif; font-weight: 700; font-size: 30px;">MT</div>
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<span style="font-weight: 600; font-size: 15px;">maya-torres-logo.png</span>
+<button type="button" style="align-self: flex-start; min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid #D6D3CA; background: #FFFFFF; font: 600 14px Inter, sans-serif; color: #14171C;">Replace logo</button>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px;">
+<span style="font-weight: 600; font-size: 14px;">Colours (suggested from your logo)</span>
+<div style="display: flex; flex-wrap: wrap; gap: 12px;">
+<span style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; border: 2px solid #14171C; font-size: 13px; font-weight: 600;"><span style="width: 28px; height: 28px; border-radius: 50%; background: #12545A;"></span>Deep teal</span>
+<span style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; border: 1px solid #E6E4DD; font-size: 13px;"><span style="width: 28px; height: 28px; border-radius: 50%; background: #F3E9DC; border: 1px solid #E6E4DD;"></span>Warm sand</span>
+<span style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; border: 1px solid #E6E4DD; font-size: 13px;"><span style="width: 28px; height: 28px; border-radius: 50%; background: #FF5A36;"></span>Coral</span>
+<span style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; border: 1px solid #E6E4DD; font-size: 13px;"><span style="width: 28px; height: 28px; border-radius: 50%; background: #14171C;"></span>Ink</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<label for="font" style="font-weight: 600; font-size: 14px;">Caption font</label>
+<select id="font" style="min-height: 44px; max-width: 320px; padding: 0 12px; border-radius: 10px; border: 1px solid #D6D3CA; font: 500 14px Inter, sans-serif; background: #FFFFFF; color: #14171C;"><option>Inter Tight Bold</option><option>DM Serif Display</option><option>Space Grotesk</option></select>
+</div>
+<div style="display: flex; flex-direction: column; gap: 14px;">
+<span style="font-weight: 600; font-size: 14px;">How you talk</span>
+<sc-for list="{{tones}}" as="t" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 14px; font-size: 13px; color: #5F6672;">
+<span style="width: 72px;">{{t.left}}</span>
+<input type="range" min="0" max="100" value="{{t.value}}" aria-label="{{t.aria}}" style="flex-grow: 1; accent-color: #C8401C;">
+<span style="width: 72px; text-align: right;">{{t.right}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isStep2}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 24px;">
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<h1 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 32px; font-weight: 700;">Connect your accounts</h1>
+<p style="margin: 0; font-size: 15px; color: #5F6672; line-height: 1.5;">We post only to accounts you connect, through each platform's official sign-in. You can disconnect any time.</p>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px;">
+<sc-for list="{{accounts}}" as="a" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 10px; border: 1px solid #E6E4DD; border-radius: 12px; padding: 18px;">
+<div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-weight: 600; font-size: 15px;">{{a.platform}}</span><span style="{{a.chip}}">{{a.status}}</span></div>
+<span style="font-size: 13px; color: #5F6672;">{{a.handle}}</span>
+<span style="font-size: 12px; color: #6E4A07; line-height: 1.4;">{{a.note}}</span>
+<button type="button" style="{{a.btn}}">{{a.action}}</button>
+</div>
+</sc-for>
+</div>
+<label style="display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.45;"><input type="checkbox" checked style="width: 20px; height: 20px; accent-color: #C8401C; margin-top: 1px;">I own or have the rights to everything I upload.</label>
+</div>
+</sc-if>
+
+<sc-if value="{{isStep3}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 24px;">
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<h1 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 32px; font-weight: 700;">Your niche and goal</h1>
+<p style="margin: 0; font-size: 15px; color: #5F6672; line-height: 1.5;">The Trend Scout watches your niche and nearby ones, and every post points to your goal.</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<label for="niche" style="font-weight: 600; font-size: 14px;">Niche</label>
+<select id="niche" style="min-height: 44px; max-width: 320px; padding: 0 12px; border-radius: 10px; border: 1px solid #D6D3CA; font: 500 14px Inter, sans-serif; background: #FFFFFF; color: #14171C;"><option>Coaching</option><option>Local service</option><option>Product brand</option></select>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<span style="font-weight: 600; font-size: 14px;">Nearby niches to watch</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; font-weight: 600;">
+<span style="padding: 8px 14px; border-radius: 999px; background: #FFE8E1; color: #8F2C11;">Leadership</span>
+<span style="padding: 8px 14px; border-radius: 999px; background: #FFE8E1; color: #8F2C11;">Productivity</span>
+<span style="padding: 8px 14px; border-radius: 999px; background: #FFE8E1; color: #8F2C11;">Wellness</span>
+<span style="padding: 8px 14px; border-radius: 999px; border: 1px dashed #D6D3CA; color: #5F6672;">+ Add</span>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 20px;">
+<div style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 8px;">
+<label for="goal" style="font-weight: 600; font-size: 14px;">Main goal</label>
+<select id="goal" style="min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid #D6D3CA; font: 500 14px Inter, sans-serif; background: #FFFFFF; color: #14171C;"><option>Book discovery calls</option><option>Grow followers</option><option>Sell a product</option></select>
+</div>
+<div style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 8px;">
+<label for="link" style="font-weight: 600; font-size: 14px;">Send traffic to</label>
+<input id="link" type="text" value="mayatorres.example/call" style="min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid #D6D3CA; font: 500 14px Inter, sans-serif; color: #14171C;">
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<label for="ppd" style="font-weight: 600; font-size: 14px;">Posts per day, per platform</label>
+<select id="ppd" style="min-height: 44px; max-width: 200px; padding: 0 12px; border-radius: 10px; border: 1px solid #D6D3CA; font: 500 14px Inter, sans-serif; background: #FFFFFF; color: #14171C;"><option>1</option><option selected>2</option><option>3</option></select>
+<span style="font-size: 13px; color: #5F6672;">We start here and raise it only while reach per post holds up.</span>
+</div>
+</div>
+</sc-if>
+
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 8px; border-top: 1px solid #E6E4DD;">
+<button type="button" onClick="{{back}}" style="min-height: 44px; padding: 0 16px; border-radius: 10px; border: none; background: transparent; font: 600 14px Inter, sans-serif; color: #5F6672;">Back</button>
+<sc-if value="{{notLast}}" hint-placeholder-val="{{true}}">
+<button type="button" onClick="{{next}}" style="min-height: 48px; padding: 0 22px; border-radius: 10px; border: none; background: #C8401C; color: #FFFFFF; font: 600 15px Inter, sans-serif;">Continue</button>
+</sc-if>
+<sc-if value="{{isStep3}}" hint-placeholder-val="{{false}}">
+<a href="S2-Home.dc.html" style="display: inline-flex; align-items: center; min-height: 48px; padding: 0 22px; border-radius: 10px; background: #C8401C; color: #FFFFFF; font-weight: 600; font-size: 15px; text-decoration: none;">Open my studio</a>
+</sc-if>
+</div>
+</div>
+
+<aside aria-label="Live preview" style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 12px; align-items: center;">
+<span style="font-size: 13px; font-weight: 600; color: #5F6672; text-transform: uppercase; letter-spacing: 0.06em;">Live preview</span>
+<div style="width: 260px; aspect-ratio: 9 / 16; border-radius: 16px; background: #12545A; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; padding: 22px; box-sizing: border-box;">
+<span style="font-family: 'Inter Tight', Inter, sans-serif; font-size: 22px; font-weight: 700; line-height: 1.25; color: #FFFFFF;">Burnout isn't a <span style="background: #F3E9DC; color: #12545A; padding: 0 5px; border-radius: 4px;">workload</span> problem.</span>
+<span style="font-size: 12px; color: #F3E9DC;">@mayatorres.coach</span>
+</div>
+<span style="font-size: 13px; color: #5F6672; text-align: center; max-width: 260px; line-height: 1.45;">Calm, direct, warm. Updates as you change your brand.</span>
+</aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { step: 1 }; }
+  renderVals() {
+    const step = this.state.step;
+    const labels = ['Your brand', 'Connect accounts', 'Niche and goal'];
+    const steps = labels.map((label, i) => {
+      const n = i + 1, on = n === step, done = n < step;
+      return {
+        n: done ? '✓' : String(n), label,
+        go: () => this.setState({ step: n }),
+        style: 'display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid ' + (on ? '#14171C' : '#E6E4DD') + '; background: #FFFFFF; font: ' + (on ? '600' : '500') + ' 14px Inter, sans-serif; color: ' + (on ? '#14171C' : '#5F6672') + ';',
+        dot: 'width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: ' + (on ? '#C8401C' : done ? '#1F9D6B' : '#EFEDE7') + '; color: ' + (on || done ? '#FFFFFF' : '#3E444D') + ';'
+      };
+    });
+    const chip = (ok) => 'font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: ' + (ok ? '#E3F4EC' : '#EFEDE7') + '; color: ' + (ok ? '#145C40' : '#3E444D') + ';';
+    const btn = (ok) => 'min-height: 44px; border-radius: 10px; font: 600 14px Inter, sans-serif; ' + (ok ? 'border: 1px solid #D6D3CA; background: #FFFFFF; color: #14171C;' : 'border: none; background: #C8401C; color: #FFFFFF;');
+    const accounts = [
+      { platform: 'Instagram', handle: '@mayatorres.coach', status: 'Connected', note: '', action: 'Manage', ok: true },
+      { platform: 'TikTok', handle: '@mayaleads', status: 'Connected', note: 'Posts stay private until our app is approved by TikTok.', action: 'Manage', ok: true },
+      { platform: 'YouTube', handle: 'Maya Torres', status: 'Connected', note: '', action: 'Manage', ok: true },
+      { platform: 'LinkedIn', handle: 'Not connected', status: 'Off', note: '', action: 'Connect', ok: false }
+    ].map((a) => ({ ...a, chip: chip(a.ok), btn: btn(a.ok) }));
+    const tones = [
+      { left: 'Formal', right: 'Casual', value: 62, aria: 'Formal to casual' },
+      { left: 'Calm', right: 'Energetic', value: 35, aria: 'Calm to energetic' },
+      { left: 'Expert', right: 'Friendly', value: 55, aria: 'Expert to friendly' }
+    ];
+    return {
+      steps, accounts, tones,
+      isStep1: step === 1, isStep2: step === 2, isStep3: step === 3, notLast: step < 3,
+      next: () => this.setState({ step: Math.min(3, step + 1) }),
+      back: () => this.setState({ step: Math.max(1, step - 1) })
+    };
+  }
+}
+</script>
+</body>
+</html>

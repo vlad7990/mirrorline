@@ -1,0 +1,91 @@
+# Mirrorline · project memory for Claude Code
+
+"Mirrorline" is a placeholder name. Owner: Vlad Breygin. Read this file fully at the start of every session.
+
+## What we are building
+
+An AI content studio for **coaches, consultants and local service businesses**. A client uploads their own long videos (podcasts, webinars, talks). Mirrorline turns them, plus video formats rising in the client's niche, into original short vertical videos. A team of **seven AI agents** then posts them several times a day to the client's own Instagram, TikTok and YouTube accounts, through official APIs, and learns from the results.
+
+Agents: Trend Scout · Remake Producer · Multiplier · Compliance · Client Concierge · Publisher · Performance Analyst (spec: `docs/specs/04_AGENTS_SPEC.md`).
+
+## Why
+
+This is the legal turnaround of an earlier project that failed on legal and platform grounds: it reposted other creators' videos, evaded detection, and ran fake accounts. The goal is to recover an investor's money with a legitimate, fast-growing product: done-for-you retainers first, self-serve later. Everything we build must be something we could show a platform, a lawyer or an investor.
+
+## Where we are in the 30-day plan
+
+Full plan: `docs/plan/30_DAY_PLAN.md`. Current phase: **Day 0–1, the overnight prototype.**
+
+**Order of work:**
+1. Web app (client studio) with mock data
+2. Public website (marketing, pricing, trust, sign-in, sign-up)
+3. Engine v0 (make real sample videos)
+4. Mobile: **later**. The web app must still work in a phone browser.
+
+## Source of truth, in priority order
+
+1. This file and `KICKOFF_PROMPT.md`
+2. `DESIGN.md` (design system in Google's DESIGN.md format) and `docs/design/design-tokens.*`
+3. `docs/specs/` (01 product brief, 02 brand and voice, 03 screens, 04 agents, 07 technical handoff, 08 mock data)
+4. Screen references:
+   - `docs/design/claude-design/screens/*.png`: the approved mockup
+   - `docs/design/claude-design/source/*.dc.html`: its source, including interactions
+   - `docs/design/stitch/screens/*.png` and `docs/design/stitch/code/*.html`: Stitch's polished versions. Prefer Stitch's visual polish where it matches the spec.
+5. `docs/design/STITCH_REVIEW.md`: claims and copy from Stitch that must NOT be used.
+
+If sources conflict, the higher one wins. Log every decision in `docs/DECISIONS.md`.
+
+## Stack
+
+- **Web:** Next.js (App Router) + TypeScript + Tailwind + shadcn/ui + lucide icons; pnpm.
+- **Data, auth, storage:** Supabase. Tonight, mock data only; wire Supabase only if keys exist in `.env.local`.
+- **Billing:** Stripe, **test mode only**.
+- **Hosting:** Vercel, **preview deployments only**.
+- **Media engine (later):** Python workers + queue. ffmpeg, WhisperX, ClipsAI, Remotion; Claude API for writing.
+- **Automation:** n8n, self-hosted, for back-office flows only (`docs/automation/N8N_AND_ZAPIER.md`). Zapier only for low-volume links when no API exists.
+- **Tests:** Vitest for units, Playwright for end-to-end and visual checks against the reference PNGs.
+
+## Repo layout
+
+```
+apps/web/            Next.js: marketing site at "/", client studio at "/app/*"
+packages/ui/         Shared tokens, theme, components (generated from DESIGN.md)
+packages/mock/       Typed mock data from docs/specs/08_MOCK_DATA.md
+services/pipeline/   Python media workers, one folder per agent (engine v0)
+automation/n8n/      docker-compose and exported workflow JSON (inactive by default)
+docs/                Specs, plan, designs, decisions, progress
+```
+
+## Non-negotiables (never break, never work around)
+
+1. **Inputs:** only client-owned material, or footage we hold rights to. Never download, store or reuse other creators' videos or audio.
+2. **Remakes copy the format only:** new script, new footage, new voice.
+3. **Publishing:** only through official platform APIs, via Postiz, to client-connected accounts. No device automation, app clones, proxies, fake accounts or scraping.
+4. **AI labels:** AI scenes are always labelled, in the UI and on the platform.
+5. **Consent:** no face-swaps; voice or likeness only with a stored consent record.
+6. **Compliance gate:** every video passes the Compliance agent before it can be scheduled.
+7. **Claims:**
+   - No fake testimonials, ratings, customer results or certifications (no SOC-2 and no "certified" badges unless real).
+   - No guarantees of views, followers, compliance or "zero" anything.
+   - Demo data is labelled "Sample data" on public pages.
+8. **Old drives:** code from the GenAIUniq drives is NOT in this repo and must not be added until a written IP assignment exists. Then only modules on the reuse list in `docs/specs/07_CLAUDE_CODE_HANDOFF.md`.
+9. **Secrets:** never in code or commits; use `.env.local` (git-ignored). Never print secrets.
+10. **Licences:** dependencies must be MIT, Apache-2.0, BSD, ISC or MPL-2.0. AGPL tools (Postiz) run only as separate, unmodified services. FLUX.1 dev is not allowed.
+11. **Money and production:** no paid API calls beyond test mode; no production deploys; no real social posting.
+
+## Working rules (auto mode, unattended)
+
+- **Don't stop to ask.** When something is unclear, choose the option most consistent with the sources above, log it in `docs/DECISIONS.md`, and continue.
+- **Work in milestones** (see `KICKOFF_PROMPT.md`). After each one: `pnpm lint && pnpm typecheck && pnpm test && pnpm build` must pass, then commit with a clear message, then update `docs/PROGRESS.md`.
+- **Never force-push, rewrite history, or delete files you did not create.**
+- **When blocked** (missing key, failing service): stub it behind an adapter with mock data, note it in `docs/PROGRESS.md` under "Needs Vlad", and move on.
+- **Pull requests:** keep each under ~400 lines where practical.
+- **Verify every screen:**
+  1. Take a Playwright screenshot at 1440px and at 390px.
+  2. Compare it with the reference PNG.
+  3. Fix obvious gaps.
+
+## Commands (create these during scaffolding)
+
+- `pnpm dev` · `pnpm build` · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm test:e2e`
+- `docker compose -f automation/n8n/docker-compose.yml up` (n8n, local)

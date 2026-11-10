@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mirrorline - Onboarding Setup</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Inter+Tight:wght@500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              bg: '#FAFAF7',
+              text: '#14171C',
+              muted: '#5F6672',
+              border: '#E6E4DD',
+              borderLight: '#ECEAE4',
+              coral: '#C8401C',
+              coralHover: '#b23716',
+              accentCoral: '#FF5A36',
+              deepTeal: '#12545A',
+              warmSand: '#F3E9DC',
+              ink: '#14171C',
+              tagBg: '#F3E9DC',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['"Inter Tight"', 'Inter', 'sans-serif'],
+          },
+          borderRadius: {
+            'card': '16px',
+            'phone': '24px',
+          }
+        }
+      }
+    }
+  </script>
+<!-- BEGIN: Custom Styles -->
+<style data-purpose="base-styling">
+    body {
+      background-color: #FAFAF7;
+      color: #14171C;
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* Custom Slider Style matching Mirrorline design */
+    .tone-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 9999px;
+      outline: none;
+      background: #D9D7CE;
+    }
+
+    .tone-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #C8401C;
+      cursor: pointer;
+      border: 2px solid #C8401C;
+      transition: transform 0.15s ease;
+    }
+
+    .tone-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    .tone-slider::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #C8401C;
+      cursor: pointer;
+      border: 2px solid #C8401C;
+      transition: transform 0.15s ease;
+    }
+  </style>
+<!-- END: Custom Styles -->
+</head>
+<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-[#FF5A36] selection:text-white">
+<!-- BEGIN: MainHeader -->
+<header class="w-full max-w-[1400px] mx-auto pt-8 pb-4 px-6 md:px-12 flex items-center justify-between" data-purpose="top-navigation">
+<!-- Brand Logo -->
+<div class="flex items-center gap-3 cursor-pointer" onclick="goToStep(1)">
+<!-- Open circular arrow loop icon in coral -->
+<svg class="w-7 h-7 text-[#FF5A36]" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24">
+<path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+<polyline points="21 3 21 9 15 9"></polyline>
+</svg>
+<span class="font-display font-bold text-xl tracking-tight text-brand-text">Mirrorline</span>
+</div>
+<!-- Stepper Navigation Pills -->
+<nav aria-label="Progress Steps" class="flex items-center gap-2 sm:gap-3">
+<!-- Step 1 Button -->
+<button aria-current="step" class="flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide border border-transparent transition-all shadow-sm bg-white" id="nav-step-1" onclick="goToStep(1)">
+<span class="w-4 h-4 rounded-full bg-[#C8401C] text-white flex items-center justify-center text-[10px] font-bold" id="badge-step-1">1</span>
+<span class="text-brand-text">Your brand</span>
+</button>
+<!-- Step 2 Button -->
+<button class="flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium tracking-wide text-brand-muted border border-brand-border bg-transparent hover:border-neutral-400 transition-all" id="nav-step-2" onclick="goToStep(2)">
+<span class="text-brand-muted font-semibold text-xs" id="badge-step-2">2</span>
+<span class="text-brand-muted">Connect accounts</span>
+</button>
+<!-- Step 3 Button -->
+<button class="flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium tracking-wide text-brand-muted border border-brand-border bg-transparent hover:border-neutral-400 transition-all" id="nav-step-3" onclick="goToStep(3)">
+<span class="text-brand-muted font-semibold text-xs" id="badge-step-3">3</span>
+<span class="text-brand-muted">Niche and goal</span>
+</button>
+</nav>
+</header>
+<!-- END: MainHeader -->
+<!-- BEGIN: MainContent -->
+<main class="w-full max-w-[1400px] mx-auto px-6 md:px-12 py-6 flex-1 flex flex-col justify-center">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 xl:gap-12 items-start">
+<!-- Wizard Card Panel (Left Column) -->
+<section class="lg:col-span-8 bg-white border border-[#E6E4DD] rounded-card p-8 md:p-11 shadow-[0_2px_8px_rgba(0,0,0,0.02)] min-h-[580px] flex flex-col justify-between" data-purpose="wizard-form-card">
+<!-- STEP 1 CONTENT -->
+<div class="step-panel space-y-7" id="step-panel-1">
+<div>
+<h1 class="font-display font-bold text-[32px] text-brand-text leading-tight tracking-tight">Your brand</h1>
+<p class="text-[15px] text-brand-muted mt-1 font-normal">We use this on every caption, intro and thumbnail, so your videos always look like you.</p>
+</div>
+<!-- Logo Upload Preview -->
+<div class="flex items-center gap-5 pt-1" data-purpose="logo-section">
+<div class="w-[74px] h-[74px] rounded-xl bg-[#12545A] flex items-center justify-center shadow-sm">
+<span class="text-white font-display font-bold text-2xl tracking-wide">MT</span>
+</div>
+<div class="space-y-2">
+<span class="block text-sm font-medium text-brand-text leading-none">maya-torres-logo.png</span>
+<button class="px-3.5 py-1.5 bg-white border border-[#D6D3CA] hover:border-neutral-400 text-xs font-medium text-brand-text rounded-[10px] shadow-sm transition" type="button">
+                Replace logo
+              </button>
+</div>
+</div>
+<!-- Colours Selection -->
+<div class="space-y-2.5 pt-1" data-purpose="colour-swatches">
+<label class="block text-xs font-semibold text-brand-text">Colours (suggested from your logo)</label>
+<div class="flex flex-wrap gap-2.5">
+<!-- Selected Deep Teal Swatch -->
+<div class="flex items-center gap-2.5 pl-2 pr-3.5 py-1.5 bg-white border-2 border-brand-text rounded-full shadow-sm cursor-pointer">
+<span class="w-5 h-5 rounded-full bg-[#12545A] inline-block shadow-inner"></span>
+<span class="text-xs font-semibold text-brand-text">Deep teal</span>
+</div>
+<!-- Warm sand -->
+<div class="flex items-center gap-2.5 pl-2 pr-3.5 py-1.5 bg-white border border-[#E6E4DD] rounded-full hover:border-neutral-400 transition cursor-pointer">
+<span class="w-5 h-5 rounded-full bg-[#F3E9DC] inline-block border border-neutral-200"></span>
+<span class="text-xs font-medium text-brand-text">Warm sand</span>
+</div>
+<!-- Coral -->
+<div class="flex items-center gap-2.5 pl-2 pr-3.5 py-1.5 bg-white border border-[#E6E4DD] rounded-full hover:border-neutral-400 transition cursor-pointer">
+<span class="w-5 h-5 rounded-full bg-[#FF5A36] inline-block"></span>
+<span class="text-xs font-medium text-brand-text">Coral</span>
+</div>
+<!-- Ink -->
+<div class="flex items-center gap-2.5 pl-2 pr-3.5 py-1.5 bg-white border border-[#E6E4DD] rounded-full hover:border-neutral-400 transition cursor-pointer">
+<span class="w-5 h-5 rounded-full bg-[#14171C] inline-block"></span>
+<span class="text-xs font-medium text-brand-text">Ink</span>
+</div>
+</div>
+</div>
+<!-- Caption Font Selector -->
+<div class="max-w-xs space-y-1.5" data-purpose="font-selector">
+<label class="block text-xs font-semibold text-brand-text" for="font-select">Caption font</label>
+<div class="relative">
+<select class="w-full appearance-none bg-white border border-[#E6E4DD] text-xs font-bold text-brand-text rounded-[10px] px-3.5 py-2.5 pr-8 focus:ring-1 focus:ring-[#C8401C] focus:border-[#C8401C] cursor-pointer" id="font-select">
+<option selected="" value="Inter Tight Bold">Inter Tight Bold</option>
+<option value="Inter Regular">Inter Regular</option>
+<option value="Cabinet Grotesk">Cabinet Grotesk Bold</option>
+<option value="Clash Display">Clash Display Semibold</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-neutral-500">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+</div>
+<!-- Tone Sliders -->
+<div class="space-y-3.5 pt-1" data-purpose="tone-sliders">
+<label class="block text-xs font-semibold text-brand-text">How you talk</label>
+<div class="space-y-3 text-xs text-brand-muted">
+<!-- Slider 1: Formal - Casual -->
+<div class="flex items-center gap-4">
+<span class="w-16 text-right font-normal">Formal</span>
+<div class="flex-1 relative flex items-center">
+<input class="tone-slider" max="100" min="0" oninput="this.style.background = 'linear-gradient(to right, #C8401C 0%, #C8401C ' + this.value + '%, #E5E3DB ' + this.value + '%, #E5E3DB 100%)'" style="background: linear-gradient(to right, #C8401C 0%, #C8401C 68%, #E5E3DB 68%, #E5E3DB 100%);" type="range" value="68"/>
+</div>
+<span class="w-16 font-normal">Casual</span>
+</div>
+<!-- Slider 2: Calm - Energetic -->
+<div class="flex items-center gap-4">
+<span class="w-16 text-right font-normal">Calm</span>
+<div class="flex-1 relative flex items-center">
+<input class="tone-slider" max="100" min="0" oninput="this.style.background = 'linear-gradient(to right, #C8401C 0%, #C8401C ' + this.value + '%, #E5E3DB ' + this.value + '%, #E5E3DB 100%)'" style="background: linear-gradient(to right, #C8401C 0%, #C8401C 38%, #E5E3DB 38%, #E5E3DB 100%);" type="range" value="38"/>
+</div>
+<span class="w-16 font-normal">Energetic</span>
+</div>
+<!-- Slider 3: Expert - Friendly -->
+<div class="flex items-center gap-4">
+<span class="w-16 text-right font-normal">Expert</span>
+<div class="flex-1 relative flex items-center">
+<input class="tone-slider" max="100" min="0" oninput="this.style.background = 'linear-gradient(to right, #C8401C 0%, #C8401C ' + this.value + '%, #E5E3DB ' + this.value + '%, #E5E3DB 100%)'" style="background: linear-gradient(to right, #C8401C 0%, #C8401C 60%, #E5E3DB 60%, #E5E3DB 100%);" type="range" value="60"/>
+</div>
+<span class="w-16 font-normal">Friendly</span>
+</div>
+</div>
+</div>
+</div>
+<!-- STEP 2 CONTENT (Connect Accounts) -->
+<div class="step-panel space-y-7 hidden" id="step-panel-2">
+<div>
+<h1 class="font-display font-bold text-[32px] text-brand-text leading-tight tracking-tight">Connect your accounts</h1>
+<p class="text-[15px] text-brand-muted mt-1 font-normal">We post only to accounts you connect, through each platform's official sign-in. You can disconnect any time.</p>
+</div>
+<!-- Connected Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-2">
+<!-- Instagram Card -->
+<div class="border border-[#E6E4DD] rounded-xl p-4 flex flex-col justify-between h-[155px]">
+<div>
+<div class="flex items-center justify-between">
+<span class="font-semibold text-sm text-brand-text">Instagram</span>
+<span class="text-[11px] font-medium bg-[#EBF8F2] text-[#1E7D58] px-2 py-0.5 rounded-full">Connected</span>
+</div>
+<span class="text-xs text-brand-muted mt-1 block">@mayatorres.coach</span>
+</div>
+<button class="w-full py-2 bg-white border border-[#D6D3CA] hover:border-neutral-400 text-xs font-semibold text-brand-text rounded-[10px] transition" type="button">
+                Manage
+              </button>
+</div>
+<!-- TikTok Card -->
+<div class="border border-[#E6E4DD] rounded-xl p-4 flex flex-col justify-between h-[155px]">
+<div>
+<div class="flex items-center justify-between">
+<span class="font-semibold text-sm text-brand-text">TikTok</span>
+<span class="text-[11px] font-medium bg-[#EBF8F2] text-[#1E7D58] px-2 py-0.5 rounded-full">Connected</span>
+</div>
+<span class="text-xs text-brand-muted mt-1 block">@mayaleads</span>
+<p class="text-[10px] text-[#A66922] mt-1 leading-snug">Posts stay private until our app is approved by TikTok.</p>
+</div>
+<button class="w-full py-2 bg-white border border-[#D6D3CA] hover:border-neutral-400 text-xs font-semibold text-brand-text rounded-[10px] transition" type="button">
+                Manage
+              </button>
+</div>
+<!-- YouTube Card -->
+<div class="border border-[#E6E4DD] rounded-xl p-4 flex flex-col justify-between h-[155px]">
+<div>
+<div class="flex items-center justify-between">
+<span class="font-semibold text-sm text-brand-text">YouTube</span>
+<span class="text-[11px] font-medium bg-[#EBF8F2] text-[#1E7D58] px-2 py-0.5 rounded-full">Connected</span>
+</div>
+<span class="text-xs text-brand-muted mt-1 block">Maya Torres</span>
+</div>
+<button class="w-full py-2 bg-white border border-[#D6D3CA] hover:border-neutral-400 text-xs font-semibold text-brand-text rounded-[10px] transition" type="button">
+                Manage
+              </button>
+</div>
+</div>
+<!-- Disconnected Option: LinkedIn -->
+<div class="w-full md:w-[220px]">
+<div class="border border-[#E6E4DD] rounded-xl p-4 flex flex-col justify-between h-[155px]">
+<div>
+<div class="flex items-center justify-between">
+<span class="font-semibold text-sm text-brand-text">LinkedIn</span>
+<span class="text-[11px] font-medium bg-[#F1EFE9] text-brand-muted px-2 py-0.5 rounded-full">Off</span>
+</div>
+<span class="text-xs text-brand-muted mt-1 block">Not connected</span>
+</div>
+<button class="w-full py-2 bg-[#C8401C] hover:bg-[#b23716] text-xs font-semibold text-white rounded-[10px] shadow-sm transition" type="button">
+                Connect
+              </button>
+</div>
+</div>
+<!-- Agreement Checkbox -->
+<label class="flex items-center gap-2.5 pt-2 cursor-pointer select-none">
+<input checked="" class="w-4 h-4 rounded text-[#C8401C] focus:ring-[#C8401C] border-[#D6D3CA]" type="checkbox"/>
+<span class="text-xs font-medium text-brand-text">I own or have the rights to everything I upload.</span>
+</label>
+</div>
+<!-- STEP 3 CONTENT (Niche and Goal) -->
+<div class="step-panel space-y-6 hidden" id="step-panel-3">
+<div>
+<h1 class="font-display font-bold text-[32px] text-brand-text leading-tight tracking-tight">Your niche and goal</h1>
+<p class="text-[15px] text-brand-muted mt-1 font-normal">The Trend Scout watches your niche and nearby ones, and every post points to your goal.</p>
+</div>
+<!-- Niche Selection -->
+<div class="max-w-xs space-y-1.5" data-purpose="niche-selector">
+<label class="block text-xs font-semibold text-brand-text">Niche</label>
+<div class="relative">
+<select class="w-full appearance-none bg-white border border-[#E6E4DD] text-xs font-medium text-brand-text rounded-[10px] px-3.5 py-2.5 pr-8 focus:ring-1 focus:ring-[#C8401C] focus:border-[#C8401C] cursor-pointer">
+<option selected="">Coaching</option>
+<option>Tech &amp; SaaS</option>
+<option>Health &amp; Wellness</option>
+<option>Finance &amp; Real Estate</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-neutral-500">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+</div>
+<!-- Nearby niches to watch -->
+<div class="space-y-2">
+<label class="block text-xs font-semibold text-brand-text">Nearby niches to watch</label>
+<div class="flex flex-wrap items-center gap-2">
+<span class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-[#FAEDE8] text-[#8E3218]">Leadership</span>
+<span class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-[#FAEDE8] text-[#8E3218]">Productivity</span>
+<span class="px-3.5 py-1.5 rounded-full text-xs font-medium bg-[#FAEDE8] text-[#8E3218]">Wellness</span>
+<button class="px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-[#C5C2BA] text-brand-muted hover:border-neutral-500 transition" type="button">+ Add</button>
+</div>
+</div>
+<!-- Main goal and Send traffic to -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="space-y-1.5">
+<label class="block text-xs font-semibold text-brand-text">Main goal</label>
+<div class="relative">
+<select class="w-full appearance-none bg-white border border-[#E6E4DD] text-xs font-medium text-brand-text rounded-[10px] px-3.5 py-2.5 pr-8 focus:ring-1 focus:ring-[#C8401C] focus:border-[#C8401C] cursor-pointer">
+<option selected="">Book discovery calls</option>
+<option>Grow email newsletter</option>
+<option>Direct product sales</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-neutral-500">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="block text-xs font-semibold text-brand-text">Send traffic to</label>
+<input class="w-full bg-white border border-[#E6E4DD] text-xs font-medium text-brand-text rounded-[10px] px-3.5 py-2.5 focus:ring-1 focus:ring-[#C8401C] focus:border-[#C8401C]" type="text" value="mayatorres.example/call"/>
+</div>
+</div>
+<!-- Posts per day -->
+<div class="max-w-[140px] space-y-1.5">
+<label class="block text-xs font-semibold text-brand-text">Posts per day, per platform</label>
+<div class="relative">
+<select class="w-full appearance-none bg-white border border-[#E6E4DD] text-xs font-medium text-brand-text rounded-[10px] px-3.5 py-2.5 pr-8 focus:ring-1 focus:ring-[#C8401C] focus:border-[#C8401C] cursor-pointer">
+<option>1</option>
+<option selected="">2</option>
+<option>3</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-neutral-500">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+<span class="block text-[11px] text-brand-muted pt-1">We start here and raise it only while reach per post holds up.</span>
+</div>
+</div>
+<!-- Card Footer Actions -->
+<div class="pt-8 border-t border-[#F1EFE9] flex items-center justify-between mt-8" data-purpose="wizard-actions">
+<button class="text-xs font-medium text-brand-muted hover:text-brand-text transition px-1 py-2" id="back-button" onclick="stepBack()" type="button">
+            Back
+          </button>
+<button class="bg-[#C8401C] hover:bg-[#b23716] active:scale-[0.99] text-white text-xs font-semibold px-6 py-3 rounded-[10px] shadow-sm transition" id="continue-button" onclick="stepNext()" type="button">
+            Continue
+          </button>
+</div>
+</section>
+<!-- Live Preview Column (Right Column) -->
+<section class="lg:col-span-4 flex flex-col items-center justify-start w-full" data-purpose="live-preview-column">
+<!-- Live Preview Header -->
+<span class="text-[11px] tracking-[0.08em] font-semibold text-brand-muted uppercase mb-3">Live Preview</span>
+<!-- Vertical 9:16 Video Frame Mockup -->
+<div class="w-full max-w-[280px] aspect-[9/16] rounded-phone bg-[#12545A] p-6 flex flex-col justify-end text-white shadow-md relative overflow-hidden" data-purpose="phone-mockup">
+<!-- Mock Post Caption Container -->
+<div class="space-y-2 mb-2">
+<h2 class="font-display font-bold text-[22px] leading-[1.2] text-white">
+              Burnout isn't a 
+              <span class="inline-block bg-[#F3E9DC] text-[#12545A] px-2 py-0.5 rounded-[6px] font-bold text-[20px] mx-0.5 my-0.5">
+                workload
+              </span> 
+              problem.
+            </h2>
+<p class="text-[11px] text-[#A6CCD0] font-medium pt-1">
+              @mayatorres.coach
+            </p>
+</div>
+</div>
+<!-- Subtext description under preview -->
+<p class="text-xs text-brand-muted text-center max-w-[240px] mt-4 leading-normal font-normal">
+          Calm, direct, warm. Updates as you change your brand.
+        </p>
+</section>
+</div>
+</main>
+<!-- END: MainContent -->
+<footer class="py-4 text-center text-[11px] text-neutral-400">
+    Mirrorline Onboarding Experience
+  </footer>
+<!-- BEGIN: Interactive Navigation Scripts -->
+<script data-purpose="stepper-interactivity">
+    let currentStep = 1;
+    const totalSteps = 3;
+
+    function goToStep(step) {
+      if (step < 1 || step > totalSteps) return;
+      currentStep = step;
+
+      // Hide all panels
+      for (let i = 1; i <= totalSteps; i++) {
+        const panel = document.getElementById(`step-panel-${i}`);
+        if (panel) {
+          panel.classList.toggle('hidden', i !== currentStep);
+        }
+      }
+
+      // Update Nav Buttons
+      updateNavStepper();
+
+      // Update CTA button label
+      const continueBtn = document.getElementById('continue-button');
+      if (continueBtn) {
+        if (currentStep === 3) {
+          continueBtn.textContent = 'Open my studio';
+        } else {
+          continueBtn.textContent = 'Continue';
+        }
+      }
+    }
+
+    function stepNext() {
+      if (currentStep < totalSteps) {
+        goToStep(currentStep + 1);
+      } else {
+        alert("Setup completed! Redirecting to Studio...");
+      }
+    }
+
+    function stepBack() {
+      if (currentStep > 1) {
+        goToStep(currentStep - 1);
+      }
+    }
+
+    function updateNavStepper() {
+      for (let i = 1; i <= totalSteps; i++) {
+        const btn = document.getElementById(`nav-step-${i}`);
+        const badge = document.getElementById(`badge-step-${i}`);
+        
+        if (!btn || !badge) continue;
+
+        if (i < currentStep) {
+          // Completed step
+          btn.className = "flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium tracking-wide text-brand-text border border-brand-border bg-white shadow-sm transition";
+          badge.outerHTML = `<span id="badge-step-${i}" class="w-4 h-4 rounded-full bg-[#1E7D58] text-white flex items-center justify-center text-[10px]"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></span>`;
+        } else if (i === currentStep) {
+          // Active step
+          btn.className = "flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide border border-transparent shadow-sm bg-white";
+          badge.outerHTML = `<span id="badge-step-${i}" class="w-4 h-4 rounded-full bg-[#C8401C] text-white flex items-center justify-center text-[10px] font-bold">${i}</span>`;
+        } else {
+          // Future step
+          btn.className = "flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium tracking-wide text-brand-muted border border-brand-border bg-transparent hover:border-neutral-400 transition";
+          badge.outerHTML = `<span id="badge-step-${i}" class="text-brand-muted font-semibold text-xs">${i}</span>`;
+        }
+      }
+    }
+
+    // Initialize step 1 on load
+    document.addEventListener("DOMContentLoaded", () => {
+      goToStep(1);
+    });
+  </script>
+<!-- END: Interactive Navigation Scripts -->
+</body></html>

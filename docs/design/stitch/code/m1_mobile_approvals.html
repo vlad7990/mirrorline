@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Mirrorline - Mobile Approvals</title>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter & Inter Tight -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Inter+Tight:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Custom Configuration -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            appBg: '#0E1116',
+            appSurface: '#161A21',
+            appCardTeal: '#1A3C40',
+            appText: '#F2F2EE',
+            appMuted: '#A3A9B4',
+            appHint: '#6B7280',
+            appCoral: '#FF7A5C',
+            appInk: '#14171C',
+            chipBg: '#181E25',
+            chipBorder: '#27303B',
+            btnDark: '#12171E',
+            btnBorder: '#29323F'
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            tight: ['"Inter Tight"', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+<!-- Custom Styles for Mobile Device Shell & Smooth Transitions -->
+<style data-purpose="custom-layout">
+    body {
+      background-color: #000000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+
+    /* Target exact iOS canvas dimensions (390px x 844px) */
+    .mobile-screen-frame {
+      width: 100%;
+      max-width: 390px;
+      height: 844px;
+      background-color: #0E1116;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Swipe gesture feedback classes */
+    .card-transition {
+      transition: transform 0.28s ease, opacity 0.24s ease;
+    }
+  </style>
+</head>
+<body class="bg-black text-appText">
+<!-- BEGIN: MobileDeviceContainer -->
+<div class="mobile-screen-frame shadow-2xl relative select-none">
+<!-- BEGIN: TopNavigationBar -->
+<header class="w-full pt-12 pb-3 px-5 flex items-center justify-between z-10" data-purpose="top-navigation">
+<!-- Back / Home Navigation Link -->
+<button aria-label="Go to home" class="text-[17px] font-normal text-[#D2D6DC] hover:text-white transition-colors tracking-tight focus:outline-none" type="button">
+        Home
+      </button>
+<!-- Current Progress Counter -->
+<div class="text-[15px] font-medium text-white tracking-tight pr-1" data-purpose="review-counter" id="counter-label">
+        3 to review
+      </div>
+</header>
+<!-- END: TopNavigationBar -->
+<!-- BEGIN: MainContentArea -->
+<main class="flex-1 px-4 flex flex-col justify-between overflow-hidden pb-4" data-purpose="main-stage">
+<!-- Card Stack / Current Post View -->
+<div class="relative w-full flex-1 flex flex-col justify-end pt-1 pb-3" style="min-height: 0;">
+<!-- Post Preview Card (9:16 vertical ratio optimized) -->
+<article class="card-transition w-full h-full bg-[#18363C] rounded-[22px] p-5 flex flex-col justify-between relative shadow-lg overflow-hidden border border-white/5" data-purpose="post-preview-card" id="approval-card">
+<!-- Top Metadata Badge -->
+<div class="flex items-center justify-start">
+<span class="inline-flex items-center px-3 py-1 rounded-full bg-white text-appInk text-[12px] font-semibold tracking-tight shadow-sm">
+              TikTok · Today 7:45 pm
+            </span>
+</div>
+<!-- Bottom Card Content: Hook Headline & Description -->
+<div class="mt-auto space-y-3 pb-1">
+<h1 class="font-tight font-extrabold text-[27px] leading-[1.18] text-[#F9F9F8] tracking-tight">
+              New managers: stop saying “let me know if you need anything”
+            </h1>
+<p class="text-[14.5px] leading-[1.38] text-[#DCE7E6] font-normal tracking-normal opacity-95">
+              Try this instead: “What’s one thing I can take off your plate this week?” Book a free call, link in bio.
+            </p>
+</div>
+</article>
+<!-- Empty State (Shown when all cards are processed) -->
+<div class="hidden absolute inset-0 rounded-[22px] bg-[#161A21] flex-col items-center justify-center text-center p-6 border border-white/5" data-purpose="empty-queue-indicator" id="empty-state">
+<div class="w-14 h-14 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-3">
+<svg class="w-7 h-7" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+</div>
+<h2 class="font-tight font-bold text-xl text-white mb-1">All caught up!</h2>
+<p class="text-sm text-appMuted max-w-[220px]">There are no more posts pending your approval right now.</p>
+<button class="mt-5 px-4 py-2 rounded-lg bg-btnDark text-white text-xs border border-btnBorder hover:bg-[#202732] transition" id="reset-btn" type="button">
+            Reset demo
+          </button>
+</div>
+</div>
+<!-- BEGIN: FeedbackChipsSection -->
+<section class="w-full flex flex-col gap-2 pt-1 pb-3" data-purpose="quick-feedback-chips">
+<!-- Row 1: Primary Tags -->
+<div class="flex items-center gap-2">
+<button class="feedback-chip px-[18px] py-[9px] rounded-full bg-chipBg border border-chipBorder text-[13.5px] font-medium text-appText hover:border-white/30 active:scale-95 transition-all" type="button">
+            Wrong tone
+          </button>
+<button class="feedback-chip px-[18px] py-[9px] rounded-full bg-chipBg border border-chipBorder text-[13.5px] font-medium text-appText hover:border-white/30 active:scale-95 transition-all" type="button">
+            Wrong fact
+          </button>
+</div>
+<!-- Row 2: Secondary Tag -->
+<div class="flex items-center">
+<button class="feedback-chip px-[18px] py-[9px] rounded-full bg-chipBg border border-chipBorder text-[13.5px] font-medium text-appText hover:border-white/30 active:scale-95 transition-all" type="button">
+            Change the hook
+          </button>
+</div>
+</section>
+<!-- END: FeedbackChipsSection -->
+<!-- BEGIN: PrimaryActionButtons -->
+<section class="grid grid-cols-2 gap-3 w-full" data-purpose="approval-actions">
+<!-- Send Back Button -->
+<button class="h-[54px] rounded-[16px] bg-[#14181F] border border-[#2B3340] text-white text-[16px] font-semibold flex items-center justify-center active:scale-[0.98] hover:bg-[#1A202A] transition-all focus:outline-none" id="btn-reject" type="button">
+          Send back
+        </button>
+<!-- Approve Button -->
+<button class="h-[54px] rounded-[16px] bg-appCoral text-[#14171C] text-[16px] font-bold flex items-center justify-center active:scale-[0.98] hover:brightness-105 transition-all shadow-[0_4px_16px_rgba(255,122,92,0.22)] focus:outline-none" id="btn-approve" type="button">
+          Approve
+        </button>
+</section>
+<!-- END: PrimaryActionButtons -->
+<!-- Micro Swipe Instruction Hint -->
+<footer class="pt-3 pb-1 text-center" data-purpose="swipe-instruction">
+<p class="text-[12.5px] text-[#717782] font-normal tracking-normal">
+          Swipe right to approve, left to send back
+        </p>
+</footer>
+</main>
+<!-- END: MainContentArea -->
+</div>
+<!-- END: MobileDeviceContainer -->
+<!-- BEGIN: InteractiveScript -->
+<script data-purpose="card-action-interactivity">
+    (function () {
+      const card = document.getElementById('approval-card');
+      const emptyState = document.getElementById('empty-state');
+      const counterLabel = document.getElementById('counter-label');
+      const btnApprove = document.getElementById('btn-approve');
+      const btnReject = document.getElementById('btn-reject');
+      const btnReset = document.getElementById('reset-btn');
+      const chips = document.querySelectorAll('.feedback-chip');
+
+      let remainingCount = 3;
+
+      // Handle card resolution (Approve or Reject animation)
+      function handleAction(direction) {
+        if (!card || remainingCount <= 0) return;
+
+        const xOffset = direction === 'right' ? 320 : -320;
+        const rotate = direction === 'right' ? 12 : -12;
+
+        card.style.transform = `translateX(${xOffset}px) rotate(${rotate}deg)`;
+        card.style.opacity = '0';
+
+        setTimeout(() => {
+          remainingCount -= 1;
+          if (remainingCount > 0) {
+            counterLabel.textContent = `${remainingCount} to review`;
+            card.style.transform = 'translateX(0) rotate(0deg)';
+            card.style.opacity = '1';
+          } else {
+            counterLabel.textContent = '0 to review';
+            card.style.display = 'none';
+            emptyState.classList.remove('hidden');
+            emptyState.classList.add('flex');
+          }
+        }, 220);
+      }
+
+      // Button Handlers
+      btnApprove.addEventListener('click', () => handleAction('right'));
+      btnReject.addEventListener('click', () => handleAction('left'));
+
+      // Reset Function for live testing
+      btnReset.addEventListener('click', () => {
+        remainingCount = 3;
+        counterLabel.textContent = '3 to review';
+        emptyState.classList.add('hidden');
+        emptyState.classList.remove('flex');
+        card.style.display = 'flex';
+        card.style.transform = 'translateX(0) rotate(0deg)';
+        card.style.opacity = '1';
+      });
+
+      // Quick chip toggle effect
+      chips.forEach((chip) => {
+        chip.addEventListener('click', () => {
+          chip.classList.toggle('border-appCoral');
+          chip.classList.toggle('text-white');
+        });
+      });
+    })();
+  </script>
+<!-- END: InteractiveScript -->
+</body></html>

@@ -1,0 +1,481 @@
+/**
+ * Mirrorline Design System · Standalone Design Tokens CSS
+ * Version: 1.0.0
+ * Architecture: W3C Design Tokens Community Group (DTCG) specification & CSS Custom Properties
+ * Modes: :root (Light / Editorial Warm) and [data-theme="dark"] / .dark (Dark Studio / Companion)
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* ==========================================================================
+     1. COLOR SYSTEM (LIGHT / EDITORIAL MODE)
+     ========================================================================== */
+
+  /* Brand Primary & CTAs (Deep Coral - passes >=4.5:1 WCAG AA contrast against white) */
+  --color-primary: #C8401C;
+  --color-primary-hover: #B33716;
+  --color-primary-active: #9E2E10;
+  --color-on-primary: #FFFFFF;
+
+  /* Accent (Loop Coral - for motifs, sparklines, progress bars, active highlights) */
+  --color-accent: #FF5A36;
+  --color-accent-soft: #FFE8E1;
+  --color-on-accent-soft: #8F2C11;
+
+  /* Editorial Surfaces & Canvas */
+  --color-bg: #FAFAF7;
+  --color-surface: #FFFFFF;
+  --color-surface-subtle: #F4F4F1;
+  --color-surface-dim: #DADAD7;
+  --color-surface-bright: #F9F9F6;
+  --color-surface-container-low: #F4F4F1;
+  --color-surface-container-lowest: #FFFFFF;
+  --color-surface-container-high: #EAE8E1;
+
+  /* Structural 1px Borders */
+  --color-border: #E6E4DD;
+  --color-border-strong: #D6D3CA;
+  --color-border-subtle: #F0EEE8;
+
+  /* Typography Colors */
+  --color-text: #14171C;
+  --color-text-muted: #5F6672;
+  --color-text-subtle: #8A92A0;
+
+  /* High-Contrast Editorial Ink Panels */
+  --color-ink: #14171C;
+  --color-ink-elevated: #1E232B;
+  --color-on-ink: #F2F2EE;
+  --color-on-ink-muted: #A3A9B4;
+
+  /* Semantic Statuses (always paired with readable text and soft container backgrounds) */
+  --color-success: #1F9D6B;
+  --color-success-hover: #198056;
+  --color-success-soft: #E3F4EC;
+  --color-on-success-soft: #145C40;
+
+  --color-warning: #C98A12;
+  --color-warning-hover: #A6710D;
+  --color-warning-soft: #FBF0D9;
+  --color-on-warning-soft: #6E4A07;
+
+  --color-danger: #D23F3F;
+  --color-danger-hover: #B53232;
+  --color-danger-soft: #FBE3E3;
+  --color-on-danger-soft: #8E2626;
+
+  --color-info: #2F6FDE;
+  --color-info-hover: #2256B3;
+  --color-info-soft: #E3ECFB;
+  --color-on-info-soft: #1F4FA8;
+
+  --color-neutral-soft: #EFEDE7;
+  --color-on-neutral-soft: #3E444D;
+
+  /* Demo Client Palette (Thumbnails & Badges) */
+  --color-demo-teal: #12545A;
+  --color-demo-teal-deep: #1E3A40;
+  --color-demo-teal-slate: #2F3E46;
+  --color-demo-sand: #F3E9DC;
+  --color-demo-warm-earth: #6B4F3A;
+
+  /* ==========================================================================
+     2. TYPOGRAPHY SYSTEM
+     ========================================================================== */
+  --font-family-heading: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Font Sizes, Line Heights & Weights */
+  --font-size-display: 2.75rem;     /* 44px */
+  --line-height-display: 1.1;
+  --letter-spacing-display: -0.015em;
+  --font-weight-display: 700;
+
+  --font-size-headline: 2rem;       /* 32px */
+  --line-height-headline: 1.15;
+  --letter-spacing-headline: -0.01em;
+  --font-weight-headline: 700;
+
+  --font-size-title: 1.25rem;       /* 20px */
+  --line-height-title: 1.3;
+  --font-weight-title: 600;
+
+  --font-size-subtitle: 1.125rem;   /* 18px */
+  --line-height-subtitle: 1.35;
+  --font-weight-subtitle: 600;
+
+  --font-size-body: 0.9375rem;      /* 15px */
+  --line-height-body: 1.55;
+  --font-weight-body: 400;
+  --font-weight-body-strong: 600;
+
+  --font-size-label: 0.875rem;      /* 14px */
+  --line-height-label: 1.4;
+  --font-weight-label: 600;
+
+  --font-size-meta: 0.8125rem;      /* 13px */
+  --line-height-meta: 1.45;
+  --font-weight-meta: 400;
+
+  --font-size-caption: 0.75rem;     /* 12px */
+  --line-height-caption: 1.35;
+  --font-weight-caption: 600;
+  --letter-spacing-eyebrow: 0.06em;
+
+  --font-size-metric: 1.875rem;     /* 30px */
+  --line-height-metric: 1.1;
+  --font-weight-metric: 600;
+
+  --font-size-overlay-caption: 1.0625rem; /* 17px */
+  --line-height-overlay-caption: 1.25;
+  --font-weight-overlay-caption: 700;
+
+  /* ==========================================================================
+     3. SPACING & LAYOUT GRID (8px Rhythm)
+     ========================================================================== */
+  --space-2xs: 0.125rem;   /* 2px */
+  --space-xs: 0.25rem;     /* 4px */
+  --space-sm: 0.5rem;      /* 8px */
+  --space-md: 1rem;        /* 16px */
+  --space-lg: 1.5rem;      /* 24px */
+  --space-xl: 2rem;        /* 32px */
+  --space-2xl: 2.5rem;     /* 40px */
+  --space-3xl: 3.5rem;     /* 56px */
+
+  --layout-sidebar-width: 240px;
+  --layout-max-width: 1440px;
+  --layout-gutter-desktop: 2rem;
+  --layout-gutter-mobile: 1.125rem;
+  --layout-touch-min-height: 44px;
+
+  /* ==========================================================================
+     4. SHAPES & RADII
+     ========================================================================== */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* ==========================================================================
+     5. ELEVATION & SHADOWS (Strictly Flat Minimal Studio Rules)
+     ========================================================================== */
+  --shadow-none: none;
+  --shadow-subtle: 0 1px 2px rgba(20, 23, 28, 0.05);
+  --shadow-segmented: 0 1px 2px rgba(20, 23, 28, 0.08);
+  --shadow-drawer: 0 12px 32px -4px rgba(20, 23, 28, 0.12);
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==========================================================================
+   6. DARK MODE THEME TOKENS
+   Triggered via [data-theme="dark"], .dark class on html/body, or system preference
+   ========================================================================== */
+[data-theme="dark"],
+.dark {
+  --color-primary: #C8401C;
+  --color-primary-hover: #D94B25;
+  --color-primary-active: #B33716;
+  --color-on-primary: #FFFFFF;
+
+  --color-accent: #FF7A5C;
+  --color-accent-soft: rgba(255, 122, 92, 0.15);
+  --color-on-accent-soft: #FF9B82;
+
+  --color-bg: #0E1116;
+  --color-surface: #161A21;
+  --color-surface-subtle: #1A1F29;
+  --color-surface-dim: #12151B;
+  --color-surface-bright: #202632;
+  --color-surface-container-low: #14181F;
+  --color-surface-container-lowest: #0E1116;
+  --color-surface-container-high: #242A36;
+
+  --color-border: #2A2F38;
+  --color-border-strong: #3B4250;
+  --color-border-subtle: #1E232B;
+
+  --color-text: #F2F2EE;
+  --color-text-muted: #A3A9B4;
+  --color-text-subtle: #6E7684;
+
+  --color-ink: #0E1116;
+  --color-ink-elevated: #161A21;
+  --color-on-ink: #F2F2EE;
+  --color-on-ink-muted: #A3A9B4;
+
+  --color-success: #26B87E;
+  --color-success-soft: rgba(38, 184, 126, 0.18);
+  --color-on-success-soft: #5BE0A7;
+
+  --color-warning: #E2A022;
+  --color-warning-soft: rgba(226, 160, 34, 0.18);
+  --color-on-warning-soft: #FFD175;
+
+  --color-danger: #E34F4F;
+  --color-danger-soft: rgba(227, 79, 79, 0.18);
+  --color-on-danger-soft: #FFA1A1;
+
+  --color-info: #4686F5;
+  --color-info-soft: rgba(70, 134, 245, 0.18);
+  --color-on-info-soft: #9EC0FA;
+
+  --color-neutral-soft: #232730;
+  --color-on-neutral-soft: #D6D3CA;
+}
+
+/* System mode fallback when data-theme is not explicitly overridden */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-primary: #C8401C;
+    --color-primary-hover: #D94B25;
+    --color-primary-active: #B33716;
+    --color-on-primary: #FFFFFF;
+
+    --color-accent: #FF7A5C;
+    --color-accent-soft: rgba(255, 122, 92, 0.15);
+    --color-on-accent-soft: #FF9B82;
+
+    --color-bg: #0E1116;
+    --color-surface: #161A21;
+    --color-surface-subtle: #1A1F29;
+    --color-border: #2A2F38;
+    --color-border-strong: #3B4250;
+    --color-text: #F2F2EE;
+    --color-text-muted: #A3A9B4;
+    --color-ink: #0E1116;
+    --color-on-ink: #F2F2EE;
+    --color-on-ink-muted: #A3A9B4;
+    --color-success: #26B87E;
+    --color-success-soft: rgba(38, 184, 126, 0.18);
+    --color-on-success-soft: #5BE0A7;
+    --color-warning: #E2A022;
+    --color-warning-soft: rgba(226, 160, 34, 0.18);
+    --color-on-warning-soft: #FFD175;
+    --color-danger: #E34F4F;
+    --color-danger-soft: rgba(227, 79, 79, 0.18);
+    --color-on-danger-soft: #FFA1A1;
+    --color-info: #4686F5;
+    --color-info-soft: rgba(70, 134, 245, 0.18);
+    --color-on-info-soft: #9EC0FA;
+    --color-neutral-soft: #232730;
+    --color-on-neutral-soft: #D6D3CA;
+  }
+}
+
+/* ==========================================================================
+   7. UTILITY & SEMANTIC COMPONENT PATTERN STYLES
+   ========================================================================== */
+
+/* Typography Helpers */
+.font-heading { font-family: var(--font-family-heading); }
+.font-body { font-family: var(--font-family-body); }
+.font-mono { font-family: var(--font-family-mono); }
+
+.type-display {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-display);
+  line-height: var(--line-height-display);
+  letter-spacing: var(--letter-spacing-display);
+  font-weight: var(--font-weight-display);
+}
+
+.type-headline {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-headline);
+  line-height: var(--line-height-headline);
+  letter-spacing: var(--letter-spacing-headline);
+  font-weight: var(--font-weight-headline);
+}
+
+.type-title {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-title);
+  line-height: var(--line-height-title);
+  font-weight: var(--font-weight-title);
+}
+
+.type-subtitle {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-subtitle);
+  line-height: var(--line-height-subtitle);
+  font-weight: var(--font-weight-subtitle);
+}
+
+.type-body {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  font-weight: var(--font-weight-body);
+}
+
+.type-body-strong {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  font-weight: var(--font-weight-body-strong);
+}
+
+.type-label {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-label);
+  font-weight: var(--font-weight-label);
+}
+
+.type-meta {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-meta);
+  line-height: var(--line-height-meta);
+  font-weight: var(--font-weight-meta);
+}
+
+.type-caption {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+  font-weight: var(--font-weight-caption);
+}
+
+.type-eyebrow {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-eyebrow);
+}
+
+.type-metric {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-metric);
+  line-height: var(--line-height-metric);
+  font-weight: var(--font-weight-metric);
+  font-feature-settings: 'tnum' on, 'lnum' on;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Button Components */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--layout-touch-min-height);
+  padding: 0 var(--space-lg);
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-label);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+.btn-primary:hover {
+  background-color: var(--color-primary-hover);
+}
+.btn-primary:active {
+  background-color: var(--color-primary-active);
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--layout-touch-min-height);
+  padding: 0 var(--space-md);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-label);
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+.btn-secondary:hover {
+  background-color: var(--color-surface-subtle);
+  border-color: var(--color-text-muted);
+}
+.btn-secondary:active {
+  transform: scale(0.98);
+}
+
+/* Studio Surface Cards */
+.card-surface {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+.card-ink {
+  background-color: var(--color-ink);
+  color: var(--color-on-ink);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+/* Status Chips & Badges */
+.badge-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-full);
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-caption);
+  line-height: 1;
+}
+
+.badge-passed {
+  background-color: var(--color-success-soft);
+  color: var(--color-on-success-soft);
+}
+
+.badge-needs-review {
+  background-color: var(--color-warning-soft);
+  color: var(--color-on-warning-soft);
+}
+
+.badge-blocked {
+  background-color: var(--color-danger-soft);
+  color: var(--color-on-danger-soft);
+}
+
+.badge-scheduled {
+  background-color: var(--color-info-soft);
+  color: var(--color-on-info-soft);
+}
+
+.badge-published {
+  background-color: var(--color-neutral-soft);
+  color: var(--color-on-neutral-soft);
+}
+
+.badge-ai-scene {
+  background-color: rgba(20, 23, 28, 0.75);
+  backdrop-filter: blur(4px);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-xs);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.125rem 0.375rem;
+}

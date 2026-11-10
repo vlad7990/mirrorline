@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Calendar and approvals</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Inter+Tight:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#FAFAF7}
+a{color:#B83A18}a:hover{color:#8F2C11}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1100px; font-family: Inter, system-ui, sans-serif; color: #14171C; background: #FAFAF7;">
+<div style="flex: 1 1 240px; max-width: 100%; display: flex;"><dc-import name="Sidebar" active="Calendar" hint-size="100%,1100px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 20px;">
+
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px;">
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<span style="font-size: 13px; color: #5F6672;">Publisher agent · 3 platforms · 2–3 posts a day each</span>
+<h1 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 32px; font-weight: 700;">Week of 9 November</h1>
+</div>
+<div role="radiogroup" aria-label="Approval mode" style="display: flex; padding: 4px; border-radius: 12px; background: #EFEDE7; gap: 4px;">
+<sc-for list="{{modes}}" as="m" hint-placeholder-count="2"><button type="button" role="radio" aria-checked="{{m.on}}" onClick="{{m.pick}}" style="{{m.style}}">{{m.label}}</button></sc-for>
+</div>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+<section aria-label="Calendar" style="flex: 999 1 640px; min-width: 0; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 16px; overflow-x: auto;">
+<div style="display: grid; grid-template-columns: 92px repeat(7, minmax(78px, 1fr)); gap: 6px; min-width: 690px;">
+<span></span>
+<sc-for list="{{days}}" as="d" hint-placeholder-count="7"><span style="{{d.style}}">{{d.label}}</span></sc-for>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="3">
+<span style="display: flex; align-items: center; font-size: 13px; font-weight: 600;">{{r.platform}}</span>
+<sc-for list="{{r.cells}}" as="cell" hint-placeholder-count="7">
+<div style="display: flex; flex-direction: column; gap: 6px; min-height: 120px; padding: 6px; border-radius: 10px; background: {{cell.bg}};">
+<sc-for list="{{cell.posts}}" as="p" hint-placeholder-count="2">
+<button type="button" onClick="{{p.pick}}" style="{{p.style}}"><span style="width: 18px; height: 30px; border-radius: 4px; background: {{p.thumb}}; flex-shrink: 0;"></span><span style="display: flex; flex-direction: column; gap: 1px; min-width: 0;"><span style="font-size: 11px; font-weight: 700;">{{p.time}}</span><span style="font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{p.short}}</span></span></button>
+</sc-for>
+</div>
+</sc-for>
+</sc-for>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; font-size: 12px; color: #3E444D;">
+<span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #8A909A;"></span>Published</span>
+<span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #2F6FDE;"></span>Scheduled</span>
+<span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #C98A12;"></span>Needs review</span>
+<span>TikTok posts stay private until our app is approved.</span>
+</div>
+</section>
+
+<aside aria-label="Selected post" style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 14px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 20px;">
+<div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-size: 13px; color: #5F6672;">{{sel.day}} · {{sel.time}} · {{sel.platform}}</span><span style="{{sel.chip}}">{{sel.status}}</span></div>
+<div style="align-self: center; width: 180px; aspect-ratio: 9 / 16; border-radius: 12px; background: {{sel.thumb}}; display: flex; flex-direction: column; justify-content: flex-end; padding: 14px; box-sizing: border-box;"><span style="font-family: 'Inter Tight', Inter, sans-serif; font-size: 16px; font-weight: 700; line-height: 1.25; color: #FFFFFF;">{{sel.title}}</span></div>
+<span style="font-size: 13px; font-weight: 600;">Caption</span>
+<div style="min-height: 72px; padding: 10px 12px; border-radius: 10px; border: 1px solid #D6D3CA; font: 400 14px/1.45 Inter, sans-serif; color: #14171C;">{{sel.caption}}</div>
+<div style="font-size: 13px; color: #3E444D;">Link: mayatorres.example/call · #leadership #newmanager</div>
+<label style="display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px;"><span>AI label on platform</span><input type="checkbox" checked="{{sel.ai}}" disabled="{{sel.ai}}" style="width: 20px; height: 20px; accent-color: #C8401C;"></label>
+<sc-if value="{{sel.ai}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; color: #5F6672;">Locked on: this post has AI scenes.</span></sc-if>
+<div style="display: flex; gap: 8px;">
+<button type="button" style="flex: 1; min-height: 44px; border-radius: 10px; border: 1px solid #D6D3CA; background: #FFFFFF; font: 600 14px Inter, sans-serif; color: #14171C;">Send back</button>
+<button type="button" onClick="{{approveSel}}" style="flex: 1; min-height: 44px; border-radius: 10px; border: none; background: #C8401C; color: #FFFFFF; font: 600 14px Inter, sans-serif;">Approve</button>
+</div>
+</aside>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 12px; background: #14171C; color: #F2F2EE;">
+<span style="font-size: 15px;">{{batchText}}</span>
+<div style="display: flex; gap: 10px;">
+<button type="button" onClick="{{approveAll}}" style="min-height: 44px; padding: 0 18px; border-radius: 10px; border: none; background: #FF7A5C; color: #14171C; font: 700 14px Inter, sans-serif;">Approve all 9 for tomorrow</button>
+<a href="S7-Results.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 10px; color: #FFB8A6; font-weight: 600; font-size: 14px;">See results</a>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { mode: 'each', sel: 'tue-in-1', approved: false, approvedIds: [] }; }
+  renderVals() {
+    const st = this.state;
+    const dayNames = ['Mon 9', 'Tue 10', 'Wed 11', 'Thu 12', 'Fri 13', 'Sat 14', 'Sun 15'];
+    const keys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+    const titles = ['You’re not tired. You’re over-responsible.', 'The 3-word reframe', '3 words that stop a team from burning out', 'Why your best people go quiet', 'The 10-minute Friday habit', 'If your 1:1s feel like status updates', 'New managers: stop saying “let me know…”', 'Burnout isn’t a workload problem', 'POV: your first day as a manager', 'One question that changes a 1:1'];
+    const thumbs = ['#12545A', '#1E3A40', '#2F3E46', '#6B4F3A'];
+    const plan = {
+      Instagram: [['7:30 am', '2:15 pm'], ['7:30 am', '2:15 pm', '7:45 pm'], ['12:15 pm'], ['7:30 am', '2:15 pm'], ['7:30 am'], ['10:00 am'], ['7:45 pm']],
+      TikTok: [['12:15 pm', '7:45 pm'], ['8:00 am', '12:15 pm', '7:45 pm'], ['12:15 pm', '7:45 pm'], ['7:45 pm'], ['12:15 pm'], ['12:00 pm'], ['6:00 pm']],
+      'YouTube Shorts': [['9:00 am', '5:00 pm'], ['9:00 am', '1:00 pm', '5:00 pm'], ['9:00 am', '5:00 pm'], ['9:00 am'], ['9:00 am', '5:00 pm'], ['11:00 am'], ['9:00 am']]
+    };
+    const statusOf = (di, platform, ti) => {
+      if (di === 0) return (platform === 'TikTok' && ti === 1) ? 'Needs review' : (ti === 0 ? 'Published' : 'Scheduled');
+      if (di === 1) return (platform === 'Instagram' && ti === 1) || (platform === 'TikTok' && ti === 0) ? 'Needs review' : 'Scheduled';
+      return 'Scheduled';
+    };
+    const col = { Published: '#8A909A', Scheduled: '#2F6FDE', 'Needs review': '#C98A12' };
+    const chipBg = { Published: ['#EFEDE7', '#3E444D'], Scheduled: ['#E3ECFB', '#1F4FA8'], 'Needs review': ['#FBF0D9', '#6E4A07'], Approved: ['#E3F4EC', '#145C40'] };
+    let k = 0, selected = null;
+    const rows = Object.keys(plan).map((platform) => ({
+      platform,
+      cells: plan[platform].map((times, di) => ({
+        bg: di === 1 ? '#FFF6F2' : '#FAFAF7',
+        posts: times.map((time, ti) => {
+          const id = keys[di] + '-' + platform.slice(0, 2).toLowerCase() + '-' + ti;
+          let status = statusOf(di, platform, ti);
+          if (status === 'Needs review' && (st.approved && di === 1 || st.approvedIds.includes(id))) status = 'Approved';
+          const title = titles[k % titles.length], thumb = thumbs[k % thumbs.length]; k++;
+          const post = { id, time, title, thumb, status, day: dayNames[di], platform, ai: title === 'The 3-word reframe' || title.startsWith('POV') };
+          if (id === st.sel) selected = post;
+          const isSel = id === st.sel;
+          return {
+            time, thumb, short: title,
+            pick: () => this.setState({ sel: id }),
+            style: 'display: flex; align-items: center; gap: 6px; width: 100%; min-height: 44px; padding: 5px 6px; border-radius: 8px; text-align: left; background: #FFFFFF; color: #14171C; font-family: Inter, sans-serif; border: ' + (isSel ? '2px solid #14171C' : '1px solid #E6E4DD') + '; border-left: 4px solid ' + (col[status] || '#1F9D6B') + ';'
+          };
+        })
+      }))
+    }));
+    const days = dayNames.map((label, i) => ({ label, style: 'font-size: 13px; font-weight: ' + (i === 1 ? '700' : '600') + '; color: ' + (i === 1 ? '#8F2C11' : '#5F6672') + '; padding: 4px 6px;' }));
+    const s = selected || rows[0].cells[1].posts.length && { id: 'none', time: '', title: 'Select a post', thumb: '#12545A', status: 'Scheduled', day: '', platform: '', ai: false };
+    const c = chipBg[s.status];
+    const sel = { ...s, chip: 'font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: ' + c[0] + '; color: ' + c[1] + ';', caption: s.title + ' Book a free call, link in bio.' };
+    const modes = [['each', 'Approve each post'], ['auto', 'Auto-approve after 24h']].map(([v, label]) => ({
+      label, on: st.mode === v ? 'true' : 'false',
+      pick: () => this.setState({ mode: v }),
+      style: 'min-height: 40px; padding: 0 14px; border-radius: 9px; border: none; font: 600 13px Inter, sans-serif; ' + (st.mode === v ? 'background: #FFFFFF; color: #14171C; box-shadow: 0 1px 2px rgba(0,0,0,0.08);' : 'background: transparent; color: #5F6672;')
+    }));
+    return {
+      rows, days, sel, modes,
+      approveSel: () => this.setState({ approvedIds: st.approvedIds.concat([st.sel]) }),
+      approveAll: () => this.setState({ approved: true }),
+      batchText: st.approved ? 'Tomorrow is approved. The Publisher will post 9 videos on Tuesday.' : (st.mode === 'auto' ? 'Auto-approve is on: posts go out 24 hours after they are ready unless you object.' : 'Tomorrow: 9 posts ready, 2 need your eye.')
+    };
+  }
+}
+</script>
+</body>
+</html>

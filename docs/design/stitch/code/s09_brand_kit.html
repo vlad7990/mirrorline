@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mirrorline — Brand kit</title>
+<!-- Tailwind CSS CDN with forms and container-queries plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter and Newsreader (for serif preview) -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&amp;display=swap" rel="stylesheet"/>
+<script data-purpose="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            serif: ['Newsreader', 'serif'],
+          },
+          colors: {
+            brand: {
+              teal: '#12545A',
+              sand: '#F3E9DC',
+              coral: '#FF5A36',
+              coralActiveBorder: '#C8401C',
+              ink: '#14171C',
+              cardBorder: '#E6E4DD',
+              subtleGray: '#F9F8F5',
+              tagGreenBg: '#E7F5EE',
+              tagGreenText: '#187A4F',
+              tagRedBg: '#FCE8E6',
+              tagRedText: '#BA2E22',
+              activeNavBg: '#FFE8E1',
+              activeNavText: '#C8401C',
+            }
+          }
+        }
+      }
+    };
+  </script>
+<style data-purpose="custom-typography">
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  </style>
+</head>
+<body class="bg-[#FBFBFA] text-[#14171C] flex min-h-screen">
+<!-- BEGIN: LeftSidebar -->
+<aside class="w-64 border-r border-[#EBEAE5] bg-white flex flex-col justify-between shrink-0 min-h-screen px-5 py-6" data-purpose="sidebar">
+<div class="flex flex-col space-y-6">
+<!-- Brand Logo -->
+<div class="flex items-center space-x-2.5 px-1">
+<svg class="w-6 h-6 text-[#FF5A36]" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24">
+<circle cx="12" cy="12" r="9"></circle>
+<path d="M12 3a9 9 0 0 1 9 9"></path>
+</svg>
+<span class="text-xl font-bold tracking-tight text-[#14171C]">Mirrorline</span>
+</div>
+<!-- Workspace Switcher -->
+<div class="flex items-center p-2 rounded-xl border border-brand-cardBorder bg-[#FAFAF8] space-x-3 cursor-pointer hover:bg-stone-50 transition-colors" data-purpose="workspace-switcher">
+<div class="w-9 h-9 rounded-lg bg-brand-teal text-white font-bold flex items-center justify-center text-sm shrink-0">
+          MT
+        </div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-semibold text-stone-900 truncate leading-snug">Maya Torres Coaching</span>
+<span class="text-xs text-stone-500 font-normal leading-none mt-0.5">Growth plan</span>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="flex flex-col space-y-1" data-purpose="primary-navigation">
+<a class="px-3 py-2 rounded-lg text-stone-600 font-medium text-sm hover:text-stone-900 hover:bg-stone-100 transition-colors" href="#">Home</a>
+<a class="px-3 py-2 rounded-lg text-stone-600 font-medium text-sm hover:text-stone-900 hover:bg-stone-100 transition-colors" href="#">Upload</a>
+<a class="px-3 py-2 rounded-lg text-stone-600 font-medium text-sm hover:text-stone-900 hover:bg-stone-100 transition-colors" href="#">Trends</a>
+<a class="px-3 py-2 rounded-lg text-stone-600 font-medium text-sm hover:text-stone-900 hover:bg-stone-100 transition-colors" href="#">Calendar</a>
+<a class="px-3 py-2 rounded-lg text-stone-600 font-medium text-sm hover:text-stone-900 hover:bg-stone-100 transition-colors" href="#">Results</a>
+<a class="px-3 py-2 rounded-lg text-stone-600 font-medium text-sm hover:text-stone-900 hover:bg-stone-100 transition-colors" href="#">Agents</a>
+<a class="px-3.5 py-2.5 rounded-xl bg-brand-activeNavBg text-brand-activeNavText font-semibold text-sm transition-colors" href="#">Brand kit</a>
+<a class="px-3 py-2 rounded-lg text-stone-600 font-medium text-sm hover:text-stone-900 hover:bg-stone-100 transition-colors" href="#">Settings</a>
+</nav>
+</div>
+<!-- Usage Meter Card -->
+<div class="p-3.5 rounded-xl border border-brand-cardBorder bg-[#FAFAF8]" data-purpose="usage-meter">
+<div class="flex justify-between items-center text-xs mb-2">
+<span class="text-stone-500 font-normal">Posts this month</span>
+<span class="text-stone-900 font-semibold">63 of 90</span>
+</div>
+<!-- Meter Progress Bar -->
+<div class="w-full bg-[#E5E5E2] rounded-full h-1.5 overflow-hidden">
+<div class="bg-[#FF5A36] h-1.5 rounded-full" style="width: 70%"></div>
+</div>
+</div>
+</aside>
+<!-- END: LeftSidebar -->
+<!-- BEGIN: MainContent -->
+<main class="flex-1 px-12 py-10 overflow-y-auto" data-purpose="main-layout">
+<!-- Header Section -->
+<header class="mb-8">
+<p class="text-xs text-stone-500 font-medium mb-1">Used by every agent on every video</p>
+<h1 class="text-3xl font-bold tracking-tight text-stone-900">Brand kit</h1>
+</header>
+<!-- Cards Grid -->
+<div class="flex flex-col space-y-6 max-w-6xl">
+<!-- Row 1: Logo & colours, Caption style, Voice -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 items-start">
+<!-- BEGIN: Logo and Colours Card -->
+<section class="lg:col-span-4 bg-white border border-brand-cardBorder rounded-xl p-6 shadow-sm" data-purpose="card-logo-and-colours">
+<h2 class="text-base font-semibold text-stone-900 mb-5">Logo and colours</h2>
+<!-- Logo Section -->
+<div class="flex items-center space-x-4 mb-6">
+<div class="w-16 h-16 rounded-xl bg-brand-teal flex items-center justify-center text-white text-2xl font-bold">
+              MT
+            </div>
+<button class="px-3.5 py-1.5 text-xs font-medium text-stone-800 border border-brand-cardBorder rounded-lg hover:bg-stone-50 shadow-sm transition-colors" type="button">
+              Replace logo
+            </button>
+</div>
+<!-- Color Swatches -->
+<div class="grid grid-cols-4 gap-3 pt-2">
+<!-- Swatch 1: Deep teal -->
+<div class="flex flex-col">
+<div class="w-full aspect-square rounded-lg bg-brand-teal mb-2"></div>
+<span class="text-[11px] font-medium text-stone-700 leading-tight">Deep teal</span>
+<span class="text-[10px] text-stone-400 mt-0.5">#12545A</span>
+</div>
+<!-- Swatch 2: Warm sand -->
+<div class="flex flex-col">
+<div class="w-full aspect-square rounded-lg bg-brand-sand mb-2"></div>
+<span class="text-[11px] font-medium text-stone-700 leading-tight">Warm sand</span>
+<span class="text-[10px] text-stone-400 mt-0.5">#F3E9DC</span>
+</div>
+<!-- Swatch 3: Coral -->
+<div class="flex flex-col">
+<div class="w-full aspect-square rounded-lg bg-brand-coral mb-2"></div>
+<span class="text-[11px] font-medium text-stone-700 leading-tight">Coral</span>
+<span class="text-[10px] text-stone-400 mt-0.5">#FF5A36</span>
+</div>
+<!-- Swatch 4: Ink -->
+<div class="flex flex-col">
+<div class="w-full aspect-square rounded-lg bg-brand-ink mb-2"></div>
+<span class="text-[11px] font-medium text-stone-700 leading-tight">Ink</span>
+<span class="text-[10px] text-stone-400 mt-0.5">#14171C</span>
+</div>
+</div>
+</section>
+<!-- END: Logo and Colours Card -->
+<!-- BEGIN: Caption Style Card -->
+<section class="lg:col-span-5 bg-white border border-brand-cardBorder rounded-xl p-6 shadow-sm" data-purpose="card-caption-style">
+<h2 class="text-base font-semibold text-stone-900 mb-5">Caption style</h2>
+<!-- Caption Presets -->
+<div class="grid grid-cols-3 gap-3 mb-5">
+<!-- Preset 1: Bold Highlight (Active) -->
+<div class="border-2 border-brand-coralActiveBorder rounded-xl p-2.5 flex flex-col justify-between cursor-pointer bg-white">
+<div class="w-full h-24 rounded-lg bg-brand-teal p-2 flex flex-col justify-center text-white">
+<span class="text-xs font-bold leading-tight">Coach,</span>
+<span class="text-xs font-bold leading-tight mt-1 inline-block">don't</span>
+<span class="text-xs font-bold leading-tight inline-block">carry.</span>
+</div>
+<span class="text-[11px] font-semibold text-stone-900 mt-2">Bold highlight</span>
+</div>
+<!-- Preset 2: Editorial Serif -->
+<div class="border border-brand-cardBorder rounded-xl p-2.5 flex flex-col justify-between cursor-pointer hover:border-stone-400 transition-colors bg-white">
+<div class="w-full h-24 rounded-lg bg-brand-sand p-2 flex flex-col justify-center text-stone-800 font-serif">
+<span class="text-xs italic leading-tight">Coach,</span>
+<span class="text-xs italic leading-tight mt-0.5">don't</span>
+<span class="text-xs italic leading-tight">carry.</span>
+</div>
+<span class="text-[11px] font-semibold text-stone-900 mt-2">Editorial serif</span>
+</div>
+<!-- Preset 3: Clean Minimal -->
+<div class="border border-brand-cardBorder rounded-xl p-2.5 flex flex-col justify-between cursor-pointer hover:border-stone-400 transition-colors bg-white">
+<div class="w-full h-24 rounded-lg bg-[#14171C] p-2 flex flex-col justify-center text-white">
+<span class="text-xs font-medium leading-tight">Coach,</span>
+<span class="text-xs font-medium leading-tight mt-0.5">don't</span>
+<span class="text-xs font-medium leading-tight">carry.</span>
+</div>
+<span class="text-[11px] font-semibold text-stone-900 mt-2">Clean minimal</span>
+</div>
+</div>
+<!-- Video Intro & Outro Pill Inputs -->
+<div class="space-y-2">
+<div class="px-3.5 py-2 rounded-lg border border-brand-cardBorder text-xs text-stone-800 bg-[#FAFAF8]">
+              Intro: 0.8 s teal card with logo
+            </div>
+<div class="px-3.5 py-2 rounded-lg border border-brand-cardBorder text-xs text-stone-800 bg-[#FAFAF8]">
+              Outro: “Book a free call” + link
+            </div>
+</div>
+</section>
+<!-- END: Caption Style Card -->
+<!-- BEGIN: Voice Card -->
+<section class="lg:col-span-3 bg-white border border-brand-cardBorder rounded-xl p-6 shadow-sm" data-purpose="card-voice">
+<h2 class="text-base font-semibold text-stone-900 mb-5">Voice</h2>
+<div class="space-y-3">
+<!-- Voice Option 1: My own voice (Active) -->
+<div class="border-2 border-stone-900 rounded-xl p-3.5 bg-white">
+<div class="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+<span class="text-xs font-bold text-stone-900">My own voice</span>
+<span class="text-[10px] font-medium bg-brand-tagGreenBg text-brand-tagGreenText px-2 py-0.5 rounded-full">
+                  Consent signed 9 Nov 2026
+                </span>
+</div>
+<p class="text-[11px] text-stone-500 leading-snug">
+                Used only for Maya's videos. You can withdraw consent at any time in Settings.
+              </p>
+</div>
+<!-- Voice Option 2: Stock voice -->
+<div class="border border-brand-cardBorder rounded-xl p-3 flex items-center justify-between bg-white text-xs">
+<span class="text-stone-800 font-medium">Stock voice: “Calm, warm, female, US”</span>
+<span class="text-[10px] font-normal text-stone-400 bg-stone-100 px-2 py-0.5 rounded border border-stone-200">
+                Backup
+              </span>
+</div>
+</div>
+</section>
+<!-- END: Voice Card -->
+</div>
+<!-- Row 2: Words Card -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
+<!-- BEGIN: Words Section -->
+<section class="lg:col-span-4 bg-white border border-brand-cardBorder rounded-xl p-6 shadow-sm" data-purpose="card-words">
+<h2 class="text-base font-semibold text-stone-900 mb-4">Words</h2>
+<!-- Always Use Keywords -->
+<div class="mb-5">
+<span class="text-xs font-medium text-emerald-800 block mb-2.5">Always use</span>
+<div class="flex flex-wrap gap-2">
+<span class="px-2.5 py-1 bg-brand-tagGreenBg text-brand-tagGreenText rounded-full text-xs font-medium">
+                first-time managers
+              </span>
+<span class="px-2.5 py-1 bg-brand-tagGreenBg text-brand-tagGreenText rounded-full text-xs font-medium">
+                burnout
+              </span>
+<span class="px-2.5 py-1 bg-brand-tagGreenBg text-brand-tagGreenText rounded-full text-xs font-medium">
+                reframe
+              </span>
+<span class="px-2.5 py-1 bg-brand-tagGreenBg text-brand-tagGreenText rounded-full text-xs font-medium">
+                1:1
+              </span>
+</div>
+</div>
+<!-- Never Use Keywords -->
+<div class="mb-5">
+<span class="text-xs font-medium text-red-800 block mb-2.5">Never use</span>
+<div class="flex flex-wrap gap-2">
+<span class="px-2.5 py-1 bg-brand-tagRedBg text-brand-tagRedText rounded-full text-xs font-medium">
+                hustle
+              </span>
+<span class="px-2.5 py-1 bg-brand-tagRedBg text-brand-tagRedText rounded-full text-xs font-medium">
+                crush it
+              </span>
+<span class="px-2.5 py-1 bg-brand-tagRedBg text-brand-tagRedText rounded-full text-xs font-medium">
+                guaranteed
+              </span>
+</div>
+</div>
+<!-- Add Button -->
+<button class="inline-flex items-center px-3 py-1 border border-brand-cardBorder text-xs font-medium rounded-lg text-stone-700 bg-white hover:bg-stone-50 transition-colors" type="button">
+            + Add
+          </button>
+</section>
+<!-- END: Words Section -->
+</div>
+</div>
+</main>
+<!-- END: MainContent -->
+</body></html>

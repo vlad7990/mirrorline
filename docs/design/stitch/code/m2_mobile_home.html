@@ -1,0 +1,201 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Mirrorline - Mobile Home</title>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script data-purpose="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              bg: '#FAFAF7',
+              border: '#E6E4DD',
+              dark: '#14171C',
+              coral: '#FF5A36',
+              teal: '#12545A',
+              muted: '#5F6672',
+              'accent-green': '#198038',
+              'banner-bg': '#14171C',
+              'thumb-brown': '#6B4F3A',
+              'thumb-teal': '#12545A',
+              'thumb-dark': '#1E3A40',
+              'tag-blue-bg': '#E3ECFB',
+              'tag-blue-text': '#1F4FA8',
+              'tag-amber-bg': '#FBF0D9',
+              'tag-amber-text': '#6E4A07',
+              'loop-bg': '#FFE8E1',
+              'loop-title': '#C8401C'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'Inter Tight', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    };
+  </script>
+<!-- Typography & Global Setup -->
+<style data-purpose="typography">
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  </style>
+<style data-purpose="layout-utilities">
+    /* Subtle custom card border color */
+    .card-border {
+      border: 1px solid #E6E4DD;
+    }
+  </style>
+</head>
+<body class="bg-[#FAFAF7] text-[#14171C] flex justify-center min-h-screen py-0 sm:py-6 selection:bg-[#FFE8E1]">
+<!-- Mobile Container (Target Device: ~390px iOS screen) -->
+<div class="w-full max-w-[412px] bg-[#FAFAF7] px-5 pt-8 pb-10 flex flex-col gap-6" data-purpose="app-shell">
+<!-- BEGIN: TopNavigationBar -->
+<header class="flex items-center justify-between gap-2" data-purpose="navigation-header">
+<!-- Brand Logo & Name -->
+<div class="flex items-center gap-2.5">
+<!-- Mirrorline Coral Loop Icon -->
+<svg aria-hidden="true" class="w-6 h-6 text-[#FF5A36]" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewBox="0 0 24 24">
+<path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+<path d="M21 3v6h-6"></path>
+</svg>
+<span class="text-xl font-bold tracking-tight text-[#14171C]">Mirrorline</span>
+</div>
+<!-- User Avatar / Profile Badge -->
+<div class="flex items-center gap-2" id="header-actions-group"><button id="quick-theme-toggle" type="button" aria-label="Toggle Appearance Theme" class="w-9 h-9 bg-white card-border rounded-xl flex items-center justify-center text-[#5F6672] shadow-sm hover:opacity-80 transition-opacity"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></button><div aria-label="Maya Torres Profile" class="w-9 h-9 bg-[#12545A] rounded-xl flex items-center justify-center text-white font-bold text-xs tracking-wide shadow-sm" data-purpose="user-badge">MT</div></div>
+</header>
+<!-- END: TopNavigationBar -->
+<!-- BEGIN: GreetingSection -->
+<section class="mt-2 space-y-1" data-purpose="greeting">
+<!-- Date Eyebrow -->
+<p class="text-[15px] font-medium text-[#5F6672]">Monday, 9 November</p>
+<!-- Main Title -->
+<h1 class="text-[31px] font-bold tracking-tight leading-tight text-[#14171C]">Good morning, Maya</h1>
+</section><section class="bg-white rounded-2xl p-3.5 card-border shadow-[0_1px_2px_rgba(0,0,0,0.02)] space-y-3" data-purpose="theme-preference-card"><div class="flex items-center justify-between"><div class="space-y-0.5"><h2 class="text-[14px] font-semibold text-[#14171C] leading-snug">Theme</h2><p class="text-[12px] text-[#5F6672] font-normal">Light, Dark, or sync with System</p></div><span class="text-[11px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-full bg-[#FFE8E1] text-[#C8401C]" id="theme-active-indicator">System</span></div><div class="grid grid-cols-3 gap-2 bg-[#FAFAF7] p-1 rounded-xl card-border" role="radiogroup" aria-label="Theme preference"><button type="button" data-theme-value="light" class="theme-btn flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold text-[#5F6672] transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg><span class="">Light</span></button><button type="button" data-theme-value="dark" class="theme-btn flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold text-[#5F6672] transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg><span class="">Dark</span></button><button type="button" data-theme-value="system" class="theme-btn active-theme flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold bg-white text-[#14171C] shadow-sm border border-[#FF5A36] transition-colors"><svg class="w-3.5 h-3.5 text-[#FF5A36]" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg><span class="">System</span></button></div></section>
+<!-- END: GreetingSection -->
+<!-- BEGIN: MetricsGrid -->
+<section class="grid grid-cols-2 gap-3" data-purpose="metrics-grid">
+<!-- Metric Card 1: Posts this week -->
+<div class="bg-white rounded-2xl p-4 card-border shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between h-[106px]" data-purpose="metric-tile">
+<span class="text-[13px] font-normal text-[#5F6672]">Posts this week</span>
+<div class="space-y-0.5">
+<p class="text-3xl font-bold tracking-tight text-[#14171C] leading-none">21</p>
+<p class="text-[13px] font-medium text-[#198038]">On plan</p>
+</div>
+</div>
+<!-- Metric Card 2: Views -->
+<div class="bg-white rounded-2xl p-4 card-border shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between h-[106px]" data-purpose="metric-tile">
+<span class="text-[13px] font-normal text-[#5F6672]">Views</span>
+<div class="space-y-0.5">
+<p class="text-3xl font-bold tracking-tight text-[#14171C] leading-none">48.3K</p>
+<p class="text-[13px] font-semibold text-[#198038]">+18%</p>
+</div>
+</div>
+<!-- Metric Card 3: Link clicks -->
+<div class="bg-white rounded-2xl p-4 card-border shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between h-[106px]" data-purpose="metric-tile">
+<span class="text-[13px] font-normal text-[#5F6672]">Link clicks</span>
+<div class="space-y-0.5">
+<p class="text-3xl font-bold tracking-tight text-[#14171C] leading-none">214</p>
+<p class="text-[13px] font-semibold text-[#198038]">+22%</p>
+</div>
+</div>
+<!-- Metric Card 4: Calls booked -->
+<div class="bg-white rounded-2xl p-4 card-border shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-between h-[106px]" data-purpose="metric-tile">
+<span class="text-[13px] font-normal text-[#5F6672]">Calls booked</span>
+<div class="space-y-0.5">
+<p class="text-3xl font-bold tracking-tight text-[#14171C] leading-none">6</p>
+<p class="text-[13px] font-semibold text-[#198038]">+2</p>
+</div>
+</div>
+</section>
+<!-- END: MetricsGrid -->
+<!-- BEGIN: ActionBanner -->
+<section class="bg-[#14171C] text-white rounded-2xl px-5 py-4 flex items-center justify-between" data-purpose="urgent-action-banner">
+<div class="space-y-0.5 pr-2">
+<h2 class="text-base font-bold leading-snug">3 posts need your eye</h2>
+<p class="text-[13px] text-[#A2A8B4] font-normal">1 blocked: venue music in cut 12</p>
+</div>
+<button class="text-sm font-semibold text-white hover:opacity-80 transition-opacity flex-shrink-0" type="button">
+        Review
+      </button>
+</section>
+<!-- END: ActionBanner -->
+<!-- BEGIN: NextUpSection -->
+<section class="space-y-3" data-purpose="next-up-queue">
+<!-- Section Title -->
+<h2 class="text-[21px] font-bold tracking-tight text-[#14171C]">Next up</h2>
+<div class="space-y-2.5">
+<!-- Post Item 1 -->
+<article class="bg-white rounded-2xl p-3.5 card-border flex items-center justify-between gap-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)]" data-purpose="scheduled-post-card">
+<div class="flex items-center gap-3.5 min-w-0">
+<!-- 9:16 Video Thumbnail Placeholder Swatch -->
+<div aria-label="Warm brown video thumbnail" class="w-[30px] h-[52px] bg-[#6B4F3A] rounded-md flex-shrink-0"></div>
+<!-- Title & Metadata -->
+<div class="min-w-0">
+<h3 class="text-[15px] font-semibold text-[#14171C] truncate leading-tight">The 3-word reframe (remake)</h3>
+<p class="text-[13px] text-[#5F6672] mt-0.5">Instagram · 2:15 pm</p>
+</div>
+</div>
+<!-- Status Tag -->
+<span class="bg-[#E3ECFB] text-[#1F4FA8] text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0">
+            Scheduled
+          </span>
+</article>
+<!-- Post Item 2 -->
+<article class="bg-white rounded-2xl p-3.5 card-border flex items-center justify-between gap-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)]" data-purpose="scheduled-post-card">
+<div class="flex items-center gap-3.5 min-w-0">
+<!-- 9:16 Video Thumbnail Placeholder Swatch -->
+<div aria-label="Teal video thumbnail" class="w-[30px] h-[52px] bg-[#12545A] rounded-md flex-shrink-0"></div>
+<!-- Title & Metadata -->
+<div class="min-w-0">
+<h3 class="text-[15px] font-semibold text-[#14171C] truncate leading-tight">The 10-minute Friday habit</h3>
+<p class="text-[13px] text-[#5F6672] mt-0.5">YouTube Shorts · 5:00 pm</p>
+</div>
+</div>
+<!-- Status Tag -->
+<span class="bg-[#E3ECFB] text-[#1F4FA8] text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0">
+            Scheduled
+          </span>
+</article>
+<!-- Post Item 3 -->
+<article class="bg-white rounded-2xl p-3.5 card-border flex items-center justify-between gap-3 shadow-[0_1px_2px_rgba(0,0,0,0.02)]" data-purpose="needs-review-post-card">
+<div class="flex items-center gap-3.5 min-w-0">
+<!-- 9:16 Video Thumbnail Placeholder Swatch -->
+<div aria-label="Dark navy video thumbnail" class="w-[30px] h-[52px] bg-[#1E3A40] rounded-md flex-shrink-0"></div>
+<!-- Title & Metadata -->
+<div class="min-w-0">
+<h3 class="text-[15px] font-semibold text-[#14171C] truncate leading-tight">New managers: stop sayi...</h3>
+<p class="text-[13px] text-[#5F6672] mt-0.5">TikTok · 7:45 pm</p>
+</div>
+</div>
+<!-- Status Tag -->
+<span class="bg-[#FBF0D9] text-[#6E4A07] text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0">
+            Needs review
+          </span>
+</article>
+</div>
+</section>
+<!-- END: NextUpSection -->
+<!-- BEGIN: LearningLoopSection -->
+<section class="bg-[#FFE8E1] rounded-2xl p-5 mt-1 space-y-1.5" data-purpose="learning-loop-card">
+<!-- Eyebrow Title -->
+<h3 class="text-[12px] font-bold tracking-wider text-[#C8401C] uppercase">
+        Learning loop
+      </h3>
+<!-- Insight Copy -->
+<p class="text-[15px] leading-relaxed text-[#14171C] font-normal">
+        Question hooks got 2.1× average views. More of them next week.
+      </p>
+</section>
+<!-- END: LearningLoopSection -->
+</div>
+
+
+<style id="theme-styles">body.dark-mode, [data-theme="dark"] { background-color: #0E1116 !important; color: #F2F2EE !important; }body.dark-mode [data-purpose="app-shell"], [data-theme="dark"] [data-purpose="app-shell"] { background-color: #0E1116 !important; }body.dark-mode .card-border, [data-theme="dark"] .card-border { border-color: #2A2F38 !important; }body.dark-mode [data-purpose="metric-tile"], body.dark-mode [data-purpose="scheduled-post-card"], body.dark-mode [data-purpose="needs-review-post-card"], body.dark-mode [data-purpose="theme-preference-card"], [data-theme="dark"] [data-purpose="metric-tile"], [data-theme="dark"] [data-purpose="scheduled-post-card"], [data-theme="dark"] [data-purpose="needs-review-post-card"], [data-theme="dark"] [data-purpose="theme-preference-card"] { background-color: #161A21 !important; }body.dark-mode h1, body.dark-mode h2, body.dark-mode h3, body.dark-mode span.text-[#14171C], body.dark-mode p.text-[#14171C], [data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3, [data-theme="dark"] span.text-[#14171C], [data-theme="dark"] p.text-[#14171C] { color: #F2F2EE !important; }body.dark-mode p.text-[#5F6672], body.dark-mode span.text-[#5F6672], [data-theme="dark"] p.text-[#5F6672], [data-theme="dark"] span.text-[#5F6672] { color: #A3A9B4 !important; }body.dark-mode [data-purpose="theme-preference-card"] .grid, [data-theme="dark"] [data-purpose="theme-preference-card"] .grid { background-color: #12151B !important; }body.dark-mode #quick-theme-toggle, [data-theme="dark"] #quick-theme-toggle { background-color: #161A21 !important; color: #A3A9B4 !important; }body.dark-mode [data-purpose="urgent-action-banner"], [data-theme="dark"] [data-purpose="urgent-action-banner"] { background-color: #1A202C !important; border: 1px solid #374151 !important; }body.dark-mode [data-purpose="learning-loop-card"], [data-theme="dark"] [data-purpose="learning-loop-card"] { background-color: #1F1715 !important; border: 1px solid #572013 !important; }body.dark-mode [data-purpose="learning-loop-card"] p, [data-theme="dark"] [data-purpose="learning-loop-card"] p { color: #F5EAE7 !important; }</style><script>document.addEventListener('DOMContentLoaded', function () { const buttons = document.querySelectorAll('.theme-btn'); const quickToggle = document.getElementById('quick-theme-toggle'); const indicator = document.getElementById('theme-active-indicator'); const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)'); function getStoredTheme() { return localStorage.getItem('mirrorline_theme') || 'system'; } function applyTheme(pref) { const isSystemDark = mediaQuery.matches; const shouldDark = pref === 'dark' || (pref === 'system' && isSystemDark); if (shouldDark) { document.documentElement.classList.add('dark'); document.body.classList.add('dark-mode'); document.body.setAttribute('data-theme', 'dark'); } else { document.documentElement.classList.remove('dark'); document.body.classList.remove('dark-mode'); document.body.setAttribute('data-theme', 'light'); } if (indicator) { indicator.textContent = pref.charAt(0).toUpperCase() + pref.slice(1); } buttons.forEach(btn => { const val = btn.getAttribute('data-theme-value'); if (val === pref) { btn.className = 'theme-btn active-theme flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold bg-white text-[#14171C] shadow-sm border border-[#FF5A36] transition-colors'; const icon = btn.querySelector('svg'); if (icon) icon.classList.add('text-[#FF5A36]'); } else { btn.className = 'theme-btn flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold text-[#5F6672] transition-colors'; const icon = btn.querySelector('svg'); if (icon) icon.classList.remove('text-[#FF5A36]'); } }); } buttons.forEach(btn => { btn.addEventListener('click', function () { const val = this.getAttribute('data-theme-value'); localStorage.setItem('mirrorline_theme', val); applyTheme(val); }); }); if (quickToggle) { quickToggle.addEventListener('click', function () { const current = getStoredTheme(); const next = current === 'light' ? 'dark' : (current === 'dark' ? 'system' : 'light'); localStorage.setItem('mirrorline_theme', next); applyTheme(next); }); } mediaQuery.addEventListener('change', function () { if (getStoredTheme() === 'system') { applyTheme('system'); } }); applyTheme(getStoredTheme()); });</script></body></html>

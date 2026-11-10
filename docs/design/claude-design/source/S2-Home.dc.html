@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Inter+Tight:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#FAFAF7}
+a{color:#B83A18}a:hover{color:#8F2C11}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1150px; font-family: Inter, system-ui, sans-serif; color: #14171C; background: #FAFAF7;">
+<div style="flex: 1 1 240px; max-width: 100%; display: flex;"><dc-import name="Sidebar" active="Home" hint-size="100%,1150px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 28px;">
+
+<header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px;">
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<span style="font-size: 13px; color: #5F6672;">Monday, 9 November</span>
+<h1 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 32px; font-weight: 700;">Good morning, Maya</h1>
+<p style="margin: 0; font-size: 15px; color: #5F6672;">3 posts are out, 3 more go today. 3 cuts need your eye.</p>
+</div>
+<a href="S3-Upload.dc.html" style="display: inline-flex; align-items: center; min-height: 48px; padding: 0 20px; border-radius: 10px; background: #C8401C; color: #FFFFFF; font-weight: 600; font-size: 15px; text-decoration: none;">New upload</a>
+</header>
+
+<section aria-label="This week" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+<sc-for list="{{metrics}}" as="m" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 6px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 18px 20px;">
+<span style="font-size: 13px; color: #5F6672;">{{m.label}}</span>
+<span style="font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums;">{{m.value}}</span>
+<svg viewBox="0 0 200 36" style="width: 100%; height: 36px;" aria-hidden="true"><polyline points="{{m.points}}" fill="none" stroke="#FF5A36" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></polyline></svg>
+<span style="font-size: 13px; color: #145C40; font-weight: 600;">{{m.delta}}</span>
+</div>
+</sc-for>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+<div style="flex: 999 1 480px; min-width: 0; display: flex; flex-direction: column; gap: 24px;">
+
+<section style="display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<div style="display: flex; justify-content: space-between; align-items: center;"><h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 20px; font-weight: 600;">Needs you</h2><span style="font-size: 13px; color: #5F6672;">4 items</span></div>
+<sc-for list="{{needs}}" as="n" hint-placeholder-count="4">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid #F0EEE8;">
+<span style="{{n.chip}}">{{n.kind}}</span>
+<span style="flex: 1 1 240px; font-size: 14px; line-height: 1.4;">{{n.text}}</span>
+<a href="{{n.href}}" style="display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #D6D3CA; background: #FFFFFF; color: #14171C; font-size: 13px; font-weight: 600; text-decoration: none;">{{n.action}}</a>
+</div>
+</sc-for>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<div style="display: flex; justify-content: space-between; align-items: center;"><h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 20px; font-weight: 600;">Today</h2><a href="S6-Calendar.dc.html" style="font-size: 14px; font-weight: 600;">Open calendar</a></div>
+<sc-for list="{{today}}" as="p" hint-placeholder-count="6">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 10px 0; border-top: 1px solid #F0EEE8;">
+<span style="width: 70px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">{{p.time}}</span>
+<span style="width: 36px; height: 56px; border-radius: 6px; background: {{p.thumb}};"></span>
+<span style="flex: 1 1 220px; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 14px; font-weight: 500;">{{p.title}}</span><span style="font-size: 12px; color: #5F6672;">{{p.platform}}</span></span>
+<span style="{{p.chip}}">{{p.status}}</span>
+</div>
+</sc-for>
+</section>
+</div>
+
+<div style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 24px;">
+<section style="display: flex; flex-direction: column; gap: 10px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<div style="display: flex; justify-content: space-between; align-items: center;"><h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 20px; font-weight: 600;">Agent activity</h2><a href="S8-Agents.dc.html" style="font-size: 14px; font-weight: 600;">All agents</a></div>
+<sc-for list="{{feed}}" as="f" hint-placeholder-count="6">
+<div style="display: flex; gap: 10px; padding: 10px 0; border-top: 1px solid #F0EEE8;">
+<span style="width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: #FF5A36; flex-shrink: 0;"></span>
+<div style="display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 12px; color: #5F6672;">{{f.time}} · {{f.agent}}</span><span style="font-size: 14px; line-height: 1.4;">{{f.text}}</span></div>
+</div>
+</sc-for>
+</section>
+<section style="display: flex; flex-direction: column; gap: 10px; background: #14171C; color: #F2F2EE; border-radius: 12px; padding: 22px;">
+<div style="display: flex; align-items: center; gap: 10px;">
+<svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><path d="M26 16a10 10 0 1 1-4.2-8.1" fill="none" stroke="#FF7A5C" stroke-width="3" stroke-linecap="round"></path><path d="M22.5 3.5l-0.6 4.6 4.6 0.4" fill="none" stroke="#FF7A5C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span style="font-size: 13px; font-weight: 600; color: #FFB8A6; text-transform: uppercase; letter-spacing: 0.06em;">Learning loop</span>
+</div>
+<p style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 20px; font-weight: 600; line-height: 1.3;">This week's winner: question hooks, 2.1× average views.</p>
+<p style="margin: 0; font-size: 14px; color: #C9CDD3; line-height: 1.5;">Next week we're making more of them, and trying them on TikTok first.</p>
+<a href="S7-Results.dc.html" style="color: #FFB8A6; font-size: 14px; font-weight: 600;">See results</a>
+</section>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1150}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const chip = (bg, fg) => 'font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: ' + bg + '; color: ' + fg + '; white-space: nowrap;';
+    const C = {
+      pass: chip('#E3F4EC', '#145C40'), review: chip('#FBF0D9', '#6E4A07'), blocked: chip('#FBE3E3', '#8E2626'),
+      sched: chip('#E3ECFB', '#1F4FA8'), pub: chip('#EFEDE7', '#3E444D'), trend: chip('#E3ECFB', '#1F4FA8')
+    };
+    const metrics = [
+      { label: 'Posts this week', value: '21', delta: 'On plan: 3 a day', points: '0,26 33,24 66,22 100,20 133,18 166,16 200,14' },
+      { label: 'Views', value: '48.3K', delta: '+18% vs last week', points: '0,30 33,24 66,22 100,15 133,12 166,17 200,9' },
+      { label: 'Link clicks', value: '214', delta: '+22% vs last week', points: '0,30 33,27 66,22 100,20 133,14 166,15 200,10' },
+      { label: 'Calls booked', value: '6', delta: '+2 vs last week', points: '0,30 33,30 66,24 100,24 133,18 166,18 200,12' }
+    ];
+    const needs = [
+      { kind: 'Needs review', chip: C.review, text: 'Cut 6, “What I’d tell myself in my first month as a manager”, mentions a former employer.', action: 'Review', href: 'S3-Upload.dc.html' },
+      { kind: 'Needs review', chip: C.review, text: 'Cut 9, “A listener asked…”, shows a listener’s name on screen.', action: 'Review', href: 'S3-Upload.dc.html' },
+      { kind: 'Needs review', chip: C.review, text: '7:45 pm TikTok post is waiting for approval.', action: 'Approve', href: 'S6-Calendar.dc.html' },
+      { kind: 'Blocked', chip: C.blocked, text: 'Cut 12 uses background music from a venue. Swap in a library track or your own voice-over.', action: 'Fix audio', href: 'S3-Upload.dc.html' }
+    ];
+    const today = [
+      { time: '7:30 am', platform: 'Instagram', title: 'You’re not tired. You’re over-responsible.', status: 'Published', chip: C.pub, thumb: '#12545A' },
+      { time: '9:00 am', platform: 'YouTube Shorts', title: '3 words that stop a team from burning out', status: 'Published', chip: C.pub, thumb: '#1E3A40' },
+      { time: '12:15 pm', platform: 'TikTok', title: 'Why your best people go quiet', status: 'Published (private)', chip: C.pub, thumb: '#2F3E46' },
+      { time: '2:15 pm', platform: 'Instagram · AI scenes labelled', title: 'The 3-word reframe (remake)', status: 'Scheduled', chip: C.sched, thumb: '#6B4F3A' },
+      { time: '5:00 pm', platform: 'YouTube Shorts', title: 'The 10-minute Friday habit', status: 'Scheduled', chip: C.sched, thumb: '#12545A' },
+      { time: '7:45 pm', platform: 'TikTok', title: 'New managers: stop saying “let me know if you need anything”', status: 'Needs review', chip: C.review, thumb: '#1E3A40' }
+    ];
+    const feed = [
+      { time: '1:00 pm', agent: 'Performance Analyst', text: 'Question hooks beat the average by 2.1×. Raising their share next week.' },
+      { time: '12:15 pm', agent: 'Publisher', text: 'Posted to TikTok (private until app approval).' },
+      { time: '10:20 am', agent: 'Remake Producer', text: 'Draft ready: “The 3-word reframe” for Maya (similarity 12%).' },
+      { time: '10:05 am', agent: 'Trend Scout', text: 'Found “The 3-word reframe” rising in Leadership (+340%).' },
+      { time: '9:44 am', agent: 'Compliance', text: '9 passed, 2 need review, 1 blocked (venue music).' },
+      { time: '9:41 am', agent: 'Multiplier', text: 'Cut 12 clips from Episode 47 (cost $1.84).' }
+    ];
+    return { metrics, needs, today, feed };
+  }
+}
+</script>
+</body>
+</html>

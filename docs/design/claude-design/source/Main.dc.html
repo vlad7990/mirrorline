@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mirrorline design system</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Inter+Tight:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#FAFAF7}
+a{color:#B83A18}a:hover{color:#8F2C11}
+</style>
+</helmet>
+<div style="box-sizing: border-box; max-width: 1440px; margin: 0 auto; padding: 56px 64px 80px; display: flex; flex-direction: column; gap: 48px; font-family: Inter, system-ui, sans-serif; color: #14171C; background: #FAFAF7;">
+
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px;">
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: center; gap: 10px;">
+<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><path d="M26 16a10 10 0 1 1-4.2-8.1" fill="none" stroke="#FF5A36" stroke-width="3" stroke-linecap="round"></path><path d="M22.5 3.5l-0.6 4.6 4.6 0.4" fill="none" stroke="#FF5A36" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span style="font-family: 'Inter Tight', Inter, sans-serif; font-size: 22px; font-weight: 700;">Mirrorline</span>
+<span style="font-size: 12px; font-weight: 600; color: #5F6672; border: 1px solid #E6E4DD; border-radius: 999px; padding: 3px 10px;">Placeholder name</span>
+</div>
+<h1 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 44px; line-height: 1.1; font-weight: 700; max-width: 760px;">Design system and demo path</h1>
+<p style="margin: 0; font-size: 17px; line-height: 1.5; color: #5F6672; max-width: 720px;">An AI content studio for coaches and local businesses. Calm, editorial, and built around the client's own videos. All people and brands shown are fictional.</p>
+</div>
+<a href="S1-Onboarding.dc.html" style="display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 22px; border-radius: 10px; background: #C8401C; color: #FFFFFF; font-weight: 600; font-size: 15px; text-decoration: none;">Start the demo</a>
+</header>
+
+<section style="display: flex; flex-direction: column; gap: 16px;">
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 22px; font-weight: 600;">Demo path · about 3 minutes</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+<sc-for list="{{path}}" as="step" hint-placeholder-count="8">
+<a href="{{step.href}}" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid #E6E4DD; background: #FFFFFF; color: #14171C; font-size: 14px; font-weight: 500; text-decoration: none;"><span style="font-weight: 700; color: #B83A18;">{{step.n}}</span>{{step.label}}</a>
+</sc-for>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 16px;">
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 22px; font-weight: 600;">Colour tokens</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px;">
+<sc-for list="{{tokens}}" as="t" hint-placeholder-count="12">
+<div style="display: flex; flex-direction: column; gap: 8px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 12px;">
+<div style="{{t.swatch}}"></div>
+<div style="font-size: 14px; font-weight: 600;">{{t.name}}</div>
+<div style="font-size: 12px; color: #5F6672;">{{t.light}} · dark {{t.dark}}</div>
+<div style="font-size: 12px; color: #5F6672;">{{t.use}}</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section style="display: flex; flex-wrap: wrap; gap: 32px;">
+<div style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 14px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 28px;">
+<h2 style="margin: 0 0 6px; font-family: 'Inter Tight', Inter, sans-serif; font-size: 22px; font-weight: 600;">Type</h2>
+<div style="font-family: 'Inter Tight', Inter, sans-serif; font-size: 32px; font-weight: 700;">Heading 32 · Inter Tight</div>
+<div style="font-family: 'Inter Tight', Inter, sans-serif; font-size: 24px; font-weight: 600;">Heading 24 · Inter Tight</div>
+<div style="font-family: 'Inter Tight', Inter, sans-serif; font-size: 20px; font-weight: 600;">Heading 20 · Inter Tight</div>
+<div style="font-size: 15px; line-height: 1.55;">Body 15 · Inter. Cut 12 clips from your podcast. 3 posts today, next at 2:15 pm.</div>
+<div style="font-size: 13px; color: #5F6672;">Meta 13 · Inter · Uploaded today 9:12 am</div>
+<div style="font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums;">48,300 · 214 · 6</div>
+</div>
+<div style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 18px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 28px;">
+<h2 style="margin: 0 0 6px; font-family: 'Inter Tight', Inter, sans-serif; font-size: 22px; font-weight: 600;">Voice</h2>
+<p style="margin: 0; font-size: 15px; line-height: 1.55;">Calm, specific, honest. Plain verbs, real numbers, no guarantees.</p>
+<div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px; line-height: 1.5;">
+<div style="padding: 12px 14px; border-radius: 10px; background: #E3F4EC; color: #145C40;">Do: “12 cuts ready. 3 need your eye before they post.”</div>
+<div style="padding: 12px 14px; border-radius: 10px; background: #E3F4EC; color: #145C40;">Do: “TikTok posts stay private until our app is approved.”</div>
+<div style="padding: 12px 14px; border-radius: 10px; background: #FBE3E3; color: #8E2626;">Don't: “Go viral now! 10x your followers!”</div>
+</div>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 16px;">
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 22px; font-weight: 600;">Components</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
+
+<div style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 14px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 24px;">
+<div style="font-size: 13px; font-weight: 600; color: #5F6672; text-transform: uppercase; letter-spacing: 0.06em;">Buttons</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 10px; border: none; background: #C8401C; color: #FFFFFF; font: 600 14px Inter, sans-serif;">Remake for my brand</button>
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid #D6D3CA; background: #FFFFFF; color: #14171C; font: 600 14px Inter, sans-serif;">Preview</button>
+<button type="button" style="min-height: 44px; padding: 0 18px; border-radius: 10px; border: none; background: transparent; color: #B83A18; font: 600 14px Inter, sans-serif;">Edit hook</button>
+</div>
+<div style="font-size: 13px; font-weight: 600; color: #5F6672; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 8px;">Status chips</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; font-weight: 600;">
+<span style="padding: 4px 10px; border-radius: 999px; background: #E3F4EC; color: #145C40;">Passed</span>
+<span style="padding: 4px 10px; border-radius: 999px; background: #FBF0D9; color: #6E4A07;">Needs review</span>
+<span style="padding: 4px 10px; border-radius: 999px; background: #FBE3E3; color: #8E2626;">Blocked</span>
+<span style="padding: 4px 10px; border-radius: 999px; background: #E3ECFB; color: #1F4FA8;">Scheduled</span>
+<span style="padding: 4px 10px; border-radius: 999px; background: #EFEDE7; color: #3E444D;">Published</span>
+</div>
+<div style="font-size: 13px; font-weight: 600; color: #5F6672; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 8px;">Agent status</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; font-weight: 600;">
+<span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #FFE8E1; color: #8F2C11;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #FF5A36;"></span>Working</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #EFEDE7; color: #3E444D;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #8A909A;"></span>Idle</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #FBF0D9; color: #6E4A07;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #C98A12;"></span>Waiting</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #FBE3E3; color: #8E2626;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #D23F3F;"></span>Blocked</span>
+</div>
+</div>
+
+<div style="flex: 0 0 220px; display: flex; flex-direction: column; gap: 10px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 16px;">
+<div style="font-size: 13px; font-weight: 600; color: #5F6672; text-transform: uppercase; letter-spacing: 0.06em;">Video card</div>
+<div style="position: relative; aspect-ratio: 9 / 16; border-radius: 10px; background: #12545A; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; padding: 14px; box-sizing: border-box;">
+<span style="position: absolute; top: 10px; left: 10px; font-size: 11px; font-weight: 700; color: #14171C; background: #FFFFFF; border-radius: 6px; padding: 2px 6px;">0:24</span>
+<span style="font-family: 'Inter Tight', Inter, sans-serif; font-size: 17px; font-weight: 700; line-height: 1.25; color: #FFFFFF;">You're not tired. <span style="background: #F3E9DC; color: #12545A; padding: 0 4px; border-radius: 4px;">You're over-responsible.</span></span>
+</div>
+<div style="font-size: 14px; font-weight: 600; line-height: 1.35;">You're not tired. You're over-responsible.</div>
+<div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #5F6672;"><span>Hook clip · score 92</span><span style="padding: 3px 8px; border-radius: 999px; background: #E3F4EC; color: #145C40; font-weight: 600;">Passed</span></div>
+</div>
+
+<div style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 16px;">
+<div style="display: flex; flex-direction: column; gap: 6px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 20px;">
+<div style="font-size: 13px; color: #5F6672;">Views this week</div>
+<div style="font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums;">48.3K</div>
+<svg viewBox="0 0 200 40" style="width: 100%; height: 40px;" aria-hidden="true"><polyline points="0,34 33,28 66,25 100,16 133,13 166,19 200,10" fill="none" stroke="#FF5A36" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></polyline></svg>
+<div style="font-size: 13px; color: #145C40; font-weight: 600;">+18% vs last week</div>
+</div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; background: #FFFFFF; border: 1px dashed #D6D3CA; border-radius: 12px; padding: 28px 20px;">
+<svg width="48" height="48" viewBox="0 0 32 32" aria-hidden="true"><path d="M26 16a10 10 0 1 1-4.2-8.1" fill="none" stroke="#FF5A36" stroke-width="2" stroke-linecap="round"></path><path d="M22.5 3.5l-0.6 4.6 4.6 0.4" fill="none" stroke="#FF5A36" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<div style="font-weight: 600; font-size: 15px;">No uploads yet</div>
+<div style="font-size: 14px; color: #5F6672; line-height: 1.45;">Drop a long video. We'll find the moments worth posting.</div>
+</div>
+</div>
+
+</div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const sw = (c, border) => 'height: 56px; border-radius: 8px; background: ' + c + ';' + (border ? ' border: 1px solid #E6E4DD;' : '');
+    const tokens = [
+      { name: 'bg', light: '#FAFAF7', dark: '#0E1116', use: 'Page background', swatch: sw('#FAFAF7', true) },
+      { name: 'surface', light: '#FFFFFF', dark: '#161A21', use: 'Cards, panels', swatch: sw('#FFFFFF', true) },
+      { name: 'border', light: '#E6E4DD', dark: '#2A2F38', use: 'Dividers, borders', swatch: sw('#E6E4DD') },
+      { name: 'text', light: '#14171C', dark: '#F2F2EE', use: 'Primary text', swatch: sw('#14171C') },
+      { name: 'text-muted', light: '#5F6672', dark: '#A3A9B4', use: 'Secondary text', swatch: sw('#5F6672') },
+      { name: 'accent', light: '#FF5A36', dark: '#FF7A5C', use: 'The loop, highlights', swatch: sw('#FF5A36') },
+      { name: 'accent-strong', light: '#C8401C', dark: '#FF7A5C', use: 'Buttons with white text', swatch: sw('#C8401C') },
+      { name: 'accent-soft', light: '#FFE8E1', dark: '#3A2019', use: 'Selected, working', swatch: sw('#FFE8E1') },
+      { name: 'success', light: '#1F9D6B', dark: '#3CC98F', use: 'Published, passed', swatch: sw('#1F9D6B') },
+      { name: 'warning', light: '#C98A12', dark: '#E8B23A', use: 'Needs review', swatch: sw('#C98A12') },
+      { name: 'danger', light: '#D23F3F', dark: '#F06A6A', use: 'Blocked, errors', swatch: sw('#D23F3F') },
+      { name: 'info', light: '#2F6FDE', dark: '#6B9BF2', use: 'Trends, tips', swatch: sw('#2F6FDE') }
+    ];
+    const path = [
+      { n: 'S1', label: 'Onboarding', href: 'S1-Onboarding.dc.html' },
+      { n: 'S2', label: 'Home', href: 'S2-Home.dc.html' },
+      { n: 'S3', label: 'Upload and multiply', href: 'S3-Upload.dc.html' },
+      { n: 'S4', label: 'Trend board', href: 'S4-Trends.dc.html' },
+      { n: 'S5', label: 'Remake studio', href: 'S5-Remake.dc.html' },
+      { n: 'S6', label: 'Calendar', href: 'S6-Calendar.dc.html' },
+      { n: 'S7', label: 'Results', href: 'S7-Results.dc.html' },
+      { n: 'S8', label: 'Agents', href: 'S8-Agents.dc.html' },
+      { n: 'M1', label: 'Mobile approvals', href: 'M1-Approvals.dc.html' }
+    ];
+    return { tokens, path };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Brand kit</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Inter+Tight:wght@600;700&amp;family=DM+Serif+Display&amp;display=swap">
+<style>
+body{margin:0;background:#FAFAF7}
+a{color:#B83A18}a:hover{color:#8F2C11}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 1100px; font-family: Inter, system-ui, sans-serif; color: #14171C; background: #FAFAF7;">
+<div style="flex: 1 1 240px; max-width: 100%; display: flex;"><dc-import name="Sidebar" active="Brand kit" hint-size="100%,1100px"></dc-import></div>
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 22px;">
+
+<header style="display: flex; flex-direction: column; gap: 6px;">
+<span style="font-size: 13px; color: #5F6672;">Used by every agent on every video</span>
+<h1 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 32px; font-weight: 700;">Brand kit</h1>
+</header>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; align-items: start;">
+
+<section style="display: flex; flex-direction: column; gap: 14px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 18px; font-weight: 600;">Logo and colours</h2>
+<div style="display: flex; gap: 16px; align-items: center;">
+<div style="width: 72px; height: 72px; border-radius: 14px; background: #12545A; color: #F3E9DC; display: flex; align-items: center; justify-content: center; font-family: 'Inter Tight', Inter, sans-serif; font-weight: 700; font-size: 26px;">MT</div>
+<button type="button" style="min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid #D6D3CA; background: #FFFFFF; font: 600 14px Inter, sans-serif; color: #14171C;">Replace logo</button>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;">
+<div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px;"><span style="height: 48px; border-radius: 8px; background: #12545A;"></span>Deep teal<br>#12545A</div>
+<div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px;"><span style="height: 48px; border-radius: 8px; background: #F3E9DC; border: 1px solid #E6E4DD;"></span>Warm sand<br>#F3E9DC</div>
+<div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px;"><span style="height: 48px; border-radius: 8px; background: #FF5A36;"></span>Coral<br>#FF5A36</div>
+<div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px;"><span style="height: 48px; border-radius: 8px; background: #14171C;"></span>Ink<br>#14171C</div>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 14px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 18px; font-weight: 600;">Caption style</h2>
+<div role="radiogroup" aria-label="Caption style" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
+<sc-for list="{{styles}}" as="s" hint-placeholder-count="3">
+<button type="button" role="radio" aria-checked="{{s.on}}" onClick="{{s.pick}}" style="{{s.wrap}}">
+<span style="{{s.preview}}">{{s.sample}}</span>
+<span style="font-size: 12px; font-weight: 600; color: #14171C;">{{s.label}}</span>
+</button>
+</sc-for>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px;">
+<span style="padding: 8px 12px; border-radius: 10px; background: #FAFAF7; border: 1px solid #E6E4DD;">Intro: 0.8 s teal card with logo</span>
+<span style="padding: 8px 12px; border-radius: 10px; background: #FAFAF7; border: 1px solid #E6E4DD;">Outro: “Book a free call” + link</span>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 14px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 18px; font-weight: 600;">Voice</h2>
+<div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 10px; border: 2px solid #14171C;">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;"><span style="font-weight: 600; font-size: 14px;">My own voice</span><span style="font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #E3F4EC; color: #145C40;">Consent signed 9 Nov 2026</span></div>
+<span style="font-size: 13px; color: #5F6672;">Used only for Maya's videos. You can withdraw consent at any time in Settings.</span>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 14px; border-radius: 10px; border: 1px solid #E6E4DD;"><span style="font-size: 14px;">Stock voice: “Calm, warm, female, US”</span><span style="font-size: 12px; color: #5F6672;">Backup</span></div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 14px; background: #FFFFFF; border: 1px solid #E6E4DD; border-radius: 12px; padding: 22px;">
+<h2 style="margin: 0; font-family: 'Inter Tight', Inter, sans-serif; font-size: 18px; font-weight: 600;">Words</h2>
+<span style="font-size: 13px; font-weight: 600; color: #145C40;">Always use</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; font-weight: 600;">
+<span style="padding: 6px 12px; border-radius: 999px; background: #E3F4EC; color: #145C40;">first-time managers</span>
+<span style="padding: 6px 12px; border-radius: 999px; background: #E3F4EC; color: #145C40;">burnout</span>
+<span style="padding: 6px 12px; border-radius: 999px; background: #E3F4EC; color: #145C40;">reframe</span>
+<span style="padding: 6px 12px; border-radius: 999px; background: #E3F4EC; color: #145C40;">1:1</span>
+</div>
+<span style="font-size: 13px; font-weight: 600; color: #8E2626;">Never use</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; font-weight: 600;">
+<span style="padding: 6px 12px; border-radius: 999px; background: #FBE3E3; color: #8E2626;">hustle</span>
+<span style="padding: 6px 12px; border-radius: 999px; background: #FBE3E3; color: #8E2626;">crush it</span>
+<span style="padding: 6px 12px; border-radius: 999px; background: #FBE3E3; color: #8E2626;">guaranteed</span>
+<span style="padding: 6px 12px; border-radius: 999px; border: 1px dashed #D6D3CA; color: #5F6672;">+ Add</span>
+</div>
+</section>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { style: 0 }; }
+  renderVals() {
+    const sel = this.state.style;
+    const defs = [
+      { label: 'Bold highlight', font: "'Inter Tight', Inter, sans-serif", weight: 700, bg: '#12545A', color: '#FFFFFF' },
+      { label: 'Editorial serif', font: "'DM Serif Display', Georgia, serif", weight: 400, bg: '#F3E9DC', color: '#12545A' },
+      { label: 'Clean minimal', font: 'Inter, sans-serif', weight: 600, bg: '#14171C', color: '#F2F2EE' }
+    ];
+    const styles = defs.map((d, i) => ({
+      label: d.label, sample: 'Coach, don’t carry.', on: i === sel ? 'true' : 'false',
+      pick: () => this.setState({ style: i }),
+      wrap: 'display: flex; flex-direction: column; gap: 8px; padding: 8px; border-radius: 10px; background: #FFFFFF; text-align: left; border: ' + (i === sel ? '2px solid #C8401C' : '1px solid #E6E4DD') + ';',
+      preview: 'display: flex; align-items: flex-end; aspect-ratio: 9 / 12; border-radius: 8px; padding: 10px; box-sizing: border-box; background: ' + d.bg + '; color: ' + d.color + '; font-family: ' + d.font + '; font-weight: ' + d.weight + '; font-size: 16px; line-height: 1.2;'
+    }));
+    return { styles };
+  }
+}
+</script>
+</body>
+</html>

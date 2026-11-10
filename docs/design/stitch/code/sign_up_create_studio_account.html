@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mirrorline — Create your studio account</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "success-soft": "#E3F4EC",
+            "on-primary-fixed-variant": "#891e00",
+            "primary-fixed": "#ffdbd2",
+            "danger-soft": "#FBE3E3",
+            "border-strong": "#D6D3CA",
+            "on-secondary-fixed-variant": "#8c1900",
+            "text-muted": "#5F6672",
+            "on-error": "#ffffff",
+            "neutral-soft": "#EFEDE7",
+            "on-neutral-soft": "#3E444D",
+            "on-tertiary-fixed-variant": "#44474d",
+            "on-secondary": "#ffffff",
+            "on-primary-container": "#fff1ee",
+            "secondary": "#b52603",
+            "on-secondary-container": "#570c00",
+            "surface": "#FFFFFF",
+            "dark-background": "#0E1116",
+            "tertiary-container": "#6d6f75",
+            "accent-soft": "#FFE8E1",
+            "tertiary-fixed": "#e1e2e9",
+            "info-soft": "#E3ECFB",
+            "background": "#f9f9f6",
+            "on-tertiary": "#ffffff",
+            "surface-container-highest": "#e2e3e0",
+            "warning-soft": "#FBF0D9",
+            "info": "#2F6FDE",
+            "inverse-on-surface": "#f1f1ee",
+            "on-danger-soft": "#8E2626",
+            "dark-border": "#2A2F38",
+            "secondary-container": "#fd5835",
+            "on-accent-soft": "#8F2C11",
+            "secondary-fixed-dim": "#ffb4a3",
+            "inverse-primary": "#ffb4a2",
+            "dark-surface": "#161A21",
+            "surface-container-lowest": "#ffffff",
+            "surface-container": "#eeeeeb",
+            "on-primary-fixed": "#3c0800",
+            "dark-text-muted": "#A3A9B4",
+            "secondary-fixed": "#ffdad2",
+            "on-surface-variant": "#5a413b",
+            "surface-bright": "#f9f9f6",
+            "on-ink": "#F2F2EE",
+            "on-success-soft": "#145C40",
+            "error-container": "#ffdad6",
+            "demo-teal": "#12545A",
+            "on-background": "#1a1c1b",
+            "tertiary": "#54575d",
+            "surface-variant": "#e2e3e0",
+            "inverse-surface": "#2f312f",
+            "on-tertiary-fixed": "#191c21",
+            "surface-container-low": "#f4f4f1",
+            "dark-text": "#F2F2EE",
+            "demo-sand": "#F3E9DC",
+            "on-error-container": "#93000a",
+            "primary-fixed-dim": "#ffb4a2",
+            "primary-container": "#c8401c",
+            "on-primary": "#ffffff",
+            "outline": "#8e7069",
+            "on-secondary-fixed": "#3d0600",
+            "surface-container-high": "#e8e8e5",
+            "on-warning-soft": "#6E4A07",
+            "warning": "#C98A12",
+            "dark-accent": "#FF7A5C",
+            "surface-dim": "#dadad7",
+            "border": "#E6E4DD",
+            "danger": "#D23F3F",
+            "success": "#1F9D6B",
+            "on-info-soft": "#1F4FA8",
+            "on-surface": "#1a1c1b",
+            "surface-tint": "#b02f0a",
+            "tertiary-fixed-dim": "#c4c6cd",
+            "primary": "#a52803",
+            "on-tertiary-container": "#f2f3fb",
+            "outline-variant": "#e2bfb6",
+            "ink": "#14171C",
+            "error": "#ba1a1a"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-lg": "1.375rem",
+            "margin-desktop": "2.25rem",
+            "space-xl": "2rem",
+            "space-sm": "0.5rem",
+            "gutter": "1.25rem",
+            "margin": "1.125rem",
+            "space-xs": "0.25rem",
+            "space-md": "1rem",
+            "gutter-desktop": "1.5rem"
+          },
+          "fontFamily": {
+            "metric-display": ["Inter"],
+            "title-md": ["Inter"],
+            "meta": ["Inter"],
+            "eyebrow": ["Inter"],
+            "caption": ["Inter"],
+            "label-md": ["Inter"],
+            "headline-md": ["Inter"],
+            "overlay-caption": ["Inter"],
+            "body-regular": ["Inter"],
+            "headline-lg-mobile": ["Inter"],
+            "headline-lg": ["Inter"],
+            "title-sm": ["Inter"],
+            "display": ["Inter"],
+            "body-medium": ["Inter"]
+          },
+          "fontSize": {
+            "metric-display": ["30px", { "lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "title-md": ["20px", { "lineHeight": "26px", "fontWeight": "600" }],
+            "meta": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "eyebrow": ["12px", { "lineHeight": "16px", "letterSpacing": "0.06em", "fontWeight": "600" }],
+            "caption": ["12px", { "lineHeight": "16px", "fontWeight": "600" }],
+            "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "headline-md": ["24px", { "lineHeight": "30px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "overlay-caption": ["17px", { "lineHeight": "22px", "fontWeight": "700" }],
+            "body-regular": ["15px", { "lineHeight": "24px", "fontWeight": "400" }],
+            "headline-lg-mobile": ["26px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+            "headline-lg": ["32px", { "lineHeight": "38px", "letterSpacing": "-0.015em", "fontWeight": "700" }],
+            "title-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "display": ["44px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "body-medium": ["15px", { "lineHeight": "24px", "fontWeight": "600" }]
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-background text-ink min-h-screen antialiased flex flex-col font-body-regular">
+<!-- Minimal Focused Header (No standard tab navigation for transactional onboarding) -->
+<header class="w-full bg-surface border-b border-border sticky top-0 z-40">
+<div class="max-w-7xl mx-auto px-gutter-desktop h-16 flex items-center justify-between">
+<div class="flex items-center gap-6">
+<a class="flex items-center gap-2 group" href="#">
+<div class="w-7 h-7 rounded-lg bg-ink flex items-center justify-center text-on-ink transition-transform duration-200 group-hover:scale-95">
+<span class="material-symbols-outlined text-title-sm" data-icon="all_inclusive">all_inclusive</span>
+</div>
+<span class="font-title-md text-title-md font-bold text-ink tracking-tight">Mirrorline</span>
+</a>
+<div class="h-4 w-px bg-border hidden sm:block"></div>
+<a class="hidden sm:inline-flex items-center gap-1.5 text-meta font-meta text-text-muted hover:text-ink transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-caption" data-icon="arrow_back">arrow_back</span>
+<span>Back to studio overview</span>
+</a>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-meta font-meta text-text-muted hidden md:inline">Already have an account?</span>
+<a class="text-label-md font-label-md text-ink hover:text-primary transition-colors duration-150 border border-border-strong px-3.5 py-1.5 rounded-lg bg-surface hover:bg-neutral-soft" href="#">
+          Sign in
+        </a>
+</div>
+</div>
+</header>
+<!-- Main Canvas Area -->
+<main class="flex-1 w-full max-w-7xl mx-auto px-gutter-desktop py-space-xl flex flex-col items-center justify-center">
+<div class="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- Primary Registration Card (7 cols on Desktop) -->
+<div class="lg:col-span-7 bg-surface rounded-xl border border-border p-6 sm:p-8 lg:p-10">
+<!-- Header & Identity Context -->
+<div class="mb-8">
+<div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-accent-soft text-on-accent-soft font-eyebrow text-eyebrow mb-3 uppercase tracking-wider">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary-container animate-pulse"></span>
+            Private Studio Onboarding
+          </div>
+<h1 class="text-headline-lg font-headline-lg text-ink tracking-tight">
+            Start your autonomous studio
+          </h1>
+<p class="text-body-regular font-body-regular text-text-muted mt-2 max-w-xl">
+            Turn your long-form videos into daily short-form growth with your own 7-agent AI team.
+          </p>
+</div>
+<!-- Social SSO Cluster -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+<button class="flex items-center justify-center gap-3 h-11 px-4 rounded-lg border border-border-strong bg-surface hover:bg-neutral-soft text-ink font-label-md text-label-md transition-colors duration-150" type="button">
+<svg class="w-4 h-4" viewbox="0 0 24 24">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"></path>
+</svg>
+<span>Continue with Google</span>
+</button>
+<button class="flex items-center justify-center gap-3 h-11 px-4 rounded-lg border border-border-strong bg-surface hover:bg-neutral-soft text-ink font-label-md text-label-md transition-colors duration-150" type="button">
+<svg class="w-4 h-4 fill-ink" viewbox="0 0 170 170">
+<path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.69-3.04-7.69-7.85-12.01-14.42-5.74-8.71-10.3-18.91-13.68-30.61-3.37-11.7-5.06-23.01-5.06-33.93 0-14.1 3.52-25.95 10.55-35.54 7.03-9.59 16.03-14.47 27-14.64 4.35 0 9.29 1.17 14.82 3.52 5.53 2.34 9.5 3.58 11.9 3.71 1.74-.24 5.99-1.57 12.74-4 6.75-2.42 12.51-3.41 17.27-2.98 13.32 1.05 23.85 6.2 31.6 15.46-11.83 7.15-17.65 16.94-17.47 29.38.19 9.87 4 18.15 11.44 24.84 7.44 6.69 16.14 10.37 26.11 11.05-2.22 6.58-4.71 12.63-7.47 18.16zM119.22 33.05c-.17 3.56-1.12 7.08-2.85 10.55-1.73 3.47-4.14 6.52-7.23 9.15-3.09 2.63-6.53 4.48-10.33 5.55-1.05.2-1.9.3-2.55.3-.23-1.63-.35-3.18-.35-4.66 0-7.39 2.91-14.54 8.74-21.46 5.83-6.91 12.76-11.23 20.79-12.95.12 1.15.18 2.3.18 3.47z"></path>
+</svg>
+<span>Continue with Apple</span>
+</button>
+</div>
+<!-- Section Divider -->
+<div class="relative flex py-2 items-center mb-6">
+<div class="flex-grow border-t border-border"></div>
+<span class="flex-shrink mx-4 text-meta font-meta text-text-muted">or with work email</span>
+<div class="flex-grow border-t border-border"></div>
+</div>
+<!-- Form Entry Points -->
+<form class="space-y-5" onsubmit="event.preventDefault();">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<!-- Full Name -->
+<div>
+<label class="block text-label-md font-label-md text-ink mb-1.5" for="fullName">
+                Full name
+              </label>
+<input class="w-full h-11 px-3.5 rounded-lg border border-border-strong bg-surface text-ink text-body-regular font-body-regular placeholder-text-muted focus:border-ink focus:ring-1 focus:ring-ink focus:outline-none transition-colors" id="fullName" name="fullName" placeholder="e.g. Maya Torres" type="text" value="Maya Torres"/>
+</div>
+<!-- Work Email -->
+<div>
+<label class="block text-label-md font-label-md text-ink mb-1.5" for="workEmail">
+                Work email
+              </label>
+<input class="w-full h-11 px-3.5 rounded-lg border border-border-strong bg-surface text-ink text-body-regular font-body-regular placeholder-text-muted focus:border-ink focus:ring-1 focus:ring-ink focus:outline-none transition-colors" id="workEmail" name="workEmail" placeholder="maya@torresadvisory.com" type="email" value="maya@torresadvisory.com"/>
+</div>
+</div>
+<!-- Studio / Workspace Name -->
+<div>
+<label class="block text-label-md font-label-md text-ink mb-1.5" for="workspaceName">
+              Workspace / Studio name
+            </label>
+<input class="w-full h-11 px-3.5 rounded-lg border border-border-strong bg-surface text-ink text-body-regular font-body-regular placeholder-text-muted focus:border-ink focus:ring-1 focus:ring-ink focus:outline-none transition-colors" id="workspaceName" name="workspaceName" placeholder="Torres Advisory Group" type="text" value="Torres Advisory Group"/>
+<p class="text-caption font-caption text-text-muted mt-1">This will identify your sovereign compliance vault and watermarking namespace.</p>
+</div>
+<!-- Account Type / Role Pill Selector -->
+<div>
+<label class="block text-label-md font-label-md text-ink mb-2">
+              Primary studio focus
+            </label>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5" id="rolePillContainer">
+<button class="role-pill text-left px-3.5 py-2.5 rounded-lg border-2 border-ink bg-neutral-soft text-ink transition-all duration-150" data-selected="true" onclick="selectRole(this)" type="button">
+<div class="flex items-center justify-between">
+<span class="text-label-md font-label-md block">Executive Coach</span>
+<span class="w-2 h-2 rounded-full bg-primary-container"></span>
+</div>
+<span class="text-caption font-caption text-text-muted block mt-0.5">High-ticket retainer</span>
+</button>
+<button class="role-pill text-left px-3.5 py-2.5 rounded-lg border border-border-strong bg-surface hover:bg-neutral-soft text-ink transition-all duration-150" data-selected="false" onclick="selectRole(this)" type="button">
+<div class="flex items-center justify-between">
+<span class="text-label-md font-label-md block">Advisory Firm</span>
+<span class="w-2 h-2 rounded-full bg-transparent"></span>
+</div>
+<span class="text-caption font-caption text-text-muted block mt-0.5">Multi-partner practice</span>
+</button>
+<button class="role-pill text-left px-3.5 py-2.5 rounded-lg border border-border-strong bg-surface hover:bg-neutral-soft text-ink transition-all duration-150" data-selected="false" onclick="selectRole(this)" type="button">
+<div class="flex items-center justify-between">
+<span class="text-label-md font-label-md block">Creator Practice</span>
+<span class="w-2 h-2 rounded-full bg-transparent"></span>
+</div>
+<span class="text-caption font-caption text-text-muted block mt-0.5">Authority solo craft</span>
+</button>
+</div>
+</div>
+<!-- Password with Strength & Show/Hide -->
+<div>
+<div class="flex items-center justify-between mb-1.5">
+<label class="text-label-md font-label-md text-ink" for="passwordField">
+                Studio master password
+              </label>
+<button class="text-caption font-caption text-text-muted hover:text-ink transition-colors flex items-center gap-1" id="togglePassBtn" onclick="togglePasswordVisibility()" type="button">
+<span class="material-symbols-outlined text-caption" data-icon="visibility" id="visibilityIcon">visibility</span>
+<span id="visibilityText">Show</span>
+</button>
+</div>
+<div class="relative">
+<input class="w-full h-11 px-3.5 pr-10 rounded-lg border border-border-strong bg-surface text-ink text-body-regular font-body-regular focus:border-ink focus:ring-1 focus:ring-ink focus:outline-none transition-colors" id="passwordField" oninput="updateStrengthIndicator(this.value)" placeholder="Minimum 10 characters" type="password" value="StudioSovereign2025!"/>
+<div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-success">
+<span class="material-symbols-outlined text-title-sm" data-icon="check_circle">check_circle</span>
+</div>
+</div>
+<!-- Password Strength Indicator -->
+<div class="mt-2 flex items-center gap-2">
+<div class="flex-1 grid grid-cols-4 gap-1.5 h-1.5">
+<div class="bg-success rounded-full"></div>
+<div class="bg-success rounded-full"></div>
+<div class="bg-success rounded-full"></div>
+<div class="bg-success rounded-full"></div>
+</div>
+<span class="text-caption font-caption text-success font-semibold">Strong studio cipher</span>
+</div>
+</div>
+<!-- Ethical & Compliance Acknowledgement Checkbox -->
+<div class="pt-2">
+<label class="flex items-start gap-3 cursor-pointer group">
+<input checked="" class="mt-1 h-4 w-4 rounded border-border-strong text-primary-container focus:ring-primary-container focus:ring-offset-0 focus:ring-1 transition cursor-pointer" type="checkbox"/>
+<span class="text-meta font-meta text-text-muted leading-relaxed group-hover:text-ink transition-colors">
+                I confirm my source material is owned by me or my registered advisory practice, and I accept the 
+                <a class="underline text-ink hover:text-primary transition-colors" href="#">AI Ethics &amp; Consent Terms</a> 
+                governing voice/likeness modeling.
+              </span>
+</label>
+</div>
+<!-- Primary CTA Button (48px height, #C8401C) -->
+<div class="pt-2">
+<button class="w-full h-12 rounded-[10px] bg-primary-container hover:bg-secondary text-on-primary font-label-md text-label-md flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.99] shadow-none" type="submit">
+<span>Create Studio Account</span>
+<span class="material-symbols-outlined text-title-sm" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<!-- Footer Trust Statement -->
+<div class="pt-2 border-t border-border flex items-center justify-center gap-2 text-center">
+<span class="material-symbols-outlined text-caption text-success" data-icon="verified_user">verified_user</span>
+<span class="text-caption font-caption text-text-muted">
+              SOC-2 Type II compliant • Official platform APIs only • No scraped likenesses
+            </span>
+</div>
+</form>
+</div>
+<!-- Right Column: Editorial Showcase & Assurance (5 cols on Desktop) -->
+<div class="lg:col-span-5 space-y-6">
+<!-- Authority Quote / Testimonial Container -->
+<div class="bg-surface rounded-xl border border-border p-6 relative overflow-hidden">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-11 h-11 rounded-full border border-border bg-neutral-soft overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="Editorial black and white portrait of Maya Torres, an executive advisor with sharp tailored blazer, natural confident expression, soft natural directional daylight in a clean architectural studio interior." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6JA8OzNaXZNq84BYhmcapEO1_8IwhQ8md43O3hMVJPP7Sf59dJ_lwa4RIcWPtm5kVLxOVWjbm-qmKaTYZXeEKxM0bHE53IpCDaAoMqoK6JUQD2psHdJN_vIFhODeT3QD9-CSfFH4hyTO-fj2n7P5EUoR4HssF32uIY7K6t2bEf-162DXMVS2b-zKH5_4LlRzDWuL5KAXfYjnHoNWYED7ADFao1ujVP4POLhYDbImz"/>
+</div>
+<div>
+<div class="text-label-md font-label-md text-ink">Maya Torres</div>
+<div class="text-caption font-caption text-text-muted">Managing Partner, Torres Advisory</div>
+</div>
+<div class="ml-auto px-2 py-0.5 rounded-full bg-success-soft text-on-success-soft font-caption text-caption flex items-center gap-1">
+<span class="material-symbols-outlined text-caption" data-icon="verified">verified</span>
+              Verified
+            </div>
+</div>
+<p class="text-body-regular font-body-regular text-ink italic leading-relaxed">
+            “We booked six corporate advisory retainers in our first month without filming a single new video. Mirrorline extracts the nuance of our thinking without the synthetic noise.”
+          </p>
+<div class="mt-4 pt-3 border-t border-border flex items-center justify-between text-meta font-meta text-text-muted">
+<span>Result: 4.8x qualified inbound</span>
+<span class="font-semibold text-ink">Zero camera dread</span>
+</div>
+</div>
+<!-- "What happens after sign up" Roadmap Card -->
+<div class="bg-surface rounded-xl border border-border p-6">
+<div class="flex items-center justify-between mb-5">
+<h3 class="text-title-sm font-title-sm text-ink font-semibold">What happens after sign up</h3>
+<span class="text-caption font-caption px-2 py-0.5 rounded bg-neutral-soft text-on-neutral-soft">S01 Wizard</span>
+</div>
+<div class="space-y-4">
+<!-- Step 1 -->
+<div class="flex items-start gap-3.5">
+<div class="w-7 h-7 rounded-full bg-neutral-soft text-ink font-caption text-caption flex items-center justify-center font-bold flex-shrink-0 mt-0.5 border border-border">
+                1
+              </div>
+<div class="flex-1">
+<div class="text-label-md font-label-md text-ink">Set up your brand voice and caption style</div>
+<div class="text-meta font-meta text-text-muted mt-0.5">Calibrate typographic rules, sand overlay chips, and tone boundaries in under 3 minutes.</div>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="flex items-start gap-3.5">
+<div class="w-7 h-7 rounded-full bg-neutral-soft text-ink font-caption text-caption flex items-center justify-center font-bold flex-shrink-0 mt-0.5 border border-border">
+                2
+              </div>
+<div class="flex-1">
+<div class="text-label-md font-label-md text-ink">Connect your official social accounts</div>
+<div class="text-meta font-meta text-text-muted mt-0.5">Official Graph API pipelines for Instagram, TikTok, and YouTube with token sandboxing.</div>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="flex items-start gap-3.5">
+<div class="w-7 h-7 rounded-full bg-accent-soft text-primary-container font-caption text-caption flex items-center justify-center font-bold flex-shrink-0 mt-0.5 border border-primary-fixed">
+                3
+              </div>
+<div class="flex-1">
+<div class="text-label-md font-label-md text-ink font-semibold">Drop your first video for Multiplier processing</div>
+<div class="text-meta font-meta text-text-muted mt-0.5">The Multiplier Agent slices 12 clean editorial cuts with similarity validation scores under 15%.</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sovereign Compliance Ink Statement Panel -->
+<div class="bg-ink text-on-ink rounded-xl p-6 border border-ink">
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-demo-sand text-title-sm" data-icon="policy">policy</span>
+<span class="text-label-md font-label-md font-semibold text-on-ink tracking-tight">Mirrorline Certified Compliance</span>
+</div>
+<span class="text-caption font-caption text-demo-sand px-2 py-0.5 rounded border border-white/20">v4.2</span>
+</div>
+<p class="text-meta font-meta text-dark-text-muted leading-relaxed">
+            Your studio retains 100% intellectual property sovereignty. We never train frontier public models on executive client footage or client proprietary transcripts.
+          </p>
+<div class="mt-4 pt-3 border-t border-dark-border grid grid-cols-2 gap-2 text-caption font-caption text-on-ink">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-success text-caption" data-icon="check">check</span>
+<span>Audio rights cleared</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-success text-caption" data-icon="check">check</span>
+<span>Encrypted vaults</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Editorial Footer as specified in the Shared Components JSON -->
+<footer class="w-full bg-background border-t border-border mt-auto">
+<div class="w-full max-w-7xl mx-auto px-gutter-desktop py-space-xl flex flex-col md:flex-row items-center justify-between gap-4">
+<div class="flex items-center gap-3">
+<span class="text-title-sm font-title-sm font-bold text-ink">Mirrorline</span>
+<span class="text-text-muted text-meta font-meta">© 2025 Mirrorline AI Studio Inc. Calm, transparent content operations. All rights reserved.</span>
+</div>
+<div class="flex flex-wrap items-center gap-5 text-meta font-meta">
+<a class="text-text-muted hover:text-ink transition-colors duration-150" href="#">Architecture</a>
+<a class="text-text-muted hover:text-ink transition-colors duration-150" href="#">Privacy &amp; AI Ethics</a>
+<a class="text-text-muted hover:text-ink transition-colors duration-150" href="#">Commercial Audio Policy</a>
+<a class="text-text-muted hover:text-ink transition-colors duration-150" href="#">Status</a>
+<a class="text-text-muted hover:text-ink transition-colors duration-150" href="#">Contact</a>
+</div>
+</div>
+</footer>
+<script>
+    function selectRole(button) {
+      const container = document.getElementById('rolePillContainer');
+      const allButtons = container.querySelectorAll('.role-pill');
+      
+      allButtons.forEach(btn => {
+        btn.classList.remove('border-2', 'border-ink', 'bg-neutral-soft');
+        btn.classList.add('border', 'border-border-strong', 'bg-surface');
+        btn.setAttribute('data-selected', 'false');
+        const dot = btn.querySelector('.rounded-full');
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-transparent';
+      });
+
+      button.classList.remove('border-border-strong', 'bg-surface');
+      button.classList.add('border-2', 'border-ink', 'bg-neutral-soft');
+      button.setAttribute('data-selected', 'true');
+      const activeDot = button.querySelector('.rounded-full');
+      if (activeDot) activeDot.className = 'w-2 h-2 rounded-full bg-primary-container';
+    }
+
+    function togglePasswordVisibility() {
+      const passwordField = document.getElementById('passwordField');
+      const visibilityIcon = document.getElementById('visibilityIcon');
+      const visibilityText = document.getElementById('visibilityText');
+
+      if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        visibilityIcon.textContent = 'visibility_off';
+        visibilityText.textContent = 'Hide';
+      } else {
+        passwordField.type = 'password';
+        visibilityIcon.textContent = 'visibility';
+        visibilityText.textContent = 'Show';
+      }
+    }
+
+    function updateStrengthIndicator(val) {
+      // Functional micro-interaction stub for input monitoring
+    }
+  </script>
+</body></html>
