@@ -153,12 +153,13 @@ nothing is hardcoded, so the demo story stays consistent across screens.
    `packages/ui/package.json`, left behind when `SegmentedControl` stopped
    using Radix Tabs. Harmless; remove it next time the lockfile changes anyway.
 
-5. **The calendar's day columns.** At 1440px the week grid showed only 2 of 7
-   days because our post chips render the full title where the reference
-   truncates. A fix was in flight at the end of the run — check
-   `docs/screens-built/app-calendar--1440--light.png` against
-   `docs/design/claude-design/screens/S06_Calendar-and-approvals.png` and
-   confirm all seven days now fit.
+5. ~~The calendar's day columns.~~ **Fixed.** At 1440px the week grid showed
+   only 2 of 7 days. Cause was `table-layout: auto` — a column sizes to its
+   max-content, so the chip's `truncate` plus `white-space: nowrap` made each
+   day as wide as its longest full title, and `min-w-0` cannot help an
+   auto-layout cell. Now `table-fixed`: table width 2418px → 706px, day columns
+   272–380px → 78px, all seven days visible beside the drawer. Verified in
+   `docs/screens-built/app-calendar--1440--light.png`.
 
 6. **`docs/screens-built/` is the evidence.** Compare it against
    `docs/design/claude-design/screens/*.png` and tell me what still looks wrong.
