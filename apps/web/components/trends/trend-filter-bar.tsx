@@ -41,7 +41,9 @@ export function TrendFilterBar({ filters }: TrendFilterBarProps) {
   )
 
   return (
-    <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
+    // The page header holds its action in a shrink-0 box, so the bar needs a
+    // cap of its own to wrap instead of pushing the page sideways.
+    <div className="flex max-w-[calc(100vw-72px)] flex-wrap items-center gap-2 lg:max-w-none">
       <SegmentedControl
         label="Which niches"
         items={NICHE_OPTIONS}
@@ -54,7 +56,8 @@ export function TrendFilterBar({ filters }: TrendFilterBarProps) {
         options={PLATFORM_OPTIONS}
         value={filters.platform}
         onValueChange={(value) => apply({ ...filters, platform: parsePlatformFilter(value) })}
-        className="w-[160px]"
+        // Wide enough for the longest label, "YouTube Shorts", on one line.
+        className="w-[184px]"
       />
 
       <Select

@@ -69,11 +69,12 @@ export function ConnectedAccountsCard({
             <li key={account.id} className="flex flex-col gap-2 py-3">
               <Divider />
               <div className="flex flex-wrap items-center gap-2.5 pt-1">
-                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                {/* Grows, but never below a readable handle width. */}
+                <span className="flex min-w-0 flex-1 basis-[150px] flex-col gap-0.5">
                   <span className="text-label text-text">
                     {account.platformLabel}
                     {isComingSoon ? (
-                      <span className="ml-2 rounded-full bg-neutral-soft px-2 py-0.5 text-caption font-normal text-on-neutral-soft">
+                      <span className="ml-2 inline-block whitespace-nowrap rounded-full bg-neutral-soft px-2 py-0.5 text-caption font-normal text-on-neutral-soft">
                         Coming soon
                       </span>
                     ) : null}
@@ -83,7 +84,7 @@ export function ConnectedAccountsCard({
 
                 <span
                   className={cn(
-                    'inline-flex items-center rounded-full px-2.5 py-1',
+                    'inline-flex shrink-0 items-center rounded-full px-2.5 py-1',
                     'font-body text-caption',
                     chip.classes,
                   )}

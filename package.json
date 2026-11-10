@@ -20,6 +20,7 @@
     "design:lint": "npx --yes @google/design.md lint DESIGN.md"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.11.0",
     "@playwright/test": "1.65.0",
     "@types/node": "22.10.5",
     "typescript": "5.7.3",

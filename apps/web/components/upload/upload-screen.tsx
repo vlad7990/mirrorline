@@ -78,7 +78,7 @@ export function UploadScreen({ state }: UploadScreenProps) {
     <div className="flex flex-col gap-6">
       <PageHeader
         eyebrow={UPLOAD_HEADER.eyebrow}
-        title={UPLOAD_HEADER.title}
+        title={isEmpty || isError ? UPLOAD_HEADER.titleWithoutCuts : UPLOAD_HEADER.title}
         action={
           isReady ? (
             <div className="flex flex-wrap items-center gap-2.5">

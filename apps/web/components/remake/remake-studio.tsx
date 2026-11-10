@@ -12,7 +12,7 @@
  */
 
 import { accounts, workspace, type Trend } from '@mirrorline/mock'
-import { Button, Card, CompliancePanel, Dialog, PageHeader, Toast } from '@mirrorline/ui'
+import { Button, CompliancePanel, Dialog, PageHeader, Toast } from '@mirrorline/ui'
 import { Check } from 'lucide-react'
 import Link from 'next/link'
 import * as React from 'react'
@@ -82,7 +82,9 @@ export function RemakeStudio({ trend, recipe, plan }: RemakeStudioProps) {
         title={`Remake: ${trend.format}`}
         description={`Remake Producer agent · format from ${trend.fromNiche} (${trend.growthLabel}) · made for ${workspace.name}`}
         action={
-          <div className="flex flex-wrap items-center gap-2">
+          // The page header holds its action in a shrink-0 box, so the row
+          // needs a cap of its own to wrap instead of widening the page.
+          <div className="flex max-w-[calc(100vw-72px)] flex-wrap items-center gap-2 lg:max-w-none">
             <Button asChild variant="tertiary">
               <Link href="/app/trends">Discard</Link>
             </Button>
@@ -120,11 +122,6 @@ export function RemakeStudio({ trend, recipe, plan }: RemakeStudioProps) {
       </div>
 
       <CompliancePanel items={COMPLIANCE_CHECKS} status="passed" />
-
-      <Card tone="subtle" padding="sm" className="text-meta text-text-muted">
-        Nothing here posts on its own. The Publisher only sends approved posts, through the
-        official platform APIs, to the accounts {workspace.name} connected.
-      </Card>
 
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
         {isEditing ? (

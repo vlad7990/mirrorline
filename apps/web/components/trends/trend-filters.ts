@@ -77,8 +77,8 @@ export const WINDOW_OPTIONS: readonly FilterOption<TimeWindow>[] = [
  * numbers can never be read as one measurement.
  */
 export const WINDOW_SENTENCES: Record<TimeWindow, string> = {
-  '7d': 'Formats the Trend Scout scored in the last 7 days. Growth is measured over 7 days.',
-  '24h': 'Formats the Trend Scout scored in the last 24 hours. Growth is measured over 7 days.',
+  '7d': 'Scored in the last 7 days. Growth over 7 days.',
+  '24h': 'Scored in the last 24 hours. Growth over 7 days.',
 }
 
 export function parseTimeWindow(raw: string | undefined): TimeWindow {

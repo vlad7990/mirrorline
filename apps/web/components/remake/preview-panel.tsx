@@ -64,8 +64,10 @@ export function PreviewPanel({
               className={cn(
                 'flex cursor-pointer items-center rounded-md border-2 px-3 py-2.5',
                 'font-body text-body transition-colors duration-150',
-                'has-[:focus-visible]:outline has-[:focus-visible]:outline-2',
-                'has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary',
+                // The input is visually hidden, so the ring has to follow it
+                // onto the label. `outline-2` carries the solid style.
+                'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2',
+                'has-[:focus-visible]:outline-primary',
                 isSelected
                   ? 'border-primary bg-accent-soft text-on-accent-soft'
                   : 'border-border bg-surface text-text hover:border-border-strong',

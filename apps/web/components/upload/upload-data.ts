@@ -59,6 +59,8 @@ const SECONDS_IN_MINUTE = 60
 export const UPLOAD_HEADER = {
   eyebrow: 'Create · Multiplier agent',
   title: `One video, ${cuts.length} posts`,
+  /** With nothing to show, the count in the title would be a claim. */
+  titleWithoutCuts: 'Upload a video',
 } as const
 
 export const SOURCE_VIDEO = {

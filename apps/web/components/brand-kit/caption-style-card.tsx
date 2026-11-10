@@ -112,11 +112,11 @@ export function CaptionStyleCard() {
                       )}
                     </span>
                   </span>
-                  <span className="text-caption font-normal text-text">
+                  <span className="flex flex-col text-caption font-normal text-text">
                     {style.name}
                     {/* The word, not only the border colour, marks the choice. */}
                     {selectedId === style.id ? (
-                      <span className="font-semibold"> · Selected</span>
+                      <span className="font-semibold text-text">Selected</span>
                     ) : null}
                   </span>
                   <span className="sr-only">{style.description}</span>

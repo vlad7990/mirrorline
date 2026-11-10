@@ -63,9 +63,7 @@ export function SourceCard({ showSource }: SourceCardProps) {
           </span>
           <span className="flex min-w-0 flex-col gap-0.5">
             <span className="text-body font-semibold text-text">{SOURCE_VIDEO.title}</span>
-            <span className="text-meta text-text-muted">
-              {SOURCE_VIDEO.lengthLabel} · {SOURCE_VIDEO.meta}
-            </span>
+            <span className="text-meta text-text-muted">{SOURCE_VIDEO.meta}</span>
           </span>
         </div>
       ) : null}
@@ -166,6 +164,11 @@ export function CutGrid({ cuts, approvedIds, onToggleApprove, onPreview }: CutGr
               length: cut.lengthLabel,
               cutNumber: cut.index,
             }}
+            // The hook is already burned into the frame, exactly as it will
+            // look on the platform. Repeating it under the card would say the
+            // same thing twice, so the card's heading keeps the text for
+            // assistive technology and leaves the picture to carry it.
+            title={<span className="sr-only">{cut.hook}</span>}
             format={cut.format}
             score={cut.score}
             status={status}

@@ -45,7 +45,7 @@ export default function ResultsPage() {
 
       <Link
         href="/app/agents"
-        className="self-start text-label text-primary underline-offset-4 hover:underline dark:text-accent"
+        className="self-start text-label text-primary underline underline-offset-4 dark:text-accent"
       >
         See how the agents used these results
       </Link>

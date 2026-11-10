@@ -14,10 +14,14 @@ import { cn } from '@mirrorline/ui'
 
 import { PostChip, STATUS_SWATCH_CLASS, statusWord } from './post-chip'
 
-/** Below this the seven columns would squeeze the chips out of shape. */
-const GRID_MIN_WIDTH = 780
-const PLATFORM_COLUMN_WIDTH = 104
-const DAY_COLUMN_MIN_WIDTH = 92
+/**
+ * Below this the seven columns squeeze the chips out of shape; above it the
+ * grid stops fitting beside the drawer at 1440px and would scroll on a desktop
+ * that has the room. These are the widths from the approved mockup.
+ */
+const GRID_MIN_WIDTH = 690
+const PLATFORM_COLUMN_WIDTH = 92
+const DAY_COLUMN_MIN_WIDTH = 78
 
 /** DESIGN.md: the legend names three of the five states; the rest read on the chip. */
 const LEGEND_STATUSES: readonly PostStatus[] = ['published', 'scheduled', 'needs-review']
@@ -56,13 +60,18 @@ export function WeekGrid({
               key={day.date}
               className={cn(
                 'px-1.5 py-1 text-meta',
-                day.isToday || day.date === highlightDate
-                  ? 'font-bold text-on-accent-soft'
-                  : 'font-semibold text-text-muted',
+                // Today is the coral one; the day waiting for approval is the
+                // near-black one above the tinted column.
+                day.isToday && 'font-bold text-on-accent-soft',
+                !day.isToday && day.date === highlightDate && 'font-bold text-text',
+                !day.isToday && day.date !== highlightDate && 'font-semibold text-text-muted',
               )}
             >
               {day.dayLabel} {day.dayOfMonth}
               {day.isToday ? <span className="sr-only"> (today)</span> : null}
+              {!day.isToday && day.date === highlightDate ? (
+                <span className="sr-only"> (waiting for your approval)</span>
+              ) : null}
             </span>
           ))}
 
@@ -84,7 +93,7 @@ export function WeekGrid({
           <span key={status} className="inline-flex items-center gap-1.5">
             <span
               aria-hidden="true"
-              className={cn('size-2.5 rounded-sm', STATUS_SWATCH_CLASS[status])}
+              className={cn('size-2.5 rounded-[3px]', STATUS_SWATCH_CLASS[status])}
             />
             {statusWord(status)}
           </span>

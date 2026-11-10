@@ -1,23 +1,57 @@
+import { Button, PageHeader } from '@mirrorline/ui'
 import type { Metadata } from 'next'
+import Link from 'next/link'
 
-import { DEMO_STATE_PARAM, parseDemoState } from '@/components/upload/upload-data'
-import { UploadScreen } from '@/components/upload/upload-screen'
+import { HOME_HEADER } from '@/components/home/home-data'
+import {
+  AgentActivityCard,
+  HomeMetrics,
+  LearningLoopCard,
+  TodayCard,
+} from '@/components/home/home-panels'
+import { NeedsYouCard } from '@/components/home/needs-you-card'
 
 /**
- * S3 · Upload and multiply.
+ * S2 · Home, the command centre.
  *
- * The page's only job is to read `?state=` and hand a validated value to the
- * screen. Next 15 delivers search params as a promise, and anything it
- * carries is untrusted, so it goes through `parseDemoState` before use.
+ * 03_SCREENS_SPEC: "the client sees in 5 seconds what happened today and what
+ * needs them." So the order is: what the week looks like, what is waiting on
+ * her, what goes out today, and what the agents did while she was away.
+ *
+ * DESIGN.md "Layout": a wide main column with a ~320px rail beside it on a
+ * desktop. Below `lg` the grid collapses and the rail follows the content,
+ * which is also its order in the markup.
  */
 
-export const metadata: Metadata = { title: 'Upload' }
+export const metadata: Metadata = { title: 'Home' }
 
-interface UploadPageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>
-}
+export default function HomePage() {
+  return (
+    <div className="flex flex-col gap-7">
+      <PageHeader
+        eyebrow={HOME_HEADER.eyebrow}
+        title={HOME_HEADER.title}
+        description={HOME_HEADER.subline}
+        action={
+          <Button asChild variant="primary">
+            <Link href="/app/upload">New upload</Link>
+          </Button>
+        }
+      />
 
-export default async function UploadPage({ searchParams }: UploadPageProps) {
-  const params = await searchParams
-  return <UploadScreen state={parseDemoState(params[DEMO_STATE_PARAM])} />
+      <HomeMetrics />
+
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-w-0 flex-col gap-6">
+          <NeedsYouCard />
+          <TodayCard />
+        </div>
+
+        <aside aria-label="Agents and results" className="flex min-w-0 flex-col gap-6">
+          <AgentActivityCard />
+          <LearningLoopCard />
+        </aside>
+      </div>
+    </div>
+  )
 }

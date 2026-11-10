@@ -26,33 +26,32 @@ const NEUTRAL_TINT = 'bg-surface-subtle text-text'
 const LOOP_MARK_SIZE = 22
 
 export function AgentLoop({ className }: { className?: string }) {
-  const lastIndex = agents.length - 1
-
   return (
     <Card as="section" className={cn('flex flex-col gap-3.5', className)}>
       <h2 className="sr-only">How the seven agents hand work on</h2>
 
       {/* An ordered list: the sequence is the meaning, and it reads in order
-          even when the arrows are not rendered. */}
-      <ol className="m-0 flex list-none flex-wrap items-center gap-2 p-0">
+          even when the arrows are not rendered. The arrow leads its chip, so a
+          line that wraps starts with the hand-off rather than ending in one. */}
+      <ol className="m-0 flex list-none flex-wrap items-center gap-x-1.5 gap-y-2 p-0">
         {agents.map((agent, index) => (
-          <li key={agent.id} className="inline-flex items-center gap-2">
+          <li key={agent.id} className="inline-flex items-center gap-1.5">
+            {index > 0 ? (
+              <ArrowRight
+                aria-hidden="true"
+                className="size-4 shrink-0 text-text-muted"
+                strokeWidth={1.6}
+              />
+            ) : null}
             <span
               className={cn(
-                'inline-flex min-h-9 items-center rounded-full px-3',
+                'inline-flex min-h-9 items-center rounded-full px-2.5',
                 'font-body text-meta font-semibold',
                 LOOP_TINTS[agent.id] ?? NEUTRAL_TINT,
               )}
             >
               {agent.name}
             </span>
-            {index < lastIndex ? (
-              <ArrowRight
-                aria-hidden="true"
-                className="size-[18px] shrink-0 text-text-muted"
-                strokeWidth={1.6}
-              />
-            ) : null}
           </li>
         ))}
       </ol>

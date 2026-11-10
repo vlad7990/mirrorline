@@ -279,10 +279,14 @@ interface BatchBarProps {
 
 /** DESIGN.md "Ink": the batch-approval bar is one of the screen's dark panels. */
 function BatchBar({ readyCount, pendingCount, dayLabel, onApproveAll }: BatchBarProps) {
-  const message =
-    pendingCount > 0
-      ? `Tomorrow: ${readyCount} posts ready, ${pendingCount} need your eye.`
-      : `Tomorrow is approved. The Publisher will post ${readyCount} videos on ${dayLabel}.`
+  // The counts come from tomorrow's chips, so the sentence changes with them
+  // rather than repeating a number from the mockup.
+  let message = `Tomorrow is approved. The Publisher will post ${readyCount} videos on ${dayLabel}.`
+  if (pendingCount > 0 && pendingCount === readyCount) {
+    message = `Tomorrow: ${readyCount} posts ready. All ${pendingCount} need your eye.`
+  } else if (pendingCount > 0) {
+    message = `Tomorrow: ${readyCount} posts ready, ${pendingCount} need your eye.`
+  }
 
   return (
     <Card
