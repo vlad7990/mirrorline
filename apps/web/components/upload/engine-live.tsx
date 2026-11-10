@@ -50,6 +50,7 @@ export interface EngineLiveProps {
 export function EngineLive({ onResult }: EngineLiveProps) {
   const [availability, setAvailability] = React.useState<Availability | null>(null)
   const [file, setFile] = React.useState<File | null>(null)
+  const [transcript, setTranscript] = React.useState<File | null>(null)
   const [rightsHolder, setRightsHolder] = React.useState('')
   const [rightsConfirmed, setRightsConfirmed] = React.useState(false)
   const [jobId, setJobId] = React.useState<string | null>(null)
@@ -57,6 +58,7 @@ export function EngineLive({ onResult }: EngineLiveProps) {
   const [error, setError] = React.useState<string | null>(null)
   const inputId = React.useId()
   const holderId = React.useId()
+  const scriptId = React.useId()
 
   React.useEffect(() => {
     let cancelled = false
@@ -118,6 +120,7 @@ export function EngineLive({ onResult }: EngineLiveProps) {
 
     const body = new FormData()
     body.set('video', file)
+    if (transcript !== null) body.set('transcript', transcript)
     body.set('rightsConfirmed', String(rightsConfirmed))
     body.set('rightsHolder', rightsHolder)
 
@@ -169,6 +172,32 @@ export function EngineLive({ onResult }: EngineLiveProps) {
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
             className="text-meta text-text-muted file:mr-3 file:rounded-md file:border file:border-border-strong file:bg-surface file:px-3 file:py-2 file:text-label file:font-semibold file:text-text"
           />
+        </div>
+
+        {/* Optional, and the difference between a run that works and one that
+            stops, on a machine with no Whisper model. The engine will not
+            invent words, so with no model and no script there is nothing to
+            cut on. */}
+        <div className="flex flex-col gap-2">
+          <label htmlFor={scriptId} className="text-label font-semibold text-text">
+            Transcript{' '}
+            <span className="font-normal text-text-muted">
+              (optional, needed when no speech model is installed)
+            </span>
+          </label>
+          <input
+            id={scriptId}
+            type="file"
+            accept=".txt,.json"
+            disabled={isRunning}
+            onChange={(event) => setTranscript(event.target.files?.[0] ?? null)}
+            className="text-meta text-text-muted file:mr-3 file:rounded-md file:border file:border-border-strong file:bg-surface file:px-3 file:py-2 file:text-label file:font-semibold file:text-text"
+          />
+          <p className="m-0 text-meta text-text-muted">
+            A plain <span className="machine">.txt</span> script, or a word-level{' '}
+            <span className="machine">.transcript.json</span>. Timings from a plain script are
+            spread evenly, and the summary says so.
+          </p>
         </div>
 
         {/* CLAUDE.md non-negotiable 1. The API refuses without both of these,

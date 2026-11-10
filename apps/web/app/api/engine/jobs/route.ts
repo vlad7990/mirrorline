@@ -26,6 +26,7 @@ import {
   createJobDirectory,
   messageOf,
   sourcePath,
+  transcriptPath,
   writeJob,
   type StoredJob,
 } from '@/lib/engine/jobs'
@@ -38,6 +39,9 @@ export const dynamic = 'force-dynamic'
 const MAX_BYTES = 2 * 1024 * 1024 * 1024
 
 const ACCEPTED_PREFIX = 'video/'
+
+/** A feature-length transcript is well under this. */
+const MAX_TRANSCRIPT_BYTES = 16 * 1024 * 1024
 
 export async function POST(request: Request) {
   const availability = await engineAvailability()
@@ -75,6 +79,24 @@ export async function POST(request: Request) {
     )
   }
 
+  // Optional, and validated before a byte is written. An empty file would
+  // reach the engine as an empty transcript, which it refuses anyway; saying
+  // so here is faster and clearer.
+  const supplied = form.get('transcript')
+  const transcript = supplied instanceof File && supplied.size > 0 ? supplied : null
+  if (transcript !== null) {
+    const name = transcript.name.toLowerCase()
+    if (!name.endsWith('.txt') && !name.endsWith('.json')) {
+      return NextResponse.json(
+        { error: 'a transcript must be a .txt script or a word-level .transcript.json' },
+        { status: 400 },
+      )
+    }
+    if (transcript.size > MAX_TRANSCRIPT_BYTES) {
+      return NextResponse.json({ error: 'that transcript is implausibly large' }, { status: 413 })
+    }
+  }
+
   // The checkbox on the upload screen. Non-negotiable 1 lives here.
   const rightsHolder = String(form.get('rightsHolder') ?? '').trim()
   if (form.get('rightsConfirmed') !== 'true' || rightsHolder === '') {
@@ -104,6 +126,18 @@ export async function POST(request: Request) {
       Readable.fromWeb(file.stream() as NodeReadableStream<Uint8Array>),
       createWriteStream(sourcePath(jobId)),
     )
+
+    // An optional transcript, written beside the video under the name the
+    // engine looks for. Without a Whisper model installed this is the only
+    // way to words, and the engine will not invent them.
+    if (transcript !== null) {
+      const kind = transcript.name.toLowerCase().endsWith('.json') ? 'json' : 'text'
+      await pipeline(
+        Readable.fromWeb(transcript.stream() as NodeReadableStream<Uint8Array>),
+        createWriteStream(transcriptPath(jobId, kind)),
+      )
+    }
+
     await writeBrandFile(jobId, rightsHolder)
   } catch (error) {
     return NextResponse.json(

@@ -91,6 +91,19 @@ export function brandPath(jobId: string): string {
   return path.join(jobDirectory(jobId), BRAND_FILE)
 }
 
+/**
+ * Where a supplied transcript goes, so the engine finds it.
+ *
+ * `ScriptTranscriber` looks for `<video><suffix>` beside the source, so the
+ * name is derived from the video's rather than chosen here. Two shapes, and
+ * the engine prefers the first: word-level JSON carries real timings, plain
+ * text gets timings spread evenly and is labelled as estimated.
+ */
+export function transcriptPath(jobId: string, kind: 'json' | 'text'): string {
+  const suffix = kind === 'json' ? '.transcript.json' : '.script.txt'
+  return `${sourcePath(jobId)}${suffix}`
+}
+
 export function samplesDirectory(jobId: string): string {
   return path.join(jobDirectory(jobId), SAMPLES_DIRECTORY)
 }
