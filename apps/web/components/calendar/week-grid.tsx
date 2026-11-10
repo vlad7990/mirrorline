@@ -23,10 +23,20 @@ import { PostChip, STATUS_SWATCH_CLASS, statusWord } from './post-chip'
  * Below this the seven columns squeeze the chips out of shape; above it the
  * grid stops fitting beside the drawer at 1440px and would scroll on a desktop
  * that has the room. These are the widths from the approved mockup.
+ *
+ * The table is `table-fixed` on purpose. With the browser's automatic layout a
+ * column is as wide as its widest chip wants to be, so a single long post title
+ * pushed each day column past 270px and only two of the seven fitted beside the
+ * drawer. Fixed layout makes these numbers the real column widths and lets the
+ * chip titles truncate instead, which is what the mockup does.
+ *
+ * 76 + 7x78 + 9x4 of horizontal border-spacing = 658, the grid's natural width.
+ * The card gives it ~706px at 1440px, and fixed layout shares the surplus out,
+ * so each day column lands near 84px — the mockup's density.
  */
-const GRID_MIN_WIDTH = 690
-const PLATFORM_COLUMN_WIDTH = 92
-const DAY_COLUMN_MIN_WIDTH = 78
+const GRID_MIN_WIDTH = 658
+const PLATFORM_COLUMN_WIDTH = 76
+const DAY_COLUMN_WIDTH = 78
 
 /**
  * SC 1.4.1: every state a chip can show has to be named somewhere on the page,
@@ -71,7 +81,7 @@ export function WeekGrid({
     <div className="flex min-w-0 flex-col gap-3.5">
       <div className="scroll-x pb-1">
         <table
-          className="w-full border-separate border-spacing-1.5"
+          className="w-full table-fixed border-separate border-spacing-x-1 border-spacing-y-1.5"
           style={{ minWidth: GRID_MIN_WIDTH }}
         >
           <caption className="sr-only">
@@ -87,9 +97,9 @@ export function WeekGrid({
                 <th
                   key={day.date}
                   scope="col"
-                  style={{ minWidth: DAY_COLUMN_MIN_WIDTH }}
+                  style={{ width: DAY_COLUMN_WIDTH }}
                   className={cn(
-                    'px-1.5 py-1 text-left align-bottom text-meta',
+                    'px-1 py-1 text-left align-bottom text-meta',
                     // Today is the coral one; the day waiting for approval is the
                     // near-black one above the tinted column.
                     day.isToday && 'font-bold text-on-accent-soft',
@@ -169,7 +179,7 @@ function GridRow({
         <td key={`${row.platform}-${cell.date}`} className="align-top">
           <div
             className={cn(
-              'flex min-h-[120px] flex-col gap-1.5 rounded-md p-1.5',
+              'flex min-h-[120px] min-w-0 flex-col gap-1.5 rounded-md p-1',
               cell.date === highlightDate ? 'bg-accent-soft/50' : 'bg-background',
             )}
           >

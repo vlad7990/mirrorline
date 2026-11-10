@@ -68,8 +68,12 @@ export function PostChip({ post, status, dayLabel, isSelected, onSelect }: PostC
       onClick={() => onSelect(post.id)}
       // The day comes first: a name without it leaves 20 chips sounding alike.
       aria-label={`${dayLabel}, ${post.timeLabel}, ${post.platformLabel}, ${post.title}, ${word.toLowerCase()}`}
+      // The visible title is truncated to one line so seven day columns fit at
+      // 1440px. A mouse can still read it whole here; `aria-label` above keeps
+      // it for assistive tech, and the tooltip never becomes the chip's name.
+      title={post.title}
       className={cn(
-        'flex min-h-11 w-full items-center gap-1.5 rounded-md bg-surface p-1.5 text-left',
+        'flex min-h-11 w-full min-w-0 items-center gap-1 rounded-md bg-surface p-1 text-left',
         'transition-colors duration-150 hover:bg-surface-subtle',
         isSelected ? 'border-2 border-ink' : 'border border-border',
         'border-l-4',
@@ -83,12 +87,16 @@ export function PostChip({ post, status, dayLabel, isSelected, onSelect }: PostC
         className="h-[30px] w-[18px] shrink-0 rounded-sm"
         style={{ backgroundColor: post.thumbnailColor }}
       />
-      <span aria-hidden="true" className="flex min-w-0 flex-col">
+      <span aria-hidden="true" className="flex min-w-0 flex-1 flex-col">
         <span className="text-[11px] font-bold leading-tight text-text">{post.timeLabel}</span>
-        <span className="truncate text-[11px] leading-tight text-text">{post.title}</span>
+        {/* One line, clipped with an ellipsis: the whole title lives in the
+            chip's name and its tooltip, never in its width. */}
+        <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] leading-tight text-text">
+          {post.title}
+        </span>
         {/* SC 1.4.1: the status is a word on the chip, not only a coloured
             edge, so it survives both colour blindness and a greyscale print. */}
-        <span className="truncate text-[10px] font-normal leading-tight text-text-muted">
+        <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-normal leading-tight text-text-muted">
           {word}
         </span>
       </span>

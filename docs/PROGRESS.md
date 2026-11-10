@@ -8,9 +8,26 @@
 
 ## Preview link
 
-_Pending — the Vercel preview is deployed at the end of the run. If this line
-still says "pending", the deploy did not happen and the reason is under
-"Needs Vlad"._
+**https://mirrorline-1jggxtqas-vn-mn-product-group.vercel.app** — status Ready,
+deployed 10 Nov 2026 00:38 EST.
+
+Preview only. Nothing was promoted to production, and `.claude/settings.json`
+blocks `vercel --prod` anyway.
+
+**It asks you to sign in.** The project inherits the team's Vercel
+Authentication, so every route 302s to the Vercel login for anyone who is not
+in `vn-mn-product-group`. That is the safe default and I left it on — making it
+open would put the prototype on the public internet for anyone with the URL.
+
+To show it to someone outside the team, pick one:
+- **Share link** (best for a prospect): Vercel dashboard → the deployment →
+  *Share* → copy the protection-bypass URL. Time-limited, no account needed.
+- **Add them to the team** as a Viewer: good for a partner or an investor who
+  will look more than once.
+- **Turn protection off for previews**: dashboard → Settings → Deployment
+  Protection → Vercel Authentication → off. Only do this knowingly — the demo
+  data is fictional and there are no secrets in the build, but the URL becomes
+  publicly reachable.
 
 ## Run it locally
 
@@ -32,8 +49,12 @@ pnpm licence-check  # dependency licence allow-list (CLAUDE.md #10)
 pnpm build
 ```
 
-No keys are needed. `.env.local` is absent by design and everything runs on the
-fixtures in `packages/mock`.
+No keys are needed — everything runs on the fixtures in `packages/mock`.
+
+One `.env.local` does exist at the repo root: `vercel link` wrote a
+`VERCEL_OIDC_TOKEN` into it. It is gitignored and never committed (verified with
+`git ls-files`), it holds no Supabase or Stripe credential, and the app does not
+read it. Delete it freely.
 
 ## The 3-minute demo path
 
@@ -74,9 +95,9 @@ Worth clicking during a demo:
 | Auth UI: `/sign-in`, `/sign-up` (mock session, no backend) | done |
 | Lead capture → `POST /api/leads` → `.data/leads.json` (gitignored) | done |
 | GitHub Actions CI: lint, typecheck, test, build, licence check | done, green |
-| Playwright: demo path, routes, responsive, axe, theme, screenshots | see below |
+| Playwright: 87 E2E tests passing; 80 screenshots in docs/screens-built/ | done |
 
-24 routes build. All figures on every screen are derived from `packages/mock` —
+25 routes build. All figures on every screen are derived from `packages/mock` —
 nothing is hardcoded, so the demo story stays consistent across screens.
 
 ## What is stubbed, and honestly labelled as such
@@ -118,16 +139,32 @@ nothing is hardcoded, so the demo story stays consistent across screens.
    first paying client, alongside the contract and terms work already scheduled
    for week 4.
 
-3. **Accessibility fixes landed overnight but have not been re-audited by a
-   fresh pair of eyes.** The audit found 12 WCAG 2.2 AA failures; fixes were
-   applied. Re-run `pnpm test:e2e` and ideally a second audit before showing the
-   preview to anyone who relies on assistive technology.
+3. **Accessibility: 12 WCAG AA failures were found and fixed, but a second
+   fresh audit has not run.** axe now reports **0 violations of any impact** on
+   every route in both themes, and the E2E suite is 87 passed / 0 failed. Worth
+   knowing *why* that is not the whole story: the auditor's judgement was that
+   "an axe pass on this codebase would be misleading, not reassuring", because
+   axe does not evaluate SC 1.4.11 non-text contrast — and three of the twelve
+   failures were exactly that (form borders at 1.50:1, the off-switch track at
+   1.17:1). A green axe run would have hidden them. A human keyboard-and-
+   screen-reader pass is still the real test.
 
-4. **`docs/screens-built/` is the evidence.** Compare it against
+4. **`@radix-ui/react-tabs` is now an unused dependency** in
+   `packages/ui/package.json`, left behind when `SegmentedControl` stopped
+   using Radix Tabs. Harmless; remove it next time the lockfile changes anyway.
+
+5. **The calendar's day columns.** At 1440px the week grid showed only 2 of 7
+   days because our post chips render the full title where the reference
+   truncates. A fix was in flight at the end of the run — check
+   `docs/screens-built/app-calendar--1440--light.png` against
+   `docs/design/claude-design/screens/S06_Calendar-and-approvals.png` and
+   confirm all seven days now fit.
+
+6. **`docs/screens-built/` is the evidence.** Compare it against
    `docs/design/claude-design/screens/*.png` and tell me what still looks wrong.
    The references are a floor, not a ceiling, but regressions matter.
 
-5. **Decide on the theme switch's home.** It sits in the sidebar footer (where
+7. **Decide on the theme switch's home.** It sits in the sidebar footer (where
    KICKOFF_PROMPT asked for it) and again on Settings. Neither reference PNG
    shows it in the sidebar, so it will read as a diff against the mockups.
 

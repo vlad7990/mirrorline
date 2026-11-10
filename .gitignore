@@ -24,3 +24,5 @@ blob-report/
 # Build caches
 *.tsbuildinfo
 .turbo/
+.vercel
+.env*
