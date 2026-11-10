@@ -2,6 +2,10 @@
 
 | Path | What it is | Read when |
 |---|---|---|
+| `docs/PROGRESS.md` | **Start here.** Morning handoff: preview link, how to run it, what's done, what's stubbed, "Needs Vlad", next 5 tasks | First thing each morning |
+| `docs/DECISIONS.md` | Every choice made without asking, with the reason and the source that settled it | When something looks surprising |
+| `docs/TOOLING.md` | Which MCPs, skills and agents exist, what each is for, and what each actually produced | Before reaching for a tool |
+| `docs/screens-built/` | Playwright screenshots of every route at 1440 and 390, light and dark | Comparing the build with the references |
 | `CLAUDE.md` | Project memory: what, why, stack, rules | Every session |
 | `KICKOFF_PROMPT.md` | Overnight milestones and definition of done | Start of the overnight run |
 | `DESIGN.md` | Design system (Google DESIGN.md format, lint-clean) | Before any UI work |

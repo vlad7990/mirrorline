@@ -16,7 +16,12 @@ import Link from 'next/link'
 
 import { LOOP_CLOSING_LINE, PUBLIC_AGENTS } from '@/components/marketing/agents'
 import { Faq, type FaqItem } from '@/components/marketing/faq'
-import { SampleDataLabel, Section, SectionHeading } from '@/components/marketing/primitives'
+import {
+  ComingSoonLabel,
+  SampleDataLabel,
+  Section,
+  SectionHeading,
+} from '@/components/marketing/primitives'
 import { SELLABLE_TIERS } from '@/components/marketing/pricing-tiers'
 
 import { LeadDialogButton } from './components/lead-form'
@@ -247,6 +252,10 @@ export default function LandingPage() {
             <li key={cut.id} className="w-[160px] shrink-0 sm:w-[172px]">
               <VideoThumb
                 caption={cut.hook}
+                // The sand-on-teal key phrase is the signature caption
+                // treatment in DESIGN.md "Typography"; this is the one public
+                // surface that shows the product's output, so it renders here.
+                highlight={cut.highlightPhrase}
                 index={index}
                 length={cut.lengthLabel}
                 cutNumber={cut.index}
@@ -279,9 +288,12 @@ export default function LandingPage() {
             </Button>
           }
         />
-        <ol className="scroll-x mt-8 flex list-none gap-4 p-0 pb-2">
+        {/* All seven are visible from 640px up — this is the section the page is
+            named for, so none of them hides behind a scrollbar. Only the 390px
+            column keeps the horizontal strip. */}
+        <ol className="scroll-x mt-8 flex list-none gap-4 p-0 pb-2 sm:grid sm:grid-cols-2 sm:pb-0 md:grid-cols-4">
           {PUBLIC_AGENTS.map((agent) => (
-            <li key={agent.id} className="w-[260px] shrink-0">
+            <li key={agent.id} className="w-[260px] shrink-0 sm:w-auto">
               <Card className="flex h-full flex-col gap-2">
                 <span className="tabular text-caption font-semibold text-on-accent-soft">
                   Step {agent.step} of {PUBLIC_AGENTS.length}
@@ -292,7 +304,10 @@ export default function LandingPage() {
             </li>
           ))}
         </ol>
-        <Card tone="ink" className="mt-4">
+        {/* The automated re-plan is post-MVP, so the loop's closing hand-off is
+            labelled rather than sold. CLAUDE.md non-negotiable 7. */}
+        <Card tone="ink" className="mt-4 flex flex-col items-start gap-3">
+          <ComingSoonLabel />
           <p className="m-0 text-body text-on-ink">{LOOP_CLOSING_LINE}</p>
         </Card>
       </Section>

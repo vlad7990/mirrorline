@@ -87,6 +87,14 @@ export interface Cut {
   /** 1-based position in the results grid. */
   readonly index: number
   readonly hook: string
+  /**
+   * The key phrase inside `hook` that the burned-in caption highlights — sand
+   * background, teal text. DESIGN.md "Typography": "Captions on video
+   * thumbnails: Inter Tight 700, white, with the key phrase highlighted on a
+   * sand background in teal." Optional: a hook with no natural key phrase is
+   * rendered plain rather than given an arbitrary one.
+   */
+  readonly highlightPhrase?: string
   readonly lengthLabel: string
   readonly lengthSeconds: number
   readonly format: FormatTag

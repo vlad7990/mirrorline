@@ -102,6 +102,15 @@ describe('cuts', () => {
     ])
   })
 
+  test('every highlight phrase is a real substring of its hook', () => {
+    // VideoThumb renders the caption plain when the phrase is not found, so a
+    // typo here would silently drop the signature sand-on-teal treatment.
+    for (const cut of cuts) {
+      expect(cut.highlightPhrase).toBeTypeOf('string')
+      expect(cut.hook).toContain(cut.highlightPhrase)
+    }
+  })
+
   test('thumbnails rotate through four colours', () => {
     expect(new Set(cuts.map((cut) => cut.thumbnailColor)).size).toBe(4)
     expect(cuts[0]?.thumbnailColor).toBe('#12545A')

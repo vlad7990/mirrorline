@@ -26,6 +26,8 @@ export const sourceVideo: SourceVideo = {
 
 interface CutRow {
   readonly hook: string
+  /** The phrase the burned-in caption highlights. Must appear inside `hook`. */
+  readonly highlightPhrase: string
   readonly lengthLabel: string
   readonly format: FormatTag
   readonly score: number
@@ -36,6 +38,7 @@ interface CutRow {
 const CUT_ROWS: readonly CutRow[] = [
   {
     hook: "You're not tired. You're over-responsible.",
+    highlightPhrase: 'over-responsible',
     lengthLabel: '0:24',
     format: 'Hook clip',
     score: 92,
@@ -44,6 +47,7 @@ const CUT_ROWS: readonly CutRow[] = [
   },
   {
     hook: 'The meeting that cost me my best engineer',
+    highlightPhrase: 'best engineer',
     lengthLabel: '0:52',
     format: 'Story',
     score: 88,
@@ -52,6 +56,7 @@ const CUT_ROWS: readonly CutRow[] = [
   },
   {
     hook: '3 words that stop a team from burning out',
+    highlightPhrase: '3 words',
     lengthLabel: '0:31',
     format: 'Hook clip',
     score: 86,
@@ -60,6 +65,7 @@ const CUT_ROWS: readonly CutRow[] = [
   },
   {
     hook: 'If your 1:1s feel like status updates, try this',
+    highlightPhrase: 'status updates',
     lengthLabel: '0:44',
     format: 'Tip',
     score: 84,
@@ -68,6 +74,7 @@ const CUT_ROWS: readonly CutRow[] = [
   },
   {
     hook: "New managers: stop saying 'let me know if you need anything'",
+    highlightPhrase: 'stop saying',
     lengthLabel: '0:28',
     format: 'Hook clip',
     score: 83,
@@ -76,6 +83,7 @@ const CUT_ROWS: readonly CutRow[] = [
   },
   {
     hook: "What I'd tell myself in my first month as a manager",
+    highlightPhrase: 'first month',
     lengthLabel: '0:58',
     format: 'Story',
     score: 80,
@@ -84,6 +92,7 @@ const CUT_ROWS: readonly CutRow[] = [
   },
   {
     hook: "Burnout isn't a workload problem",
+    highlightPhrase: 'workload',
     lengthLabel: '0:19',
     format: 'Quote card',
     score: 79,
@@ -92,6 +101,7 @@ const CUT_ROWS: readonly CutRow[] = [
   },
   {
     hook: 'Why your best people go quiet',
+    highlightPhrase: 'go quiet',
     lengthLabel: '0:36',
     format: 'Hook clip',
     score: 77,
@@ -100,6 +110,7 @@ const CUT_ROWS: readonly CutRow[] = [
   },
   {
     hook: 'A listener asked: how do I say no to my boss?',
+    highlightPhrase: 'say no',
     lengthLabel: '0:47',
     format: 'Reply',
     score: 75,
@@ -108,6 +119,7 @@ const CUT_ROWS: readonly CutRow[] = [
   },
   {
     hook: 'The 10-minute Friday habit',
+    highlightPhrase: '10-minute',
     lengthLabel: '0:33',
     format: 'Tip',
     score: 74,
@@ -116,6 +128,7 @@ const CUT_ROWS: readonly CutRow[] = [
   },
   {
     hook: "5 signs you're managing, not leading",
+    highlightPhrase: 'not leading',
     lengthLabel: '0:40',
     format: 'Carousel',
     score: 72,
@@ -124,6 +137,7 @@ const CUT_ROWS: readonly CutRow[] = [
   },
   {
     hook: 'Funny story about my first team offsite',
+    highlightPhrase: 'first team offsite',
     lengthLabel: '0:29',
     format: 'Story',
     score: 61,
@@ -136,6 +150,7 @@ export const cuts: readonly Cut[] = CUT_ROWS.map((row, position) => ({
   id: `cut-${idSuffix(position + 1)}`,
   index: position + 1,
   hook: row.hook,
+  highlightPhrase: row.highlightPhrase,
   lengthLabel: row.lengthLabel,
   lengthSeconds: secondsFromClockLabel(row.lengthLabel),
   format: row.format,

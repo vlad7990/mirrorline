@@ -1,0 +1,255 @@
+/**
+ * The sales demo, start to finish, in one run.
+ *
+ * sign up → onboarding (3 steps) → home → upload → trends → remake →
+ * calendar → results → agents.
+ *
+ * Every step asserts something a buyer would actually look at: a real number, a
+ * status word, a gated button. The fixtures in @mirrorline/mock are fully
+ * deterministic (no Date.now, no Math.random), so any flake here is a bug in
+ * this file, not in the data.
+ */
+
+import { expect, test, type Page } from '@playwright/test'
+
+import { onlyProject } from './helpers/project-gate'
+import { REMAKE_TREND_ID } from './helpers/routes'
+
+onlyProject('chromium', 'The demo is walked once, at the 1440x900 sales viewport.')
+
+/** The walk crosses nine screens; one default timeout is not enough. */
+const WALK_TIMEOUT_MS = 180_000
+
+const RIGHTS_LABEL = 'I own or have the rights to everything I upload.'
+
+/** The studio sidebar nav. Scoping to it keeps link names unambiguous. */
+function studioNav(page: Page) {
+  return page.getByRole('navigation', { name: 'Studio' })
+}
+
+async function openFromSidebar(page: Page, label: string): Promise<void> {
+  await studioNav(page).getByRole('link', { name: label, exact: true }).click()
+}
+
+function heading(page: Page, name: string) {
+  return page.getByRole('heading', { level: 1, name })
+}
+
+test('the whole demo path holds up', async ({ page }) => {
+  test.setTimeout(WALK_TIMEOUT_MS)
+
+  /* --- 1. Sign up -------------------------------------------------------- */
+
+  await page.goto('/sign-up')
+  await expect(heading(page, 'Set up your studio')).toBeVisible()
+
+  await page.getByLabel('Your name').fill('Maya Torres')
+  await page.getByLabel('Work email').fill('maya@mayatorres.example')
+  await page.getByLabel('Workspace name').fill('Maya Torres Coaching')
+  await page.getByLabel('Password', { exact: true }).fill('a short sentence works well')
+
+  const rightsOnSignUp = page.getByRole('checkbox', { name: RIGHTS_LABEL })
+  await expect(rightsOnSignUp).not.toBeChecked()
+
+  // Non-negotiable 1 is enforced on the way in, not just described.
+  await page.getByRole('button', { name: 'Create your workspace' }).click()
+  // Next.js ships its own role="alert" route announcer, so filter by the copy.
+  await expect(
+    page.getByRole('alert').filter({ hasText: 'We can only work from material you own' }),
+  ).toBeVisible()
+  await expect(page).toHaveURL(/\/sign-up$/)
+
+  await rightsOnSignUp.check()
+  await page.getByRole('button', { name: 'Create your workspace' }).click()
+  await expect(page).toHaveURL(/\/app\/onboarding/)
+
+  /* --- 2. Onboarding step 1: brand, with the live preview ---------------- */
+
+  await expect(heading(page, 'Your brand')).toBeVisible()
+  await expect(
+    page.getByRole('navigation', { name: 'Setup steps' }).getByRole('button', {
+      name: /Step 1 of 3/,
+    }),
+  ).toHaveAttribute('aria-current', 'step')
+
+  const preview = page.getByRole('complementary', { name: 'Live preview', exact: true })
+  const previewCard = preview.locator('div').first()
+
+  // Deep teal is the default, straight from the brand kit fixture.
+  await expect(previewCard).toHaveCSS('background-color', 'rgb(18, 84, 90)')
+  await expect(preview).toContainText('Calm, direct, warm.')
+
+  // The whole point of step 1: the preview repaints as the brand changes.
+  await page.getByRole('radio', { name: 'Warm sand' }).check()
+  await expect(previewCard).toHaveCSS('background-color', 'rgb(243, 233, 220)')
+
+  await page.getByRole('button', { name: 'Continue' }).click()
+
+  /* --- 3. Onboarding step 2: the rights checkbox gates Continue ---------- */
+
+  await expect(heading(page, 'Connect your accounts')).toBeVisible()
+  for (const platform of ['Instagram', 'TikTok', 'YouTube', 'LinkedIn']) {
+    await expect(page.getByRole('heading', { level: 2, name: platform })).toBeVisible()
+  }
+
+  const continueOnStep2 = page.getByRole('button', { name: 'Continue' })
+  await expect(continueOnStep2).toBeDisabled()
+
+  const rightsOnStep2 = page.getByRole('checkbox', { name: RIGHTS_LABEL })
+  await expect(rightsOnStep2).not.toBeChecked()
+  await rightsOnStep2.check()
+
+  await expect(continueOnStep2).toBeEnabled()
+  await continueOnStep2.click()
+
+  /* --- 4. Onboarding step 3: niche and goal ------------------------------ */
+
+  await expect(heading(page, 'Your niche and goal')).toBeVisible()
+  for (const nearby of ['Leadership', 'Productivity', 'Wellness']) {
+    await expect(page.getByRole('button', { name: `Remove ${nearby}` })).toBeVisible()
+  }
+
+  await page.getByRole('link', { name: 'Open my studio' }).click()
+
+  /* --- 5. Home ----------------------------------------------------------- */
+
+  await expect(page).toHaveURL(/\/app\/home$/)
+  await expect(heading(page, 'Good morning, Maya')).toBeVisible()
+  await expect(
+    page.getByText('3 posts are out, 3 more go today. 3 cuts need your eye.'),
+  ).toBeVisible()
+
+  // `exact` matters: the learning-loop panel is named "This week's winner: …".
+  const week = page.getByRole('region', { name: 'This week', exact: true })
+  await expect(week).toContainText('Posts this week')
+  await expect(week).toContainText('21')
+  await expect(week).toContainText('48.3K')
+  await expect(week).toContainText('214')
+  await expect(week).toContainText('Calls booked')
+
+  // "Needs you" is the morning to-do: 2 cuts to review, 1 post to approve,
+  // 1 cut blocked by Compliance.
+  const needsYou = page.getByRole('region', { name: 'Needs you', exact: true })
+  await expect(needsYou).toContainText('4 items')
+  await expect(needsYou.getByText('Blocked')).toBeVisible()
+
+  await needsYou.getByRole('button', { name: 'Approve', exact: true }).click()
+  await expect(needsYou).toContainText('3 items')
+  await expect(page.getByRole('status').filter({ hasText: 'Approved' })).toBeVisible()
+
+  await expect(page.getByRole('region', { name: 'Agents and results', exact: true })).toContainText(
+    '2.1× average views',
+  )
+
+  /* --- 6. Upload and multiply ------------------------------------------- */
+
+  await openFromSidebar(page, 'Upload')
+  await expect(heading(page, 'One video, 12 posts')).toBeVisible()
+
+  const summary = page.getByRole('status').filter({ hasText: 'cuts ready' })
+  await expect(summary).toContainText('12 cuts ready')
+  await expect(summary).toContainText('9 passed')
+  await expect(summary).toContainText('2 need your eye')
+  await expect(summary).toContainText('1 blocked')
+
+  // The Multiplier's own pipeline prints the same 9 / 2 / 1 split.
+  const pipeline = page.getByRole('region', { name: 'Done in 3 min 41 s', exact: true })
+  await expect(pipeline.getByRole('listitem').filter({ hasText: 'Compliance check' })).toContainText(
+    '9 · 2 · 1',
+  )
+
+  const cuts = page.getByRole('region', { name: 'Cuts', exact: true })
+  await expect(cuts.getByRole('article')).toHaveCount(12)
+  await expect(cuts.getByText('Background music from a venue; replace the audio')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Schedule 9 passed cuts' })).toBeVisible()
+
+  /* --- 7. Trend board --------------------------------------------------- */
+
+  await openFromSidebar(page, 'Trends')
+  await expect(heading(page, 'Formats rising now')).toBeVisible()
+
+  await expect(page.getByRole('region', { name: 'How remakes work', exact: true })).toContainText(
+    'We remake the format, never the footage.',
+  )
+
+  const remakeLinks = page.getByRole('link', { name: /^Remake for my brand/ })
+  await expect(remakeLinks).toHaveCount(8)
+  await expect(page.getByRole('heading', { level: 2, name: 'The 3-word reframe' })).toBeVisible()
+  await expect(page.getByText('+340%')).toBeVisible()
+
+  await remakeLinks.first().click()
+
+  /* --- 8. Remake studio ------------------------------------------------- */
+
+  await expect(page).toHaveURL(new RegExp(`/app/remake/${REMAKE_TREND_ID}$`))
+  await expect(heading(page, 'Remake: The 3-word reframe')).toBeVisible()
+
+  const compliance = page.getByRole('region', { name: 'Compliance agent', exact: true })
+  await expect(compliance.getByText('Passed', { exact: true })).toBeVisible()
+  // STITCH_REVIEW item 4: the limit is named, never dressed up as "safe".
+  await expect(compliance).toContainText('New wording · 12% similar (limit 30%)')
+  await expect(compliance).not.toContainText('safe <')
+  await expect(compliance).toContainText('No original footage used')
+  await expect(compliance).toContainText('AI scene labelled on screen and on the platform')
+
+  await expect(page.getByRole('region', { name: '3 · Preview', exact: true })).toContainText('Hooks to A/B test')
+
+  /* --- 9. Calendar and batch approval ----------------------------------- */
+
+  await openFromSidebar(page, 'Calendar')
+  await expect(heading(page, 'Week of 9 November')).toBeVisible()
+
+  const batchBar = page.getByRole('region', { name: "Tomorrow's approvals", exact: true })
+  await expect(batchBar).toContainText('Tomorrow: 9 posts ready. All 9 need your eye.')
+
+  const approveAll = batchBar.getByRole('button', { name: 'Approve all 9 for tomorrow' })
+  await approveAll.click()
+
+  await expect(batchBar).toContainText(
+    'Tomorrow is approved. The Publisher will post 9 videos on Tue 10.',
+  )
+  await expect(approveAll).toBeHidden()
+
+  /* --- 10. Results ------------------------------------------------------ */
+
+  await openFromSidebar(page, 'Results')
+  await expect(heading(page, '21 posts, 6 calls booked')).toBeVisible()
+
+  const funnel = page.getByRole('region', { name: 'From views to calls', exact: true })
+  for (const stage of ['Views', 'Profile visits', 'Link clicks', 'Leads', 'Calls booked']) {
+    await expect(funnel).toContainText(stage)
+  }
+  await expect(funnel).toContainText('48,300')
+  // The bottom of the funnel is the number the demo is selling.
+  await expect(funnel.getByText('6', { exact: true })).toBeVisible()
+
+  /* --- 11. Agents ------------------------------------------------------- */
+
+  await openFromSidebar(page, 'Agents')
+  await expect(heading(page, 'Seven agents, one loop')).toBeVisible()
+
+  await expect(page.getByRole('article')).toHaveCount(7)
+  for (const name of [
+    'Trend Scout',
+    'Remake Producer',
+    'Multiplier',
+    'Compliance',
+    'Client Concierge',
+    'Publisher',
+    'Performance Analyst',
+  ]) {
+    await expect(page.getByRole('heading', { level: 3, name, exact: true })).toBeVisible()
+  }
+
+  await expect(page.getByText('Your AI team · spend this month $43 of $180 in caps')).toBeVisible()
+
+  // Non-negotiable 6, visible: Compliance cannot be switched off.
+  const complianceSwitch = page.getByRole('switch', { name: 'Compliance' })
+  await expect(complianceSwitch).toBeChecked()
+  await expect(complianceSwitch).toBeDisabled()
+  await expect(
+    page.getByText(
+      "Compliance can't be turned off. Every video passes it before it can be scheduled.",
+    ),
+  ).toBeVisible()
+})

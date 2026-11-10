@@ -101,6 +101,11 @@ export const PUBLIC_AGENTS: readonly PublicAgent[] = [
   },
 ]
 
-/** The learning loop runs end to end; the last hand-off is the one that closes it. */
+/**
+ * The last hand-off is the one that closes the loop — and the automated version
+ * of it is post-MVP, so the line says what happens today. It is shown next to a
+ * `ComingSoonLabel` on both public pages, and the wording matches the caveat on
+ * /how-it-works.
+ */
 export const LOOP_CLOSING_LINE =
-  'The Performance Analyst hands its ranking back to the Trend Scout, so next week starts from what worked this week.'
+  'The Performance Analyst hands its ranking back to the Trend Scout, so next week starts from what worked this week. Today the Performance Analyst writes that plan and a person puts it into effect with you.'
