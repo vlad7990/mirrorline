@@ -8,8 +8,9 @@
 
 ## Preview link
 
-**https://mirrorline-1jggxtqas-vn-mn-product-group.vercel.app** — status Ready,
-deployed 10 Nov 2026 00:38 EST.
+**https://mirrorline-nm9daq8z5-vn-mn-product-group.vercel.app** — status Ready,
+deployed 10 Nov 2026 00:52 EST. This is the final build of the run, including
+the calendar column fix.
 
 Preview only. Nothing was promoted to production, and `.claude/settings.json`
 blocks `vercel --prod` anyway.
