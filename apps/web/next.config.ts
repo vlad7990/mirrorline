@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
   // Workspace packages ship raw TS/TSX, so Next must compile them itself.
   transpilePackages: ['@mirrorline/ui', '@mirrorline/mock'],
   outputFileTracingRoot: repoRoot,
+  // The reference screenshots in docs/screens-built/ are taken against the dev
+  // server, and Next's floating dev-tools badge sits over the UI in every one
+  // of them — over the sidebar usage meter at 1440px and over a section
+  // heading at 390px. Nothing in this repo needs the badge.
+  devIndicators: false,
 };
 
 export default nextConfig;

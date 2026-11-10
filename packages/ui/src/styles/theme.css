@@ -197,6 +197,11 @@
   /* Wide content scrolls inside its card, never breaking the page.
      DESIGN.md "Layout". */
   .scroll-x {
+    /* The scroller must be the containing block for its own absolutely
+       positioned descendants. Without this, an `.sr-only` qualifier inside the
+       wide content resolves against the initial containing block, escapes the
+       overflow clip, and widens the page instead of the card. */
+    position: relative;
     overflow-x: auto;
     overscroll-behavior-x: contain;
   }

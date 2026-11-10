@@ -14,7 +14,14 @@ import { ChevronDownIcon } from '@/components/icons'
  */
 
 const INITIALS_COUNT = 2
-const AVATAR_SIZE = 30
+/**
+ * The sidebar is 240px and the switcher has to show "Maya Torres Coaching" and
+ * "Growth plan" in full, as S02_Home.png does. The avatar, the two gaps, the
+ * button padding and the chevron are the only things competing with the text,
+ * so each is trimmed to the smallest size that still reads.
+ */
+const AVATAR_SIZE = 28
+const CHEVRON_SIZE = 12
 const SWITCHER_MIN_HEIGHT = 48
 
 function initialsOf(name: string): string {
@@ -62,7 +69,7 @@ export function WorkspaceSwitcher() {
         aria-expanded={isOpen}
         aria-controls={isOpen ? menuId : undefined}
         onClick={() => setIsOpen((open) => !open)}
-        className="flex w-full items-center gap-2.5 rounded-lg border border-border bg-background px-2.5 py-2 text-left transition-colors hover:border-border-strong"
+        className="flex w-full items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-2 text-left transition-colors hover:border-border-strong"
         style={{ minHeight: SWITCHER_MIN_HEIGHT }}
       >
         <span
@@ -73,12 +80,14 @@ export function WorkspaceSwitcher() {
           {initials}
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-meta font-semibold text-text">{workspace.name}</span>
+          <span className="truncate text-caption font-semibold text-text">{workspace.name}</span>
           <span className="truncate text-caption font-normal text-text-muted">
-            {workspace.planName}
+            {/* The fixture holds the plan's name; "plan" is the word that turns
+                it into the sentence DESIGN.md asks for. */}
+            {workspace.planName} plan
           </span>
         </span>
-        <ChevronDownIcon size={16} className="shrink-0 text-text-muted" />
+        <ChevronDownIcon size={CHEVRON_SIZE} className="shrink-0 text-text-muted" />
       </button>
 
       {/* SC 4.1.2: this used to claim role="menu" without ever moving focus

@@ -10,7 +10,6 @@ import {
   DialogContent,
   DialogDescription,
   DialogTitle,
-  Divider,
 } from '@mirrorline/ui'
 
 /**
@@ -54,14 +53,17 @@ export function DataRightsCard({ onNotice }: DataRightsCardProps) {
     <Card as="section" className="flex flex-col gap-3">
       <h2 className="m-0 font-heading text-subtitle text-text">Data and rights</h2>
 
+      {/* HTML allows exactly one wrapper <div> between <dl> and its <dt>/<dd>,
+          so the rule above each row is this div's top border rather than a
+          nested <Divider>. Same 1px line, same spacing. */}
       <dl className="m-0 flex flex-col gap-2">
         {rows.map((row) => (
-          <div key={row.label} className="flex flex-col gap-2 pt-1">
-            <Divider />
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <dt className="text-body text-text">{row.label}</dt>
-              <dd className="m-0 text-meta text-text-muted">{row.detail}</dd>
-            </div>
+          <div
+            key={row.label}
+            className="mt-1 flex flex-wrap items-baseline justify-between gap-2 border-t border-border pt-2"
+          >
+            <dt className="text-body text-text">{row.label}</dt>
+            <dd className="m-0 text-meta text-text-muted">{row.detail}</dd>
           </div>
         ))}
       </dl>

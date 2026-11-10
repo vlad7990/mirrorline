@@ -15,7 +15,6 @@ import * as LabelPrimitive from '@radix-ui/react-label'
 import * as SelectPrimitive from '@radix-ui/react-select'
 import * as SliderPrimitive from '@radix-ui/react-slider'
 import * as SwitchPrimitive from '@radix-ui/react-switch'
-import * as TabsPrimitive from '@radix-ui/react-tabs'
 import { Check, ChevronDown } from 'lucide-react'
 import * as React from 'react'
 
@@ -337,14 +336,20 @@ export interface SegmentedControlProps {
   /** Names the group, e.g. "Approval mode". */
   label: string
   className?: string
-  /** Optional <SegmentedPanel> children. */
-  children?: React.ReactNode
 }
 
 /**
- * Radix Tabs with the segmented look. DESIGN.md: "Segmented controls: the
- * active segment may use a very subtle shadow (0 1px 2px rgba(0,0,0,0.08))" —
- * exposed as --shadow-segment, the only shadow in the system.
+ * A single-choice picker with the segmented look.
+ *
+ * Built from native radio inputs inside a `role="radiogroup"`, not from tabs:
+ * none of these controls reveals a tabpanel, and a `role="tab"` that points at
+ * a panel which does not exist is an invalid `aria-controls` (SC 4.1.2). The
+ * radios give arrow-key roving, Home/End and the right announcement for free,
+ * exactly as the theme switch and the brand swatches already do.
+ *
+ * DESIGN.md: "Segmented controls: the active segment may use a very subtle
+ * shadow (0 1px 2px rgba(0,0,0,0.08))" — exposed as --shadow-segment, the only
+ * shadow in the system.
  */
 export function SegmentedControl({
   items,
@@ -353,42 +358,60 @@ export function SegmentedControl({
   onValueChange,
   label,
   className,
-  children,
 }: SegmentedControlProps) {
+  const groupName = React.useId()
+  const [internalValue, setInternalValue] = React.useState<string>(
+    defaultValue ?? items[0]?.value ?? '',
+  )
+
+  const isControlled = value !== undefined
+  const selectedValue = isControlled ? value : internalValue
+
+  function select(next: string): void {
+    if (!isControlled) setInternalValue(next)
+    onValueChange?.(next)
+  }
+
   return (
-    <TabsPrimitive.Root
-      value={value}
-      defaultValue={defaultValue ?? items[0]?.value}
-      onValueChange={onValueChange}
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className={cn('inline-flex gap-1 rounded-lg bg-neutral-soft p-1', className)}
     >
-      <TabsPrimitive.List
-        aria-label={label}
-        className={cn('inline-flex gap-1 rounded-lg bg-neutral-soft p-1', className)}
-      >
-        {items.map((item) => (
-          <TabsPrimitive.Trigger
-            key={item.value}
+      {items.map((item) => (
+        <label key={item.value} className="relative inline-flex">
+          {/* Invisible but laid over the whole segment, not `sr-only`: a click
+              anywhere on the segment lands on the real radio, and the styling
+              below still keys off it as the sibling `peer`. */}
+          <input
+            type="radio"
+            name={groupName}
             value={item.value}
+            checked={item.value === selectedValue}
             disabled={item.disabled}
+            onChange={() => select(item.value)}
+            className="peer absolute inset-0 m-0 size-full cursor-pointer appearance-none opacity-0 disabled:cursor-not-allowed"
+          />
+          {/* Not aria-hidden: this text is what names the radio through its
+              wrapping <label>. */}
+          <span
             className={cn(
               'inline-flex h-10 items-center justify-center rounded-md px-4',
               'font-body text-label text-text-muted transition-colors duration-150',
-              'data-[state=active]:bg-surface data-[state=active]:text-text',
-              'data-[state=active]:shadow-[var(--shadow-segment)]',
-              'disabled:pointer-events-none disabled:opacity-55',
+              'peer-checked:bg-surface peer-checked:text-text',
+              'peer-checked:shadow-[var(--shadow-segment)]',
+              'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2',
+              'peer-focus-visible:outline-primary',
+              'peer-disabled:cursor-not-allowed peer-disabled:opacity-55',
             )}
           >
             {item.label}
-          </TabsPrimitive.Trigger>
-        ))}
-      </TabsPrimitive.List>
-      {children}
-    </TabsPrimitive.Root>
+          </span>
+        </label>
+      ))}
+    </div>
   )
 }
-
-/** The panel that belongs to a segment. Re-exported so callers stay in Radix. */
-export const SegmentedPanel = TabsPrimitive.Content
 
 /* -------------------------------------------------------------------------- */
 /* FieldGroup                                                                  */

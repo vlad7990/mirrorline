@@ -9,9 +9,10 @@ import { MonitorIcon, MoonIcon, SunIcon, type IconProps } from '@/components/ico
  * Light / dark / system, as one segmented control.
  *
  * Built from native radio inputs: a radio group gives arrow-key movement and
- * the right announcement for free, and `SegmentedControl` is not exported from
- * @mirrorline/ui yet. DESIGN.md "Elevation & Depth" allows the one shadow on
- * the active segment, which is `shadow-segment` in the theme.
+ * the right announcement for free. It keeps its own markup rather than using
+ * @mirrorline/ui's SegmentedControl because each option here is icon-only, with
+ * the word carried in an `sr-only` span. DESIGN.md "Elevation & Depth" allows
+ * the one shadow on the active segment, which is `shadow-segment` in the theme.
  *
  * Each option is icon-only on screen; the word is the accessible name.
  */

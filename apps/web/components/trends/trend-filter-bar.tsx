@@ -41,8 +41,9 @@ export function TrendFilterBar({ filters }: TrendFilterBarProps) {
   )
 
   return (
-    // The page header holds its action in a shrink-0 box, so the bar needs a
-    // cap of its own to wrap instead of pushing the page sideways.
+    // The page header's action slot shrinks below `sm`, but the two Selects
+    // carry fixed widths, so the bar still needs a cap of its own to wrap
+    // instead of pushing the page sideways.
     <div className="flex max-w-[calc(100vw-72px)] flex-wrap items-center gap-2 lg:max-w-none">
       <SegmentedControl
         label="Which niches"

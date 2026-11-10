@@ -22,7 +22,12 @@ const LOGO_SIZE = 26
 
 export function Sidebar({ className }: { className?: string }) {
   return (
-    <div
+    // A landmark, not a bare <div>: the wordmark, the workspace switcher, the
+    // theme radios and the usage meter all sit outside <main>, and content that
+    // belongs to no landmark is content a screen-reader user cannot jump to.
+    // The <nav aria-label="Studio"> stays nested inside it.
+    <aside
+      aria-label="Workspace"
       className={[
         'flex h-full w-sidebar flex-col gap-3.5 border-r border-border bg-surface px-4 py-6',
         className ?? '',
@@ -43,6 +48,6 @@ export function Sidebar({ className }: { className?: string }) {
         <ThemeSwitch />
         <UsageMeter />
       </div>
-    </div>
+    </aside>
   )
 }

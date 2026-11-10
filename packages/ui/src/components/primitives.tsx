@@ -250,7 +250,12 @@ export function PageHeader({
           <p className="m-0 max-w-[62ch] text-body text-text-muted">{description}</p>
         ) : null}
       </div>
-      {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
+      {/* The slot may shrink and wrap on a phone: a wide action (a summary line
+          beside a button) must never push the page sideways. From `sm` up there
+          is room again, so it keeps its natural width and stays right-aligned. */}
+      {action ? (
+        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:shrink-0">{action}</div>
+      ) : null}
     </header>
   )
 }

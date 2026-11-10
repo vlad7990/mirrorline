@@ -21,7 +21,12 @@ import { ONBOARDING, STUDIO_HOME } from '@/lib/routes'
 /** The example address used anywhere a placeholder is needed. */
 const EXAMPLE_EMAIL = 'maya@mayatorres.example'
 
-const LINK_CLASS = 'text-primary hover:underline dark:text-accent'
+/**
+ * SC 1.4.1: a link inside a paragraph may not be told apart by colour alone,
+ * so the underline is always on, not only on hover. Matches the links on the
+ * results page and in the upload dropzone.
+ */
+const LINK_CLASS = 'text-primary underline underline-offset-4 dark:text-accent'
 
 /* -------------------------------------------------------------------------- */
 /* Shared pieces                                                               */
