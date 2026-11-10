@@ -163,15 +163,23 @@ export interface TooltipProps {
   /** The element the tooltip describes. Must be focusable. */
   children: React.ReactNode
   side?: 'top' | 'right' | 'bottom' | 'left'
-  /** Milliseconds before it appears. */
+  /**
+   * Milliseconds before it appears. Left unset on purpose: the provider sets
+   * it for the whole app, and it also owns the skip window that opens the
+   * next tooltip instantly. Pass this only to make one tooltip slower than
+   * its neighbours, which is rarely what you want.
+   */
   delayDuration?: number
 }
 
 /**
  * A tooltip is a hint, never the only copy of a fact: anything essential must
- * also be on the page. Wrap the app once in <TooltipProvider>.
+ * also be on the page.
+ *
+ * Needs a <TooltipProvider> above it — Radix throws without one. The web app
+ * mounts a single provider in its root layout.
  */
-export function Tooltip({ content, children, side = 'top', delayDuration = 200 }: TooltipProps) {
+export function Tooltip({ content, children, side = 'top', delayDuration }: TooltipProps) {
   return (
     <TooltipPrimitive.Root delayDuration={delayDuration}>
       <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>

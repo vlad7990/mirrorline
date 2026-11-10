@@ -51,6 +51,18 @@ and what we *did*. Checked with `claude mcp list` at the start of the 2026-11-09
 | `vercel:deploy`, `vercel:deployments-cicd` | Preview deploy | M6 |
 | `browse`, `qa` | Driving the running app | M5 |
 | `superpowers:verification-before-completion` | Not declaring done without evidence | Every milestone |
+| `emil-design-eng` | Interaction and animation review: easing, duration, press feedback, origin-aware popovers | After the glass-box rebuild (10 Nov). Found three real defects, all fixed: the FAQ had no open/close animation, the chevron ran on a 150ms literal instead of the row's token, and the exported `Tooltip` could not be used because no `TooltipProvider` was mounted |
+| `impeccable` | Shared design laws and the brand/product register tests | After the glass-box rebuild (10 Nov). No absolute-ban violations: no gradient text, no glassmorphism, no side-stripe borders, no hardcoded `#fff`/`#000`, no visible em dashes, eyebrows used 1–2 per page rather than as section grammar. Three observations recorded below rather than changed |
+
+### What `impeccable` flagged and we did not change
+
+Recorded so the decision is visible rather than silently ignored.
+
+- **Pure `#FFFFFF` surface.** The skill's colour law is "never `#000` or `#fff`, tint every neutral toward the brand hue". `background` is tinted (`#F6F7F9`); `surface` and `on-primary` are pure white. Changing them means re-running the WCAG contrast proof in `packages/ui`, so it is a design-system decision for Vlad, not a drive-by edit.
+- **No product screenshots on the public site.** The brand register calls text-only pages the failure mode, and treats product screenshots as imagery. The 9:16 frames on the marketing pages are CSS panels with demo captions, which is honest (non-negotiable 7 labels demo data) but thin. There are 80 real screenshots in `docs/screens-built/` that could carry it.
+- **`.press` is gated to fine pointers.** `@media (hover: hover) and (pointer: fine)` means no press dip on touch. The reasoning is in `theme.css` and is defensible; it is also the one place where a touch user gets less feedback than a mouse user. Worth a decision either way.
+
+Both skills were run on 10 Nov against the committed glass-box UI. Neither had been run on it before — `ui-ux-pro-max` and `design-taste-frontend` covered the earlier M4 website work, and `emil-design-eng` had been loaded in an earlier session without a recorded outcome.
 
 ## Agents
 

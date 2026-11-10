@@ -48,15 +48,24 @@ export function Faq({ items }: FaqProps) {
               )}
             >
               {item.question}
+              {/* Same duration token as the row it sits in. At 150ms the
+                  chevron used to finish before the panel it describes. */}
               <ChevronDown
                 aria-hidden="true"
-                className="size-5 shrink-0 text-text-muted transition-transform duration-150 group-data-[state=open]:rotate-180"
+                className={cn(
+                  'size-5 shrink-0 text-text-muted',
+                  'transition-transform duration-[var(--duration-dropdown)] ease-out',
+                  'group-data-[state=open]:rotate-180',
+                )}
                 strokeWidth={1.8}
               />
             </AccordionPrimitive.Trigger>
           </AccordionPrimitive.Header>
-          <AccordionPrimitive.Content className="px-5 pb-5">
-            <div className="flex max-w-[68ch] flex-col gap-3 text-body text-text-muted">
+          {/* The padding lives on the inner wrapper, not here: this element's
+              height is what animates, and padding on it would keep the panel
+              visibly tall at height 0. */}
+          <AccordionPrimitive.Content className="accordion-panel">
+            <div className="flex max-w-[68ch] flex-col gap-3 px-5 pb-5 text-body text-text-muted">
               {item.answer}
             </div>
           </AccordionPrimitive.Content>

@@ -543,6 +543,65 @@
       var(--overlay-pop-exit-duration, var(--duration-dropdown-exit)) var(--ease-out);
   }
 
+  /* A tooltip opened while another was already showing skips its delay, and
+     should skip its animation too: the delay is what the first one paid for,
+     and animating the rest makes a row of controls feel slower than it is. */
+  .overlay-pop[data-state='instant-open'] {
+    animation-duration: 0ms;
+  }
+
+  /*
+   * A disclosure opening and closing: the FAQ today, any accordion later.
+   *
+   * Height, not transform, which breaks the usual "only animate transform and
+   * opacity" rule — and has to. The point of a disclosure is that the rest of
+   * the page moves down to make room; a transform would slide the panel over
+   * its neighbours instead of displacing them. Radix measures the panel and
+   * publishes --radix-accordion-content-height, so the keyframe interpolates
+   * between two known heights rather than to `auto`, which does not animate.
+   *
+   * Keyframes rather than a transition for the same reason as the overlays
+   * above: Presence waits for animationend before it unmounts, and ignores a
+   * transition. Opacity trails the height on the way in so the text does not
+   * appear before it has room, and leads on the way out so it is gone before
+   * the gap closes.
+   */
+  @keyframes mirrorline-accordion-down {
+    from {
+      height: 0;
+      opacity: 0;
+    }
+
+    to {
+      height: var(--radix-accordion-content-height);
+      opacity: 1;
+    }
+  }
+
+  @keyframes mirrorline-accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+      opacity: 1;
+    }
+
+    to {
+      height: 0;
+      opacity: 0;
+    }
+  }
+
+  .accordion-panel {
+    overflow: hidden;
+  }
+
+  .accordion-panel[data-state='open'] {
+    animation: mirrorline-accordion-down var(--duration-dropdown) var(--ease-out);
+  }
+
+  .accordion-panel[data-state='closed'] {
+    animation: mirrorline-accordion-up var(--duration-dropdown-exit) var(--ease-out);
+  }
+
   /*
    * The toast is a transition, not a keyframe, and @starting-style supplies
    * the entry state so no mount-then-flip effect is needed. A second

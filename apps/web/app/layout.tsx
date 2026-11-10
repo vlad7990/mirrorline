@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { GeistMono } from 'geist/font/mono'
 import { GeistSans } from 'geist/font/sans'
-import { ThemeProvider, THEME_SCRIPT } from '@mirrorline/ui'
+import { ThemeProvider, TooltipProvider, THEME_SCRIPT } from '@mirrorline/ui'
 
 import './globals.css'
 
@@ -37,13 +37,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-background font-body text-text">
         <ThemeProvider>
-          <a
-            href="#main"
-            className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:inline-flex focus:h-touch focus:items-center focus:rounded-md focus:border focus:border-border-strong focus:bg-surface focus:px-4 focus:text-label focus:font-semibold focus:text-text"
-          >
-            Skip to content
-          </a>
-          {children}
+          {/* Radix requires a provider above every tooltip, so the one the
+              library exports is unusable without this. It belongs at the root
+              rather than per tooltip for a second reason: skipDelayDuration is
+              shared state. Once one tooltip is open, moving along a row of
+              controls opens the rest instantly, which is what makes a toolbar
+              feel quick. Per-instance providers would lose that. */}
+          <TooltipProvider delayDuration={200} skipDelayDuration={300}>
+            <a
+              href="#main"
+              className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:inline-flex focus:h-touch focus:items-center focus:rounded-md focus:border focus:border-border-strong focus:bg-surface focus:px-4 focus:text-label focus:font-semibold focus:text-text"
+            >
+              Skip to content
+            </a>
+            {children}
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

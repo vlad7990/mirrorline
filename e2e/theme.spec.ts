@@ -17,6 +17,24 @@
 import { expect, test } from '@playwright/test'
 
 import { onlyProject } from './helpers/project-gate'
+
+/*
+ * One retry, for the no-flash test specifically.
+ *
+ * That test replaces every `_next/static/*.js` with an empty body so React
+ * cannot hydrate. Against `next dev` that also removes the Fast Refresh
+ * client, so when another worker's first hit on a studio route triggers a
+ * recompile mid-navigation, Next answers with a full reload and the
+ * navigation comes back ERR_ABORTED. The assertion is sound: the file passes
+ * every time at --workers=1 and in isolation, and fails on a parallel run
+ * against a cold route.
+ *
+ * The real fix is the warm-up step named in docs/PROGRESS.md "Needs Vlad" —
+ * hit each route once before the suite, so nothing compiles during it. Until
+ * that lands, a retry keeps a dev-server artefact from reading as a theme
+ * regression.
+ */
+test.describe.configure({ retries: 1 })
 import {
   THEME_STORAGE_KEY,
   expectResolvedTheme,
