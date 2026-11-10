@@ -73,7 +73,7 @@ export function PostChip({ post, status, dayLabel, isSelected, onSelect }: PostC
       // it for assistive tech, and the tooltip never becomes the chip's name.
       title={post.title}
       className={cn(
-        'flex min-h-11 w-full min-w-0 items-center gap-1 rounded-md bg-surface p-1 text-left',
+        'flex min-h-11 w-full min-w-0 items-center gap-0.5 rounded-md bg-surface p-1 text-left',
         'transition-colors duration-150 hover:bg-surface-subtle',
         isSelected ? 'border-2 border-ink' : 'border border-border',
         'border-l-4',
@@ -84,7 +84,7 @@ export function PostChip({ post, status, dayLabel, isSelected, onSelect }: PostC
           plain swatch rather than a theme token. */}
       <span
         aria-hidden="true"
-        className="h-[30px] w-[18px] shrink-0 rounded-sm"
+        className="h-[28px] w-[15px] shrink-0 rounded-sm"
         style={{ backgroundColor: post.thumbnailColor }}
       />
       <span aria-hidden="true" className="flex min-w-0 flex-1 flex-col">
@@ -95,8 +95,10 @@ export function PostChip({ post, status, dayLabel, isSelected, onSelect }: PostC
           {post.title}
         </span>
         {/* SC 1.4.1: the status is a word on the chip, not only a coloured
-            edge, so it survives both colour blindness and a greyscale print. */}
-        <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-normal leading-tight text-text-muted">
+            edge, so it survives both colour blindness and a greyscale print.
+            A step smaller than the title so the narrow column still shows the
+            word itself rather than its first syllable. */}
+        <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[9px] font-normal leading-tight tracking-tight text-text-muted">
           {word}
         </span>
       </span>
