@@ -157,3 +157,34 @@ On Vlad's instruction. The pricing page is static copy with no Stripe objects;
 `automation/` stays as it arrived. Docker is not installed on this machine, so
 an n8n compose file could have been written but never verified — writing
 unverified infrastructure is worse than not writing it.
+
+## 2026-11-10 · D13 · One ViewerPanel in packages/ui, three implementations removed
+
+Three agents reskinning in parallel each produced a viewer surface: the
+component agent added `ViewerPanel` to `packages/ui/src/components/video.tsx`,
+and the marketing and studio agents, not seeing it, each wrote a local copy
+with a different API. Nine call sites used the two locals; the shared export
+had no users at all.
+
+The shared one is now the only one. It keeps the studio copy's geometry,
+because that is what DESIGN.md `components.viewer-panel` fixes — `rounded.lg`
+and 16px padding, which `Card tone="viewer" padding="sm"` already gives — and
+the marketing copy's header, because a public page needs a title and a machine
+readout over the frame. The marketing copy's `rounded-xl` and `sm:p-5` were a
+drift from the spec and are gone.
+
+Resolved along the way:
+
+- `footer` (studio) and `footnote` (marketing) were one idea under two names.
+  Kept `footnote`, at full `on-viewer` rather than the studio copy's 75%: the
+  longest footnotes are the sample-data notes on the public pages, and the
+  contrast proof has room for it either way (9.5:1 at 75%, 16:1 at full).
+- The old shared version wrapped children in a 1–4 column grid. Dropped —
+  seven of the nine call sites lay their own content out and a forced grid
+  broke both centring a single frame and the twelve-cut contact sheet. The
+  panel owns the surface, the header and the footnote; layout is the caller's.
+- `label` is gone too. It rendered a `<section>` with an `aria-label`, which
+  `as` and a plain `aria-label` already do, and no call site used it.
+
+38 screenshots moved, all of them panels changing radius or padding. No route
+changed its copy or its structure.

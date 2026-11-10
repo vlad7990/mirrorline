@@ -20,12 +20,12 @@ import {
   StatusChip,
   VideoCard,
   VideoThumb,
+  ViewerPanel,
   cn,
 } from '@mirrorline/ui'
 import { Check, Clock, Loader2 } from 'lucide-react'
 import * as React from 'react'
 
-import { ViewerPanel } from '@/components/shell/viewer-panel'
 import { UploadDropzone } from './upload-dropzone'
 import {
   CUT_ACTIONS,

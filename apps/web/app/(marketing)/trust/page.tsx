@@ -8,12 +8,11 @@
  */
 
 import { cuts, todaySchedule, weekPosts } from '@mirrorline/mock'
-import { AiLabel, Card, VideoThumb } from '@mirrorline/ui'
+import { AiLabel, Card, VideoThumb, ViewerPanel } from '@mirrorline/ui'
 import type { Metadata } from 'next'
 import * as React from 'react'
 
 import { SampleDataLabel, Section, SectionHeading } from '@/components/marketing/primitives'
-import { ViewerPanel } from '@/components/marketing/viewer-panel'
 
 import { LeadDialogButton } from '../components/lead-form'
 

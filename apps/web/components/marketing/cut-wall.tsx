@@ -14,10 +14,8 @@
  */
 
 import { cuts, sourceVideo, todaySchedule, weekPosts, type Cut } from '@mirrorline/mock'
-import { StatusChip, VideoThumb } from '@mirrorline/ui'
+import { StatusChip, VideoThumb, ViewerPanel } from '@mirrorline/ui'
 import * as React from 'react'
-
-import { ViewerPanel } from './viewer-panel'
 
 /**
  * CLAUDE.md non-negotiable 4: "AI scenes are always labelled, in the UI and on

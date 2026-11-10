@@ -22,38 +22,36 @@ import * as React from 'react'
 import { cn } from '../cn'
 import { THUMBNAIL_COLORS } from '../tokens'
 import { LogoMark } from './logo'
-import { Card } from './primitives'
+import { Card, type CardProps } from './primitives'
 import { AiLabel, StatusChip, type Status } from './status'
 
 /* -------------------------------------------------------------------------- */
 /* ViewerPanel                                                                 */
 /* -------------------------------------------------------------------------- */
 
-/** DESIGN.md "components.viewer-panel" fixes the grid at 1–4 columns of 9:16. */
-const VIEWER_COLUMNS: Record<1 | 2 | 3 | 4, string> = {
-  1: 'grid-cols-1',
-  2: 'grid-cols-2',
-  3: 'grid-cols-3',
-  4: 'grid-cols-4',
-}
-
 // `title` is omitted from the HTML attributes: the native one is a tooltip
-// string, ours is the line printed on the viewer.
-export interface ViewerPanelProps extends Omit<React.HTMLAttributes<HTMLElement>, 'title'> {
-  /**
-   * Names the panel for assistive technology, e.g. "Preview". Supplying it
-   * renders a <section>, so the label lands on a real region rather than on a
-   * generic <div> where it would be ignored.
-   */
-  label?: string
-  /** A quiet line above the frames: "Cut 3 of 5", "Sample data". */
+// string, ours is the heading printed on the viewer. The Card variants are
+// omitted too — the surface is the whole point of this component, so a caller
+// does not get to pick another tone.
+export interface ViewerPanelProps extends Omit<CardProps, 'title' | 'tone' | 'padding' | 'selected'> {
+  /** Printed top left, in the studio's voice: "What the gate held back". */
   title?: React.ReactNode
-  /** Controls, badges or captions below the frames. */
-  footer?: React.ReactNode
-  /** How many 9:16 items sit side by side. One by default. */
-  columns?: 1 | 2 | 3 | 4
-  /** Force the tag. Defaults to <section> when `label` is set, else <div>. */
-  as?: 'div' | 'section'
+  /** h2 inside a page, h3 inside a section. Defaults to h3. */
+  level?: 2 | 3
+  /** Set when a heading elsewhere on the page already labels the panel. */
+  titleId?: string
+  /**
+   * Top right. Machine output belongs here: a duration, a count, a limit.
+   * Pass it already wrapped in `.machine` where it is a figure.
+   */
+  readout?: React.ReactNode
+  /** A quiet line under the content: a length and handle, a sample-data note. */
+  footnote?: React.ReactNode
+  /**
+   * Drop the mat to 4px and let the frame nearly meet the edge. For a
+   * thumbnail small enough that a full 16px mat reads as a border.
+   */
+  flush?: boolean
 }
 
 /**
@@ -67,34 +65,59 @@ export interface ViewerPanelProps extends Omit<React.HTMLAttributes<HTMLElement>
  * roles separate and forbids substituting one for the other.
  *
  * Built on Card's `viewer` tone so the surface is defined in exactly one
- * place, at the 10px radius and 16px padding DESIGN.md specifies.
+ * place, at the lg radius and 16px padding DESIGN.md's `viewer-panel` fixes.
+ * Because the tone carries `text-on-viewer`, the header, the footnote and
+ * anything the caller nests inherit it — no call site repeats the colour.
+ *
+ * Laying the content out is the caller's job, through `className`: a single
+ * frame centres itself in the mat, a contact sheet of twelve fills it. The
+ * panel only owns the surface, the header and the footnote.
  */
 export function ViewerPanel({
-  label,
-  title,
-  footer,
-  columns = 1,
   as,
+  title,
+  level = 3,
+  titleId,
+  readout,
+  footnote,
+  flush = false,
   className,
   children,
   ...props
 }: ViewerPanelProps) {
-  const component = as ?? (label ? 'section' : 'div')
+  const Heading = level === 2 ? 'h2' : 'h3'
+  const hasHeader = Boolean(title) || Boolean(readout)
 
   return (
     <Card
-      as={component}
+      as={as}
       tone="viewer"
-      padding="sm"
-      aria-label={label}
-      className={cn('flex flex-col gap-3', className)}
+      padding={flush ? 'none' : 'sm'}
+      className={cn(
+        // No dark: variant anywhere here. That is the point of the surface.
+        'flex flex-col',
+        // A header and a footnote make the panel a composed block, which needs
+        // more air than a frame and its length line do.
+        hasHeader ? 'gap-4' : 'gap-2.5',
+        flush && 'p-1',
+        className,
+      )}
       {...props}
     >
-      {title ? <p className="m-0 text-meta text-on-viewer/70">{title}</p> : null}
-      <div className={cn('grid gap-2', VIEWER_COLUMNS[columns])}>{children}</div>
-      {footer ? (
-        <div className="flex flex-wrap items-center gap-2 text-meta text-on-viewer/70">{footer}</div>
+      {hasHeader ? (
+        <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          {title ? (
+            <Heading id={titleId} className="m-0 font-heading text-subtitle">
+              {title}
+            </Heading>
+          ) : null}
+          {/* A lone readout still belongs on the right: it is the machine
+              annotating the frame, not a title for it. */}
+          {readout ? <div className={cn('text-meta', !title && 'ml-auto')}>{readout}</div> : null}
+        </header>
       ) : null}
+      {children}
+      {footnote ? <p className="m-0 text-meta">{footnote}</p> : null}
     </Card>
   )
 }

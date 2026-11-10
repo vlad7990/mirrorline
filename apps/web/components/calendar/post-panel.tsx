@@ -12,10 +12,8 @@
 
 import type { PostStatus, ScheduledPost } from '@mirrorline/mock'
 import { workspace } from '@mirrorline/mock'
-import { AiLabel, Button, Label, StatusChip, Switch, Textarea } from '@mirrorline/ui'
+import { AiLabel, Button, Label, StatusChip, Switch, Textarea, ViewerPanel } from '@mirrorline/ui'
 import { useId, useState } from 'react'
-
-import { ViewerPanel } from '@/components/shell/viewer-panel'
 
 /** Statuses that are already settled; approving them again would say nothing. */
 const SETTLED_STATUSES: readonly PostStatus[] = ['approved', 'published', 'published-private']

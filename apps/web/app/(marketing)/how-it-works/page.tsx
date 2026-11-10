@@ -8,7 +8,7 @@
  */
 
 import { agents, cuts } from '@mirrorline/mock'
-import { Card, cn, StatusChip, VideoThumb } from '@mirrorline/ui'
+import { Card, cn, StatusChip, VideoThumb, ViewerPanel } from '@mirrorline/ui'
 import { BarChart3, CalendarDays, Check, Scissors, ShieldCheck, Upload } from 'lucide-react'
 import type { Metadata } from 'next'
 import * as React from 'react'
@@ -20,7 +20,6 @@ import {
   Section,
   SectionHeading,
 } from '@/components/marketing/primitives'
-import { ViewerPanel } from '@/components/marketing/viewer-panel'
 
 import { LeadDialogButton } from '../components/lead-form'
 

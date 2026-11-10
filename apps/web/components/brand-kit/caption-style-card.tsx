@@ -2,9 +2,7 @@
 
 import { useId, useState } from 'react'
 import { brandKit } from '@mirrorline/mock'
-import { Card, cn } from '@mirrorline/ui'
-
-import { ViewerPanel } from '@/components/shell/viewer-panel'
+import { Card, ViewerPanel, cn } from '@mirrorline/ui'
 
 /**
  * "Caption style" — three previews of the same line, one of them selected.

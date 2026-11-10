@@ -9,10 +9,8 @@
  * cut contains one (CLAUDE.md non-negotiable 4).
  */
 
-import { Card, VideoThumb, cn } from '@mirrorline/ui'
+import { Card, VideoThumb, ViewerPanel, cn } from '@mirrorline/ui'
 import * as React from 'react'
-
-import { ViewerPanel } from '@/components/shell/viewer-panel'
 
 export interface PreviewPanelProps {
   /** The three hooks. The checked one is burned into the preview. */
@@ -54,7 +52,7 @@ export function PreviewPanel({
           measurement and goes mono; the handle beside it is a name. */}
       <ViewerPanel
         className="items-center self-center"
-        footer={
+        footnote={
           <>
             <span className="machine">{lengthLabel}</span> · {handle}
           </>

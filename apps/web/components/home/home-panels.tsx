@@ -10,11 +10,10 @@
  * screen's one.
  */
 
-import { Card, LogoMark, MetricTile, StatusChip } from '@mirrorline/ui'
+import { Card, LogoMark, MetricTile, StatusChip, ViewerPanel } from '@mirrorline/ui'
 import Link from 'next/link'
 
 import { MACHINE_FIGURES } from '@/components/shell/machine-voice'
-import { ViewerPanel } from '@/components/shell/viewer-panel'
 import {
   AGENT_FEED_LINES,
   HOME_METRICS,

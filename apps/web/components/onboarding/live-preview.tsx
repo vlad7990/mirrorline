@@ -8,7 +8,8 @@
  * politely so a screen-reader user hears the slider take effect too.
  */
 
-import { ViewerPanel } from '@/components/shell/viewer-panel'
+import { ViewerPanel } from '@mirrorline/ui'
+
 import { describeTone, findColour, findFont, type ToneValues } from './onboarding-data'
 
 const CAPTION_BEFORE = "Burnout isn't a"
