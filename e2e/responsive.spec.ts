@@ -68,17 +68,34 @@ test('the drawer traps focus and Escape closes it', async ({ page }) => {
   const drawer = page.getByRole('dialog', { name: 'Studio menu' })
   await expect(drawer).toBeVisible()
 
-  // Focus starts inside the drawer and cannot leave it: a native modal
-  // <dialog> makes everything behind it inert.
-  const TAB_PRESSES = 14
+  // Focus starts inside the drawer and cannot reach anything behind it: a
+  // native modal <dialog> makes the rest of the page inert.
+  //
+  // Chromium wraps the cycle through the document scope, so for one press
+  // `document.activeElement` is <body>. That is the wrap point, not an escape —
+  // what matters is that no control outside the dialog is ever focused. The
+  // loop runs past the wrap to prove the cycle closes back into the drawer.
+  const TAB_PRESSES = 16
+  const focusReport: string[] = []
+
   for (let press = 0; press < TAB_PRESSES; press += 1) {
-    await expect
-      .poll(() => drawer.evaluate((node) => node.contains(document.activeElement)), {
-        message: `focus escaped the drawer after ${press} Tab presses`,
-      })
-      .toBe(true)
+    const where = await drawer.evaluate((node) => {
+      const active = document.activeElement
+      if (active === null) return 'none'
+      if (node.contains(active)) return 'inside'
+      if (active === document.body || active === document.documentElement) return 'wrap'
+      return `OUTSIDE:${active.tagName.toLowerCase()}:${(active.textContent ?? '').trim().slice(0, 30)}`
+    })
+    focusReport.push(`${press}:${where}`)
+    expect(where, `focus left the drawer: ${focusReport.join(' ')}`).not.toMatch(/^OUTSIDE/)
     await page.keyboard.press('Tab')
   }
+
+  // Not just "never outside" — focus really does come back into the drawer.
+  expect(focusReport.filter((entry) => entry.endsWith('inside')).length).toBeGreaterThan(
+    TAB_PRESSES / 2,
+  )
+  await expect(drawer.getByRole('button', { name: 'Close menu' })).toBeVisible()
 
   await page.keyboard.press('Escape')
   await expect(drawer).toBeHidden()

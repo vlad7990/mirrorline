@@ -21,10 +21,12 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], viewport: DESKTOP_VIEWPORT },
     },
     {
-      // `pnpm screenshots` targets this project; the mobile dependency lets one
-      // command cover both reference viewports (390x844 first, then 1440x900).
+      // `pnpm screenshots` targets this project. e2e/screenshots.spec.ts sets
+      // both reference viewports itself (1440x900 and 390x844), so this project
+      // needs no `dependencies`. It used to depend on `mobile`; Playwright skips
+      // a project whose dependency failed, which meant one failing responsive
+      // assertion silently produced no reference PNGs at all.
       name: 'screenshots',
-      dependencies: ['mobile'],
       use: { ...devices['Desktop Chrome'], viewport: DESKTOP_VIEWPORT },
     },
     {

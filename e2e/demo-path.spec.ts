@@ -178,6 +178,11 @@ test('the whole demo path holds up', async ({ page }) => {
     'We remake the format, never the footage.',
   )
 
+  // The visible live region and the card count have to agree.
+  await expect(page.getByRole('status').filter({ hasText: 'formats match' })).toHaveText(
+    '8 formats match these filters',
+  )
+
   const remakeLinks = page.getByRole('link', { name: /^Remake for my brand/ })
   await expect(remakeLinks).toHaveCount(8)
   await expect(page.getByRole('heading', { level: 2, name: 'The 3-word reframe' })).toBeVisible()
@@ -249,10 +254,18 @@ test('the whole demo path holds up', async ({ page }) => {
 
   await expect(page.getByText('Your AI team · spend this month $43 of $180 in caps')).toBeVisible()
 
-  // Non-negotiable 6, visible: Compliance cannot be switched off.
+  // Non-negotiable 6, visible: Compliance cannot be switched off. It is locked
+  // with aria-disabled rather than `disabled`, so it stays in the tab order and
+  // a keyboard user can still reach the sentence that explains why.
   const complianceSwitch = page.getByRole('switch', { name: 'Compliance' })
   await expect(complianceSwitch).toBeChecked()
-  await expect(complianceSwitch).toBeDisabled()
+  await expect(complianceSwitch).toHaveAttribute('aria-disabled', 'true')
+  // Still reachable by keyboard, which is the point of aria-disabled here.
+  await complianceSwitch.focus()
+  await expect(complianceSwitch).toBeFocused()
+  // And still unswitchable: the handler returns early.
+  await complianceSwitch.click({ force: true })
+  await expect(complianceSwitch).toBeChecked()
   await expect(
     page.getByText(
       "Compliance can't be turned off. Every video passes it before it can be scheduled.",

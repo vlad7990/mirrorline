@@ -23,6 +23,7 @@ import {
   hasInlineThemeScript,
   readStoredTheme,
   setStoredTheme,
+  themeBootstrapScriptTag,
 } from './helpers/theme'
 
 onlyProject('chromium', 'The theme contract is viewport-independent.')
@@ -68,7 +69,14 @@ test('the choice survives a reload and a navigation', async ({ page }) => {
   await page.goto(SWITCH_PAGE)
   await expectResolvedTheme(page, 'light')
 
-  await page.getByRole('radio', { name: 'Dark' }).check()
+  // Keyboard, not a click: the radios are `sr-only` and the visible segment is
+  // their label, so the hit target for the input itself is covered. Space on a
+  // focused radio is how the control is meant to be driven.
+  const darkOption = page.getByRole('radio', { name: 'Dark' })
+  await darkOption.focus()
+  await page.keyboard.press('Space')
+
+  await expect(darkOption).toBeChecked()
   await expectResolvedTheme(page, 'dark')
   expect(await readStoredTheme(page)).toBe('dark')
 
@@ -81,7 +89,7 @@ test('the choice survives a reload and a navigation', async ({ page }) => {
   await expectResolvedTheme(page, 'dark')
 })
 
-test('the inline bootstrap is in <head> ahead of every bundle', async ({ request }) => {
+test('the bootstrap is a parser-blocking inline script in <head>', async ({ request }) => {
   const response = await request.get('/app/home')
   expect(response.status()).toBe(200)
   const html = await response.text()
@@ -93,22 +101,40 @@ test('the inline bootstrap is in <head> ahead of every bundle', async ({ request
   expect(headEnd, 'document has no </head>').toBeGreaterThan(-1)
   expect(scriptAt, 'theme bootstrap is not inside <head>').toBeLessThan(headEnd)
 
-  // Nothing React ships can have run before it.
-  const firstBundleAt = html.indexOf('/_next/static/chunks')
-  expect(firstBundleAt, 'no Next.js bundle in the document').toBeGreaterThan(-1)
-  expect(scriptAt).toBeLessThan(firstBundleAt)
+  // Inline and synchronous: the parser stops and runs it before it reaches
+  // <body>, so the first paint already has the right class. Next.js emits its
+  // own bundles earlier in <head>, but every one of them is `async`, so none
+  // of them blocks or beats this.
+  const tag = themeBootstrapScriptTag(html)
+  expect(tag, 'could not find the bootstrap script tag').not.toBeNull()
+  expect(tag).not.toMatch(/\bsrc=/)
+  expect(tag).not.toMatch(/\basync\b/)
+  expect(tag).not.toMatch(/\bdefer\b/)
+  expect(tag).not.toMatch(/type="module"/)
+
+  const bundleTags = html.slice(0, headEnd).match(/<script\b[^>]*\bsrc="\/_next\/[^"]*"[^>]*>/g) ?? []
+  expect(bundleTags.length, 'no Next.js bundle in <head>').toBeGreaterThan(0)
+  for (const bundleTag of bundleTags) {
+    expect(bundleTag, `a blocking bundle could paint before the theme: ${bundleTag}`).toMatch(
+      /\basync\b|\bdefer\b|\bnoModule\b/,
+    )
+  }
 })
 
 test('no flash: the class lands with React never hydrating', async ({ page }) => {
   await page.goto(SWITCH_PAGE)
   await setStoredTheme(page, 'dark')
 
-  // Block every script Next.js would load. The bootstrap is part of the
-  // document, so it still runs; nothing else does. If `.dark` is on <html>
-  // after this, only the pre-paint script can have put it there.
-  await page.route('**/_next/static/**/*.js', (route) => route.abort())
+  // Replace every script Next.js would load with an empty file, so React
+  // never hydrates. The bootstrap is part of the document, so it still runs.
+  // If `.dark` is on <html> after this, only the pre-paint script put it there.
+  await page.route(/\/_next\/static\/.*\.js(\?.*)?$/, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }),
+  )
 
   await page.goto(SWITCH_PAGE)
+  // Proof that nothing React ships ran: the webpack runtime never registered.
+  expect(await page.evaluate(() => 'webpackChunk_N_E' in window)).toBe(false)
   await expectResolvedTheme(page, 'dark')
   await expect(page.locator('html')).toHaveAttribute('style', /color-scheme:\s*dark/)
 })

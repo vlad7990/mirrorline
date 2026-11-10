@@ -76,3 +76,23 @@ export function initialHtmlClass(html: string): string {
 export function hasInlineThemeScript(html: string): boolean {
   return html.includes(THEME_STORAGE_KEY) && html.includes('classList.toggle')
 }
+
+/**
+ * The opening `<script …>` tag of the theme bootstrap, e.g. `<script>`.
+ * Returns null when the bootstrap is not in the document at all.
+ *
+ * Used to prove the bootstrap is a parser-blocking inline script: no `src`, no
+ * `async`, no `defer` and not a module, so it runs before the body is parsed.
+ */
+export function themeBootstrapScriptTag(html: string): string | null {
+  const keyAt = html.indexOf(THEME_STORAGE_KEY)
+  if (keyAt === -1) return null
+
+  const openAt = html.lastIndexOf('<script', keyAt)
+  if (openAt === -1) return null
+
+  const closeAt = html.indexOf('>', openAt)
+  if (closeAt === -1) return null
+
+  return html.slice(openAt, closeAt + 1)
+}
