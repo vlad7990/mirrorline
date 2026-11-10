@@ -6,7 +6,7 @@
  * discount, and no comparison column against anybody else.
  */
 
-import { Card } from '@mirrorline/ui'
+import { Card, cn } from '@mirrorline/ui'
 import { Check } from 'lucide-react'
 import type { Metadata } from 'next'
 
@@ -36,7 +36,6 @@ export default function PricingPage() {
     <>
       <Section size="lg">
         <div className="flex max-w-[52rem] flex-col gap-5">
-          <span className="eyebrow">Pricing</span>
           <h1 className="m-0 font-heading text-headline text-text sm:text-display">
             One flat price a month
           </h1>
@@ -52,63 +51,73 @@ export default function PricingPage() {
         <h2 id="tiers-heading" className="sr-only">
           Tiers
         </h2>
-        <ul className="grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 xl:grid-cols-4">
+        {/* One bordered band, one row per tier, not four equal columns. A price
+            list reads down: the mono figures line up against each other, which
+            is the whole point of comparing them. DESIGN.md "Typography": a
+            price is a figure, so it is set in the machine's voice. */}
+        <ul className="flex list-none flex-col divide-y divide-border rounded-lg border border-border bg-surface p-0">
           {PRICING_TIERS.map((tier) => {
             const isComingLater = tier.comingLaterLabel !== null
 
             return (
-              <Card
-                as="li"
+              <li
                 key={tier.id}
-                padding="lg"
-                selected={tier.isSuggested}
-                className="flex flex-col gap-4"
+                className={cn(
+                  'grid gap-4 p-5 sm:p-6 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_minmax(0,13rem)] lg:items-start lg:gap-8',
+                  tier.isSuggested ? 'bg-accent-soft/40' : null,
+                )}
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="m-0 font-heading text-title text-text">{tier.name}</h3>
-                  {tier.isSuggested ? (
-                    <span className="rounded-full bg-accent-soft px-3 py-1 text-caption font-semibold text-on-accent-soft">
-                      Suggested
+                <div className="flex flex-col gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="m-0 font-heading text-title text-text">{tier.name}</h3>
+                    {tier.isSuggested ? (
+                      <span className="rounded-full bg-accent-soft px-3 py-1 text-caption font-semibold text-on-accent-soft">
+                        Suggested
+                      </span>
+                    ) : null}
+                    {isComingLater ? (
+                      <ComingSoonLabel>{tier.comingLaterLabel}</ComingSoonLabel>
+                    ) : null}
+                  </div>
+                  <p className="m-0 flex flex-wrap items-baseline gap-x-2">
+                    <span className="machine text-metric font-semibold text-text">
+                      {tier.price}
                     </span>
-                  ) : null}
-                  {isComingLater ? (
-                    <ComingSoonLabel>{tier.comingLaterLabel}</ComingSoonLabel>
-                  ) : null}
+                    <span className="text-meta text-text-muted">{tier.period}</span>
+                  </p>
                 </div>
 
-                <p className="m-0">
-                  <span className="tabular font-heading text-headline text-text">{tier.price}</span>{' '}
-                  <span className="text-meta text-text-muted">{tier.period}</span>
-                </p>
+                <div className="flex min-w-0 flex-col gap-3">
+                  <p className="m-0 max-w-[62ch] text-body text-text-muted">{tier.summary}</p>
+                  <ul className="m-0 flex list-none flex-col gap-2 p-0 sm:flex-row sm:flex-wrap sm:gap-x-5">
+                    {tier.includes.map((line) => (
+                      <li key={line} className="flex items-start gap-2 text-meta text-text">
+                        <span className="mt-0.5 text-on-success-soft">
+                          <Check aria-hidden="true" className="size-4" strokeWidth={2.2} />
+                        </span>
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
-                <p className="m-0 text-meta text-text-muted">{tier.summary}</p>
-
-                <ul className="m-0 flex flex-1 list-none flex-col gap-2 p-0">
-                  {tier.includes.map((line) => (
-                    <li key={line} className="flex items-start gap-2 text-meta text-text">
-                      <span className="mt-0.5 text-on-success-soft">
-                        <Check aria-hidden="true" className="size-4" strokeWidth={2.2} />
-                      </span>
-                      {line}
-                    </li>
-                  ))}
-                </ul>
-
-                {isComingLater ? (
-                  <p className="m-0 text-meta text-text-muted">
-                    Not built yet, so there is nothing to buy and no waiting list to join.
-                  </p>
-                ) : (
-                  <LeadDialogButton
-                    intent={tier.id === 'pilot' ? 'pilot' : 'demo'}
-                    variant={tier.isSuggested ? 'primary' : 'secondary'}
-                    size="lg"
-                    fullWidth
-                  >
-                    {tier.id === 'pilot' ? 'Start a pilot' : `Talk about ${tier.name}`}
-                  </LeadDialogButton>
-                )}
-              </Card>
+                <div className="flex flex-col gap-2 lg:items-stretch">
+                  {isComingLater ? (
+                    <p className="m-0 text-meta text-text-muted">
+                      Not built yet, so there is nothing to buy and no waiting list to join.
+                    </p>
+                  ) : (
+                    <LeadDialogButton
+                      intent={tier.id === 'pilot' ? 'pilot' : 'demo'}
+                      variant={tier.isSuggested ? 'primary' : 'secondary'}
+                      size="lg"
+                      fullWidth
+                    >
+                      {tier.id === 'pilot' ? 'Start a pilot' : `Talk about ${tier.name}`}
+                    </LeadDialogButton>
+                  )}
+                </div>
+              </li>
             )
           })}
         </ul>
@@ -120,8 +129,14 @@ export default function PricingPage() {
         <SectionHeading
           id="included-heading"
           eyebrow="Every tier"
-          title="What you get at any price"
-          lead="These are not add-ons. They are how the studio works, so they are in the pilot too."
+          title="The limits do not change with the price"
+          lead={
+            <>
+              These are not add-ons, and they are not a premium plan. They are how the studio is
+              built, so they are in the <span className="machine">$750</span> pilot on the same
+              terms as the <span className="machine">$3,000</span> month.
+            </>
+          }
         />
         <ul className="mt-8 grid list-none grid-cols-1 gap-3 p-0 md:grid-cols-2">
           {ALWAYS_INCLUDED.map((line) => (

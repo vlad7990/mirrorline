@@ -13,6 +13,8 @@
 import { Card, LogoMark, MetricTile, StatusChip } from '@mirrorline/ui'
 import Link from 'next/link'
 
+import { MACHINE_FIGURES } from '@/components/shell/machine-voice'
+import { ViewerPanel } from '@/components/shell/viewer-panel'
 import {
   AGENT_FEED_LINES,
   HOME_METRICS,
@@ -36,8 +38,14 @@ export function HomeMetrics() {
       className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4"
     >
       {HOME_METRICS.map((metric) => (
+        // DESIGN.md "Metric tile": "label in Geist, big number in Geist Mono".
+        // The tile draws its own figure, so the machine's voice reaches it
+        // through the `.tabular` class the library puts on that number. The
+        // label above and the delta sentence below stay in Geist: "On plan:
+        // 9 a day" is the studio talking, not a readout.
         <MetricTile
           key={metric.id}
+          className={MACHINE_FIGURES}
           label={metric.label}
           value={metric.value}
           series={metric.series}
@@ -53,8 +61,8 @@ export function HomeMetrics() {
 /* Today                                                                       */
 /* -------------------------------------------------------------------------- */
 
-/** DESIGN.md "Shapes": "tiny thumbnails 4–6px". */
-const THUMB_CLASSES = 'h-14 w-9 shrink-0 rounded-sm'
+/** DESIGN.md "Shapes": "tiny thumbnails and log rows 4px". */
+const THUMB_CLASSES = 'h-12 w-[27px] rounded-sm'
 
 export function TodayCard() {
   return (
@@ -72,16 +80,18 @@ export function TodayCard() {
         {TODAY_POSTS.map((post) => (
           <li
             key={post.id}
-            className="flex flex-wrap items-center gap-3.5 border-t border-border py-2.5"
+            className="flex flex-wrap items-center gap-3 border-t border-border py-2"
           >
-            <span className="tabular w-[70px] shrink-0 text-label text-text">{post.timeLabel}</span>
+            {/* The slot the Publisher will post in, so it is measured. */}
+            <span className="machine w-[70px] shrink-0 text-label text-text">{post.timeLabel}</span>
             {/* The frame stands in for the video still; the title beside it
-                carries the meaning, so it is hidden from assistive tech. */}
-            <span
-              aria-hidden="true"
-              className={THUMB_CLASSES}
-              style={{ backgroundColor: post.thumbnailColor }}
-            />
+                carries the meaning, so it is hidden from assistive tech.
+                DESIGN.md "Colors — Viewer": a 9:16 frame sits on the lightbox
+                in both themes, so even at this size it gets its mat rather
+                than borrowing the card's surface. */}
+            <ViewerPanel aria-hidden="true" flush className="shrink-0">
+              <span className={THUMB_CLASSES} style={{ backgroundColor: post.thumbnailColor }} />
+            </ViewerPanel>
             <span className="flex min-w-[160px] flex-1 flex-col gap-0.5">
               <span className="text-label font-medium text-text">{post.title}</span>
               <span className="text-caption font-normal text-text-muted">
@@ -114,11 +124,22 @@ export function AgentActivityCard() {
 
       <ol className="m-0 flex list-none flex-col p-0">
         {AGENT_FEED_LINES.map((line) => (
-          <li key={line.id} className="flex gap-2.5 border-t border-border py-2.5">
+          <li key={line.id} className="flex gap-2.5 border-t border-border py-2">
             {/* Decoration only: the time and the agent name are right there. */}
             <span aria-hidden="true" className="mt-1.5 size-2 shrink-0 rounded-full bg-accent" />
             <span className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-caption font-normal text-text-muted">{line.meta}</span>
+              {/* The glass box in miniature: when it ran and what it cost are
+                  the machine's, the agent's name is the studio's. DESIGN.md
+                  "Typography — two voices". */}
+              <span className="text-caption font-normal text-text-muted">
+                <span className="machine">{line.timeLabel}</span> · {line.agentName}
+                {line.costLabel ? (
+                  <>
+                    {' · '}
+                    <span className="machine">{line.costLabel}</span>
+                  </>
+                ) : null}
+              </span>
               <span className="text-label font-normal text-text">{line.message}</span>
             </span>
           </li>

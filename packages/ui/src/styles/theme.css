@@ -215,12 +215,29 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /*
+   * Headings inherit their colour; they do not assert one.
+   *
+   * `body` already sets --color-text, so on a normal page this renders exactly
+   * as `color: var(--color-text)` did. The difference is on the dark surfaces.
+   * A heading inside a `viewer` lightbox or an `ink` panel inherits
+   * --color-on-viewer / --color-on-ink from the container, which is the whole
+   * contract those token pairs exist to express.
+   *
+   * The previous `color: var(--color-text)` defeated that: it beat the
+   * inherited colour on specificity, so a heading on the viewer came out
+   * near-black on near-black — 1.05:1, and axe flags it `serious`. Every
+   * component then had to remember to restate the colour on every heading, and
+   * the one that forgot was silently unreadable. Inheriting makes the surface
+   * responsible for its own foreground, which is how the rest of the system
+   * already works.
+   */
   h1,
   h2,
   h3,
   h4 {
     font-family: var(--font-heading);
-    color: var(--color-text);
+    color: inherit;
   }
 
   /* Metrics line up in columns. DESIGN.md "Typography". */
@@ -391,5 +408,197 @@
 
   .log-in {
     animation: mirrorline-log-in var(--duration-dropdown) var(--ease-out) both;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Overlay motion: dialog, drawer, tooltip, select, toast                  */
+  /* ---------------------------------------------------------------------- */
+
+  /*
+   * Why these are keyframes and not transitions: Radix's Presence only waits
+   * for a CSS *animation* before it unmounts a panel (it reads
+   * getComputedStyle().animationName and listens for animationend). A
+   * transition is ignored, so an exit written as one never plays. Toast is the
+   * one exception below, because it can be retriggered faster than it can
+   * finish and a transition interrupts cleanly where an animation restarts.
+   *
+   * Each pair declares ONE end only. The other end is the element's own
+   * computed style, so a frame never fights the utility that positions it —
+   * which matters, because Tailwind v4 centres the modal with the `translate`
+   * property. Hence the split: the centred panel animates `scale`, the sheets
+   * animate `translate`, and nothing here animates `transform`.
+   *
+   * Nothing enters from scale(0). DESIGN.md's press dip is 3%, and an entrance
+   * starts at 96% for the same reason: a panel that grows out of nothing reads
+   * as a cartoon, not an instrument.
+   */
+
+  @keyframes mirrorline-overlay-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes mirrorline-overlay-out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes mirrorline-content-in {
+    from {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
+
+  @keyframes mirrorline-content-out {
+    to {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
+
+  @keyframes mirrorline-drawer-right-in {
+    from {
+      translate: 100% 0;
+    }
+  }
+
+  @keyframes mirrorline-drawer-right-out {
+    to {
+      translate: 100% 0;
+    }
+  }
+
+  @keyframes mirrorline-drawer-bottom-in {
+    from {
+      translate: 0 100%;
+    }
+  }
+
+  @keyframes mirrorline-drawer-bottom-out {
+    to {
+      translate: 0 100%;
+    }
+  }
+
+  /* The flat ink wash behind a modal. Opacity only: a wash has nowhere to
+     come from. */
+  .overlay-wash[data-state='open'] {
+    animation: mirrorline-overlay-in var(--duration-modal) var(--ease-out);
+  }
+
+  .overlay-wash[data-state='closed'] {
+    animation: mirrorline-overlay-out var(--duration-modal-exit) var(--ease-out);
+  }
+
+  /* The centred modal. DESIGN.md makes modals the exception that stays
+     centred, so this one is deliberately NOT origin-aware. */
+  .overlay-panel[data-state='open'] {
+    animation: mirrorline-content-in var(--duration-modal) var(--ease-out);
+  }
+
+  .overlay-panel[data-state='closed'] {
+    animation: mirrorline-content-out var(--duration-modal-exit) var(--ease-out);
+  }
+
+  /* Sheets. --ease-drawer has the long slow tail that makes a drawer feel
+     attached to the finger rather than fired across the screen. */
+  .overlay-sheet-right[data-state='open'] {
+    animation: mirrorline-drawer-right-in var(--duration-modal) var(--ease-drawer);
+  }
+
+  .overlay-sheet-right[data-state='closed'] {
+    animation: mirrorline-drawer-right-out var(--duration-modal-exit) var(--ease-drawer);
+  }
+
+  .overlay-sheet-bottom[data-state='open'] {
+    animation: mirrorline-drawer-bottom-in var(--duration-modal) var(--ease-drawer);
+  }
+
+  .overlay-sheet-bottom[data-state='closed'] {
+    animation: mirrorline-drawer-bottom-out var(--duration-modal-exit) var(--ease-drawer);
+  }
+
+  /*
+   * Tooltips and popovers, which ARE origin-aware: the component sets
+   * transform-origin from the matching --radix-*-content-transform-origin, so
+   * the panel appears to come out of the control it belongs to instead of out
+   * of its own middle. Radix writes `delayed-open`/`instant-open` for a
+   * tooltip and `open` for a select, so all three are matched here.
+   *
+   * The duration is set by the component, because a tooltip (160ms) and a
+   * select (200ms) are not the same speed.
+   */
+  .overlay-pop[data-state='open'],
+  .overlay-pop[data-state='delayed-open'],
+  .overlay-pop[data-state='instant-open'] {
+    animation: mirrorline-content-in var(--overlay-pop-duration, var(--duration-dropdown))
+      var(--ease-out);
+  }
+
+  .overlay-pop[data-state='closed'] {
+    animation: mirrorline-content-out
+      var(--overlay-pop-exit-duration, var(--duration-dropdown-exit)) var(--ease-out);
+  }
+
+  /*
+   * The toast is a transition, not a keyframe, and @starting-style supplies
+   * the entry state so no mount-then-flip effect is needed. A second
+   * confirmation can land before the first has finished; a transition
+   * interrupts from wherever it is, an animation would restart from the top.
+   *
+   * There is no exit half on purpose. The toast is a polite live region, and
+   * holding its text on screen to animate it out would keep stale wording
+   * exposed to a screen reader after the fact.
+   */
+  .toast-in {
+    transition:
+      opacity var(--duration-dropdown) var(--ease-out),
+      translate var(--duration-dropdown) var(--ease-out);
+  }
+
+  @starting-style {
+    .toast-in {
+      opacity: 0;
+      translate: 0 8px;
+    }
+  }
+
+  /*
+   * Reduced motion. The duration tokens already collapse at :root, which stops
+   * the movement, but a near-zero animation still has to fire and still leaves
+   * the element at its animated scale for a frame. `animation: none` is the
+   * honest version.
+   *
+   * Verified safe against Radix: @radix-ui/react-presence reads
+   * getComputedStyle().animationName and, when it is "none", dispatches UNMOUNT
+   * immediately rather than waiting for an animationend that will never
+   * arrive (react-presence 1.1.11, dist/index.mjs line 66). So the panels still
+   * close.
+   *
+   * `translate` is reset only on the sheets. The centred modal positions itself
+   * with `translate`, so clearing it there would throw the panel off centre.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .overlay-wash,
+    .overlay-panel,
+    .overlay-sheet-right,
+    .overlay-sheet-bottom,
+    .overlay-pop {
+      animation: none !important;
+      scale: 1 !important;
+    }
+
+    .overlay-sheet-right,
+    .overlay-sheet-bottom {
+      translate: none !important;
+    }
+
+    .toast-in {
+      transition: none !important;
+      translate: none !important;
+    }
   }
 }

@@ -60,7 +60,10 @@ export function ScriptPanel({ script, shots }: ScriptPanelProps) {
               key={shot.description}
               className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border py-2.5"
             >
-              <span className="tabular w-4 shrink-0 font-body text-label text-text-muted">
+              {/* The shot-list numbers are the Remake Producer's ordering of
+                  the cut, so they read in the machine's voice. The shot
+                  description and its source chip stay in Geist. */}
+              <span className="machine w-4 shrink-0 text-label text-text-muted">
                 {index + 1}
               </span>
               <span className="min-w-0 flex-1 basis-[200px] text-body text-text">

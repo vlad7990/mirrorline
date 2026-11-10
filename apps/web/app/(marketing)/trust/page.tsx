@@ -7,10 +7,13 @@
  * differentiator, not a disclaimer.
  */
 
-import { Card } from '@mirrorline/ui'
+import { cuts, todaySchedule, weekPosts } from '@mirrorline/mock'
+import { AiLabel, Card, VideoThumb } from '@mirrorline/ui'
 import type { Metadata } from 'next'
+import * as React from 'react'
 
-import { Section, SectionHeading } from '@/components/marketing/primitives'
+import { SampleDataLabel, Section, SectionHeading } from '@/components/marketing/primitives'
+import { ViewerPanel } from '@/components/marketing/viewer-panel'
 
 import { LeadDialogButton } from '../components/lead-form'
 
@@ -24,7 +27,25 @@ interface Rule {
   readonly id: string
   readonly title: string
   readonly paragraphs: readonly string[]
+  /** The machine's half of the rule: a limit, a cap, a figure you can audit. */
+  readonly readout?: React.ReactNode
 }
+
+/** The rule whose claim is shown on a frame rather than only described. */
+const AI_LABEL_RULE_ID = 'ai-labelled'
+
+/**
+ * CLAUDE.md non-negotiable 4. Which cuts carry a generated scene is a property
+ * of the schedule, so it is read back from the posts rather than restated.
+ */
+const AI_LABELLED_CUT = (() => {
+  const labelledIds = new Set(
+    [...todaySchedule, ...weekPosts].flatMap((post) =>
+      post.hasAiScenes && post.cutId !== null ? [post.cutId] : [],
+    ),
+  )
+  return cuts.find((cut) => labelledIds.has(cut.id)) ?? null
+})()
 
 const RULES: readonly Rule[] = [
   {
@@ -74,6 +95,7 @@ const RULES: readonly Rule[] = [
       'Before anything can be scheduled, the Compliance agent checks it against its source, checks the rights and consent records, checks the licence list and checks the AI labels. It answers passed, needs review, or blocked, with the reason in plain words.',
       'You see the same result we do. You can override a block, and the override is logged with your name on it.',
     ],
+    readout: 'similarity limit 30%',
   },
   {
     id: 'honest-numbers',
@@ -98,14 +120,14 @@ export default function TrustPage() {
     <>
       <Section size="lg">
         <div className="flex max-w-[52rem] flex-col gap-5">
-          <span className="eyebrow">Our rules</span>
           <h1 className="m-0 font-heading text-headline text-text sm:text-display">
             The rules we work by, and the ones we will not pretend to
           </h1>
           <p className="m-0 max-w-[62ch] text-body text-text-muted">
-            This page is the whole of it. Seven rules that are built into the product, and a list of
-            things we are not claiming, written plainly, because an agency that is vague here is
-            telling you something.
+            This page is the whole of it. <span className="machine">{RULES.length}</span> rules
+            built into the product, and <span className="machine">{NOT_CLAIMED.length}</span> things
+            we are not claiming, written plainly, because an agency that is vague here is telling
+            you something.
           </p>
         </div>
       </Section>
@@ -119,15 +141,67 @@ export default function TrustPage() {
             <Card as="li" key={rule.id} padding="lg" className="flex flex-col gap-3">
               {/* No "Rule N of 7" counter: the <ol> carries the count for
                   assistive tech, and the rules are not ranked. */}
-              <h3 className="m-0 font-heading text-title text-text">{rule.title}</h3>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h3 className="m-0 font-heading text-title text-text">{rule.title}</h3>
+                {rule.readout ? (
+                  <p className="machine m-0 text-mono text-text-muted">{rule.readout}</p>
+                ) : null}
+              </div>
               {rule.paragraphs.map((paragraph) => (
                 <p key={paragraph} className="m-0 max-w-[68ch] text-body text-text-muted">
                   {paragraph}
                 </p>
               ))}
+              {rule.id === AI_LABEL_RULE_ID && AI_LABELLED_CUT ? (
+                /* The claim, shown. DESIGN.md: a 9:16 frame sits on the viewer
+                   surface, identical in both themes, and the AI label sits on
+                   the frame rather than in the small print. */
+                <ViewerPanel
+                  className="mt-1"
+                  footnote={
+                    <>
+                      Sample data, from Maya Torres Coaching, a fictional demo client. The badge is
+                      the same one you see in the studio.
+                    </>
+                  }
+                  readout={
+                    <>
+                      cut <span className="machine">{AI_LABELLED_CUT.index}</span>, length{' '}
+                      <span className="machine">{AI_LABELLED_CUT.lengthLabel}</span>
+                    </>
+                  }
+                  title="How a generated scene is labelled"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-[132px] shrink-0">
+                      <VideoThumb
+                        aiScene
+                        caption={AI_LABELLED_CUT.hook}
+                        cutNumber={AI_LABELLED_CUT.index}
+                        highlight={AI_LABELLED_CUT.highlightPhrase}
+                        index={AI_LABELLED_CUT.index}
+                        length={AI_LABELLED_CUT.lengthLabel}
+                      />
+                    </div>
+                    <div className="flex min-w-0 flex-col gap-2">
+                      <AiLabel />
+                      <p className="m-0 text-meta text-on-viewer">
+                        The badge rides with the post. Where the platform has its own AI label, we
+                        set that too, and you can ask for the video without the generated scene.
+                      </p>
+                    </div>
+                  </div>
+                </ViewerPanel>
+              ) : null}
             </Card>
           ))}
         </ol>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <SampleDataLabel />
+          <p className="m-0 text-meta text-text-muted">
+            Every figure and frame on this website belongs to a fictional demo client.
+          </p>
+        </div>
       </Section>
 
       <Section aria-labelledby="not-claimed-heading">

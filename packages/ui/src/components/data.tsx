@@ -125,11 +125,21 @@ export function MetricTile({
 }: MetricTileProps) {
   return (
     <Card padding="sm" className={cn('flex flex-col gap-1.5 px-5 py-[18px]', className)} {...props}>
+      {/* The studio's voice: a label is the product naming the thing. Sans. */}
       <span className="text-meta text-text-muted">{label}</span>
-      <span className="tabular font-body text-metric text-text">{value}</span>
+      {/* The machine's voice. `metric` is a Geist Mono token, so the family has
+          to come from `.machine` — `font-body` was quietly overriding it with
+          Geist Sans and losing the whole distinction. `.machine` also carries
+          the tabular figures that the column alignment depends on. */}
+      <span className="machine text-metric text-text">{value}</span>
       {series && series.length > 1 ? <Sparkline values={series} /> : null}
       {delta ? (
-        <span className={cn('text-meta font-semibold', DELTA_TONES[deltaDirection])}>{delta}</span>
+        // A delta is a measurement, so it is mono even though it reads as a
+        // short phrase: "+18% vs last week" is the machine reporting a
+        // comparison it made, and it sits directly under a mono figure.
+        <span className={cn('machine text-meta font-semibold', DELTA_TONES[deltaDirection])}>
+          {delta}
+        </span>
       ) : null}
     </Card>
   )
@@ -189,6 +199,7 @@ export function FunnelBar({
 
         return (
           <div key={step.label} className="flex flex-wrap items-center gap-3.5">
+            {/* The stage name is prose the studio wrote. Sans. */}
             <span className="w-[120px] shrink-0 text-label text-text">{step.label}</span>
             <span
               aria-hidden="true"
@@ -204,10 +215,12 @@ export function FunnelBar({
                 style={{ width: `${percent}%` }}
               />
             </span>
-            <span className="tabular w-20 shrink-0 text-right text-label text-text">
+            {/* Count and step rate are both the machine's. DESIGN.md "Funnel":
+                "counts and step rates in mono, so the real drop-off shows". */}
+            <span className="machine w-20 shrink-0 text-right text-label text-text">
               {formatCount(step.count)}
             </span>
-            <span className="w-[140px] shrink-0 text-meta text-text-muted">{rate}</span>
+            <span className="machine w-[140px] shrink-0 text-meta text-text-muted">{rate}</span>
           </div>
         )
       })}
@@ -293,7 +306,12 @@ export function StatTable<Row>({
                 const classes = cn(
                   'border-t border-border px-3 py-2.5 text-body text-text',
                   column.align === 'right' ? 'text-right' : 'text-left',
-                  column.numeric && 'tabular',
+                  // `numeric` is what marks a column as the machine's output,
+                  // so it now switches the family as well as the figures. The
+                  // text columns stay sans: a post title or a format name is
+                  // the studio talking. The <th> headers stay sans too — a
+                  // column heading is a word, not a measurement.
+                  column.numeric && 'machine',
                 )
                 return column.rowHeader ? (
                   <th key={column.key} scope="row" className={cn(classes, 'font-normal')}>
@@ -394,14 +412,21 @@ export function Heatmap({
         <tbody>
           {rows.map((row) => (
             <tr key={row.label}>
-              <th scope="row" className="text-left text-meta font-normal text-text">
+              {/* A posting time is a clock reading, which DESIGN.md lists
+                  under the machine voice along with costs and timings. */}
+              <th scope="row" className="machine text-left text-meta font-normal text-text">
                 {row.label}
               </th>
               {row.cells.map((cell, index) => (
                 <td
                   key={`${row.label}-${index}`}
                   title={cell.label}
-                  className="h-[22px] rounded-sm"
+                  // The cell's value is the sentence it carries — "Monday 7:30
+                  // am · 1,240 views" — which the shading only decorates. Mono
+                  // on the cell keeps that figure in the machine's voice
+                  // wherever it is read from: the `title`, the screen-reader
+                  // text, or any count a caller renders inside it.
+                  className="machine h-[22px] rounded-sm"
                   style={{ backgroundColor: cellBackground(cell.value) }}
                 >
                   <span className="sr-only">{cell.label}</span>

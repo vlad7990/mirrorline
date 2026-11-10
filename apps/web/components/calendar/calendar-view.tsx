@@ -29,6 +29,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type ReactNode,
   type Ref,
 } from 'react'
 
@@ -204,8 +205,12 @@ export function CalendarView() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1.5">
           <Eyebrow>
-            Publisher agent · {PLATFORM_COUNT} platforms · {MIN_PER_DAY} to {MAX_PER_DAY} posts a
-            day each
+            {/* Counts read off the grid itself, so they are measured. */}
+            Publisher agent · <span className="machine">{PLATFORM_COUNT}</span> platforms ·{' '}
+            <span className="machine">
+              {MIN_PER_DAY} to {MAX_PER_DAY}
+            </span>{' '}
+            posts a day each
           </Eyebrow>
           <h1 className="m-0 font-heading text-headline text-text">
             {FIRST_DAY ? `Week of ${FIRST_DAY.dayOfMonth} ${FIRST_DAY.monthLabel}` : 'This week'}
@@ -305,12 +310,29 @@ function BatchBar({
   onApproveAll,
 }: BatchBarProps) {
   // The counts come from tomorrow's chips, so the sentence changes with them
-  // rather than repeating a number from the mockup.
-  let message = `Tomorrow is approved. The Publisher will post ${readyCount} videos on ${dayLabel}.`
+  // rather than repeating a number from the mockup. The counts themselves are
+  // the Publisher's tally and go mono; the sentence around them is the studio
+  // talking, so it stays in Geist — DESIGN.md "Typography — two voices".
+  const ready = <span className="machine">{readyCount}</span>
+  const pending = <span className="machine">{pendingCount}</span>
+
+  let message: ReactNode = (
+    <>
+      Tomorrow is approved. The Publisher will post {ready} videos on {dayLabel}.
+    </>
+  )
   if (pendingCount > 0 && pendingCount === readyCount) {
-    message = `Tomorrow: ${readyCount} posts ready. All ${pendingCount} need your eye.`
+    message = (
+      <>
+        Tomorrow: {ready} posts ready. All {pending} need your eye.
+      </>
+    )
   } else if (pendingCount > 0) {
-    message = `Tomorrow: ${readyCount} posts ready, ${pendingCount} need your eye.`
+    message = (
+      <>
+        Tomorrow: {ready} posts ready, {pending} need your eye.
+      </>
+    )
   }
 
   return (
@@ -326,10 +348,12 @@ function BatchBar({
       </p>
       <div className="flex flex-wrap items-center gap-2.5">
         {pendingCount > 0 ? (
+          // A button label is the studio talking, so the count inside it stays
+          // in Geist even though the same figure goes mono in the sentence.
           <Button
             variant="primary"
             size="md"
-            className="bg-accent text-ink hover:bg-accent/90"
+            className="press bg-accent text-ink hover:bg-accent/90"
             onClick={onApproveAll}
           >
             Approve all {pendingCount} for tomorrow
@@ -337,7 +361,7 @@ function BatchBar({
         ) : null}
         <Link
           href="/app/results"
-          className="inline-flex min-h-11 items-center rounded-md px-4 text-label text-accent underline-offset-4 hover:underline"
+          className="press inline-flex min-h-11 items-center rounded-md px-4 text-label text-accent underline-offset-4 hover:underline"
         >
           See results
         </Link>

@@ -56,7 +56,9 @@ const connectedPlatformCount = accounts.filter(
 ).length
 
 export function PlanCard() {
-  const priceLabel = `$${workspace.planPriceUsdPerMonth.toLocaleString('en-US')} a month`
+  // Split from "a month" so the amount can take the machine's voice without
+  // dragging the words with it. DESIGN.md "Typography — two voices".
+  const priceAmount = `$${workspace.planPriceUsdPerMonth.toLocaleString('en-US')}`
   const usageLabel = `${workspace.postsUsed} of ${workspace.postsIncluded}`
 
   return (
@@ -64,8 +66,13 @@ export function PlanCard() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <h2 className="m-0 font-heading text-subtitle text-text">{workspace.planName} plan</h2>
+          {/* The price and the two counts are figures; the nouns beside them
+              are the studio's. DESIGN.md "Don't": never set a cost in Geist
+              Sans because it happens to sit in a line of text. */}
           <p className="m-0 text-meta text-text-muted">
-            {priceLabel} · {workspace.postsIncluded} posts · {connectedPlatformCount} platforms
+            <span className="machine">{priceAmount}</span> a month ·{' '}
+            <span className="machine">{workspace.postsIncluded}</span> posts ·{' '}
+            <span className="machine">{connectedPlatformCount}</span> platforms
           </p>
         </div>
 
@@ -88,7 +95,8 @@ export function PlanCard() {
       <div className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-baseline justify-between gap-2 text-meta">
           <span className="text-text-muted">Posts used this month</span>
-          <span className="tabular font-semibold text-text">{usageLabel}</span>
+          {/* The same "63 of 90" readout as the sidebar meter, same voice. */}
+          <span className="machine font-semibold text-text">{usageLabel}</span>
         </div>
         <ProgressBar
           label="Posts used this month"
@@ -104,11 +112,14 @@ export function PlanCard() {
           <li key={invoice.id} className="flex flex-col gap-2 pt-2">
             <Divider />
             <div className="flex flex-wrap items-baseline justify-between gap-2 pb-1 text-meta">
-              <span className="tabular text-text-muted">{invoice.dateLabel}</span>
+              {/* The date and the amount are what the billing record says, so
+                  they read in the machine's voice. The plan name and its
+                  period between them are the studio naming what was sold. */}
+              <span className="machine text-text-muted">{invoice.dateLabel}</span>
               <span className="min-w-0 flex-1 text-text">
                 {invoice.planName}, {invoicePeriodLabel(invoice)}
               </span>
-              <span className="tabular font-semibold text-text">{invoice.amountLabel}</span>
+              <span className="machine font-semibold text-text">{invoice.amountLabel}</span>
             </div>
           </li>
         ))}

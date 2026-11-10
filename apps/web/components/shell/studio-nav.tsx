@@ -35,7 +35,16 @@ export function StudioNav({
                 aria-current={isActive ? 'page' : undefined}
                 onClick={onNavigate}
                 className={[
-                  'flex min-h-touch items-center rounded-md px-3 text-label transition-colors',
+                  'flex min-h-touch items-center rounded-md px-3 text-label',
+                  // DESIGN.md "Motion — Press": a 3% dip on :active, fine
+                  // pointers only, dropped under prefers-reduced-motion. This
+                  // is the ONLY motion the nav gets. The arrival of the screen
+                  // itself stays instant — no fade, no slide, no stagger —
+                  // because moving between studio screens is something a
+                  // person does dozens of times a day, and a transition on it
+                  // would read as lag rather than as feedback. `.press` owns
+                  // the transition shorthand, so the hover tint lands at once.
+                  'press',
                   isActive
                     ? 'bg-accent-soft font-semibold text-on-accent-soft'
                     : 'font-medium text-text-muted hover:bg-surface-subtle hover:text-text',

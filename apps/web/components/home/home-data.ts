@@ -180,16 +180,27 @@ export function postPlatformLine(post: ScheduledPost): string {
 /* Agent activity                                                              */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * One line of the feed, kept in four fields rather than one string.
+ *
+ * DESIGN.md "Typography — two voices" splits a log line down the middle: the
+ * timestamp and the cost are the machine reporting and go in Geist Mono, the
+ * agent's name and what it did are the studio talking and stay in Geist. One
+ * concatenated `meta` string could only ever have been one of the two.
+ */
 export interface AgentFeedLine {
   readonly id: string
-  /** "1:00 pm · Performance Analyst". */
-  readonly meta: string
+  /** "1:00 pm". Mono. */
+  readonly timeLabel: string
+  /** "Performance Analyst". A name, so Geist. */
+  readonly agentName: string
+  /** "$1.84", or null when the step cost nothing. Mono. */
+  readonly costLabel: string | null
   readonly message: string
 }
 
-function feedMessage(entry: AgentLogEntry): string {
-  if (entry.costUsd === null) return entry.message
-  return `${entry.message} (cost $${entry.costUsd.toFixed(2)})`
+function feedCostLabel(entry: AgentLogEntry): string | null {
+  return entry.costUsd === null ? null : `$${entry.costUsd.toFixed(2)}`
 }
 
 /** Newest first. `slice()` keeps the fixture's own order untouched. */
@@ -198,8 +209,10 @@ export const AGENT_FEED_LINES: readonly AgentFeedLine[] = agentFeed
   .reverse()
   .map((entry) => ({
     id: entry.id,
-    meta: `${entry.timeLabel} · ${entry.agentName}`,
-    message: feedMessage(entry),
+    timeLabel: entry.timeLabel,
+    agentName: entry.agentName,
+    costLabel: feedCostLabel(entry),
+    message: entry.message,
   }))
 
 /* -------------------------------------------------------------------------- */

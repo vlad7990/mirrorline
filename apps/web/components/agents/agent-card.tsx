@@ -69,13 +69,17 @@ export function AgentCard({
 
       <div className="flex flex-wrap items-baseline justify-between gap-2 text-meta">
         <span className="text-text-muted">This week</span>
-        <span className="font-semibold text-text">{agent.doneThisWeek}</span>
+        {/* A count the agent produced, so it is the machine's voice. The label
+            beside it is the studio's. */}
+        <span className="machine font-semibold text-text">{agent.doneThisWeek}</span>
       </div>
 
       <div className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-baseline justify-between gap-2 text-meta">
           <span className="text-text-muted">Spend / cap</span>
-          <span className="tabular font-semibold text-text">
+          {/* DESIGN.md "Spend cap": "a mono pill reading spent against limit
+              ('$6 / $25')". Money an agent spent is measured, never prose. */}
+          <span className="machine font-semibold text-text">
             ${agent.spendUsd} / ${agent.capUsd}
           </span>
         </div>
@@ -88,8 +92,12 @@ export function AgentCard({
       </div>
 
       <div className="mt-auto flex flex-wrap items-center justify-between gap-3">
+        {/* DESIGN.md "Motion — Press": a 3% dip on :active, fine pointers
+            only, dropped under prefers-reduced-motion. This is the control
+            that swaps the log beside the grid, so it earns the feedback. */}
         <Button
           variant="secondary"
+          className="press"
           aria-pressed={isSelected}
           aria-controls={logPanelId}
           onClick={() => onSelect(agent.id)}

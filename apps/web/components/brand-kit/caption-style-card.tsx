@@ -4,6 +4,8 @@ import { useId, useState } from 'react'
 import { brandKit } from '@mirrorline/mock'
 import { Card, cn } from '@mirrorline/ui'
 
+import { ViewerPanel } from '@/components/shell/viewer-panel'
+
 /**
  * "Caption style" — three previews of the same line, one of them selected.
  *
@@ -90,28 +92,39 @@ export function CaptionStyleCard() {
                     'flex cursor-pointer flex-col gap-2 rounded-md border-2 border-border p-2',
                     'peer-checked:border-primary',
                     'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary',
+                    // DESIGN.md "Motion — Press": a 3% dip on :active, fine
+                    // pointers only, dropped under prefers-reduced-motion.
+                    'press',
                   )}
                 >
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      'flex aspect-[9/12] items-end rounded-sm p-2.5 text-[15px] leading-tight',
-                      preview.tile,
-                      preview.type,
-                    )}
-                    style={preview.fontFamily ? { fontFamily: preview.fontFamily } : undefined}
-                  >
-                    <span>
-                      {SAMPLE_LEAD}
-                      {preview.highlight ? (
-                        <mark className="rounded-sm bg-demo-sand px-1 text-demo-teal">
-                          {SAMPLE_KEY_PHRASE}
-                        </mark>
-                      ) : (
-                        SAMPLE_KEY_PHRASE
+                  {/* DESIGN.md "Colors — Viewer": a caption preview is the
+                      product's video output, so it is judged on the lightbox
+                      rather than on the card. The mat is the same near-black in
+                      both themes, which is the point here: the three styles
+                      have to be compared against one ground, and two of them
+                      carry light fills that would otherwise read one way on a
+                      white card and another on a dark one. */}
+                  <ViewerPanel aria-hidden="true" flush className="gap-0">
+                    <span
+                      className={cn(
+                        'flex aspect-[9/12] items-end rounded-sm p-2.5 text-[15px] leading-tight',
+                        preview.tile,
+                        preview.type,
                       )}
+                      style={preview.fontFamily ? { fontFamily: preview.fontFamily } : undefined}
+                    >
+                      <span>
+                        {SAMPLE_LEAD}
+                        {preview.highlight ? (
+                          <mark className="rounded-sm bg-demo-sand px-1 text-demo-teal">
+                            {SAMPLE_KEY_PHRASE}
+                          </mark>
+                        ) : (
+                          SAMPLE_KEY_PHRASE
+                        )}
+                      </span>
                     </span>
-                  </span>
+                  </ViewerPanel>
                   <span className="flex flex-col text-caption font-normal text-text">
                     {style.name}
                     {/* The word, not only the border colour, marks the choice. */}

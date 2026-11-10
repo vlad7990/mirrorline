@@ -65,7 +65,7 @@ export function SiteHeader() {
         <button
           type="button"
           onClick={() => setIsDrawerOpen(true)}
-          className="inline-grid size-11 place-items-center rounded-md border border-border-strong bg-surface text-text md:hidden"
+          className="press inline-grid size-11 place-items-center rounded-md border border-border-strong bg-surface text-text md:hidden"
           aria-haspopup="dialog"
           aria-expanded={isDrawerOpen}
         >

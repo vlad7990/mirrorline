@@ -23,7 +23,18 @@ export default function AgentsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        eyebrow={`Your AI team · spend this month $${spend} of $${caps} in caps`}
+        eyebrow={
+          <>
+            {/* DESIGN.md "Spend cap": "It shows wherever an agent can spend
+                money, not only in Settings." The two figures are measured, so
+                they take the machine's voice; the words around them do not. */}
+            Your AI team · spend this month{' '}
+            <span className="machine">
+              ${spend} of ${caps}
+            </span>{' '}
+            in caps
+          </>
+        }
         title="Seven agents, one loop"
       />
 

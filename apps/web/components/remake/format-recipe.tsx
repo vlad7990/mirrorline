@@ -33,7 +33,11 @@ export function FormatRecipe({ beats }: FormatRecipeProps) {
             key={`${beat.startSeconds}-${beat.name}`}
             className="flex gap-3 border-t border-border py-2.5 first:border-t-0 first:pt-0"
           >
-            <span className="tabular w-16 shrink-0 font-body text-caption text-text-muted">
+            {/* Beat timings (0-2 s, 2-8 s) are measurements of the format, so
+                they read in the machine's voice. DESIGN.md "Typography": the
+                mono voice is "everything the agents produced or measured".
+                The beat's name and note beside them stay in Geist. */}
+            <span className="machine w-16 shrink-0 text-caption text-text-muted">
               {beat.timeLabel}
             </span>
             <span className="min-w-0">

@@ -25,6 +25,7 @@ import {
 import { Check, Clock, Loader2 } from 'lucide-react'
 import * as React from 'react'
 
+import { ViewerPanel } from '@/components/shell/viewer-panel'
 import { UploadDropzone } from './upload-dropzone'
 import {
   CUT_ACTIONS,
@@ -55,9 +56,12 @@ export function SourceCard({ showSource }: SourceCardProps) {
 
       {showSource ? (
         <div className="flex items-center gap-3.5">
+          {/* The source's running time is a measurement, so it reads in the
+              machine's voice. DESIGN.md "Typography": timings (0:24, 52:14)
+              are Geist Mono. */}
           <span
             aria-hidden="true"
-            className="tabular flex h-[54px] w-24 shrink-0 items-center justify-center rounded-md bg-demo-teal text-caption text-demo-sand"
+            className="machine flex h-[54px] w-24 shrink-0 items-center justify-center rounded-md bg-demo-teal text-caption text-demo-sand"
           >
             {SOURCE_VIDEO.lengthLabel}
           </span>
@@ -118,6 +122,7 @@ export function PipelineCard({ isRunning }: PipelineCardProps) {
                 state === 'running' && 'shimmer',
               )}
             >
+              {/* The step's name is the studio naming a stage. */}
               <span className="inline-flex items-center gap-1.5 text-caption">
                 <StepIcon state={state} />
                 {/* The tick, the spinner and the clock differ by shape; this
@@ -125,7 +130,15 @@ export function PipelineCard({ isRunning }: PipelineCardProps) {
                 <span className="sr-only">{STEP_STATE_WORDS[state]}: </span>
                 {step.name}
               </span>
-              <span className="text-caption font-normal">{step.detail}</span>
+              {/* Its detail is either what the Multiplier measured ("52 min,
+                  word timings", "12 kept, 9:16", "9 · 2 · 1") or the name of
+                  something the studio chose ("Maya's caption style"). Only the
+                  first kind is the machine reporting, so only it goes mono. */}
+              <span
+                className={cn('text-caption font-normal', step.isMeasured && 'machine')}
+              >
+                {step.detail}
+              </span>
             </li>
           )
         })}
@@ -138,8 +151,18 @@ export function PipelineCard({ isRunning }: PipelineCardProps) {
 /* Cuts grid                                                                   */
 /* -------------------------------------------------------------------------- */
 
-/** DESIGN.md "Layout": "auto-fill grids of 172px-minimum cards for videos". */
-const CUT_GRID_CLASSES = 'grid grid-cols-[repeat(auto-fill,minmax(172px,1fr))] gap-4 sm:gap-5'
+/**
+ * DESIGN.md "Layout": "auto-fill grids of 172px-minimum cards for videos".
+ * The gap tightened by one step from the marketing rhythm — DESIGN.md puts
+ * card gaps at 16–24px and the studio sits at the near end of that band.
+ */
+const CUT_GRID_CLASSES = 'grid grid-cols-[repeat(auto-fill,minmax(172px,1fr))] gap-3.5 sm:gap-4'
+
+/**
+ * DESIGN.md "Motion — Stagger": "up to about six items. Past that it stops
+ * feeling like one gesture." Cuts seven and beyond land with the sixth.
+ */
+const STAGGER_CEILING = 5
 
 export interface CutGridProps {
   cuts: readonly Cut[]
@@ -150,14 +173,24 @@ export interface CutGridProps {
 
 export function CutGrid({ cuts, approvedIds, onToggleApprove, onPreview }: CutGridProps) {
   return (
-    <section aria-label="Cuts" className={CUT_GRID_CLASSES}>
-      {cuts.map((cut) => {
+    // DESIGN.md "Colors — Viewer": "Every 9:16 frame — the preview, the
+    // approvals queue, the player — sits on the viewer surface, and it is the
+    // same near-black in both themes." The cuts grid is the approvals queue,
+    // so it is a lightbox holding a contact sheet: the cards keep their own
+    // surface and every frame is judged against the same near-black, whichever
+    // theme the person approving it happens to be using.
+    <ViewerPanel as="section" aria-label="Cuts" className={cn('gap-0', CUT_GRID_CLASSES)}>
+      {cuts.map((cut, index) => {
         const isApproved = approvedIds.includes(cut.id)
         const status = cutStatus(cut, isApproved)
         return (
           <VideoCard
             key={cut.id}
             selected={isApproved}
+            // DESIGN.md "Motion — Stagger": 60ms a step, capped at the sixth,
+            // so twelve cuts still land as one gesture rather than a cascade.
+            className="log-in stagger"
+            style={{ '--index': Math.min(index, STAGGER_CEILING) } as React.CSSProperties}
             thumb={{
               caption: cut.hook,
               index: cut.index - 1,
@@ -184,7 +217,7 @@ export function CutGrid({ cuts, approvedIds, onToggleApprove, onPreview }: CutGr
           />
         )
       })}
-    </section>
+    </ViewerPanel>
   )
 }
 
@@ -195,8 +228,12 @@ interface CutActionsProps {
   onPreview: (cut: Cut) => void
 }
 
-/** Two 44px buttons that still fit inside a 172px card. */
-const CARD_BUTTON_CLASSES = 'min-w-0 flex-1 px-2'
+/**
+ * Two 44px buttons that still fit inside a 172px card. `press` is DESIGN.md
+ * "Motion — Press": a 3% dip on :active, fine pointers only, dropped under
+ * prefers-reduced-motion.
+ */
+const CARD_BUTTON_CLASSES = 'press min-w-0 flex-1 px-2'
 
 function CutActions({ cut, status, onToggleApprove, onPreview }: CutActionsProps) {
   const secondLabel = secondActionLabel(status)
@@ -278,23 +315,30 @@ export function CutPreviewDialog({ cut, isApproved, onOpenChange }: CutPreviewDi
         <DialogTitle>Cut {cut.index}</DialogTitle>
         <DialogDescription>{cut.complianceReason ?? PASSED_EXPLANATION}</DialogDescription>
         <div className="flex flex-wrap gap-4">
-          <VideoThumb
-            caption={cut.hook}
-            index={cut.index - 1}
-            length={cut.lengthLabel}
-            cutNumber={cut.index}
-            className="w-[150px] shrink-0"
-          />
+          {/* The player. DESIGN.md "Viewer panel": "a near-black lightbox
+              holding the 9:16 frame, in both themes". */}
+          <ViewerPanel className="shrink-0 items-center">
+            <VideoThumb
+              caption={cut.hook}
+              index={cut.index - 1}
+              length={cut.lengthLabel}
+              cutNumber={cut.index}
+              className="w-[150px]"
+            />
+          </ViewerPanel>
           <div className="flex min-w-[180px] flex-1 flex-col items-start gap-2.5">
             <p className="m-0 font-heading text-subtitle text-text">{cut.hook}</p>
+            {/* The format is a name the studio gave this kind of cut; the score
+                and the length are measurements, so only those two go mono. */}
             <p className="m-0 text-meta text-text-muted">
-              {cut.format} · score {cut.score} · {cut.lengthLabel}
+              {cut.format} · score <span className="machine">{cut.score}</span> ·{' '}
+              <span className="machine">{cut.lengthLabel}</span>
             </p>
             <StatusChip status={status} />
           </div>
         </div>
         <DialogClose asChild>
-          <Button variant="secondary" className="self-start">
+          <Button variant="secondary" className="press self-start">
             Close
           </Button>
         </DialogClose>

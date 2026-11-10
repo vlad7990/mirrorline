@@ -97,6 +97,7 @@ Worth clicking during a demo:
 | Lead capture → `POST /api/leads` → `.data/leads.json` (gitignored) | done |
 | GitHub Actions CI: lint, typecheck, test, build, licence check | done, green |
 | Playwright: 87 E2E tests passing; 80 screenshots in docs/screens-built/ | done |
+| "Glass box" design system applied across `packages/ui`, the website and the studio | done |
 
 25 routes build. All figures on every screen are derived from `packages/mock` —
 nothing is hardcoded, so the demo story stays consistent across screens.

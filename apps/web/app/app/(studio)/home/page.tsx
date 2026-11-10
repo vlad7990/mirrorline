@@ -27,7 +27,9 @@ export const metadata: Metadata = { title: 'Home' }
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col gap-7">
+    // DESIGN.md: studio surfaces tighten up relative to marketing. 24px rather
+    // than 28px between the big blocks, still on the 8px grid.
+    <div className="flex flex-col gap-6">
       <PageHeader
         eyebrow={HOME_HEADER.eyebrow}
         title={HOME_HEADER.title}
@@ -41,13 +43,13 @@ export default function HomePage() {
 
       <HomeMetrics />
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="flex min-w-0 flex-col gap-6">
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-w-0 flex-col gap-5">
           <NeedsYouCard />
           <TodayCard />
         </div>
 
-        <aside aria-label="Agents and results" className="flex min-w-0 flex-col gap-6">
+        <aside aria-label="Agents and results" className="flex min-w-0 flex-col gap-5">
           <AgentActivityCard />
           <LearningLoopCard />
         </aside>

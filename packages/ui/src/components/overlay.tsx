@@ -11,6 +11,12 @@
  *
  * Radix Dialog gives us focus trapping, Escape-to-close and an inert
  * background for free; we only style it.
+ *
+ * Motion lives in theme.css, as the `.overlay-*` and `.toast-in` utilities.
+ * The components below only pick which one applies, because Radix supplies the
+ * `data-state` those classes key off. DESIGN.md "Motion": enters use
+ * --ease-out (sheets use --ease-drawer), exits run at the paired exit token —
+ * about 65% of the enter — and nothing enters from scale(0).
  */
 
 import * as DialogPrimitive from '@radix-ui/react-dialog'
@@ -37,7 +43,7 @@ export const DialogOverlay = React.forwardRef<
   return (
     <DialogPrimitive.Overlay
       ref={ref}
-      className={cn('fixed inset-0 z-40 bg-ink/40', className)}
+      className={cn('overlay-wash fixed inset-0 z-40 bg-ink/40', className)}
       {...props}
     />
   )
@@ -71,14 +77,23 @@ export const DialogDescription = React.forwardRef<
 
 export type DialogSide = 'center' | 'right' | 'bottom'
 
+/**
+ * Position and motion together, because which one a panel needs follows from
+ * where it sits. The centred modal animates `scale` only: Tailwind centres it
+ * with the `translate` property, so a sliding keyframe would fight the
+ * centring. The sheets are inset-positioned, which leaves `translate` free for
+ * the slide.
+ */
 const SIDE_CLASSES: Record<DialogSide, string> = {
-  // A centred modal, 16px radius like the wizard panels.
+  // A centred modal, 14px radius like the wizard panels. DESIGN.md makes the
+  // modal the exception that stays centred, so it is not origin-aware: it
+  // grows from its own middle, 96% to 100%.
   center:
-    'left-1/2 top-1/2 w-[min(560px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 rounded-xl',
+    'overlay-panel left-1/2 top-1/2 w-[min(560px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 rounded-xl',
   // The calendar drawer: full height on the right, square against the edge.
-  right: 'inset-y-0 right-0 w-[min(420px,100vw)] rounded-l-xl',
+  right: 'overlay-sheet-right inset-y-0 right-0 w-[min(420px,100vw)] rounded-l-xl',
   // The phone-width sheet.
-  bottom: 'inset-x-0 bottom-0 max-h-[85vh] rounded-t-xl',
+  bottom: 'overlay-sheet-bottom inset-x-0 bottom-0 max-h-[85vh] rounded-t-xl',
 }
 
 export interface DialogContentProps
@@ -167,6 +182,12 @@ export function Tooltip({ content, children, side = 'top', delayDuration = 200 }
           className={cn(
             'z-50 max-w-[260px] rounded-md bg-ink px-2.5 py-1.5',
             'font-body text-meta text-on-ink',
+            // Origin-aware: Radix publishes the corner the content was placed
+            // from, so the hint grows out of the control it describes rather
+            // than out of its own centre. 160ms in, 110ms out.
+            'overlay-pop origin-[var(--radix-tooltip-content-transform-origin)]',
+            '[--overlay-pop-duration:var(--duration-tooltip)]',
+            '[--overlay-pop-exit-duration:var(--duration-tooltip-exit)]',
           )}
         >
           {content}
@@ -299,6 +320,12 @@ export function Toast({
           className={cn(
             'flex items-center gap-3',
             'rounded-lg border border-border bg-surface px-4 py-3 text-text',
+            // A transition, not a keyframe. A second confirmation can arrive
+            // before the first has finished; a transition interrupts from
+            // wherever it is, where an animation would restart from the top.
+            // `@starting-style` in theme.css supplies the entry state, so no
+            // mount-then-flip effect is needed here.
+            'toast-in',
             className,
           )}
           {...props}

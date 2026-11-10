@@ -56,10 +56,10 @@ function Field({ label, htmlFor, hint, children }: FieldProps) {
 function ProviderButtons() {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <Button variant="secondary" size="lg" fullWidth>
+      <Button variant="secondary" size="lg" fullWidth className="press">
         Continue with Google
       </Button>
-      <Button variant="secondary" size="lg" fullWidth>
+      <Button variant="secondary" size="lg" fullWidth className="press">
         Continue with Apple
       </Button>
     </div>
@@ -124,11 +124,11 @@ export function SignInForm() {
           />
         </Field>
 
-        <Button type="submit" variant="primary" fullWidth>
+        <Button type="submit" variant="primary" fullWidth className="press">
           Sign in
         </Button>
 
-        <Button variant="secondary" size="lg" fullWidth onClick={() => setIsLinkSent(true)}>
+        <Button variant="secondary" size="lg" fullWidth className="press" onClick={() => setIsLinkSent(true)}>
           Email me a sign-in link
         </Button>
 
@@ -276,7 +276,7 @@ export function SignUpForm() {
           ) : null}
         </div>
 
-        <Button type="submit" variant="primary" fullWidth>
+        <Button type="submit" variant="primary" fullWidth className="press">
           Create your workspace
         </Button>
 

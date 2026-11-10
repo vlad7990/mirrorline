@@ -31,26 +31,29 @@ const COLUMNS: readonly StatColumn<TopPost>[] = [
     ),
   },
   { key: 'platform', header: 'Platform', cell: (post) => post.platformLabel },
+  // The three numeric columns are what the Performance Analyst measured, so
+  // they read in the machine's voice. DESIGN.md "Typography — two voices": the
+  // hook in the row header and the platform name stay in Geist.
   {
     key: 'views',
     header: 'Views',
     align: 'right',
     numeric: true,
-    cell: (post) => formatCount(post.views),
+    cell: (post) => <span className="machine">{formatCount(post.views)}</span>,
   },
   {
     key: 'clicks',
     header: 'Clicks',
     align: 'right',
     numeric: true,
-    cell: (post) => formatCount(post.clicks),
+    cell: (post) => <span className="machine">{formatCount(post.clicks)}</span>,
   },
   {
     key: 'calls',
     header: 'Calls',
     align: 'right',
     numeric: true,
-    cell: (post) => <span className="font-semibold">{formatCount(post.calls)}</span>,
+    cell: (post) => <span className="machine font-semibold">{formatCount(post.calls)}</span>,
   },
 ]
 

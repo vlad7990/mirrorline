@@ -87,7 +87,15 @@ export function AgentsBoard() {
 
       {selectedAgent ? (
         <div className="w-full xl:w-[340px] xl:shrink-0">
-          <AgentLogPanel id={logPanelId} agent={selectedAgent} entries={selectedEntries} />
+          {/* Keyed on the agent so switching one remounts the list and its
+              60ms stagger replays. DESIGN.md "Agent log line": the lines
+              arrive; they do not simply swap. */}
+          <AgentLogPanel
+            key={selectedAgent.id}
+            id={logPanelId}
+            agent={selectedAgent}
+            entries={selectedEntries}
+          />
         </div>
       ) : null}
     </div>

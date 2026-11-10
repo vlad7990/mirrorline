@@ -8,6 +8,13 @@
  * DESIGN.md "Don't": "Don't show a trend as someone else's video; show the
  * format as an abstract storyboard." StoryboardFrames is that storyboard — it
  * renders empty frames and never an image.
+ *
+ * Everything 9:16 in here sits on the `viewer` surface: ViewerPanel is the
+ * lightbox itself, VideoCard frames a single cut in one, and StoryboardFrames
+ * puts its empty beats on the same near-black. DESIGN.md "Do's": "Put 9:16
+ * video on the viewer surface, in both themes, so footage looks the same to
+ * everyone who approves it." The thumbnail fills stay on their demo brand
+ * colours, which are the one set of hues that are not theme tokens.
  */
 
 import * as React from 'react'
@@ -17,6 +24,80 @@ import { THUMBNAIL_COLORS } from '../tokens'
 import { LogoMark } from './logo'
 import { Card } from './primitives'
 import { AiLabel, StatusChip, type Status } from './status'
+
+/* -------------------------------------------------------------------------- */
+/* ViewerPanel                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/** DESIGN.md "components.viewer-panel" fixes the grid at 1–4 columns of 9:16. */
+const VIEWER_COLUMNS: Record<1 | 2 | 3 | 4, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+}
+
+// `title` is omitted from the HTML attributes: the native one is a tooltip
+// string, ours is the line printed on the viewer.
+export interface ViewerPanelProps extends Omit<React.HTMLAttributes<HTMLElement>, 'title'> {
+  /**
+   * Names the panel for assistive technology, e.g. "Preview". Supplying it
+   * renders a <section>, so the label lands on a real region rather than on a
+   * generic <div> where it would be ignored.
+   */
+  label?: string
+  /** A quiet line above the frames: "Cut 3 of 5", "Sample data". */
+  title?: React.ReactNode
+  /** Controls, badges or captions below the frames. */
+  footer?: React.ReactNode
+  /** How many 9:16 items sit side by side. One by default. */
+  columns?: 1 | 2 | 3 | 4
+  /** Force the tag. Defaults to <section> when `label` is set, else <div>. */
+  as?: 'div' | 'section'
+}
+
+/**
+ * The lightbox. DESIGN.md "Viewer panel": "a near-black lightbox holding the
+ * 9:16 frame, in both themes, with the AI label and any length or cut badges
+ * sitting on it. Controls and captions use on-viewer text."
+ *
+ * It is the same near-black whichever theme the viewer chose, which is the
+ * whole point: two people approving the same cut must see the same cut. That
+ * is also why this is `viewer` and not `ink` — DESIGN.md keeps the two dark
+ * roles separate and forbids substituting one for the other.
+ *
+ * Built on Card's `viewer` tone so the surface is defined in exactly one
+ * place, at the 10px radius and 16px padding DESIGN.md specifies.
+ */
+export function ViewerPanel({
+  label,
+  title,
+  footer,
+  columns = 1,
+  as,
+  className,
+  children,
+  ...props
+}: ViewerPanelProps) {
+  const component = as ?? (label ? 'section' : 'div')
+
+  return (
+    <Card
+      as={component}
+      tone="viewer"
+      padding="sm"
+      aria-label={label}
+      className={cn('flex flex-col gap-3', className)}
+      {...props}
+    >
+      {title ? <p className="m-0 text-meta text-on-viewer/70">{title}</p> : null}
+      <div className={cn('grid gap-2', VIEWER_COLUMNS[columns])}>{children}</div>
+      {footer ? (
+        <div className="flex flex-wrap items-center gap-2 text-meta text-on-viewer/70">{footer}</div>
+      ) : null}
+    </Card>
+  )
+}
 
 /* -------------------------------------------------------------------------- */
 /* VideoThumb                                                                  */
@@ -92,8 +173,10 @@ export const VideoThumb = React.forwardRef<HTMLDivElement, VideoThumbProps>(func
       style={{ backgroundColor: thumbColor(index) }}
       {...props}
     >
+      {/* A length is a timing, which DESIGN.md puts in the machine's voice
+          alongside costs and counts: "timings (0:24, 52:14)". Mono. */}
       {length ? (
-        <span className="absolute left-2.5 top-2.5 rounded-sm bg-on-primary px-1.5 py-0.5 font-body text-caption text-ink">
+        <span className="machine absolute left-2.5 top-2.5 rounded-sm bg-on-primary px-1.5 py-0.5 text-caption text-ink">
           {length}
         </span>
       ) : null}
@@ -109,8 +192,10 @@ export const VideoThumb = React.forwardRef<HTMLDivElement, VideoThumbProps>(func
         </span>
       ) : null}
 
-      {/* Inter Tight 700, white. The frame behind it is always a dark demo
-          colour, so on-primary (#FFFFFF) is right in both themes. */}
+      {/* Geist 700, white, and deliberately NOT mono. A burned-in caption is
+          the client speaking to their audience, not the machine reporting, so
+          it stays in the studio's voice. The frame behind it is always a dark
+          demo colour, so on-primary (#FFFFFF) is right in both themes. */}
       <span className="font-heading text-overlay-caption text-on-primary">
         {renderCaption(caption, highlight)}
       </span>
@@ -156,23 +241,41 @@ export function VideoCard({
   return (
     <Card
       as="article"
+      // The frame around a 9:16 cut is a lightbox, not a page. DESIGN.md
+      // "Do's": "Put 9:16 video on the viewer surface, in both themes, so
+      // footage looks the same to everyone who approves it." The thumbnail
+      // keeps its own demo brand colour; what changes is the surround.
+      tone="viewer"
       padding="none"
       selected={selected}
-      className={cn('flex flex-col gap-2.5 p-2.5', className)}
+      className={cn(
+        'flex flex-col gap-2.5 p-2.5',
+        // Selection is still a 2px border, never a shadow — but the ink border
+        // Card uses by default is almost invisible against the viewer, so it
+        // takes the primary that DESIGN.md "Elevation" offers as the
+        // alternative. tailwind-merge keeps the later border colour.
+        selected && 'border-primary',
+        className,
+      )}
       {...props}
     >
       <VideoThumb {...thumb} />
-      <h3 className="m-0 px-0.5 font-body text-label leading-snug text-text">
+      {/* The hook, repeated as real text. On the viewer, so on-viewer. */}
+      <h3 className="m-0 px-0.5 font-body text-label leading-snug text-on-viewer">
         {title ?? thumb.caption}
       </h3>
       <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
-        <span className="text-caption font-normal text-text-muted">
+        {/* Format is a word, the score is a figure, and they share one line.
+            Sans wins the line: breaking a phrase across two families to catch
+            two digits reads as a typo, and DESIGN.md's tie-break is sans. */}
+        <span className="text-caption font-normal text-on-viewer/70">
           {format}
           {score !== undefined ? ` · score ${score}` : ''}
         </span>
         <StatusChip status={status} />
       </div>
-      {reason ? <p className="m-0 px-0.5 text-meta text-text-muted">{reason}</p> : null}
+      {/* Prose explaining what a human has to look at. Sans. */}
+      {reason ? <p className="m-0 px-0.5 text-meta text-on-viewer/70">{reason}</p> : null}
       {actions ? <div className="flex flex-wrap gap-2 px-0.5 pb-0.5">{actions}</div> : null}
     </Card>
   )
@@ -212,14 +315,22 @@ export function StoryboardFrames({
   return (
     <ol
       aria-label={label}
-      className={cn('m-0 grid list-none grid-cols-4 gap-1.5 p-0', className)}
+      className={cn(
+        // These are 9:16 frames, so they sit on the viewer like every other
+        // 9:16 thing in the product — the same near-black in both themes. It
+        // also does the honest thing visually: an empty frame on the viewer
+        // reads as a slot waiting for footage, where an empty frame on the
+        // page read as a broken image.
+        'm-0 grid list-none grid-cols-4 gap-1.5 rounded-lg bg-viewer p-2 text-on-viewer',
+        className,
+      )}
       {...props}
     >
       {beats.map((beat, index) => (
         <li key={`${beat.label}-${index}`} className="flex flex-col gap-1">
           <span
             aria-hidden="true"
-            className="flex aspect-[9/16] items-end rounded-sm border border-border-strong bg-background p-1"
+            className="flex aspect-[9/16] items-end rounded-sm border border-on-viewer/20 bg-on-viewer/5 p-1"
           >
             <span
               className={cn(
@@ -228,7 +339,8 @@ export function StoryboardFrames({
               )}
             />
           </span>
-          <span className="text-caption font-normal leading-tight text-text-muted">
+          {/* The beat name is the studio describing a format. Sans. */}
+          <span className="text-caption font-normal leading-tight text-on-viewer/70">
             {beat.label}
           </span>
         </li>

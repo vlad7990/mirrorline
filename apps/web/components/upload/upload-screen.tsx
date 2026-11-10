@@ -38,7 +38,7 @@ import {
   countCuts,
   cutsForFilter,
   scheduleLabel,
-  summaryLine,
+  summaryParts,
 } from './upload-data'
 
 export interface UploadScreenProps {
@@ -75,17 +75,28 @@ export function UploadScreen({ state }: UploadScreenProps) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    // DESIGN.md: studio surfaces tighten up relative to marketing, so the
+    // stack sits at 20px rather than 24px. Still on the 8px grid at 2.5 steps.
+    <div className="flex flex-col gap-5">
       <PageHeader
         eyebrow={UPLOAD_HEADER.eyebrow}
         title={isEmpty || isError ? UPLOAD_HEADER.titleWithoutCuts : UPLOAD_HEADER.title}
         action={
           isReady ? (
             <div className="flex flex-wrap items-center gap-2.5">
+              {/* The counts are the Multiplier's tally, the words beside them
+                  are the studio's. DESIGN.md "Typography — two voices". */}
               <span role="status" className="text-label font-normal text-text-muted">
-                {summaryLine(counts)}
+                {summaryParts(counts).map((part, index) => (
+                  <React.Fragment key={part.label}>
+                    {index > 0 ? ' · ' : null}
+                    <span className="machine">{part.figure}</span> {part.label}
+                  </React.Fragment>
+                ))}
               </span>
-              <Button asChild variant="primary">
+              {/* A button label is the studio talking, so it stays in Geist
+                  even though it carries a figure. */}
+              <Button asChild variant="primary" className="press">
                 <Link href="/app/calendar">{scheduleLabel(counts)}</Link>
               </Button>
             </div>
@@ -107,7 +118,7 @@ export function UploadScreen({ state }: UploadScreenProps) {
         />
       ) : null}
 
-      <div className="flex flex-wrap items-stretch gap-5">
+      <div className="flex flex-wrap items-stretch gap-4">
         <SourceCard showSource={!isEmpty && !isError} />
         {isReady || isLoading ? <PipelineCard isRunning={isLoading} /> : null}
       </div>

@@ -10,6 +10,8 @@
 import { hookTypeRanking, metrics, weekDays } from '@mirrorline/mock'
 import { Card, Heatmap, cn, type HeatmapRow } from '@mirrorline/ui'
 
+import { MACHINE_HEATMAP_TIMES } from '@/components/shell/machine-voice'
+
 function formatCount(value: number): string {
   return value.toLocaleString('en-US')
 }
@@ -33,8 +35,11 @@ export function HookRankingCard() {
           return (
             <li key={hook.id} className="flex flex-col gap-1">
               <div className="flex items-baseline justify-between gap-3 text-label font-normal">
+                {/* The hook type is a name the studio gave a kind of opening;
+                    its average is measured. DESIGN.md "Typography — two
+                    voices": one stays Geist, the other goes mono. */}
                 <span className={cn('text-text', isWinner && 'font-bold')}>{hook.label}</span>
-                <span className="tabular text-text">{formatCount(hook.averageViews)}</span>
+                <span className="machine text-text">{formatCount(hook.averageViews)}</span>
               </div>
               <span
                 aria-hidden="true"
@@ -98,6 +103,10 @@ export function BestTimesCard() {
         Best times
       </h2>
       <Heatmap
+        // The row headings are clock times, which DESIGN.md groups with costs
+        // and timings in the machine's voice. The day initials across the top
+        // are words, so they stay in Geist.
+        className={MACHINE_HEATMAP_TIMES}
         caption="Views per post by posting time and day of the week"
         captionHidden
         columnLabels={HEATMAP_COLUMNS}

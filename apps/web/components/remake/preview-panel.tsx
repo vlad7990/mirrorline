@@ -12,6 +12,8 @@
 import { Card, VideoThumb, cn } from '@mirrorline/ui'
 import * as React from 'react'
 
+import { ViewerPanel } from '@/components/shell/viewer-panel'
+
 export interface PreviewPanelProps {
   /** The three hooks. The checked one is burned into the preview. */
   hooks: readonly string[]
@@ -45,12 +47,21 @@ export function PreviewPanel({
         3 · Preview
       </h2>
 
-      <VideoThumb
-        caption={selectedHook}
-        aiScene
-        className="w-full max-w-[220px] self-center"
-        footnote={`${lengthLabel} · ${handle}`}
-      />
+      {/* DESIGN.md "Viewer panel": "a near-black lightbox holding the 9:16
+          frame, in both themes, with the AI label and any length or cut badges
+          sitting on it." The lightbox does not follow the theme, so this cut
+          looks the same to whoever approves it. The length under the frame is a
+          measurement and goes mono; the handle beside it is a name. */}
+      <ViewerPanel
+        className="items-center self-center"
+        footer={
+          <>
+            <span className="machine">{lengthLabel}</span> · {handle}
+          </>
+        }
+      >
+        <VideoThumb caption={selectedHook} aiScene className="w-full max-w-[200px]" />
+      </ViewerPanel>
 
       <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
         <legend className="mb-2 p-0 font-body text-label text-text">Hooks to A/B test</legend>
@@ -63,7 +74,12 @@ export function PreviewPanel({
               key={hook}
               className={cn(
                 'flex cursor-pointer items-center rounded-md border-2 px-3 py-2.5',
-                'font-body text-body transition-colors duration-150',
+                'font-body text-body',
+                // DESIGN.md "Motion — Press": a 3% dip on :active, fine
+                // pointers only, dropped under prefers-reduced-motion. It
+                // replaces the hover colour fade on this label, because
+                // `.press` owns the transition shorthand.
+                'press',
                 // The input is visually hidden, so the ring has to follow it
                 // onto the label. `outline-2` carries the solid style.
                 'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2',

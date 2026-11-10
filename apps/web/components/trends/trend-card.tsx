@@ -29,9 +29,11 @@ export function TrendCard({ trend }: TrendCardProps) {
         <span className="rounded-full bg-neutral-soft px-2.5 py-1 font-body text-caption text-on-neutral-soft">
           {trend.fromNiche}
         </span>
-        {/* The green is decoration; the words carry the meaning. */}
-        <span className="tabular font-body text-label text-on-success-soft">
-          <span className="sr-only">7-day growth </span>
+        {/* The green is decoration; the words carry the meaning. The figure
+            itself is what the Trend Scout measured, so it goes mono, while the
+            niche chip beside it stays in Geist — that is a name. */}
+        <span className="machine text-label text-on-success-soft">
+          <span className="font-body sr-only">7-day growth </span>
           {trend.growthLabel}
         </span>
       </div>
@@ -54,10 +56,13 @@ export function TrendCard({ trend }: TrendCardProps) {
           label={fitLabel}
           valueText={`${trend.fit} out of ${FIT_MAX}`}
         />
-        <span className="tabular shrink-0 font-body text-label text-text">{trend.fit}</span>
+        {/* A fit score, measured against this brand. */}
+        <span className="machine shrink-0 text-label text-text">{trend.fit}</span>
       </div>
 
-      <Button asChild variant="primary" fullWidth>
+      {/* DESIGN.md "Motion — Press": a 3% dip on :active, fine pointers only,
+          dropped under prefers-reduced-motion. */}
+      <Button asChild variant="primary" className="press" fullWidth>
         <Link href={`/app/remake/${trend.id}`}>
           Remake for my brand
           <span className="sr-only">: {trend.format}</span>

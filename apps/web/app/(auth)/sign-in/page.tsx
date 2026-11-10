@@ -25,7 +25,6 @@ export default function SignInPage() {
       {/* Form ----------------------------------------------------------- */}
       <Card padding="lg" className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
-          <span className="eyebrow">Sign in</span>
           <h1 className="m-0 font-heading text-headline text-text">Welcome back</h1>
           <p className="m-0 max-w-[48ch] text-body text-text-muted">
             Pick up where you left off: today&rsquo;s cuts, what needs your eye, and what is going
@@ -54,7 +53,9 @@ export default function SignInPage() {
                 key={post.id}
                 className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md bg-surface-subtle px-3 py-2.5"
               >
-                <span className="tabular w-[72px] shrink-0 text-meta text-text-muted">
+                {/* A posting time is something the machine decided, so it is
+                    set in the machine's voice. DESIGN.md "Typography". */}
+                <span className="machine w-[72px] shrink-0 text-mono text-text-muted">
                   {post.timeLabel}
                 </span>
                 <span className="min-w-0 flex-1 text-meta text-text">
@@ -68,7 +69,9 @@ export default function SignInPage() {
           <div className="flex flex-col gap-2 border-t border-border pt-4">
             {/* All seven, because the heading says seven. They are short pills,
                 so the column still fits. */}
-            <h3 className="eyebrow m-0">The seven agents</h3>
+            <h3 className="m-0 font-heading text-label text-text">
+              All <span className="machine">{agents.length}</span> agents, right now
+            </h3>
             <ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-2 p-0">
               {agents.map((agent) => (
                 <li key={agent.id} className="flex items-center gap-2">

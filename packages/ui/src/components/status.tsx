@@ -108,7 +108,15 @@ export interface StatusChipProps extends React.HTMLAttributes<HTMLSpanElement> {
   withDot?: boolean
 }
 
-/** Soft background, dark text, fully rounded, caption type, always a word. */
+/**
+ * Soft background, dark text, fully rounded, caption type, always a word.
+ *
+ * Deliberately sans, and it stays that way. A chip carries a status word, and
+ * a status word is the studio telling you where something stands — not a
+ * figure the machine measured. "Passed" in Geist Mono would be claiming to be
+ * an audit trail. Even the `children` override ("Needs review · 2") stays
+ * sans: the count there qualifies the word, it is not a measurement on its own.
+ */
 export function StatusChip({
   status,
   children,

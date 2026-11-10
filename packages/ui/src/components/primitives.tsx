@@ -29,7 +29,12 @@ const buttonVariants = cva(
   [
     'inline-flex items-center justify-center gap-2 whitespace-nowrap',
     'rounded-md font-body text-label font-semibold',
-    'transition-colors duration-150',
+    // DESIGN.md "Motion": the tokens, never a hand-written duration or a bare
+    // CSS keyword. `.press` adds the 3% dip on :active — it carries its own
+    // `transition: transform var(--duration-press) var(--ease-out)`, the
+    // (hover: hover) and (pointer: fine) gate, and the reduced-motion opt-out
+    // that drops the transform rather than merely speeding it up.
+    'press transition-colors duration-[var(--duration-press)] ease-out',
     'disabled:pointer-events-none disabled:opacity-55',
   ].join(' '),
   {
@@ -142,6 +147,17 @@ const cardVariants = cva('rounded-lg border', {
       surface: 'border-border bg-surface text-text',
       /** The dark insight panel. At most one or two per screen. */
       ink: 'border-ink bg-ink text-on-ink',
+      /**
+       * The lightbox. For a card whose subject is a 9:16 frame, so the video
+       * reads as being in a viewer rather than on a page.
+       *
+       * Not interchangeable with `ink`. DESIGN.md "Elevation & Depth" names
+       * three dark roles in order of depth and then says "Do not substitute
+       * one for another": `ink` is an emphasis panel that belongs to the page
+       * and follows the theme, `viewer` is the same near-black in both themes
+       * so a client's footage never changes colour under someone's approval.
+       */
+      viewer: 'border-viewer bg-viewer text-on-viewer',
       /** A quiet inset block inside another card. */
       subtle: 'border-border bg-surface-subtle text-text',
       /** An empty slot waiting for content. */
@@ -337,7 +353,15 @@ export function ProgressBar({
       {...props}
     >
       <div
-        className={cn('rounded-full bg-accent transition-[width] duration-300', PROGRESS_HEIGHT)}
+        className={cn(
+          'rounded-full bg-accent',
+          // A bar that is already on screen moving to a new value, which is
+          // what --ease-in-out is for. DESIGN.md caps UI motion at 300ms and
+          // the old hand-written 300ms sat right on the ceiling; the dropdown
+          // token (200ms) is the honest speed for a value changing.
+          'transition-[width] duration-[var(--duration-dropdown)] ease-in-out',
+          PROGRESS_HEIGHT,
+        )}
         style={{ width: `${percent}%` }}
       />
     </div>

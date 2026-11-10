@@ -69,7 +69,9 @@ export function RemakeStudio({ trend, recipe, plan }: RemakeStudioProps) {
   const shots = buildShotList(plan)
 
   return (
-    <div className="flex flex-col gap-6">
+    // DESIGN.md: studio surfaces tighten up relative to marketing. 20px, still
+    // on the 8px grid at 2.5 steps.
+    <div className="flex flex-col gap-5">
       <PageHeader
         eyebrow={
           <Link
@@ -80,18 +82,28 @@ export function RemakeStudio({ trend, recipe, plan }: RemakeStudioProps) {
           </Link>
         }
         title={`Remake: ${trend.format}`}
-        description={`Remake Producer agent · format from ${trend.fromNiche} (${trend.growthLabel}) · made for ${workspace.name}`}
+        description={
+          <>
+            {/* The niche and the workspace are names; the 7-day growth figure
+                is what the Trend Scout measured, so only it goes mono. */}
+            Remake Producer agent · format from {trend.fromNiche} (
+            <span className="machine">{trend.growthLabel}</span>) · made for {workspace.name}
+          </>
+        }
         action={
           // The page header holds its action in a shrink-0 box, so the row
           // needs a cap of its own to wrap instead of widening the page.
           <div className="flex max-w-[calc(100vw-72px)] flex-wrap items-center gap-2 lg:max-w-none">
-            <Button asChild variant="tertiary">
+            {/* DESIGN.md "Motion — Press": every pressable dips 3% on :active,
+                on fine pointers only, and drops the transform entirely under
+                prefers-reduced-motion. */}
+            <Button asChild variant="tertiary" className="press">
               <Link href="/app/trends">Discard</Link>
             </Button>
-            <Button variant="secondary" onClick={() => setIsEditing(true)}>
+            <Button variant="secondary" className="press" onClick={() => setIsEditing(true)}>
               Edit script
             </Button>
-            <Button variant="primary" onClick={approve} disabled={isApproved}>
+            <Button variant="primary" className="press" onClick={approve} disabled={isApproved}>
               Approve and make 5 variants
             </Button>
           </div>

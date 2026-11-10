@@ -9,6 +9,7 @@
 
 import { Card } from '@mirrorline/ui'
 import type { Metadata } from 'next'
+import * as React from 'react'
 
 import { SignUpForm } from '../components/auth-forms'
 
@@ -48,7 +49,6 @@ export default function SignUpPage() {
       {/* Form ----------------------------------------------------------- */}
       <Card padding="lg" className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
-          <span className="eyebrow">Create an account</span>
           <h1 className="m-0 font-heading text-headline text-text">Set up your studio</h1>
           <p className="m-0 max-w-[48ch] text-body text-text-muted">
             One workspace for your brand, your accounts and your videos. Nothing posts until you
@@ -66,8 +66,15 @@ export default function SignUpPage() {
           </h2>
           <ol className="m-0 flex list-none flex-col gap-4 p-0">
             {STEPS.map((step, index) => (
-              <li key={step.id} className="flex gap-3">
-                <span className="tabular grid size-7 shrink-0 place-items-center rounded-full bg-accent-soft text-caption font-semibold text-on-accent-soft">
+              <li
+                key={step.id}
+                className="log-in stagger flex gap-3"
+                style={{ '--index': index } as React.CSSProperties}
+              >
+                <span
+                  aria-hidden="true"
+                  className="machine grid size-7 shrink-0 place-items-center rounded-full bg-accent-soft text-caption font-semibold text-on-accent-soft"
+                >
                   {index + 1}
                 </span>
                 <span className="flex flex-col gap-1">

@@ -81,7 +81,9 @@ export function LeadDialogButton({
         variant={variant}
         size={size}
         fullWidth={fullWidth}
-        className={className}
+        /* DESIGN.md "Motion — Press": the one press affordance, on fine
+           pointers only, dropped under prefers-reduced-motion. */
+        className={cn('press', className)}
         onClick={() => setOpen(true)}
       >
         {children ?? copy.buttonLabel}
@@ -208,7 +210,14 @@ function LeadForm({ intent, onDone }: LeadFormProps) {
         />
       </Field>
 
-      <Button type="submit" variant="primary" fullWidth loading={isSending} loadingLabel="Sending">
+      <Button
+        type="submit"
+        variant="primary"
+        fullWidth
+        className="press"
+        loading={isSending}
+        loadingLabel="Sending"
+      >
         {isSending ? 'Sending' : copy.submitLabel}
       </Button>
 

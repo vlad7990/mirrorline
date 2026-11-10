@@ -25,7 +25,9 @@ const FIELD_SHELL = [
   'w-full rounded-md border border-border-strong bg-surface',
   'px-3 font-body text-body text-text',
   'placeholder:text-text-muted',
-  'transition-colors duration-150',
+  // The tokens, not a hand-written 150ms. DESIGN.md "Motion": explicit curves,
+  // because the CSS keywords are too weak to read as intent.
+  'transition-colors duration-[var(--duration-press)] ease-out',
   'hover:border-text-muted',
   'disabled:cursor-not-allowed disabled:opacity-55',
   'aria-[invalid=true]:border-danger',
@@ -169,6 +171,10 @@ export function Select({
           className={cn(
             'z-50 max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden',
             'rounded-md border border-border bg-surface text-text',
+            // Origin-aware, like the tooltip: the listbox grows out of the
+            // trigger it belongs to. Dropdown speed — 200ms in, 130ms out,
+            // which is the `.overlay-pop` default.
+            'overlay-pop origin-[var(--radix-select-content-transform-origin)]',
           )}
         >
           <SelectPrimitive.Viewport className="p-1">
@@ -216,6 +222,9 @@ export const Checkbox = React.forwardRef<
       ref={ref}
       className={cn(
         'inline-grid size-11 shrink-0 place-items-center rounded-md bg-transparent',
+        // Pressable, so it dips 3% on a fine pointer. `.press` carries the
+        // transition, the hover/pointer gate and the reduced-motion opt-out.
+        'press',
         'disabled:cursor-not-allowed disabled:opacity-55',
         className,
       )}
@@ -225,7 +234,7 @@ export const Checkbox = React.forwardRef<
         aria-hidden="true"
         className={cn(
           'grid size-5 place-items-center rounded-sm border border-border-strong bg-surface',
-          'transition-colors duration-150',
+          'transition-colors duration-[var(--duration-press)] ease-out',
         )}
       >
         {/* Checked state: primary fill with the white tick. */}
@@ -255,8 +264,10 @@ export const Switch = React.forwardRef<
       className={cn(
         // A 52x30 track; put it in a 44px row to keep the touch target.
         'inline-flex h-[30px] w-[52px] shrink-0 items-center rounded-full border border-border-strong p-0.5',
-        'bg-neutral-soft transition-colors duration-150',
+        'bg-neutral-soft transition-colors duration-[var(--duration-press)] ease-out',
         'data-[state=checked]:border-primary data-[state=checked]:bg-primary',
+        // The track dips with the press; the thumb below travels on its own.
+        'press',
         'disabled:cursor-not-allowed disabled:opacity-55',
         className,
       )}
@@ -264,7 +275,10 @@ export const Switch = React.forwardRef<
     >
       <SwitchPrimitive.Thumb
         className={cn(
-          'block size-6 rounded-full bg-surface transition-transform duration-150',
+          'block size-6 rounded-full bg-surface',
+          // The thumb is already on screen and moving somewhere else, which is
+          // exactly what --ease-in-out is for. DESIGN.md "Motion".
+          'transition-transform duration-[var(--duration-press)] ease-in-out',
           'data-[state=checked]:translate-x-[22px]',
         )}
       />
@@ -379,7 +393,11 @@ export function SegmentedControl({
       className={cn('inline-flex gap-1 rounded-lg bg-neutral-soft p-1', className)}
     >
       {items.map((item) => (
-        <label key={item.value} className="relative inline-flex">
+        /* `.press` sits on the label, not on the span below: the radio covers
+           the whole segment, so the label is the element the pointer actually
+           presses, and the utility already carries the fine-pointer gate and
+           the reduced-motion opt-out. */
+        <label key={item.value} className="press relative inline-flex">
           {/* Invisible but laid over the whole segment, not `sr-only`: a click
               anywhere on the segment lands on the real radio, and the styling
               below still keys off it as the sibling `peer`. */}
@@ -397,7 +415,8 @@ export function SegmentedControl({
           <span
             className={cn(
               'inline-flex h-10 items-center justify-center rounded-md px-4',
-              'font-body text-label text-text-muted transition-colors duration-150',
+              'font-body text-label text-text-muted',
+              'transition-colors duration-[var(--duration-press)] ease-out',
               'peer-checked:bg-surface peer-checked:text-text',
               'peer-checked:shadow-[var(--shadow-segment)]',
               'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2',

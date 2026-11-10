@@ -15,6 +15,8 @@ import { workspace } from '@mirrorline/mock'
 import { AiLabel, Button, Label, StatusChip, Switch, Textarea } from '@mirrorline/ui'
 import { useId, useState } from 'react'
 
+import { ViewerPanel } from '@/components/shell/viewer-panel'
+
 /** Statuses that are already settled; approving them again would say nothing. */
 const SETTLED_STATUSES: readonly PostStatus[] = ['approved', 'published', 'published-private']
 
@@ -57,18 +59,25 @@ export function PostPanel({ post, status, dayLabel, onApprove, onSendBack }: Pos
     <div className="flex min-w-0 flex-col gap-3.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-meta text-text-muted">
-          {dayLabel} · {post.timeLabel} · {post.platformLabel}
+          {/* The day and the platform are names; the slot time is the
+              Publisher's, so only it goes mono. */}
+          {dayLabel} · <span className="machine">{post.timeLabel}</span> · {post.platformLabel}
         </span>
         <StatusChip status={status} />
       </div>
 
-      <div
-        className="relative mx-auto flex aspect-[9/16] w-[180px] max-w-full flex-col justify-end rounded-lg p-3.5"
-        style={{ backgroundColor: post.thumbnailColor }}
-      >
-        {isAiLocked ? <AiLabel className="absolute right-2.5 top-2.5" /> : null}
-        <span className="font-heading text-overlay-caption text-on-primary">{post.title}</span>
-      </div>
+      {/* DESIGN.md "Colors — Viewer": the approvals queue sits on the lightbox,
+          "the same near-black in both themes", so whoever approves this post
+          judges the same frame whichever theme they happen to be using. */}
+      <ViewerPanel className="items-center">
+        <div
+          className="relative flex aspect-[9/16] w-[170px] max-w-full flex-col justify-end rounded-thumb p-3.5"
+          style={{ backgroundColor: post.thumbnailColor }}
+        >
+          {isAiLocked ? <AiLabel className="absolute right-2.5 top-2.5" /> : null}
+          <span className="font-heading text-overlay-caption text-on-primary">{post.title}</span>
+        </div>
+      </ViewerPanel>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={captionId}>Caption</Label>
@@ -112,13 +121,16 @@ export function PostPanel({ post, status, dayLabel, onApprove, onSendBack }: Pos
         </p>
       ) : null}
 
+      {/* DESIGN.md "Motion — Press": the two decisions dip 3% on :active, on
+          fine pointers only, dropped under prefers-reduced-motion. */}
       <div className="flex gap-2">
-        <Button variant="secondary" fullWidth onClick={() => onSendBack(post.id)}>
+        <Button variant="secondary" className="press" fullWidth onClick={() => onSendBack(post.id)}>
           Send back
         </Button>
         <Button
           variant="primary"
           size="md"
+          className="press"
           fullWidth
           disabled={isSettled}
           onClick={() => onApprove(post.id)}

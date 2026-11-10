@@ -98,6 +98,13 @@ export interface PipelineStep {
   readonly id: string
   readonly name: string
   readonly detail: string
+  /**
+   * True when `detail` is something the Multiplier measured, and so belongs in
+   * the machine's voice. False when it names a studio choice instead —
+   * DESIGN.md "Typography": "Never set a sentence of product copy in mono to
+   * look technical."
+   */
+  readonly isMeasured: boolean
 }
 
 /** Candidate moments the Multiplier looked at before keeping twelve. */
@@ -111,14 +118,33 @@ export const PIPELINE_STEPS: readonly PipelineStep[] = [
     id: 'transcribing',
     name: 'Transcribing',
     detail: `${Math.round(sourceVideo.durationSeconds / SECONDS_IN_MINUTE)} min, word timings`,
+    isMeasured: true,
   },
-  { id: 'finding', name: 'Finding moments', detail: `${CANDIDATE_MOMENTS} candidates` },
-  { id: 'cutting', name: 'Cutting', detail: `${cuts.length} kept, ${CUT_ASPECT}` },
-  { id: 'captioning', name: 'Captioning', detail: `${ownerFirstName}’s caption style` },
+  {
+    id: 'finding',
+    name: 'Finding moments',
+    detail: `${CANDIDATE_MOMENTS} candidates`,
+    isMeasured: true,
+  },
+  {
+    id: 'cutting',
+    name: 'Cutting',
+    detail: `${cuts.length} kept, ${CUT_ASPECT}`,
+    isMeasured: true,
+  },
+  {
+    id: 'captioning',
+    name: 'Captioning',
+    // The one step whose detail is a name, not a figure: it says which caption
+    // style was applied, which is the studio talking.
+    detail: `${ownerFirstName}’s caption style`,
+    isMeasured: false,
+  },
   {
     id: 'compliance',
     name: 'Compliance check',
     detail: `${cutSummary.passed} · ${cutSummary.needsReview} · ${cutSummary.blocked}`,
+    isMeasured: true,
   },
 ]
 
@@ -239,12 +265,30 @@ export function countCuts(approvedIds: readonly string[]): CutCounts {
   }
 }
 
-/** "12 cuts ready · 9 passed · 2 need your eye · 1 blocked". */
-export function summaryLine(counts: CutCounts): string {
-  const parts = [`${counts.total} cuts ready`, `${counts.passed} passed`]
-  if (counts.approved > 0) parts.push(`${counts.approved} approved`)
-  parts.push(`${counts.needsReview} need your eye`, `${counts.blocked} blocked`)
-  return parts.join(' · ')
+/**
+ * One clause of the summary, split so the count can take the machine's voice
+ * while the words beside it stay the studio's. DESIGN.md "Typography — two
+ * voices": the count is measured, "need your eye" is us talking.
+ */
+export interface CutSummaryPart {
+  /** The figure, e.g. "12". Rendered in Geist Mono. */
+  readonly figure: string
+  /** What it counts, e.g. "cuts ready". Rendered in Geist. */
+  readonly label: string
+}
+
+/** "12 cuts ready · 9 passed · 2 need your eye · 1 blocked", in clauses. */
+export function summaryParts(counts: CutCounts): readonly CutSummaryPart[] {
+  const parts: CutSummaryPart[] = [
+    { figure: `${counts.total}`, label: 'cuts ready' },
+    { figure: `${counts.passed}`, label: 'passed' },
+  ]
+  if (counts.approved > 0) parts.push({ figure: `${counts.approved}`, label: 'approved' })
+  parts.push(
+    { figure: `${counts.needsReview}`, label: 'need your eye' },
+    { figure: `${counts.blocked}`, label: 'blocked' },
+  )
+  return parts
 }
 
 export function scheduleLabel(counts: CutCounts): string {

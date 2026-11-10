@@ -16,7 +16,10 @@ export function UsageMeter({ className }: { className?: string }) {
     <div className={className}>
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-meta text-text-muted">Posts this month</span>
-        <span className="tabular text-meta font-semibold text-text">{used}</span>
+        {/* DESIGN.md "Layout": the sidebar ends with a usage meter, "the
+            figures in mono". It counts what the Publisher has already sent
+            against what the plan allows. */}
+        <span className="machine text-meta font-semibold text-text">{used}</span>
       </div>
       <ProgressBar
         value={postsUsed}

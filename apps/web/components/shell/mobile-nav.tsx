@@ -48,7 +48,7 @@ export function MobileNav() {
         type="button"
         onClick={() => setIsOpen(true)}
         aria-expanded={isOpen}
-        className="inline-flex h-touch w-touch items-center justify-center rounded-md border border-border text-text"
+        className="press inline-flex h-touch w-touch items-center justify-center rounded-md border border-border text-text"
       >
         <MenuIcon size={ICON_SIZE} />
         <span className="sr-only">Open menu</span>
@@ -63,6 +63,13 @@ export function MobileNav() {
           // every child covers the drawer's own box.
           if (event.target === dialogRef.current) close()
         }}
+        // Deliberately not animated. DESIGN.md gives drawers `--ease-drawer`,
+        // and @mirrorline/ui's `Drawer` is where that lives — the calendar's
+        // review sheet uses it. This one is a native <dialog> put into the top
+        // layer by showModal(), which cannot be transitioned without a
+        // keyframe in theme.css, and theme.css is not this app's to edit. It
+        // opens instantly, which is also the right call for a menu a person
+        // taps many times a day.
         className="fixed top-0 bottom-0 left-0 m-0 h-full max-h-none w-[17.5rem] max-w-[86vw] overflow-y-auto border-r border-border bg-surface p-0 text-text backdrop:bg-ink/40"
       >
         <div className="flex min-h-full flex-col gap-3.5 px-4 py-5">
@@ -71,7 +78,7 @@ export function MobileNav() {
             <button
               type="button"
               onClick={close}
-              className="inline-flex h-touch w-touch items-center justify-center rounded-md border border-border text-text"
+              className="press inline-flex h-touch w-touch items-center justify-center rounded-md border border-border text-text"
             >
               <CloseIcon size={ICON_SIZE} />
               <span className="sr-only">Close menu</span>

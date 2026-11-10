@@ -41,7 +41,10 @@ export function Faq({ items }: FaqProps) {
               className={cn(
                 'group flex w-full items-center justify-between gap-4 px-5 py-4 text-left',
                 'min-h-touch font-heading text-subtitle text-text',
-                'transition-colors hover:bg-surface-subtle',
+                /* DESIGN.md "Motion": entering uses the out-curve and the
+                   dropdown duration token, so it goes still under
+                   prefers-reduced-motion with everything else. */
+                'transition-colors duration-[var(--duration-dropdown)] ease-out hover:bg-surface-subtle',
               )}
             >
               {item.question}

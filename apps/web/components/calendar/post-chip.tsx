@@ -74,21 +74,33 @@ export function PostChip({ post, status, dayLabel, isSelected, onSelect }: PostC
       title={post.title}
       className={cn(
         'flex min-h-11 w-full min-w-0 items-center gap-0.5 rounded-md bg-surface p-1 text-left',
-        'transition-colors duration-150 hover:bg-surface-subtle',
+        'hover:bg-surface-subtle',
+        // DESIGN.md "Motion — Press": a 3% dip on :active, fine pointers only,
+        // dropped under prefers-reduced-motion. A chip is the smallest thing on
+        // this screen you can press, so it is the one that most needs to say
+        // so. `.press` owns the transition shorthand, which is why the hover
+        // colour now changes at once rather than fading.
+        'press',
         isSelected ? 'border-2 border-ink' : 'border border-border',
         'border-l-4',
         STATUS_EDGE_CLASS[status],
       )}
     >
       {/* The thumbnail is one of the four fixed demo colours, so it stays a
-          plain swatch rather than a theme token. */}
+          plain swatch rather than a theme token. It is too small for a viewer
+          mat: a 1px surround at this size renders as a border, not a lightbox,
+          so the drawer preview is where the chip's video meets the viewer. */}
       <span
         aria-hidden="true"
         className="h-[28px] w-[15px] shrink-0 rounded-sm"
         style={{ backgroundColor: post.thumbnailColor }}
       />
       <span aria-hidden="true" className="flex min-w-0 flex-1 flex-col">
-        <span className="text-[11px] font-bold leading-tight text-text">{post.timeLabel}</span>
+        {/* DESIGN.md "Calendar post chip": "time in mono". It is the slot the
+            Publisher will post in, not something the studio wrote. */}
+        <span className="machine text-[11px] font-bold leading-tight text-text">
+          {post.timeLabel}
+        </span>
         {/* One line, clipped with an ellipsis: the whole title lives in the
             chip's name and its tooltip, never in its width. */}
         <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] leading-tight text-text">

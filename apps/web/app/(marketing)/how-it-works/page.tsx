@@ -7,12 +7,20 @@
  * on the compliance gate, because that is the rule everything else depends on.
  */
 
-import { Card } from '@mirrorline/ui'
+import { agents, cuts } from '@mirrorline/mock'
+import { Card, cn, StatusChip, VideoThumb } from '@mirrorline/ui'
 import { BarChart3, CalendarDays, Check, Scissors, ShieldCheck, Upload } from 'lucide-react'
 import type { Metadata } from 'next'
+import * as React from 'react'
 
 import { LOOP_CLOSING_LINE, PUBLIC_AGENTS } from '@/components/marketing/agents'
-import { ComingSoonLabel, Section, SectionHeading } from '@/components/marketing/primitives'
+import {
+  ComingSoonLabel,
+  SampleDataLabel,
+  Section,
+  SectionHeading,
+} from '@/components/marketing/primitives'
+import { ViewerPanel } from '@/components/marketing/viewer-panel'
 
 import { LeadDialogButton } from '../components/lead-form'
 
@@ -21,6 +29,18 @@ export const metadata: Metadata = {
   description:
     'Seven agents, one loop: Trend Scout, Remake Producer, Multiplier, Compliance, Client Concierge, Publisher and Performance Analyst. What each one does, and what it will not do.',
 }
+
+/**
+ * DESIGN.md "Components": the spend cap "shows wherever an agent can spend
+ * money, not only in Settings". The figures belong to the demo client, so this
+ * reads them back from @mirrorline/mock rather than restating them.
+ */
+const AGENT_BUDGETS: ReadonlyMap<string, { spendUsd: number; capUsd: number }> = new Map(
+  agents.map((agent) => [agent.id, { spendUsd: agent.spendUsd, capUsd: agent.capUsd }]),
+)
+
+/** The cuts the gate did not wave through. The honest half of the output. */
+const HELD_CUTS = cuts.filter((cut) => cut.compliance !== 'passed')
 
 interface ClientStep {
   readonly id: string
@@ -67,14 +87,13 @@ export default function HowItWorksPage() {
     <>
       <Section size="lg">
         <div className="flex max-w-[52rem] flex-col gap-5">
-          <span className="eyebrow">How it works</span>
           <h1 className="m-0 font-heading text-headline text-text sm:text-display">
             Seven agents, one loop
           </h1>
           <p className="m-0 max-w-[62ch] text-body text-text-muted">
             A format found on Monday becomes your own videos, posted through the week, and the
-            results shape what gets made next. Each agent has one job, its own spending cap and its
-            own log, and you can override any decision it makes.
+            results shape what gets made next. Each agent has one job, its own spend cap and its own
+            log, and you can override any decision it makes.
           </p>
         </div>
       </Section>
@@ -84,54 +103,93 @@ export default function HowItWorksPage() {
           id="agents-heading"
           eyebrow="The loop"
           title="What each agent does"
-          lead="In order. Every limit below is a rule in the product, not a preference."
+          lead="In order, with the limit that comes with it. Every limit below is a rule in the product, not a preference, and every cap is one you set."
+          aside={<SampleDataLabel />}
         />
         <ol className="mt-8 flex list-none flex-col gap-4 p-0">
-          {PUBLIC_AGENTS.map((agent) => (
-            <Card as="li" key={agent.id} padding="lg" className="flex flex-col gap-4">
-              {/* No "Step N of 7" counter: the <ol> already carries the order
-                  for assistive tech, and the agents are introduced in sequence
-                  on the page. A counter on every card is furniture. */}
-              <h3 className="m-0 font-heading text-title text-text">{agent.name}</h3>
+          {PUBLIC_AGENTS.map((agent) => {
+            const budget = AGENT_BUDGETS.get(agent.id)
 
-              <p className="m-0 max-w-[68ch] text-body text-text-muted">{agent.does}</p>
+            return (
+              <Card as="li" key={agent.id} padding="lg" className="flex flex-col gap-4">
+                {/* No "Step N of 7" counter: the <ol> already carries the order
+                    for assistive tech, and the agents are introduced in sequence
+                    on the page. A counter on every card is furniture. */}
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <h3 className="m-0 font-heading text-title text-text">{agent.name}</h3>
+                  {budget ? (
+                    <p className="m-0 text-meta text-text-muted">
+                      spend cap{' '}
+                      <span className="machine text-text">
+                        ${budget.spendUsd} / ${budget.capUsd}
+                      </span>
+                    </p>
+                  ) : null}
+                </div>
 
-              <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface-subtle p-4">
-                <h4 className="eyebrow m-0">What it will not do</h4>
-                <p className="m-0 max-w-[68ch] text-meta text-text">{agent.limit}</p>
-              </div>
+                <p className="m-0 max-w-[68ch] text-body text-text-muted">{agent.does}</p>
 
-              <p className="m-0 max-w-[68ch] text-meta text-text-muted">
-                <span className="font-semibold text-text">In the loop: </span>
-                {agent.inLoop}
-              </p>
-            </Card>
-          ))}
+                <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface-subtle p-4">
+                  <h4 className="eyebrow m-0">What it will not do</h4>
+                  <p className="m-0 max-w-[68ch] text-meta text-text">{agent.limit}</p>
+                </div>
+
+                <p className="m-0 max-w-[68ch] text-meta text-text-muted">
+                  <span className="font-semibold text-text">In the loop: </span>
+                  {agent.inLoop}
+                </p>
+              </Card>
+            )
+          })}
         </ol>
-        <Card tone="ink" className="mt-4">
-          <p className="m-0 text-body text-on-ink">{LOOP_CLOSING_LINE}</p>
-        </Card>
+        {/* The automated re-plan is post-MVP. DESIGN.md keeps ink panels to one
+            or two per screen, and this page spends its one on the closing call
+            to action, so the hand-off is a hairline note instead. */}
+        <div className="mt-4 flex flex-col items-start gap-2 border-t border-border pt-5">
+          <ComingSoonLabel />
+          <p className="m-0 max-w-[68ch] text-body text-text-muted">{LOOP_CLOSING_LINE}</p>
+        </div>
       </Section>
 
       <Section aria-labelledby="client-heading">
         <SectionHeading
           id="client-heading"
-          eyebrow="Your side"
           title="What you actually do"
-          lead="Five steps. The longest one is the upload."
+          lead="Five steps. The longest one is the upload, and the only one you cannot skip is the approval."
         />
-        <ol className="mt-8 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 lg:grid-cols-5">
-          {CLIENT_STEPS.map((step) => (
-            <Card as="li" key={step.id} className="flex flex-col gap-3">
-              <span className="grid size-10 place-items-center rounded-md bg-accent-soft text-on-accent-soft">
-                <step.Icon aria-hidden="true" className="size-5" strokeWidth={1.8} />
-              </span>
-              {/* The icon and the <ol> carry the sequence; an "N of 5" counter
-                  on each tile only repeats what the order already says. */}
-              <h3 className="m-0 font-heading text-subtitle text-text">{step.title}</h3>
-              <p className="m-0 text-meta text-text-muted">{step.line}</p>
-            </Card>
-          ))}
+        {/* A sequence read down the page, not five equal tiles: the rail and the
+            mono step number carry the order, and each step keeps a full line of
+            prose instead of being squeezed into a column. */}
+        <ol className="mt-8 flex list-none flex-col p-0">
+          {CLIENT_STEPS.map((step, index) => {
+            const isLast = index === CLIENT_STEPS.length - 1
+
+            return (
+              <li
+                key={step.id}
+                className="log-in stagger flex gap-4 sm:gap-5"
+                style={{ '--index': index } as React.CSSProperties}
+              >
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-md bg-accent-soft text-on-accent-soft">
+                    <step.Icon aria-hidden="true" className="size-5" strokeWidth={1.8} />
+                  </span>
+                  {isLast ? null : <span aria-hidden="true" className="w-px flex-1 bg-border" />}
+                </div>
+                <div className={cn('flex min-w-0 flex-col gap-1.5', isLast ? 'pb-0' : 'pb-6')}>
+                  <div className="flex items-baseline gap-2.5">
+                    {/* The <ol> already carries the order for assistive tech,
+                        so the number is the machine's counter, for the eye. */}
+                    <span aria-hidden="true" className="machine text-caption text-text-muted">
+                      {index + 1}
+                    </span>
+                    <h3 className="m-0 font-heading text-subtitle text-text">{step.title}</h3>
+                  </div>
+                  <p className="m-0 max-w-[68ch] text-meta text-text-muted">{step.line}</p>
+                </div>
+              </li>
+            )
+          })}
         </ol>
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <ComingSoonLabel>Coming soon</ComingSoonLabel>
@@ -165,6 +223,60 @@ export default function HowItWorksPage() {
             <p className="m-0">
               It is our own check, not a legal clearance, and we hold no security certification. You
               can override a block; the override is logged with your name against it.
+            </p>
+          </div>
+
+          {/* The honest half of the output. DESIGN.md: 9:16 frames sit on the
+              viewer surface, in both themes, so a held cut looks the same to
+              everyone who has to decide about it. */}
+          <ViewerPanel
+            className="mt-2"
+            footnote={
+              <>
+                Sample data, from Maya Torres Coaching, a fictional demo client:{' '}
+                <span className="machine">{HELD_CUTS.length}</span> of{' '}
+                <span className="machine">{cuts.length}</span> cuts did not pass on the first run.
+              </>
+            }
+            readout={
+              <>
+                held <span className="machine">{HELD_CUTS.length}</span>, limit{' '}
+                <span className="machine">30%</span> similarity
+              </>
+            }
+            title="What the gate held back"
+          >
+            <ul className="grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-3">
+              {HELD_CUTS.map((cut, index) => (
+                <li
+                  key={cut.id}
+                  className="log-in stagger flex gap-3 sm:flex-col"
+                  style={{ '--index': index } as React.CSSProperties}
+                >
+                  <div className="w-[88px] shrink-0 sm:w-full">
+                    <VideoThumb
+                      caption={cut.hook}
+                      cutNumber={cut.index}
+                      highlight={cut.highlightPhrase}
+                      index={index}
+                      length={cut.lengthLabel}
+                    />
+                  </div>
+                  <div className="flex min-w-0 flex-col items-start gap-2">
+                    <StatusChip status={cut.compliance === 'blocked' ? 'blocked' : 'needs-review'} />
+                    <p className="m-0 text-meta text-on-viewer">
+                      {cut.complianceReason ?? 'Waiting for your decision.'}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </ViewerPanel>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <SampleDataLabel />
+            <p className="m-0 text-meta text-text-muted">
+              Nothing above is a customer result. It is the demo client&rsquo;s week.
             </p>
           </div>
         </Card>

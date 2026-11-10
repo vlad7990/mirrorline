@@ -73,7 +73,10 @@ test('the whole demo path holds up', async ({ page }) => {
   ).toHaveAttribute('aria-current', 'step')
 
   const preview = page.getByRole('complementary', { name: 'Live preview', exact: true })
-  const previewCard = preview.locator('div').first()
+  // The frame sits on the viewer mat (DESIGN.md "Colors — Viewer"), so the
+  // brand colour is on the inner card, not the outer div. Anchor on the one
+  // element that carries it as an inline style.
+  const previewCard = preview.locator('div[style*="background-color"]').first()
 
   // Deep teal is the default, straight from the brand kit fixture.
   await expect(previewCard).toHaveCSS('background-color', 'rgb(18, 84, 90)')
