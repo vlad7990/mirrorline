@@ -173,6 +173,23 @@ nothing is hardcoded, so the demo story stays consistent across screens.
 
 ## Needs Vlad
 
+0. **Higgsfield login, to unblock the cut wall.** Top of the list because it is
+   the one thing holding the design complaint open
+   (`docs/plan/DESIGN_BACKLOG.md`). The plumbing shipped on 2026-11-11 and the
+   manifest stays empty until there is real footage.
+
+   The CLI authenticates by browser OAuth (PKCE) — there is no API key to hand
+   over, so an agent cannot do this. It is signed in as `vbreygin@gmail.com`
+   with 0 credits; the funded account is `filmreecon@gmail.com`. Run:
+   ```
+   higgsfield auth logout
+   higgsfield auth login
+   ```
+   and sign in as `filmreecon@gmail.com`. `higgsfield account status` should
+   then show credits. If they sit on a team rather than a personal account,
+   `status` still reads 0 — then `higgsfield workspace list` and
+   `higgsfield workspace set <id>`.
+
 1. **Two repo hooks blocked parts of the work and cost real throughput.**
    - `pre:edit-write:gateguard-fact-force` requires four facts recited in a
      separate message before every new file. Both documented ways to disable it
