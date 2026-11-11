@@ -140,6 +140,75 @@ export const DARK_COLORS = {
   'on-neutral-soft': '#C5CBD5',
 } as const
 
+/**
+ * The public marketing site — gold and ink (D25, docs/design/handoff-v4).
+ *
+ * Not a third theme. The site alternates ink and snow bands section by
+ * section as art direction; there is no toggle, and `.dark` does not reach
+ * it. The studio keeps LIGHT_COLORS/DARK_COLORS above until the app restyle.
+ *
+ * Mirrors the `--color-*` site block in theme.css. Two values deliberately
+ * differ from the handoff because the handoff's fail WCAG AA — see
+ * `on-ink-faint` and `gold-text` below. `contrast.test.ts` holds both to
+ * 4.5:1 and keeps a record of the originals so neither slips back.
+ */
+export const SITE_COLORS = {
+  /** Decoration, borders and fills. Also display text on ink. */
+  gold: '#C8A24A',
+  /** The brightest gold. Eyebrows and the primary button fill, on ink. */
+  'gold-bright': '#F5B83D',
+  /**
+   * Display accents on a light band. 3.26:1 on snow — above the 3:1 bar for
+   * text at 44px and up, which is the only size it is used at. Never for
+   * small text; that is what `gold-text` is for.
+   */
+  'gold-deep': '#A6842F',
+  /**
+   * Small gold text on a light band. The handoff used `gold-deep` here and it
+   * scored 3.26:1 on snow, under AA for 13px eyebrows. This clears 4.53:1.
+   */
+  'gold-text': '#886611',
+  'gold-wash': '#F6E7B8',
+
+  'ink-900': '#0E1116',
+  'ink-800': '#141920',
+  'ink-700': '#1A1F27',
+  'ink-line': '#262C36',
+  'ink-line-strong': '#353C48',
+  'on-ink-900': '#F5F3EC',
+  'on-ink-muted': '#B4B8C0',
+  /**
+   * The faintest text on ink. The handoff used #7A8089, which scored 4.16:1
+   * on `ink-700` — under AA. Six steps lighter clears 4.51:1 on the worst of
+   * the three ink surfaces, and is visually indistinguishable.
+   */
+  'on-ink-faint': '#80868F',
+
+  white: '#FFFFFF',
+  snow: '#F7F6F2',
+  'snow-deep': '#EFEDE6',
+  'snow-line': '#E6E3DA',
+  'snow-line-strong': '#D4CFC2',
+  'on-snow': '#0E1116',
+  'on-snow-muted': '#3A3F48',
+  'on-snow-faint': '#6A6F78',
+
+  /** Site semantics. Separate from the studio's because these sit on ink. */
+  'site-positive': '#1FBF7B',
+  'site-negative': '#E34858',
+  'site-info': '#3A8DDE',
+} as const
+
+export type SiteColorToken = keyof typeof SITE_COLORS
+
+/**
+ * The display gradient, used on one accent phrase per headline.
+ *
+ * Kept as a string rather than split into stops because it is copied verbatim
+ * from the handoff and is the single place the three golds appear together.
+ */
+export const GOLD_GRADIENT = 'linear-gradient(135deg, #F5B83D 0%, #C8A24A 45%, #A6842F 100%)'
+
 /** Demo-brand colours. These live inside video thumbnails only. */
 export const DEMO_COLORS = {
   teal: '#12545A',

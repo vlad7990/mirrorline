@@ -59,6 +59,57 @@
   --color-neutral-soft: #e9ecf1;
   --color-on-neutral-soft: #3a4250;
 
+  /* ---------------------------------------------------------------------
+     Site — gold and ink. The PUBLIC marketing site only.
+
+     From docs/design/handoff-v4 (D25). Deliberately a separate namespace
+     rather than a second theme: the site alternates ink and snow bands as art
+     direction, section by section, and is not light/dark switchable. The
+     studio keeps the coral glass-box palette above until the app restyle.
+
+     Two values differ from the handoff, because the handoff's fail WCAG AA
+     and `contrast.test.ts` would reject them. Each was solved by walking the
+     colour until it cleared 4.5:1 on the worst surface it sits on, so these
+     are the smallest corrections that pass rather than a redesign:
+       * faint text was #7A8089 — 4.16:1 on --color-ink-700, under AA.
+         #80868F is six steps lighter and clears 4.51:1 on the worst of the
+         three ink surfaces.
+       * gold text on light was #A6842F — 3.26:1 on snow, under AA. #886611
+         clears 4.53:1. It is only for SMALL gold text (eyebrows, "Goal:"
+         lines). The display gradient keeps the handoff's golds untouched:
+         those headlines are 44px and up, where 3:1 is the bar and #A6842F
+         already passes at 3.26:1.
+     --------------------------------------------------------------------- */
+  --color-gold: #c8a24a;
+  --color-gold-bright: #f5b83d;
+  --color-gold-deep: #a6842f;
+  /* Small gold text on a light band. See the note above — not interchangeable
+     with --color-gold-deep, which is for display sizes and decoration. */
+  --color-gold-text: #886611;
+  --color-gold-wash: #f6e7b8;
+
+  --color-ink-900: #0e1116;
+  --color-ink-800: #141920;
+  --color-ink-700: #1a1f27;
+  --color-ink-line: #262c36;
+  --color-ink-line-strong: #353c48;
+  --color-on-ink-900: #f5f3ec;
+  --color-on-ink-muted: #b4b8c0;
+  --color-on-ink-faint: #80868f;
+
+  --color-snow: #f7f6f2;
+  --color-snow-deep: #efede6;
+  --color-snow-line: #e6e3da;
+  --color-snow-line-strong: #d4cfc2;
+  --color-on-snow: #0e1116;
+  --color-on-snow-muted: #3a3f48;
+  --color-on-snow-faint: #6a6f78;
+
+  /* Site semantics. Separate from the studio's because these sit on ink. */
+  --color-site-positive: #1fbf7b;
+  --color-site-negative: #e34858;
+  --color-site-info: #3a8dde;
+
   /* Demo brand — inside video thumbnails only */
   --color-demo-teal: #12545a;
   --color-demo-teal-deep: #1e3a40;
@@ -76,6 +127,26 @@
      names are kept because consumers use `font-heading` and `font-body`. */
   --font-heading: var(--font-sans);
   --font-body: var(--font-sans);
+  /*
+   * The public site's display face (D25). The handoff specifies Fraunces;
+   * Vlad kept Geist, and Geist Serif ships inside the `geist` package we
+   * already depend on — same family, same licence, no new font to load.
+   *
+   * It is a third voice, not a replacement: the studio stays entirely sans,
+   * because a serif in an instrument reads as decoration. This is for the
+   * marketing display headlines and the gold accent phrase only.
+   *
+   * No italic. Neither Geist Serif nor the `next/font` Sans export carries a
+   * true one, and a synthesised oblique at 100px is visibly sheared. The
+   * handoff's gold italic phrase is therefore upright here — the gradient
+   * does the work instead.
+   *
+   * `GeistSerifRegular` from 'geist/font/serif/regular', not the variable
+   * export: the variable file carries all four shapes (Regular, Square,
+   * Triangle, Heart) on an `ELSH` axis, and we want only the first. It is
+   * weight 400 only, which is the right weight for a display serif anyway.
+   */
+  --font-serif: var(--font-geist-serif-regular, 'Geist Serif'), ui-serif, Georgia, serif;
 
   --text-display: 46px;
   --text-display--line-height: 1.05;
@@ -373,6 +444,154 @@
     line-height: 1.06;
     letter-spacing: -0.022em;
     font-weight: 700;
+  }
+
+  /* ---------------------------------------------------------------------
+     The site scale and the bands — gold and ink (D25).
+
+     From docs/design/handoff-v4. Three display sizes, set in Geist Serif at
+     400, because that is the weight the family ships. The handoff asks for
+     Fraunces 500 at -0.02 to -0.03em; a serif at 400 needs less negative
+     tracking than one at 500, so these sit at -0.02em rather than -0.03em.
+
+     Same clamp rule as the scale above: rem + vw in the middle term, never vw
+     alone, so browser zoom still works (WCAG 1.4.4).
+     --------------------------------------------------------------------- */
+  .text-site-hero {
+    font-family: var(--font-serif);
+    font-size: clamp(3.25rem, 1.6rem + 6.2vw, 7rem);
+    line-height: 0.98;
+    letter-spacing: -0.02em;
+    font-weight: 400;
+  }
+
+  .text-site-display {
+    font-family: var(--font-serif);
+    font-size: clamp(3.5rem, 1.5rem + 7.2vw, 8rem);
+    line-height: 0.98;
+    letter-spacing: -0.02em;
+    font-weight: 400;
+  }
+
+  .text-site-h2 {
+    font-family: var(--font-serif);
+    font-size: clamp(2.75rem, 1.6rem + 4.2vw, 5rem);
+    line-height: 1.02;
+    letter-spacing: -0.018em;
+    font-weight: 400;
+  }
+
+  /*
+   * The gold accent phrase — one per headline, never two.
+   *
+   * The handoff sets this in Fraunces *italic*; Geist Serif has no italic and
+   * a synthesised oblique at 100px shears visibly, so this is upright and the
+   * gradient carries the emphasis on its own (D25).
+   *
+   * The padding/margin pair and `box-decoration-break` come from the handoff
+   * and are load-bearing: without them the last glyph's overhang is clipped
+   * by the background box, and a phrase that wraps loses the gradient on its
+   * second line. Keep them.
+   */
+  .gold-phrase {
+    background: linear-gradient(135deg, #f5b83d 0%, #c8a24a 45%, #a6842f 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    padding-right: 0.12em;
+    margin-right: -0.08em;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+
+  /*
+   * On a light band the same gradient is too pale to read, so the phrase
+   * takes the solid deep gold instead. At these sizes (44px+) that clears the
+   * 3:1 large-text bar at 3.26:1 — see the token note.
+   */
+  .band-snow .gold-phrase,
+  .band-white .gold-phrase {
+    background: none;
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
+    color: var(--color-gold-deep);
+  }
+
+  .site-eyebrow {
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-gold-bright);
+  }
+
+  /* Small gold text on light needs the corrected value, not the display one. */
+  .band-snow .site-eyebrow,
+  .band-white .site-eyebrow {
+    color: var(--color-gold-text);
+  }
+
+  /*
+   * The bands.
+   *
+   * The site alternates ink / ink-alt / snow / white section by section. That
+   * is art direction, not a theme — there is no toggle and `.dark` does not
+   * reach it.
+   *
+   * Each band REMAPS the semantic tokens rather than only setting its own
+   * colours. That is deliberate: `Card`, `Button` and every other primitive
+   * then render correctly inside a band with no site-specific variants,
+   * because `bg-surface` and `text-text` resolve to whatever the band says.
+   * One place to change, and the component library stays unaware the public
+   * site exists.
+   */
+  .band-ink,
+  .band-ink-alt,
+  .band-snow,
+  .band-white {
+    color: var(--color-text);
+    background-color: var(--color-background);
+  }
+
+  .band-ink {
+    --color-background: var(--color-ink-900);
+    --color-surface: var(--color-ink-700);
+    --color-surface-subtle: var(--color-ink-800);
+    --color-border: var(--color-ink-line);
+    --color-border-strong: var(--color-ink-line-strong);
+    --color-text: var(--color-on-ink-900);
+    --color-text-muted: var(--color-on-ink-muted);
+  }
+
+  .band-ink-alt {
+    --color-background: var(--color-ink-800);
+    --color-surface: var(--color-ink-700);
+    --color-surface-subtle: var(--color-ink-900);
+    --color-border: var(--color-ink-line);
+    --color-border-strong: var(--color-ink-line-strong);
+    --color-text: var(--color-on-ink-900);
+    --color-text-muted: var(--color-on-ink-muted);
+  }
+
+  .band-snow {
+    --color-background: var(--color-snow);
+    --color-surface: #ffffff;
+    --color-surface-subtle: var(--color-snow-deep);
+    --color-border: var(--color-snow-line);
+    --color-border-strong: var(--color-snow-line-strong);
+    --color-text: var(--color-on-snow);
+    --color-text-muted: var(--color-on-snow-muted);
+  }
+
+  .band-white {
+    --color-background: #ffffff;
+    --color-surface: var(--color-snow);
+    --color-surface-subtle: var(--color-snow-deep);
+    --color-border: var(--color-snow-line);
+    --color-border-strong: var(--color-snow-line-strong);
+    --color-text: var(--color-on-snow);
+    --color-text-muted: var(--color-on-snow-muted);
   }
 
   /* ---------------------------------------------------------------------

@@ -12,7 +12,7 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { DARK_COLORS, LIGHT_COLORS } from '../tokens'
+import { DARK_COLORS, LIGHT_COLORS, SITE_COLORS } from '../tokens'
 
 /* -------------------------------------------------------------------------- */
 /* WCAG maths                                                                  */
@@ -97,6 +97,57 @@ const THEMES: ReadonlyArray<readonly [name: string, palette: Palette]> = [
   ['dark', DARK_COLORS],
 ]
 
+/* -------------------------------------------------------------------------- */
+/* The public site — gold and ink                                              */
+/* -------------------------------------------------------------------------- */
+
+type SiteToken = keyof typeof SITE_COLORS
+
+interface SitePair {
+  foreground: SiteToken
+  background: SiteToken
+  where: string
+}
+
+/**
+ * The site's own pairs (D25). Separate from the themes above because the site
+ * is not a theme: it alternates ink and snow bands section by section, so a
+ * foreground has to clear every band it can land on, not just one.
+ *
+ * Two of these are the reason the handoff's palette was corrected rather than
+ * copied — see the token notes in theme.css:
+ *   * `on-ink-faint` was #7A8089 and scored 4.16:1 on `ink-700`.
+ *   * `gold-text` replaces #A6842F, which scored 3.26:1 on `snow`.
+ * Both now clear 4.5:1 on the worst surface they sit on, and these rows are
+ * what stop either slipping back.
+ */
+const SITE_PAIRS: readonly SitePair[] = [
+  { foreground: 'on-ink-900', background: 'ink-900', where: 'body copy on the ink band' },
+  { foreground: 'on-ink-900', background: 'ink-800', where: 'body copy on the ink-alt band' },
+  { foreground: 'on-ink-900', background: 'ink-700', where: 'body copy in a dark card' },
+  { foreground: 'on-ink-muted', background: 'ink-900', where: 'sub-copy on the ink band' },
+  { foreground: 'on-ink-muted', background: 'ink-700', where: 'sub-copy in a dark card' },
+  { foreground: 'on-ink-faint', background: 'ink-900', where: 'the faintest text on ink' },
+  { foreground: 'on-ink-faint', background: 'ink-800', where: 'the faintest text on ink-alt' },
+  { foreground: 'on-ink-faint', background: 'ink-700', where: 'the faintest text in a dark card' },
+  { foreground: 'gold-bright', background: 'ink-900', where: 'the eyebrow on ink' },
+  { foreground: 'gold-bright', background: 'ink-700', where: 'the eyebrow in a dark card' },
+  { foreground: 'gold', background: 'ink-900', where: 'gold body text on ink' },
+  { foreground: 'on-snow', background: 'snow', where: 'body copy on the snow band' },
+  { foreground: 'on-snow', background: 'white', where: 'body copy on the white band' },
+  { foreground: 'on-snow-muted', background: 'snow', where: 'sub-copy on snow' },
+  { foreground: 'on-snow-faint', background: 'snow', where: 'the faintest text on snow' },
+  { foreground: 'gold-text', background: 'snow', where: 'the eyebrow on snow' },
+  { foreground: 'gold-text', background: 'white', where: 'the eyebrow on white' },
+  { foreground: 'gold-text', background: 'snow-deep', where: 'the eyebrow on a snow inset' },
+  // The gold button is the one primary action on the site. Its label is ink.
+  { foreground: 'ink-900', background: 'gold-bright', where: 'the gold button label' },
+  { foreground: 'ink-900', background: 'gold', where: 'the gold button label, deeper fill' },
+  { foreground: 'site-positive', background: 'ink-900', where: 'a passed check on ink' },
+  { foreground: 'site-negative', background: 'ink-900', where: 'a blocked note on ink' },
+  { foreground: 'site-info', background: 'ink-900', where: 'an info note on ink' },
+]
+
 describe('WCAG contrast maths', () => {
   it('computes the documented ratios', () => {
     // Arrange + Act + Assert: black on white is the canonical 21:1.
@@ -134,6 +185,46 @@ describe.each(THEMES)('%s theme', (_themeName, palette) => {
       ).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT)
     },
   )
+})
+
+describe('the public site, gold and ink', () => {
+  it.each(SITE_PAIRS)(
+    '$foreground on $background ($where) clears 4.5:1',
+    ({ foreground, background }) => {
+      // Arrange
+      const foregroundHex = SITE_COLORS[foreground]
+      const backgroundHex = SITE_COLORS[background]
+
+      // Act
+      const ratio = contrastRatio(foregroundHex, backgroundHex)
+
+      // Assert
+      expect(
+        ratio,
+        `${foreground} (${foregroundHex}) on ${background} (${backgroundHex}) is ${ratio.toFixed(2)}:1`,
+      ).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT)
+    },
+  )
+
+  // The display gradient is the one place the handoff's own gold survives on
+  // a light band. It is allowed there because those headlines are 44px and
+  // up, where WCAG's bar is 3:1 — and it is NOT allowed anywhere smaller,
+  // which is what --color-gold-text exists for.
+  it('keeps the display gold above the large-text bar on snow, but below the normal one', () => {
+    const ratio = contrastRatio(SITE_COLORS['gold-deep'], SITE_COLORS.snow)
+
+    expect(ratio, `gold-deep on snow is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(3)
+    // If this ever clears 4.5 the correction is no longer needed and the
+    // second gold can be retired. Until then, the two are not interchangeable.
+    expect(ratio).toBeLessThan(WCAG_AA_NORMAL_TEXT)
+  })
+
+  it('states why the handoff values were corrected', () => {
+    // The exact pairs that failed, kept as a record. If someone re-introduces
+    // the handoff hexes verbatim, these say what goes wrong and where.
+    expect(contrastRatio('#7A8089', SITE_COLORS['ink-700'])).toBeLessThan(WCAG_AA_NORMAL_TEXT)
+    expect(contrastRatio('#A6842F', SITE_COLORS.snow)).toBeLessThan(WCAG_AA_NORMAL_TEXT)
+  })
 })
 
 describe('white text goes only where DESIGN.md allows it', () => {

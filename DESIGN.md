@@ -359,7 +359,18 @@ This split is semantic, not decorative. A number in mono means "a machine measur
 - **Selected items:** a 2px #0E1116 (or primary) border instead of a shadow.
 - **Dark ink panels:** the strongest emphasis on a light page. Use at most one or two per screen.
 - **Segmented controls:** the active segment may use a very subtle shadow (0 1px 2px rgba(0,0,0,0.08)).
-- **Avoid:** gradients, glows and glassmorphism.
+- **Avoid, in the studio:** gradients, glows and glassmorphism. This is a rule about the instrument, not about the brand — the public site uses all three deliberately (see "The public site" below). Scoped on 2026-11-11 with D25; before that it read as universal, which the gold-and-ink site would have silently broken.
+
+## The public site — gold and ink
+
+Adopted 2026-11-11 from `docs/design/handoff-v4` (D25). The site and the studio are two registers and do **not** share a palette. Everything above this section describes the studio; this section is the marketing pages only.
+
+- **It is not a theme.** The site alternates bands — ink `#0E1116`, ink-alt `#141920`, snow `#F7F6F2`, white `#FFFFFF` — section by section, as art direction. There is no light/dark toggle on the public pages and `.dark` does not reach them. The `.band-*` utilities in `theme.css` remap the semantic tokens inside their own subtree, so `Card` and `Button` render correctly in any band with no site-specific variants.
+- **Gold:** `#C8A24A` primary, `#F5B83D` bright (on ink), `#A6842F` deep (display text on light), `#F6E7B8` wash. The display gradient is `linear-gradient(135deg, #F5B83D 0%, #C8A24A 45%, #A6842F 100%)`, used on **one accent phrase per headline, never two**.
+- **Small gold text on a light band uses `#886611`, not `#A6842F`.** The deep gold scores 3.26:1 on snow — fine for display at 44px and up, where the bar is 3:1, and a failure for a 13px eyebrow. Two tokens, not one, and they are not interchangeable.
+- **The faintest text on ink is `#80868F`.** The handoff specified `#7A8089`; it scores 4.16:1 on the darkest card, under AA. Corrected by the smallest step that clears 4.5:1.
+- **Display face: Geist Serif**, weight 400, from the `geist` package. The handoff asks for Fraunces; Vlad kept Geist (D25). There is no italic in the family, so the handoff's gold *italic* accent phrase is upright here and the gradient carries the emphasis alone.
+- **Gradients, glows and a scroll progress bar are correct here** and wrong in the studio.
 
 ## Shapes
 

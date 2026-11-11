@@ -11,6 +11,10 @@ export { cn } from './cn'
 export {
   LIGHT_COLORS,
   DARK_COLORS,
+  // The public site's palette. Separate from the themes above on purpose —
+  // the site is art-directed per band, not light/dark switchable (D25).
+  SITE_COLORS,
+  GOLD_GRADIENT,
   DEMO_COLORS,
   THUMBNAIL_COLORS,
   RADIUS,
@@ -22,6 +26,7 @@ export {
   STAGGER_STEP,
 } from './tokens'
 export type {
+  SiteColorToken,
   ColorToken,
   RadiusToken,
   SpacingToken,

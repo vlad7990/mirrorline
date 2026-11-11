@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { GeistMono } from 'geist/font/mono'
 import { GeistSans } from 'geist/font/sans'
+import { GeistSerifRegular } from 'geist/font/serif/regular'
 import { ThemeProvider, TooltipProvider, THEME_SCRIPT } from '@mirrorline/ui'
 
 import './globals.css'
@@ -9,7 +10,14 @@ import './globals.css'
    speaking to the user; Geist Mono is the machine reporting — agent logs,
    costs, timings, similarity percentages, spend caps. Both are self-hosted by
    the `geist` package, so no font is fetched from a third party.
-   theme.css consumes --font-geist-sans and --font-geist-mono. */
+   theme.css consumes --font-geist-sans and --font-geist-mono.
+
+   Geist Serif is the third voice and belongs to the PUBLIC SITE ONLY (D25):
+   display headlines and the gold accent phrase. The studio stays entirely
+   sans, because a serif inside an instrument reads as decoration. It is
+   declared here because next/font must be called at module scope in a layout
+   and the root is the one every route shares; the file is still only fetched
+   where `font-serif` is actually used. */
 
 export const metadata: Metadata = {
   title: {
@@ -28,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`scroll-pt-20 ${GeistSans.variable} ${GeistMono.variable}`}
+      className={`scroll-pt-20 ${GeistSans.variable} ${GeistMono.variable} ${GeistSerifRegular.variable}`}
       suppressHydrationWarning
     >
       <head>
