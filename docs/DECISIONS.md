@@ -454,3 +454,65 @@ which was never the shared part, and its public types are unchanged.
 One accessibility fix caught by axe rather than by me: the capacity bar from
 D21 sat above the header and outside `<main>`, so its text belonged to no
 landmark. It is an `<aside>` now.
+
+## 2026-11-11 · D23 · The alternatives, named — and we lose two rows on purpose
+
+beCreatives runs "The Video Editing Choices In 2026" against freelancers,
+in-house hires and agencies. In a category where the buyer's default is "hire
+an editor" or "try one of those clipping tools", naming the alternatives does
+the buyer's work for them, so `Choices` borrows the device.
+
+Two constraints shaped it.
+
+**No competitor is named.** The rows are approaches, not brands. "Tool X gets
+you banned" is a claim about a named product that we would have to stand
+behind, and it is not the argument anyway — the argument is what a method
+costs you, whoever sells it. The repost row says the approach "gets accounts
+actioned, and it is the reason this project exists", which is our own history
+and not an allegation about anyone else.
+
+**We lose on speed and on cost to start.** A freelancer is cheaper, a repost
+tool is faster, and the section says so in its own lead. A comparison where
+the author wins every row is an advertisement and reads like one; the two rows
+we lose are what make the three we win worth reading.
+
+Placed directly after the four limits, because the limits are what the
+comparison is about: the row a repost tool loses is the row those limits exist
+to win.
+
+A real `<table>` at ≥768px — five approaches across three questions is tabular
+data, and a screen reader should be able to say "row: a repost tool, column:
+whose material it uses". Cards below that, because a four-column table at
+390px either scrolls sideways, hiding the comparison, or shrinks past
+readable.
+
+## 2026-11-11 · D24 · Per-day pricing, derived rather than typed
+
+repurpose.io leads with `$1.17/day` and puts `$35 billed monthly` underneath.
+On a retainer that is the more useful number: $1,500 a month is a decision,
+$50 a day is a comparison with the hour of editing it replaces. Both the
+pricing page and the landing-page teaser now lead with it.
+
+The figure is computed by `perDayUsd`, never written down. A hand-typed
+per-day number is a second price, and a second price drifts — a pricing page
+that disagrees with itself is worse than one that never had the framing. Tests
+pin the arithmetic, assert that every sellable tier can produce a figure, and
+assert that `price` and `priceUsd` never disagree.
+
+Two things the numbers themselves surfaced, which is the argument for deriving
+them:
+
+* Pilot is **$54 a day** and Growth is **$50 a day**. The trial costs more per
+  day than the month it leads into, which is the honest argument for the
+  monthly tier. A test now asserts that ordering, because if a future price
+  change inverts it the copy becomes wrong and nothing else would notice.
+* Studio is "$49 to $149", a range, so it has no single figure to divide. It
+  keeps the old presentation and `perDayUsd` returns `null` rather than
+  inventing a midpoint.
+
+Whole dollars, not cents: at $50 a day the cents are noise, where
+repurpose.io's $1.17 genuinely needs them.
+
+Unchanged: `PRICING_NOTE` still says these are introductory prices set per
+engagement, and 30_DAY_PLAN.md still calls them test prices. Nothing here
+turns them into a rate card.

@@ -12,7 +12,7 @@ import type { Metadata } from 'next'
 
 import { PageHero } from '@/components/marketing/page-hero'
 import { ComingSoonLabel, Section, SectionHeading } from '@/components/marketing/primitives'
-import { PRICING_NOTE, PRICING_TIERS } from '@/components/marketing/pricing-tiers'
+import { PRICING_NOTE, PRICING_TIERS, perDayUsd } from '@/components/marketing/pricing-tiers'
 
 import { LeadDialogButton } from '../components/lead-form'
 
@@ -54,6 +54,7 @@ export default function PricingPage() {
         <ul className="flex list-none flex-col divide-y divide-border rounded-lg border border-border bg-surface p-0">
           {PRICING_TIERS.map((tier) => {
             const isComingLater = tier.comingLaterLabel !== null
+            const perDay = perDayUsd(tier)
 
             return (
               <li
@@ -75,12 +76,33 @@ export default function PricingPage() {
                       <ComingSoonLabel>{tier.comingLaterLabel}</ComingSoonLabel>
                     ) : null}
                   </div>
-                  <p className="m-0 flex flex-wrap items-baseline gap-x-2">
-                    <span className="machine text-metric font-semibold text-text">
-                      {tier.price}
-                    </span>
-                    <span className="text-meta text-text-muted">{tier.period}</span>
-                  </p>
+                  {/* repurpose.io leads with the daily figure and puts the
+                      billed amount underneath
+                      (docs/design/COMPETITOR_REFERENCES.md §2.5). On a
+                      retainer that is the more useful number: $1,500 a month
+                      is a decision, $50 a day is a comparison with the hour
+                      of editing it replaces. Derived, never typed — see
+                      `perDayUsd`. */}
+                  {perDay === null ? (
+                    <p className="m-0 flex flex-wrap items-baseline gap-x-2">
+                      <span className="machine text-metric font-semibold text-text">
+                        {tier.price}
+                      </span>
+                      <span className="text-meta text-text-muted">{tier.period}</span>
+                    </p>
+                  ) : (
+                    <p className="m-0 flex flex-col gap-0.5">
+                      <span className="flex flex-wrap items-baseline gap-x-2">
+                        <span className="machine text-metric font-semibold text-text">
+                          ${perDay}
+                        </span>
+                        <span className="text-meta text-text-muted">a day</span>
+                      </span>
+                      <span className="text-meta text-text-muted">
+                        <span className="machine">{tier.price}</span> {tier.period}
+                      </span>
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex min-w-0 flex-col gap-3">

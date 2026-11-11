@@ -21,6 +21,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 
 import { LOOP_CLOSING_LINE, PUBLIC_AGENTS } from '@/components/marketing/agents'
+import { Choices } from '@/components/marketing/choices'
 import { CutWall } from '@/components/marketing/cut-wall'
 import { Faq, type FaqItem } from '@/components/marketing/faq'
 import { GateReadout } from '@/components/marketing/gate-readout'
@@ -31,7 +32,7 @@ import {
   Section,
   SectionHeading,
 } from '@/components/marketing/primitives'
-import { SELLABLE_TIERS } from '@/components/marketing/pricing-tiers'
+import { SELLABLE_TIERS, perDayUsd } from '@/components/marketing/pricing-tiers'
 
 import { LeadDialogButton } from './components/lead-form'
 
@@ -323,6 +324,22 @@ export default function LandingPage() {
         </p>
       </Section>
 
+      {/* The alternatives ----------------------------------------------- */}
+      {/* Straight after the limits, because the limits are what the
+          comparison is actually about: the row a repost tool loses is the
+          row our four limits exist to win. */}
+      <Section aria-labelledby="choices-heading">
+        <SectionHeading
+          id="choices-heading"
+          eyebrow="The choices"
+          title="What else you could do instead"
+          lead="We do not win every row. A freelancer is cheaper to start and a repost tool is faster. What changes is whose footage goes out, and what happens before it does."
+        />
+        <div className="mt-8">
+          <Choices />
+        </div>
+      </Section>
+
       {/* The gate ------------------------------------------------------- */}
       <Section aria-labelledby="gate-heading">
         <SectionHeading
@@ -451,12 +468,17 @@ export default function LandingPage() {
           }
         />
         <dl className="m-0 mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-10">
+          {/* Per-day leads here too, so the teaser and the pricing page frame
+              the same number the same way. One line rather than two: this is
+              a glance, not the decision. */}
           {SELLABLE_TIERS.map((tier) => (
             <div key={tier.id} className="flex items-baseline gap-2">
               <dt className="text-label text-text">{tier.name}</dt>
               <dd className="m-0 flex items-baseline gap-1.5">
-                <span className="machine text-title text-text">{tier.price}</span>
-                <span className="text-meta text-text-muted">{tier.period}</span>
+                <span className="machine text-title text-text">${perDayUsd(tier)}</span>
+                <span className="text-meta text-text-muted">
+                  a day · <span className="machine">{tier.price}</span> {tier.period}
+                </span>
               </dd>
             </div>
           ))}
