@@ -52,6 +52,16 @@ const buttonVariants = cva(
         tertiary: 'bg-transparent text-primary underline-offset-4 hover:underline dark:text-accent',
         /** No fill until hover. For icon rows and toolbars. */
         ghost: 'bg-transparent text-text hover:bg-surface-subtle',
+        /**
+         * The public site's primary action (D25). Gold gradient, ink label,
+         * fully rounded — the handoff's pill.
+         *
+         * Not for the studio: the site and the instrument do not share a
+         * primary, and DESIGN.md still forbids gradients there. The ink label
+         * is the accessible choice as well as the designed one — white on
+         * this gold is 2.4:1, ink is 10.6:1.
+         */
+        gold: 'rounded-full bg-gold-gradient text-ink-900 hover:brightness-[1.06]',
       },
       size: {
         /** 48px — the primary action. */

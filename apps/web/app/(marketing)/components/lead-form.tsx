@@ -55,7 +55,8 @@ const EMPTY_VALUES: FormValues = { name: '', email: '', company: '', want: '' }
 
 export interface LeadDialogButtonProps {
   intent: LeadIntent
-  variant?: 'primary' | 'secondary' | 'tertiary' | 'ghost'
+  /** `gold` is the public site's primary (D25); the studio never uses it. */
+  variant?: 'primary' | 'secondary' | 'tertiary' | 'ghost' | 'gold'
   size?: 'lg' | 'md'
   fullWidth?: boolean
   className?: string
