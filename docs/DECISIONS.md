@@ -309,3 +309,54 @@ the lawyer's review alongside D11.
 The wider lesson, already acted on: `licence-check` is in CI but was not in the
 local pre-commit routine CLAUDE.md names (`lint && typecheck && test &&
 build`). It should be, and this session's commits now run it.
+
+## 2026-11-11 · D19 · The cut wall gets reel plumbing now and footage later
+
+`docs/plan/DESIGN_BACKLOG.md` records Vlad's objection, raised twice: the
+landing page cut wall is twelve coloured `<div>`s where reels belong. Step 1 of
+that backlog is the `gh search` pass `development-workflow.md` has always
+required and no session had ever run. It has now been run, and its result is
+recorded in the backlog itself.
+
+Two findings worth pinning here.
+
+**No reel-card library is worth adopting.** Repo-level hits were toys or
+unlicensed TikTok clones. The reusable prior art is a pattern, not a package:
+an `IntersectionObserver` that plays a `muted`/`playsInline`/`loop` video while
+the tile is in view and pauses it when it leaves, with `poster` standing in
+before playback. That is `packages/ui/src/components/reel-media.tsx`, the only
+client component in the video module, so a page pays for the JS only on frames
+that really have a file.
+
+**`motion` is cleared but not installed.** npm `motion@14.12.0` is MIT, which
+satisfies non-negotiable 10, and it is the maintained successor to
+`framer-motion`. It was installed, measured and then removed again in the same
+session: nothing imports it yet, and a dependency with no call site is one more
+thing in the lockfile pretending to be a decision. It lands with its first real
+use. GSAP is rejected outright — its licence is not on the allow-list.
+
+The shape of the fix is deliberate. `VideoThumb` gains one optional `media`
+slot and a scrim that appears only when that slot is filled; `reel-assets.ts`
+holds the cut-id-to-file manifest and is the single place that answers "do we
+have footage for this cut yet". The manifest is **empty**, because Higgsfield
+is on an unfunded account, so every lookup misses and the wall renders exactly
+as it did before. A unit test asserts that emptiness, which puts the blocker in
+code rather than only in a doc.
+
+Why ship the plumbing before the footage: the backlog's own warning is not to
+file a finding and move on, and not to ship another coloured block dressed up
+as progress. Building the mechanism changes nothing visible and claims nothing
+— and when credits arrive the work is one manifest entry per generated file,
+with non-negotiable 4 (AI scenes labelled) and 7 (sample data labelled) already
+wired through the frame.
+
+**Needs Vlad:** Higgsfield credits. The CLI authenticates by browser OAuth
+(PKCE), so there is no key to hand over and an agent cannot do it; the account
+holder has to run `higgsfield auth login`. The funded account is
+`filmreecon@gmail.com`; the CLI is currently signed in as `vbreygin@gmail.com`
+with 0 credits.
+
+Also fixed in passing: `apps/web/lib/engine/types.test.ts` had three
+`noUncheckedIndexedAccess` errors and had been failing `pnpm typecheck` since
+the engine-integration commit. The gate was red at `HEAD`, which means that
+commit did not run it.

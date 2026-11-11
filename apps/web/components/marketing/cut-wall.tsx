@@ -14,8 +14,10 @@
  */
 
 import { cuts, sourceVideo, todaySchedule, weekPosts, type Cut } from '@mirrorline/mock'
-import { StatusChip, VideoThumb, ViewerPanel } from '@mirrorline/ui'
+import { ReelMedia, StatusChip, VideoThumb, ViewerPanel } from '@mirrorline/ui'
 import * as React from 'react'
+
+import { reelAsset } from './reel-assets'
 
 /**
  * CLAUDE.md non-negotiable 4: "AI scenes are always labelled, in the UI and on
@@ -45,6 +47,11 @@ interface CutFrameProps {
 }
 
 function CutFrame({ cut, position }: CutFrameProps) {
+  // Null for every cut until Higgsfield is funded and files land in
+  // `public/reels/`. A frame without one stays its flat demo colour rather
+  // than pretending to be footage — see ./reel-assets.
+  const reel = reelAsset(cut.id)
+
   return (
     <li
       className="log-in stagger flex min-w-0 flex-col gap-2"
@@ -57,6 +64,9 @@ function CutFrame({ cut, position }: CutFrameProps) {
         highlight={cut.highlightPhrase}
         index={position}
         length={cut.lengthLabel}
+        media={
+          reel ? <ReelMedia posterSrc={reel.posterSrc} videoSrc={reel.videoSrc} /> : undefined
+        }
       />
       <p className="m-0 text-meta text-on-viewer">
         {cut.format} <span className="machine">{cut.lengthLabel}</span>

@@ -141,6 +141,16 @@ export interface VideoThumbProps extends React.HTMLAttributes<HTMLDivElement> {
   aiScene?: boolean
   /** A quiet line under the caption, e.g. "0:40 · @mayatorres.coach". */
   footnote?: React.ReactNode
+  /**
+   * Real footage, laid behind the badges and the caption. Pass `ReelMedia` for
+   * a file that should play in view; anything absolutely positioned will do.
+   *
+   * Without it the frame is a flat demo colour, which is the honest default:
+   * a frame only looks like a reel when there is really a reel behind it.
+   * Supplying it also lays a scrim under the caption, because white 700 over
+   * arbitrary footage is not legible the way it is over a fixed brand colour.
+   */
+  media?: React.ReactNode
 }
 
 /**
@@ -180,6 +190,7 @@ export const VideoThumb = React.forwardRef<HTMLDivElement, VideoThumbProps>(func
     cutNumber,
     aiScene = false,
     footnote,
+    media,
     className,
     ...props
   },
@@ -193,9 +204,25 @@ export const VideoThumb = React.forwardRef<HTMLDivElement, VideoThumbProps>(func
         'relative flex aspect-[9/16] flex-col justify-end overflow-hidden rounded-thumb p-3.5',
         className,
       )}
+      // The demo colour stays even behind footage: it is what shows while the
+      // poster loads, so a frame is never briefly a white hole in the viewer.
       style={{ backgroundColor: thumbColor(index) }}
       {...props}
     >
+      {media}
+
+      {/* The scrim exists only over footage. Over a fixed demo colour the
+          caption's contrast is already known good (the contrast test pins it),
+          but over an arbitrary generated frame it is not, and a bright sky
+          behind white 700 is unreadable. Bottom-weighted so it darkens the
+          caption without flattening the image above it. */}
+      {media ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-viewer/85 via-viewer/25 to-transparent"
+        />
+      ) : null}
+
       {/* A length is a timing, which DESIGN.md puts in the machine's voice
           alongside costs and counts: "timings (0:24, 52:14)". Mono. */}
       {length ? (
@@ -218,11 +245,18 @@ export const VideoThumb = React.forwardRef<HTMLDivElement, VideoThumbProps>(func
       {/* Geist 700, white, and deliberately NOT mono. A burned-in caption is
           the client speaking to their audience, not the machine reporting, so
           it stays in the studio's voice. The frame behind it is always a dark
-          demo colour, so on-primary (#FFFFFF) is right in both themes. */}
-      <span className="font-heading text-overlay-caption text-on-primary">
+          demo colour or a scrimmed frame, so on-primary (#FFFFFF) is right in
+          both themes.
+
+          `relative` is load-bearing, not decoration: a statically positioned
+          element paints below a positioned sibling in the same stacking
+          context, so without it the scrim above would cover the caption. */}
+      <span className="relative font-heading text-overlay-caption text-on-primary">
         {renderCaption(caption, highlight)}
       </span>
-      {footnote ? <span className="mt-2 text-caption text-demo-sand">{footnote}</span> : null}
+      {footnote ? (
+        <span className="relative mt-2 text-caption text-demo-sand">{footnote}</span>
+      ) : null}
     </div>
   )
 })

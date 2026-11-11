@@ -39,5 +39,9 @@ export * from './components/form'
 export * from './components/status'
 export * from './components/data'
 export * from './components/video'
+// Named separately from './components/video' on purpose: this one is a client
+// component, so a page that only renders static frames never pulls it in.
+export { ReelMedia } from './components/reel-media'
+export type { ReelMediaProps } from './components/reel-media'
 export * from './components/overlay'
 export * from './components/logo'

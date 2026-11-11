@@ -45,8 +45,11 @@ describe('parseSummary', () => {
 
     expect(summary.generatedAt).toBe('2026-11-10T18:40:00Z')
     expect(summary.counts.cuts).toBe(1)
-    expect(summary.cuts[0].hook).toBe('Burnout is not a workload problem')
-    expect(summary.cuts[0].compliance.status).toBe('pass')
+    // `.at(0)?.` rather than `[0].`: tsconfig has noUncheckedIndexedAccess, so
+    // an unguarded index is a type error. The assertion is no weaker for it —
+    // a missing cut makes the actual value undefined, which still fails.
+    expect(summary.cuts.at(0)?.hook).toBe('Burnout is not a workload problem')
+    expect(summary.cuts.at(0)?.compliance.status).toBe('pass')
   })
 
   test('keeps the adapter names, which are the honesty record', () => {
@@ -100,6 +103,6 @@ describe('parseSummary', () => {
   test('a file path that is absent becomes null rather than undefined', () => {
     const summary = parseSummary({ ...SUMMARY, cuts: [{ ...CUT, file: undefined }] })
 
-    expect(summary.cuts[0].file).toBeNull()
+    expect(summary.cuts.at(0)?.file).toBeNull()
   })
 })
