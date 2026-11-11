@@ -100,6 +100,7 @@ export default function AgentsPage() {
 
       <Section tone="subtle" aria-labelledby="agents-heading">
         <SectionHeading
+          headingClassName="text-site-h2 font-serif"
           id="agents-heading"
           eyebrow="The loop"
           title="What each agent does"
@@ -174,6 +175,7 @@ export default function AgentsPage() {
 
       <Section aria-labelledby="client-heading">
         <SectionHeading
+          headingClassName="text-site-h2 font-serif"
           id="client-heading"
           title="What you actually do"
           lead="Five steps. The longest one is the upload, and the only one you cannot skip is the approval."

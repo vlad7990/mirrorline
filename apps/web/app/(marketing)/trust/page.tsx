@@ -210,6 +210,7 @@ export default function TrustPage() {
 
       <Section aria-labelledby="not-claimed-heading">
         <SectionHeading
+          headingClassName="text-site-h2 font-serif"
           id="not-claimed-heading"
           eyebrow="Plainly"
           title="What we don’t claim"

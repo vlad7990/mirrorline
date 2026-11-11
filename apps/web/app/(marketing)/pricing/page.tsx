@@ -131,7 +131,10 @@ export default function PricingPage() {
                   ) : (
                     <LeadDialogButton
                       intent={tier.id === 'pilot' ? 'pilot' : 'demo'}
-                      variant={tier.isSuggested ? 'primary' : 'secondary'}
+                      // Gold, not the studio's coral primary: this is the
+                      // public site, and one gold action per row is what
+                      // marks the suggested tier (D25).
+                      variant={tier.isSuggested ? 'gold' : 'secondary'}
                       size="lg"
                       fullWidth
                     >
@@ -149,6 +152,7 @@ export default function PricingPage() {
 
       <Section aria-labelledby="included-heading">
         <SectionHeading
+          headingClassName="text-site-h2 font-serif"
           id="included-heading"
           eyebrow="Every tier"
           title="The limits do not change with the price"
