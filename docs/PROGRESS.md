@@ -8,8 +8,14 @@
 
 ## Preview link
 
-**https://mirrorline-bh93oz0bd-vn-mn-product-group.vercel.app** — status Ready,
-deployed 10 Nov 2026, from `142569c`.
+**https://mirrorline-l2cumrggy-vn-mn-product-group.vercel.app** — status Ready,
+deployed 10 Nov 2026, from `e661188`.
+
+Engine v0 is wired to the upload screen, though **not on this preview**: the
+engine needs Python and ffmpeg, which a Vercel function has neither of, so the
+screen asks `/api/engine/status` first and keeps its demo states when the
+answer is no. Run it locally to see the live panel. Design and reasoning in
+`docs/plan/ENGINE_WIRING.md`.
 
 The public pages got a brand type scale (fluid `clamp()`, which the codebase
 had none of), scroll motion that the landing page previously had none of, and
