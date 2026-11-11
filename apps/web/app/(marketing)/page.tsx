@@ -24,7 +24,11 @@ import { Choices } from '@/components/marketing/choices'
 import { CutWall } from '@/components/marketing/cut-wall'
 import { Faq, type FaqItem } from '@/components/marketing/faq'
 import { GateReadout } from '@/components/marketing/gate-readout'
+import { CountUp } from '@/components/marketing/count-up'
+import { FeatureTabs } from '@/components/marketing/feature-tabs'
 import { HeroUpload } from '@/components/marketing/hero-upload'
+import { AUDIENCES, PROOF_CARDS } from '@/components/marketing/home-content'
+import { ShowcaseMarquee } from '@/components/marketing/showcase-marquee'
 import { TypedPhrase } from '@/components/marketing/typed-phrase'
 import {
   ComingSoonLabel,
@@ -294,6 +298,25 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* What it does, in four steps ------------------------------------ */}
+      <Section className="band-ink-alt" aria-labelledby="steps-heading">
+        <SectionHeading
+          id="steps-heading"
+          eyebrow="How the loop runs"
+          title={
+            <>
+              Four jobs, <span className="gold-phrase">one loop.</span>
+            </>
+          }
+          lead="Each one hands to the next, and the last one decides what the first does on Monday."
+          headingClassName="text-site-h2 font-serif"
+          aside={<SampleDataLabel />}
+        />
+        <div className="mt-10">
+          <FeatureTabs />
+        </div>
+      </Section>
+
       {/* The output, as proof ------------------------------------------- */}
       <Section aria-labelledby="proof-heading">
         <SectionHeading
@@ -312,6 +335,22 @@ export default function LandingPage() {
           customer result and they are not an average.
         </p>
       </Section>
+
+      {/* The showcase --------------------------------------------------- */}
+      {/* Full-bleed: the rails are meant to run off both edges, so this one
+          section opts out of the 1200px column the others keep. */}
+      <section className="band-ink-alt overflow-hidden py-16 sm:py-20" aria-labelledby="showcase-heading">
+        <div className="mx-auto mb-10 w-full max-w-[1200px] px-5 sm:px-8">
+          <h2 id="showcase-heading" className="m-0 max-w-[20ch] text-site-h2 text-on-ink-900">
+            Made for people who <span className="gold-phrase">sell what they know.</span>
+          </h2>
+          <p className="m-0 mt-3 max-w-[62ch] text-body text-on-ink-muted">
+            Sample hooks for fictional businesses, to show the shape of the work. Yours would be
+            cut from your own recordings. These are not customers and not customer results.
+          </p>
+        </div>
+        <ShowcaseMarquee />
+      </section>
 
       {/* The limits ----------------------------------------------------- */}
       <Section tone="subtle" size="md" aria-labelledby="limits-heading">
@@ -357,6 +396,78 @@ export default function LandingPage() {
         <div className="mt-8">
           <Choices />
         </div>
+      </Section>
+
+      {/* Who it is for --------------------------------------------------- */}
+      {/* The one light band on the page. The handoff alternates ink and
+          snow; a single snow section is what stops the page reading as one
+          long dark scroll. */}
+      <Section className="band-snow" aria-labelledby="audiences-heading">
+        <SectionHeading
+          id="audiences-heading"
+          eyebrow="Who it is for"
+          title={
+            <>
+              Built for people who <span className="gold-phrase">already know their subject.</span>
+            </>
+          }
+          lead="You have the expertise and the recordings. What you do not have is an evening a day to cut them up."
+          headingClassName="text-site-h2 font-serif"
+        />
+        <ul className="m-0 mt-10 grid list-none grid-cols-1 gap-5 p-0 sm:grid-cols-2 lg:grid-cols-4">
+          {AUDIENCES.map((audience) => (
+            <li key={audience.number}>
+              <Card className="flex h-full flex-col gap-3">
+                <span className="machine text-metric text-gold-deep">{audience.number}</span>
+                <h3 className="m-0 font-heading text-title text-text">{audience.title}</h3>
+                <p className="m-0 text-meta text-text-muted">{audience.body}</p>
+                {/* A goal, never a promise. Non-negotiable 7 rules out
+                    saying these will arrive — only that they are what the
+                    work is aimed at. */}
+                <p className="m-0 mt-auto pt-2 text-meta text-gold-text">
+                  Aimed at: {audience.goal}
+                </p>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      {/* One demo week, in numbers --------------------------------------- */}
+      <Section aria-labelledby="numbers-heading">
+        <SectionHeading
+          id="numbers-heading"
+          eyebrow="A demo week"
+          title={
+            <>
+              One demo week, <span className="gold-phrase">in numbers.</span>
+            </>
+          }
+          lead="Figures from the fictional demo client, so you can see what the loop reports. Your numbers will differ, and we report them as they are."
+          headingClassName="text-site-h2 font-serif"
+          aside={<SampleDataLabel />}
+        />
+        <ul className="m-0 mt-10 grid list-none grid-cols-1 gap-5 p-0 lg:grid-cols-3">
+          {PROOF_CARDS.map((proof) => (
+            <li key={proof.label}>
+              <Card className="flex h-full flex-col gap-3">
+                <p className="m-0">
+                  <CountUp
+                    value={proof.value}
+                    decimals={proof.decimals}
+                    suffix={proof.suffix}
+                    className="machine text-site-h2 text-gold-bright"
+                  />
+                </p>
+                <h3 className="m-0 font-heading text-title text-text">{proof.label}</h3>
+                <p className="m-0 text-meta text-text-muted">{proof.story}</p>
+                <p className="m-0 mt-auto border-t border-border pt-3 text-caption text-text-muted">
+                  {proof.agents}
+                </p>
+              </Card>
+            </li>
+          ))}
+        </ul>
       </Section>
 
       {/* The gate ------------------------------------------------------- */}

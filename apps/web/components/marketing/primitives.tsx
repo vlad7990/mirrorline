@@ -62,6 +62,17 @@ export interface SectionHeadingProps {
   level?: 2 | 3
   id?: string
   className?: string
+  /**
+   * Replaces the heading's own type classes. The public site passes
+   * `text-site-h2` for the serif display scale (D25).
+   *
+   * A prop rather than an arbitrary variant on `className`: `text-site-h2`
+   * is hand-written CSS in theme.css, not a registered Tailwind utility, so
+   * `[&_h2]:text-site-h2` generates no rule at all — silently, which cost a
+   * round of debugging. Composed variants only work on utilities Tailwind
+   * knows about.
+   */
+  headingClassName?: string
 }
 
 export function SectionHeading({
@@ -72,6 +83,7 @@ export function SectionHeading({
   level = 2,
   id,
   className,
+  headingClassName,
 }: SectionHeadingProps) {
   const Heading = level === 2 ? 'h2' : 'h3'
 
@@ -88,6 +100,8 @@ export function SectionHeading({
           className={cn(
             'reveal-lead m-0 text-balance font-heading text-text',
             level === 2 ? 'text-section' : 'text-title',
+            // Last, so a caller's display scale wins over the two above.
+            headingClassName,
           )}
         >
           {title}

@@ -565,10 +565,70 @@
     animation: mirrorline-dot-pulse 2.4s var(--ease-in-out) infinite;
   }
 
+  /*
+   * The feature tabs' gold track, filling across 6.5s before the slider
+   * advances. `forwards` holds it full rather than snapping back, so the
+   * moment before the change is not a flicker.
+   */
+  @keyframes mirrorline-track-fill {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  .animate-track-fill {
+    animation: mirrorline-track-fill 6500ms linear forwards;
+  }
+
+  /*
+   * The showcase rails. The list is rendered twice and moved by exactly half
+   * its width, which puts the copy where the original began — so the loop has
+   * no visible seam. Duration is set per rail inline.
+   */
+  @keyframes mirrorline-marquee-left {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes mirrorline-marquee-right {
+    from {
+      transform: translateX(-50%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  .animate-marquee-left {
+    animation: mirrorline-marquee-left linear infinite;
+  }
+
+  .animate-marquee-right {
+    animation: mirrorline-marquee-right linear infinite;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-caret,
-    .animate-dot-pulse {
+    .animate-dot-pulse,
+    .animate-track-fill,
+    .animate-marquee-left,
+    .animate-marquee-right {
       animation: none;
+    }
+
+    /* With the drift stopped the rails still hold more than fits, so they
+       become something to scroll by hand rather than something that moves
+       on its own. The track keeps its full fill so the active tab still
+       reads as active. */
+    .animate-track-fill {
+      transform: scaleX(1);
     }
   }
 
