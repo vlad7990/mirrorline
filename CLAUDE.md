@@ -27,11 +27,24 @@ Full plan: `docs/plan/30_DAY_PLAN.md`. Current phase: **Day 0–1, the overnight
 1. This file and `KICKOFF_PROMPT.md`
 2. `DESIGN.md` (design system in Google's DESIGN.md format) and `docs/design/design-tokens.*`
 3. `docs/specs/` (01 product brief, 02 brand and voice, 03 screens, 04 agents, 07 technical handoff, 08 mock data)
-4. Screen references:
-   - `docs/design/claude-design/screens/*.png`: the approved mockup
-   - `docs/design/claude-design/source/*.dc.html`: its source, including interactions
-   - `docs/design/stitch/screens/*.png` and `docs/design/stitch/code/*.html`: Stitch's polished versions. Prefer Stitch's visual polish where it matches the spec.
-5. `docs/design/STITCH_REVIEW.md`: claims and copy from Stitch that must NOT be used.
+4. **`docs/design/handoff-v4/`** — the current design, adopted 2026-11-11 (D25).
+   `README.md` is the written spec; `designs/*.dc.html` are the prototypes and
+   win on any exact value. Gold + ink for the public site, five pages. It
+   outranks everything below it, which is the previous direction.
+   **Three standing amendments, decided by Vlad — the handoff does not
+   override these:**
+   - The hero takes an **upload, never a link** (non-negotiable 1, D22).
+   - The hero run is driven by the **real engine**, not the handoff's canned
+     demo. We have the engine; a scripted result would be a step backwards.
+   - **Geist stays.** Geist Serif is the display face, not Fraunces. The gold
+     accent phrase is upright serif in the gold gradient — neither Geist Serif
+     nor the `next/font` Sans export carries a true italic.
+5. Older screen references, superseded by 4 but still the studio's basis until
+   the app restyle lands:
+   - `docs/design/claude-design/screens/*.png` and `source/*.dc.html`
+   - `docs/design/stitch/screens/*.png` and `docs/design/stitch/code/*.html`
+6. `docs/design/STITCH_REVIEW.md`: claims and copy from Stitch that must NOT be used.
+7. `docs/design/COMPETITOR_REFERENCES.md`: five competitor sites, measured.
 
 If sources conflict, the higher one wins. Log every decision in `docs/DECISIONS.md`.
 

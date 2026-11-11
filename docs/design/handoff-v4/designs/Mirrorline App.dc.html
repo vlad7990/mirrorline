@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FAFAF7;color:#14171C;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#C8401C}a:hover{color:#8F2C11}
+button{font-family:inherit}
+@keyframes mlShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes mlPulse{0%,100%{opacity:1}50%{opacity:.35}}
+</style>
+</helmet>
+
+<sc-if value="{{ is.onboarding }}" hint-placeholder-val="{{ false }}">
+<div style="min-height:100vh;background:#FAFAF7;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:24px 40px;border-bottom:1px solid #E6E4DD;background:#FFFFFF;gap:24px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:10px">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FF5A36" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>
+      <span style="font-family:'Inter Tight',sans-serif;font-weight:700;font-size:20px">Mirrorline</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex:1;max-width:560px">
+      <sc-for list="{{ obSteps }}" as="s">
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+          <div style="height:6px;border-radius:9999px;background:{{ s.bar }}"></div>
+          <span style="font-size:13px;color:{{ s.fg }};font-weight:600">{{ s.label }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <button onClick="{{ skipOnboarding }}" style="background:none;border:none;color:#5F6672;font-size:14px;font-weight:600;cursor:pointer;height:44px">Skip to demo</button>
+  </div>
+
+  <div style="flex:1;width:100%;max-width:1040px;margin:0 auto;padding:40px;box-sizing:border-box">
+    <sc-if value="{{ ob.s1 }}" hint-placeholder-val="{{ true }}">
+      <div style="font-size:13px;color:#5F6672">Step 1 of 3 · about 3 minutes</div>
+      <h1 style="font-family:'Inter Tight',sans-serif;font-size:32px;font-weight:700;margin:6px 0 6px">Set up your brand kit</h1>
+      <p style="margin:0 0 28px;color:#5F6672;font-size:15px">Every cut gets your colours, fonts and way of talking. You can change this any time.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:24px">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px;display:flex;gap:20px;align-items:center">
+            <div style="width:72px;height:72px;border-radius:12px;background:#12545A;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-family:'Inter Tight',sans-serif;font-weight:700;font-size:24px">MT</div>
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:15px">Logo</div>
+              <div style="font-size:13px;color:#5F6672">maya-torres-logo.png · 512 × 512</div>
+            </div>
+            <button style="height:44px;padding:0 16px;background:#FFFFFF;border:1px solid #D6D3CA;border-radius:10px;font-weight:600;font-size:14px;color:#14171C;cursor:pointer">Replace</button>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:600;font-size:15px">Colours</span><span style="font-size:13px;color:#5F6672">Suggested from your logo</span></div>
+            <div style="display:flex;gap:12px;margin-top:14px;flex-wrap:wrap">
+              <div style="display:flex;align-items:center;gap:10px;border:1px solid #E6E4DD;border-radius:10px;padding:8px 12px 8px 8px"><span style="width:28px;height:28px;border-radius:6px;background:#12545A"></span><span style="font-size:13px">Deep teal <span style="color:#5F6672">#12545A</span></span></div>
+              <div style="display:flex;align-items:center;gap:10px;border:1px solid #E6E4DD;border-radius:10px;padding:8px 12px 8px 8px"><span style="width:28px;height:28px;border-radius:6px;background:#F3E9DC;border:1px solid #E6E4DD"></span><span style="font-size:13px">Warm sand <span style="color:#5F6672">#F3E9DC</span></span></div>
+              <div style="display:flex;align-items:center;gap:10px;border:1px solid #E6E4DD;border-radius:10px;padding:8px 12px 8px 8px"><span style="width:28px;height:28px;border-radius:6px;background:#FF5A36"></span><span style="font-size:13px">Coral <span style="color:#5F6672">#FF5A36</span></span></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;padding-top:16px;border-top:1px solid #E6E4DD">
+              <span style="font-weight:600;font-size:15px">Fonts</span>
+              <span style="font-size:14px;color:#3E444D">Headings Inter Tight · Body Inter</span>
+            </div>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px">
+            <div style="font-weight:600;font-size:15px">How you talk</div>
+            <div style="font-size:13px;color:#5F6672;margin-top:2px">Move the sliders; the caption on the right updates.</div>
+            <div style="display:flex;flex-direction:column;gap:16px;margin-top:18px">
+              <sc-for list="{{ toneSliders }}" as="t">
+                <div style="display:grid;grid-template-columns:90px minmax(0,1fr) 90px;align-items:center;gap:12px;font-size:13px;color:#5F6672">
+                  <span>{{ t.left }}</span>
+                  <input type="range" min="0" max="100" value="{{ t.value }}" onChange="{{ t.onChange }}" style="width:100%;accent-color:#C8401C">
+                  <span style="text-align:right">{{ t.right }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:14px;align-self:start">
+          <div style="font-size:12px;font-weight:600;letter-spacing:.06em;color:#5F6672">SAMPLE CAPTION · LIVE</div>
+          <div style="aspect-ratio:9/16;max-height:440px;background:#12545A;border-radius:8px;position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:20px;box-sizing:border-box">
+            <span style="position:absolute;top:10px;left:10px;background:#FFFFFF;color:#14171C;font-size:12px;font-weight:600;padding:2px 8px;border-radius:6px">0:24</span>
+            <div style="font-family:'Inter Tight',sans-serif;font-weight:700;font-size:20px;line-height:1.25;color:#FFFFFF;text-wrap:pretty">{{ sample.pre }} <span style="background:#F3E9DC;color:#12545A;padding:0 4px;border-radius:4px;box-decoration-break:clone;-webkit-box-decoration-break:clone">{{ sample.hl }}</span></div>
+          </div>
+          <div style="font-size:13px;color:#5F6672">{{ sample.note }}</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ ob.s2 }}" hint-placeholder-val="{{ false }}">
+      <div style="font-size:13px;color:#5F6672">Step 2 of 3</div>
+      <h1 style="font-family:'Inter Tight',sans-serif;font-size:32px;font-weight:700;margin:6px 0 6px">Connect your accounts</h1>
+      <p style="margin:0 0 28px;color:#5F6672;font-size:15px">We post through each platform's official app connection, to accounts you own. Disconnect any time.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
+        <sc-for list="{{ obAccounts }}" as="a">
+          <div style="background:#FFFFFF;border:{{ a.border }};border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span style="font-family:'Inter Tight',sans-serif;font-weight:600;font-size:18px">{{ a.name }}</span>
+              <sc-if value="{{ a.connected }}"><span style="background:#E3F4EC;color:#145C40;font-size:12px;font-weight:600;padding:3px 10px;border-radius:9999px">Connected</span></sc-if>
+            </div>
+            <div style="font-size:13px;color:#5F6672;min-height:38px">{{ a.note }}</div>
+            <button onClick="{{ a.toggle }}" style="height:44px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;background:{{ a.btnBg }};color:{{ a.btnFg }};border:1px solid {{ a.btnBd }}">{{ a.btn }}</button>
+          </div>
+        </sc-for>
+      </div>
+      <label style="display:flex;align-items:center;gap:12px;margin-top:24px;background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:18px 22px;cursor:pointer;font-size:15px">
+        <input type="checkbox" checked="{{ ob.rights }}" onChange="{{ toggleRights }}" style="width:20px;height:20px;accent-color:#C8401C">
+        <span>I own or have rights to everything I upload.</span>
+      </label>
+    </sc-if>
+
+    <sc-if value="{{ ob.s3 }}" hint-placeholder-val="{{ false }}">
+      <div style="font-size:13px;color:#5F6672">Step 3 of 3</div>
+      <h1 style="font-family:'Inter Tight',sans-serif;font-size:32px;font-weight:700;margin:6px 0 6px">Your niche and goal</h1>
+      <p style="margin:0 0 28px;color:#5F6672;font-size:15px">The Trend Scout watches your niche and the ones next to it.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px">
+        <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:16px">
+          <div>
+            <div style="font-weight:600;font-size:14px;margin-bottom:8px">Niche</div>
+            <div style="height:44px;border:1px solid #D6D3CA;border-radius:10px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:15px">Coaching<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F6672" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div>
+          </div>
+          <div>
+            <div style="font-weight:600;font-size:14px;margin-bottom:8px">Nearby niches</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <sc-for list="{{ nearbyChips }}" as="c">
+                <button onClick="{{ c.toggle }}" style="height:36px;padding:0 14px;border-radius:9999px;font-size:14px;font-weight:600;cursor:pointer;background:{{ c.bg }};color:{{ c.fg }};border:1px solid {{ c.bd }}">{{ c.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div>
+            <div style="font-weight:600;font-size:14px;margin-bottom:8px">Send traffic to</div>
+            <div style="height:44px;border:1px solid #D6D3CA;border-radius:10px;display:flex;align-items:center;padding:0 14px;font-size:15px">mayatorres.example/call</div>
+          </div>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:16px">
+          <div>
+            <div style="font-weight:600;font-size:14px;margin-bottom:8px">Main goal</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ goals }}" as="g">
+                <button onClick="{{ g.pick }}" style="height:44px;text-align:left;padding:0 14px;border-radius:10px;font-size:15px;cursor:pointer;background:{{ g.bg }};color:#14171C;border:{{ g.bd }}">{{ g.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div><div style="font-weight:600;font-size:14px">Posts per day, per platform</div><div style="font-size:13px;color:#5F6672">{{ ob.ppdNote }}</div></div>
+            <div style="display:flex;align-items:center;border:1px solid #D6D3CA;border-radius:10px;overflow:hidden">
+              <button onClick="{{ ppdDown }}" style="width:44px;height:44px;border:none;background:#FFFFFF;font-size:18px;cursor:pointer">–</button>
+              <span style="width:36px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums">{{ ob.ppd }}</span>
+              <button onClick="{{ ppdUp }}" style="width:44px;height:44px;border:none;background:#FFFFFF;font-size:18px;cursor:pointer">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:32px;padding-top:24px;border-top:1px solid #E6E4DD">
+      <button onClick="{{ obBack }}" style="height:44px;padding:0 16px;background:#FFFFFF;border:1px solid #D6D3CA;border-radius:10px;font-weight:600;font-size:14px;color:#14171C;cursor:pointer">{{ ob.backLabel }}</button>
+      <button onClick="{{ obNext }}" style="height:48px;padding:0 24px;background:#C8401C;color:#FFFFFF;border:none;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer">{{ ob.nextLabel }}</button>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.app }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;min-height:100vh;background:#FAFAF7">
+  <aside style="width:240px;flex-shrink:0;background:#FAFAF7;border-right:1px solid #E6E4DD;position:sticky;top:0;height:100vh;box-sizing:border-box;padding:24px 16px;display:flex;flex-direction:column;gap:20px">
+    <button onClick="{{ goWebsite }}" style="display:flex;align-items:center;gap:10px;padding:0 6px;background:none;border:none;cursor:pointer;color:#14171C">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FF5A36" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>
+      <span style="font-family:'Inter Tight',sans-serif;font-weight:700;font-size:20px">Mirrorline</span>
+    </button>
+    <div style="display:flex;align-items:center;gap:10px;background:#FFFFFF;border:1px solid #E6E4DD;border-radius:10px;padding:10px">
+      <span style="width:32px;height:32px;border-radius:8px;background:#12545A;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px">MT</span>
+      <div style="min-width:0"><div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Maya Torres Coaching</div><div style="font-size:13px;color:#5F6672">Growth plan</div></div>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:4px">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="8">
+        <button onClick="{{ n.go }}" style="height:44px;text-align:left;padding:0 14px;border:none;border-radius:10px;font-size:15px;cursor:pointer;background:{{ n.bg }};color:{{ n.fg }};font-weight:{{ n.fw }}">{{ n.label }}</button>
+      </sc-for>
+    </nav>
+    <div style="margin-top:auto;background:#FFFFFF;border:1px solid #E6E4DD;border-radius:10px;padding:14px">
+      <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#5F6672">Posts this month</span><span style="font-weight:600;font-variant-numeric:tabular-nums">63 of 90</span></div>
+      <div style="height:6px;border-radius:9999px;background:#EFEDE7;margin-top:10px;overflow:hidden"><div style="width:70%;height:100%;background:#FF5A36;border-radius:9999px"></div></div>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;padding:36px 40px 56px">
+  <div style="max-width:1200px;margin:0 auto">
+
+  <sc-if value="{{ is.home }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:28px">
+      <div>
+        <div style="font-size:13px;color:#5F6672">Monday, 9 November</div>
+        <h1 style="font-family:'Inter Tight',sans-serif;font-size:32px;font-weight:700;margin:4px 0 6px">Good morning, Maya</h1>
+        <div style="font-size:15px;color:#5F6672">3 posts are out, 3 more go today. 3 cuts need your eye.</div>
+      </div>
+      <button onClick="{{ goUpload }}" style="height:48px;padding:0 20px;background:#C8401C;color:#FFFFFF;border:none;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer">New upload</button>
+    </div>
+    <sc-if value="{{ igError }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;background:#FBE3E3;color:#8E2626;border-radius:12px;padding:14px 18px;margin-bottom:20px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px;font-size:15px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4M12 16h.01"></path></svg><span><b>Instagram disconnected.</b> The 2:15 pm post is paused until you reconnect.</span></div>
+        <button onClick="{{ reconnect }}" style="height:44px;padding:0 16px;background:#D23F3F;color:#FFFFFF;border:none;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer">Reconnect Instagram</button>
+      </div>
+    </sc-if>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px">
+      <sc-for list="{{ metrics }}" as="m" hint-placeholder-count="4">
+        <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:18px 20px">
+          <div style="font-size:13px;color:#5F6672">{{ m.label }}</div>
+          <div style="font-size:30px;font-weight:600;line-height:1.1;margin-top:6px;font-variant-numeric:tabular-nums">{{ m.value }}</div>
+          <svg viewBox="0 0 200 36" preserveAspectRatio="none" style="width:100%;height:36px;margin:10px 0 6px;display:block"><polyline points="{{ m.points }}" fill="none" stroke="#FF5A36" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline></svg>
+          <div style="font-size:13px;font-weight:600;color:#145C40">{{ m.delta }}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:24px;min-width:0;flex:999 1 460px">
+        <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:14px;border-bottom:1px solid #E6E4DD"><h2 style="font-family:'Inter Tight',sans-serif;font-size:20px;font-weight:600;margin:0">Needs you</h2><span style="font-size:13px;color:#5F6672">{{ needsCount }}</span></div>
+          <sc-for list="{{ needs }}" as="n">
+            <div style="display:flex;align-items:center;gap:10px 14px;padding:14px 0;border-bottom:1px solid #E6E4DD;flex-wrap:wrap">
+              <span style="flex-shrink:0;font-size:12px;font-weight:600;padding:3px 10px;border-radius:9999px;background:{{ n.chip.bg }};color:{{ n.chip.fg }}">{{ n.chip.label }}</span>
+              <span style="flex:1 1 220px;font-size:15px;line-height:1.45">{{ n.text }}</span>
+              <button onClick="{{ n.act }}" style="flex-shrink:0;height:44px;padding:0 16px;background:#FFFFFF;border:1px solid #D6D3CA;border-radius:10px;font-weight:600;font-size:14px;color:#14171C;cursor:pointer">{{ n.btn }}</button>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:14px;border-bottom:1px solid #E6E4DD"><h2 style="font-family:'Inter Tight',sans-serif;font-size:20px;font-weight:600;margin:0">Today</h2><button onClick="{{ goCalendar }}" style="background:none;border:none;font-weight:600;font-size:14px;color:#14171C;text-decoration:underline;cursor:pointer">Open calendar</button></div>
+          <sc-for list="{{ today }}" as="t" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid #E6E4DD">
+              <span style="width:72px;flex-shrink:0;font-weight:600;font-size:15px;font-variant-numeric:tabular-nums">{{ t.time }}</span>
+              <span style="width:36px;height:56px;border-radius:6px;flex-shrink:0;background:{{ t.color }}"></span>
+              <div style="flex:1;min-width:0"><div style="font-size:15px">{{ t.title }}</div><div style="font-size:13px;color:#5F6672">{{ t.sub }}</div></div>
+              <span style="flex-shrink:0;font-size:12px;font-weight:600;padding:3px 10px;border-radius:9999px;background:{{ t.chip.bg }};color:{{ t.chip.fg }}">{{ t.chip.label }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:24px;flex:1 1 300px;min-width:0">
+        <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:12px;border-bottom:1px solid #E6E4DD"><h2 style="font-family:'Inter Tight',sans-serif;font-size:20px;font-weight:600;margin:0">Agent activity</h2><button onClick="{{ goAgents }}" style="background:none;border:none;font-weight:600;font-size:14px;color:#14171C;text-decoration:underline;cursor:pointer">All agents</button></div>
+          <sc-for list="{{ feed }}" as="f" hint-placeholder-count="6">
+            <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #E6E4DD">
+              <span style="width:7px;height:7px;border-radius:9999px;background:#FF5A36;margin-top:7px;flex-shrink:0"></span>
+              <div><div style="font-size:13px;color:#5F6672">{{ f.meta }}</div><div style="font-size:14px;line-height:1.45;margin-top:2px">{{ f.text }}</div></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:#14171C;color:#F2F2EE;border-radius:12px;padding:22px">
+          <div style="display:flex;align-items:center;gap:10px;color:#FF7A5C;font-size:12px;font-weight:600;letter-spacing:.06em"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF7A5C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>LEARNING LOOP</div>
+          <div style="font-family:'Inter Tight',sans-serif;font-weight:700;font-size:22px;line-height:1.25;margin-top:12px">This week's winner: question hooks, 2.1× average views.</div>
+          <div style="font-size:14px;color:#A3A9B4;margin-top:10px;line-height:1.55">Next week we're making more of them, and trying them on TikTok first.</div>
+          <button onClick="{{ goResults }}" style="background:none;border:none;padding:0;margin-top:12px;color:#FF7A5C;font-weight:600;font-size:14px;text-decoration:underline;cursor:pointer">See results</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ is.upload }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:24px">
+      <div>
+        <div style="font-size:13px;color:#5F6672">Create · Multiplier agent</div>
+        <h1 style="font-family:'Inter Tight',sans-serif;font-size:32px;font-weight:700;margin:4px 0 0">{{ up.title }}</h1>
+      </div>
+      <sc-if value="{{ up.isDone }}">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <span style="font-size:14px;color:#5F6672"><b style="color:#14171C">12 cuts ready</b> · {{ up.summary }}</span>
+          <button onClick="{{ scheduleAll }}" style="height:48px;padding:0 20px;background:#C8401C;color:#FFFFFF;border:none;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer">{{ up.scheduleLabel }}</button>
+        </div>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ up.isEmpty }}">
+      <div style="background:#FFFFFF;border:1.5px dashed #D6D3CA;border-radius:16px;padding:72px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FF5A36" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>
+        <div style="font-family:'Inter Tight',sans-serif;font-weight:600;font-size:20px;margin-top:8px">No uploads yet</div>
+        <div style="font-size:15px;color:#5F6672">Drop a long video. We'll find the moments worth posting.</div>
+        <div style="display:flex;gap:12px;margin-top:14px;flex-wrap:wrap;justify-content:center">
+          <button onClick="{{ startLoading }}" style="height:48px;padding:0 20px;background:#C8401C;color:#FFFFFF;border:none;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer">Choose a video</button>
+          <button onClick="{{ startLoading }}" style="height:48px;padding:0 18px;background:#FFFFFF;border:1px solid #D6D3CA;border-radius:10px;font-weight:600;font-size:14px;color:#14171C;cursor:pointer">Import from my YouTube channel</button>
+        </div>
+        <div style="font-size:13px;color:#5F6672;margin-top:8px">Podcasts, webinars, talks or demos · up to 3 hours · only material you own</div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ up.hasSource }}">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:24px;margin-bottom:24px">
+        <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:16px">
+          <div style="border:1.5px dashed #D6D3CA;border-radius:10px;padding:28px 16px;text-align:center">
+            <div style="font-weight:600;font-size:15px">Drop a long video</div>
+            <div style="font-size:13px;color:#5F6672;margin-top:4px">or <span style="color:#14171C;text-decoration:underline;font-weight:600">import from my YouTube channel</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px">
+            <span style="width:96px;height:56px;border-radius:6px;background:#12545A;color:#FFFFFF;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums;flex-shrink:0">52:14</span>
+            <div><div style="font-weight:600;font-size:15px">Episode 47: Why good managers burn out</div><div style="font-size:13px;color:#5F6672">Lead Without Burnout · uploaded today 9:12 am</div></div>
+          </div>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px">
+          <h2 style="font-family:'Inter Tight',sans-serif;font-size:20px;font-weight:600;margin:0 0 14px">{{ up.progressTitle }}</h2>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px">
+            <sc-for list="{{ up.steps }}" as="s">
+              <div style="border-radius:10px;padding:12px;background:{{ s.bg }};border:1px solid {{ s.bd }}">
+                <div style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:14px;color:{{ s.fg }}">
+                  <sc-if value="{{ s.done }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>
+                  <sc-if value="{{ s.active }}"><span style="width:8px;height:8px;border-radius:9999px;background:#FF5A36;animation:mlPulse 1.2s ease-in-out infinite"></span></sc-if>
+                  {{ s.label }}
+                </div>
+                <div style="font-size:13px;color:#5F6672;margin-top:4px">{{ s.note }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ up.isLoading }}">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px">{{ shimmer }}</div>
+    </sc-if>
+
+    <sc-if value="{{ up.isDone }}">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
+        <sc-for list="{{ cutFilters }}" as="f">
+          <button onClick="{{ f.pick }}" style="height:40px;padding:0 16px;border-radius:9999px;font-size:14px;font-weight:600;cursor:pointer;background:{{ f.bg }};color:{{ f.fg }};border:1px solid {{ f.bd }}">{{ f.label }}</button>
+        </sc-for>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px">
+        <sc-for list="{{ cuts }}" as="c" hint-placeholder-count="10">
+          <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px">
+            <div style="aspect-ratio:9/16;border-radius:8px;position:relative;display:flex;align-items:flex-end;padding:12px;box-sizing:border-box;background:{{ c.color }}">
+              <span style="position:absolute;top:8px;left:8px;background:#FFFFFF;color:#14171C;font-size:12px;font-weight:600;padding:1px 6px;border-radius:4px;font-variant-numeric:tabular-nums">{{ c.len }}</span>
+              <span style="position:absolute;top:8px;right:8px;background:rgba(20,23,28,.55);color:#FFFFFF;font-size:12px;font-weight:600;padding:1px 6px;border-radius:4px">#{{ c.n }}</span>
+              <div style="font-family:'Inter Tight',sans-serif;font-weight:700;font-size:15px;line-height:1.25;color:#FFFFFF;text-wrap:pretty">{{ c.hook }}</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#5F6672">{{ c.format }}</span><span style="font-weight:600;font-variant-numeric:tabular-nums">Score {{ c.score }}</span></div>
+            <div><span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:9999px;background:{{ c.chip.bg }};color:{{ c.chip.fg }}">{{ c.chip.label }}</span></div>
+            <sc-if value="{{ c.reason }}"><div style="font-size:13px;color:#5F6672;line-height:1.4">{{ c.reason }}</div></sc-if>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto">
+              <button onClick="{{ c.preview }}" style="height:44px;background:#FFFFFF;border:1px solid #D6D3CA;border-radius:10px;font-weight:600;font-size:14px;color:#14171C;cursor:pointer">Preview</button>
+              <button onClick="{{ c.act }}" style="height:44px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;background:{{ c.actBg }};color:{{ c.actFg }};border:1px solid {{ c.actBd }}">{{ c.actLabel }}</button>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+  </sc-if>
+
+  <sc-if value="{{ is.trends }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:20px">
+      <div>
+        <div style="font-size:13px;color:#5F6672">Create · Trend Scout agent · updated 10:05 am</div>
+        <h1 style="font-family:'Inter Tight',sans-serif;font-size:32px;font-weight:700;margin:4px 0 0">Formats rising now</h1>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <sc-for list="{{ trendFilters }}" as="f">
+          <button onClick="{{ f.pick }}" style="height:44px;padding:0 16px;border-radius:9999px;font-size:14px;font-weight:600;cursor:pointer;background:{{ f.bg }};color:{{ f.fg }};border:1px solid {{ f.bd }}">{{ f.label }}</button>
+        </sc-for>
+        <span style="width:1px;height:28px;background:#E6E4DD;margin:0 4px"></span>
+        <button style="height:44px;padding:0 16px;border-radius:9999px;font-size:14px;font-weight:600;background:#FFFFFF;border:1px solid #D6D3CA;color:#14171C">All platforms</button>
+        <button style="height:44px;padding:0 16px;border-radius:9999px;font-size:14px;font-weight:600;background:#FFFFFF;border:1px solid #D6D3CA;color:#14171C">Last 7 days</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start;background:#E3ECFB;color:#1F4FA8;border-radius:12px;padding:16px 20px;margin-bottom:24px;font-size:15px;line-height:1.5">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="9"></circle><path d="M12 16v-4M12 8h.01"></path></svg>
+      <span><b>We remake the format, never the footage.</b> Each card is a recipe of beats, not someone else's video. Every remake gets a new script, your footage and a compliance check.</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px">
+      <sc-for list="{{ trends }}" as="t" hint-placeholder-count="8">
+        <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:9999px;background:#EFEDE7;color:#3E444D">{{ t.niche }}</span><span style="font-size:14px;font-weight:600;color:#145C40;font-variant-numeric:tabular-nums">{{ t.growth }}</span></div>
+          <div style="font-family:'Inter Tight',sans-serif;font-weight:600;font-size:20px;line-height:1.25">{{ t.name }}</div>
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">
+            <sc-for list="{{ t.beats }}" as="b">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="aspect-ratio:9/16;max-height:110px;border:1px solid #E6E4DD;border-radius:6px;background:#FAFAF7;display:flex;align-items:flex-end;padding:6px;box-sizing:border-box"><span style="height:4px;width:100%;border-radius:9999px;background:{{ b.color }}"></span></div>
+                <span style="font-size:12px;color:#5F6672;line-height:1.3">{{ b.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="font-size:14px;line-height:1.5;color:#3E444D">{{ t.why }}</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:auto">
+            <span style="font-size:13px;color:#5F6672;white-space:nowrap">Fit for Maya</span>
+            <div style="flex:1;height:6px;border-radius:9999px;background:#EFEDE7;overflow:hidden"><div style="height:100%;border-radius:9999px;background:#FF5A36;width:{{ t.fitPct }}"></div></div>
+            <span style="font-weight:600;font-size:15px;font-variant-numeric:tabular-nums">{{ t.fit }}</span>
+          </div>
+          <button onClick="{{ goRemake }}" style="height:48px;background:#C8401C;color:#FFFFFF;border:none;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer">Remake for my brand</button>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ is.remake }}" hint-placeholder-val="{{ false }}">
+    <button onClick="{{ goTrends }}" style="background:none;border:none;padding:0;font-weight:600;font-size:14px;color:#14171C;text-decoration:underline;cursor:pointer">Back to trends</button>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;margin:8px 0 24px">
+      <div>
+        <h1 style="font-family:'Inter Tight',sans-serif;font-size:32px;font-weight:700;margin:0 0 6px">Remake: The 3-word reframe</h1>
+        <div style="font-size:15px;color:#5F6672">Remake Producer agent · format from Leadership (+340%) · made for Maya Torres Coaching</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button onClick="{{ goTrends }}" style="height:44px;padding:0 14px;background:none;border:none;font-weight:600;font-size:14px;color:#5F6672;cursor:pointer">Discard</button>
+        <button style="height:44px;padding:0 16px;background:#FFFFFF;border:1px solid #D6D3CA;border-radius:10px;font-weight:600;font-size:14px;color:#14171C;cursor:pointer">Edit script</button>
+        <button onClick="{{ approveRemake }}" style="height:48px;padding:0 20px;background:#C8401C;color:#FFFFFF;border:none;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer">Approve and make 5 variants</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:20px;align-items:start">
+      <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px">
+        <div style="font-size:12px;font-weight:600;letter-spacing:.06em;color:#5F6672;padding-bottom:12px;border-bottom:1px solid #E6E4DD">1 · FORMAT RECIPE</div>
+        <sc-for list="{{ recipe }}" as="r">
+          <div style="display:grid;grid-template-columns:56px minmax(0,1fr);gap:10px;padding:14px 0;border-bottom:1px solid #E6E4DD">
+            <span style="font-size:13px;color:#5F6672;font-variant-numeric:tabular-nums">{{ r.t }}</span>
+            <div><div style="font-weight:600;font-size:15px">{{ r.name }}</div><div style="font-size:13px;color:#5F6672;margin-top:2px;line-height:1.45">{{ r.desc }}</div></div>
+          </div>
+        </sc-for>
+        <div style="font-size:13px;color:#5F6672;line-height:1.5;padding-top:14px">Pacing: a cut every 2–3 s. Captions: two lines, key word highlighted.</div>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px">
+        <div style="font-size:12px;font-weight:600;letter-spacing:.06em;color:#5F6672;margin-bottom:14px">2 · MAYA'S VERSION · NEW SCRIPT</div>
+        <div style="background:#FAFAF7;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:10px;font-size:15px;line-height:1.55">
+          <div><b>Hook:</b> {{ chosenHook }}</div>
+          <div><b>Belief:</b> Most new managers think being needed means being good at the job.</div>
+          <div><b>Reframe:</b> Three words: <b>coach, don't carry.</b></div>
+          <div><b>Example:</b> Next time someone brings you a problem, ask “What have you tried?” before you answer.</div>
+          <div><b>Call to action:</b> Want more? Book a free call. The link is in my bio.</div>
+        </div>
+        <div style="font-weight:600;font-size:15px;margin:20px 0 6px">Shot list</div>
+        <sc-for list="{{ shots }}" as="s">
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-top:1px solid #E6E4DD">
+            <span style="width:16px;font-weight:600;color:#5F6672">{{ s.n }}</span>
+            <span style="flex:1;font-size:14px;line-height:1.45">{{ s.text }}</span>
+            <span style="flex-shrink:0;font-size:12px;font-weight:600;padding:3px 10px;border-radius:9999px;background:{{ s.bg }};color:{{ s.fg }}">{{ s.tag }}</span>
+          </div>
+        </sc-for>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:14px;border-top:1px solid #E6E4DD;font-size:14px">
+          <b>Voice:</b><span>Maya's own recording</span><span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:9999px;background:#E3F4EC;color:#145C40">Consent on file · 9 Nov 2026</span>
+        </div>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px">
+        <div style="font-size:12px;font-weight:600;letter-spacing:.06em;color:#5F6672;margin-bottom:14px">3 · PREVIEW</div>
+        <div style="aspect-ratio:9/16;width:100%;max-width:240px;margin:0 auto;background:#12545A;border-radius:12px;position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:44px 16px 16px;box-sizing:border-box;overflow:hidden">
+          <span style="position:absolute;top:10px;right:10px;background:#FFFFFF;color:#14171C;font-size:12px;font-weight:600;padding:2px 8px;border-radius:6px">AI scene</span>
+          <div style="font-family:'Inter Tight',sans-serif;font-weight:700;font-size:clamp(15px,1.4vw,19px);line-height:1.25;color:#FFFFFF;text-wrap:pretty">{{ chosenHook }}</div>
+          <div style="font-size:12px;color:#F3E9DC;margin-top:8px;overflow-wrap:anywhere">0:40 · @mayatorres.coach</div>
+        </div>
+        <div style="font-weight:600;font-size:15px;margin:18px 0 10px">Hooks to A/B test</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ hooks }}" as="h">
+            <button onClick="{{ h.pick }}" style="text-align:left;padding:12px 14px;border-radius:10px;font-size:14px;line-height:1.4;cursor:pointer;color:#14171C;background:{{ h.bg }};border:{{ h.bd }}">{{ h.text }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    <div style="background:#FFFFFF;border:1.5px solid #1F9D6B;border-radius:12px;padding:22px;margin-top:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h2 style="font-family:'Inter Tight',sans-serif;font-size:20px;font-weight:600;margin:0">Compliance agent</h2><span style="font-size:12px;font-weight:600;padding:3px 12px;border-radius:9999px;background:#E3F4EC;color:#145C40">Passed</span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px">
+        <sc-for list="{{ checks }}" as="k">
+          <div style="display:flex;gap:10px;font-size:14px;line-height:1.45"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F9D6B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M20 6 9 17l-5-5"></path></svg><span>{{ k }}</span></div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ is.calendar }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:24px">
+      <div>
+        <div style="font-size:13px;color:#5F6672">Publisher agent · 3 platforms · 2–4 posts a day each</div>
+        <h1 style="font-family:'Inter Tight',sans-serif;font-size:32px;font-weight:700;margin:4px 0 0">Week of 9 November</h1>
+      </div>
+      <div style="display:flex;background:#EFEDE7;border-radius:10px;padding:4px">
+        <sc-for list="{{ modes }}" as="m">
+          <button onClick="{{ m.pick }}" style="height:40px;padding:0 16px;border:none;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;background:{{ m.bg }};color:{{ m.fg }};box-shadow:{{ m.sh }}">{{ m.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+      <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:20px;min-width:0;flex:999 1 560px">
+        <div style="overflow-x:auto">
+          <div style="min-width:860px;display:grid;grid-template-columns:110px repeat(7,minmax(0,1fr));gap:8px">
+            <div></div>
+            <sc-for list="{{ calDays }}" as="d"><div style="font-size:14px;font-weight:600;padding:4px 6px 8px;color:{{ d.fg }}">{{ d.label }}</div></sc-for>
+            <sc-for list="{{ calRows }}" as="row">
+              <div style="display:flex;align-items:center;font-weight:600;font-size:14px;padding-right:8px">{{ row.platform }}</div>
+              <sc-for list="{{ row.cells }}" as="cell">
+                <div style="border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:6px;min-height:120px;background:{{ cell.bg }}">
+                  <sc-for list="{{ cell.posts }}" as="p">
+                    <button onClick="{{ p.select }}" style="display:flex;gap:6px;align-items:center;text-align:left;background:#FFFFFF;border-radius:6px;padding:6px;cursor:pointer;border-top:1px solid {{ p.ring }};border-right:1px solid {{ p.ring }};border-bottom:1px solid {{ p.ring }};border-left:4px solid {{ p.edge }};box-shadow:{{ p.sel }}">
+                      <span style="width:14px;height:24px;border-radius:3px;flex-shrink:0;background:{{ p.color }}"></span>
+                      <span style="min-width:0;display:flex;flex-direction:column"><span style="font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap">{{ p.time }}</span><span style="font-size:12px;color:#5F6672;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.hook }}</span></span>
+                    </button>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:#5F6672;margin-top:16px;align-items:center">
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:#8A9099"></span>Published</span>
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:#2F6FDE"></span>Scheduled</span>
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:#C98A12"></span>Needs review</span>
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:#1F9D6B"></span>Approved</span>
+          <span>TikTok posts stay private until our app is approved.</span>
+        </div>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px;flex:1 1 300px;max-width:100%">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+          <span style="font-size:13px;color:#5F6672">{{ sel.meta }}</span>
+          <span style="flex-shrink:0;font-size:12px;font-weight:600;padding:3px 10px;border-radius:9999px;background:{{ sel.chip.bg }};color:{{ sel.chip.fg }}">{{ sel.chip.label }}</span>
+        </div>
+        <div style="aspect-ratio:9/16;max-height:340px;margin:0 auto;width:100%;max-width:190px;border-radius:10px;position:relative;display:flex;align-items:flex-end;padding:14px;box-sizing:border-box;background:{{ sel.color }}">
+          <sc-if value="{{ sel.ai }}"><span style="position:absolute;top:8px;right:8px;background:#FFFFFF;color:#14171C;font-size:12px;font-weight:600;padding:1px 6px;border-radius:4px">AI scene</span></sc-if>
+          <div style="font-family:'Inter Tight',sans-serif;font-weight:700;font-size:16px;line-height:1.25;color:#FFFFFF">{{ sel.hook }}</div>
+        </div>
+        <div>
+          <div style="font-weight:600;font-size:14px;margin-bottom:6px">Caption</div>
+          <div style="border:1px solid #D6D3CA;border-radius:10px;padding:12px;font-size:14px;line-height:1.5">{{ sel.hook }}<br>Book a free call, link in bio.</div>
+        </div>
+        <div style="font-size:13px;color:#5F6672;line-height:1.5">Link: mayatorres.example/call<br>#leadership #newmanager #burnout</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <div><div style="font-size:14px;font-weight:600">AI label on platform</div><div style="font-size:12px;color:#5F6672">{{ sel.aiNote }}</div></div>
+          <button onClick="{{ toggleAiLabel }}" style="width:44px;height:26px;border-radius:9999px;border:none;position:relative;cursor:pointer;flex-shrink:0;background:{{ sel.swBg }};opacity:{{ sel.swOp }}"><span style="position:absolute;top:3px;width:20px;height:20px;border-radius:9999px;background:#FFFFFF;left:{{ sel.swX }}"></span></button>
+        </div>
+        <sc-if value="{{ sel.actionable }}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button onClick="{{ sendBack }}" style="height:48px;background:#FFFFFF;border:1px solid #D6D3CA;border-radius:10px;font-weight:600;font-size:14px;color:#14171C;cursor:pointer">Send back</button>
+            <button onClick="{{ approveSel }}" style="height:48px;background:#C8401C;color:#FFFFFF;border:none;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer">Approve</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;background:#14171C;color:#F2F2EE;border-radius:12px;padding:18px 22px;margin-top:20px">
+      <span style="font-size:15px">{{ batch.text }}</span>
+      <div style="display:flex;align-items:center;gap:20px">
+        <sc-if value="{{ batch.show }}"><button onClick="{{ approveTomorrow }}" style="height:48px;padding:0 20px;background:#FF7A5C;color:#14171C;border:none;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer">Approve all 9 for tomorrow</button></sc-if>
+        <button onClick="{{ goResults }}" style="background:none;border:none;color:#FF7A5C;font-weight:600;font-size:14px;text-decoration:underline;cursor:pointer">See results</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ is.results }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:24px">
+      <div>
+        <div style="font-size:13px;color:#5F6672">Performance Analyst agent · last 7 days, 3–9 November</div>
+        <h1 style="font-family:'Inter Tight',sans-serif;font-size:32px;font-weight:700;margin:4px 0 6px">21 posts, 6 calls booked</h1>
+        <div style="font-size:15px;color:#5F6672">48,300 views, 214 link clicks, 31 leads. Every number comes from the platforms and your booking link.</div>
+      </div>
+      <button onClick="{{ downloadReport }}" style="height:48px;padding:0 20px;background:#C8401C;color:#FFFFFF;border:none;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer">Download weekly report (PDF)</button>
+    </div>
+    <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;gap:12px;flex-wrap:wrap"><h2 style="font-family:'Inter Tight',sans-serif;font-size:20px;font-weight:600;margin:0">From views to calls</h2><span style="font-size:13px;color:#5F6672">One shared scale · right column is the step rate</span></div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <sc-for list="{{ funnel }}" as="f">
+          <div style="display:grid;grid-template-columns:110px minmax(0,1fr) 64px 56px;align-items:center;gap:14px">
+            <span style="font-size:14px">{{ f.label }}</span>
+            <div style="height:28px;background:#FAFAF7;border-radius:6px;overflow:hidden"><div style="height:100%;background:#FF5A36;border-radius:6px;min-width:3px;width:{{ f.pct }}"></div></div>
+            <span style="font-weight:600;font-size:15px;text-align:right;font-variant-numeric:tabular-nums">{{ f.value }}</span>
+            <span style="font-size:13px;color:#5F6672;font-variant-numeric:tabular-nums">{{ f.rate }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:20px;margin-bottom:20px">
+      <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px;min-width:0">
+        <h2 style="font-family:'Inter Tight',sans-serif;font-size:20px;font-weight:600;margin:0 0 12px">Top posts</h2>
+        <div style="overflow-x:auto">
+          <div style="min-width:520px">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 110px 70px 56px 48px;gap:12px;font-size:12px;font-weight:600;color:#5F6672;padding:8px 0;border-bottom:1px solid #E6E4DD"><span>Post</span><span>Platform</span><span style="text-align:right">Views</span><span style="text-align:right">Clicks</span><span style="text-align:right">Calls</span></div>
+            <sc-for list="{{ topPosts }}" as="p">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) 110px 70px 56px 48px;gap:12px;align-items:center;font-size:14px;padding:10px 0;border-bottom:1px solid #E6E4DD;font-variant-numeric:tabular-nums">
+                <span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:22px;height:38px;border-radius:4px;flex-shrink:0;background:{{ p.color }}"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.hook }}</span></span>
+                <span style="color:#5F6672">{{ p.platform }}</span><span style="text-align:right">{{ p.views }}</span><span style="text-align:right">{{ p.clicks }}</span><span style="text-align:right;font-weight:600">{{ p.calls }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px">
+        <h2 style="font-family:'Inter Tight',sans-serif;font-size:20px;font-weight:600;margin:0 0 4px">Hook types</h2>
+        <div style="font-size:13px;color:#5F6672;margin-bottom:14px">Views compared with your average post</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <sc-for list="{{ hookTypes }}" as="h">
+            <div style="display:grid;grid-template-columns:110px minmax(0,1fr) 44px;gap:10px;align-items:center;font-size:14px">
+              <span>{{ h.label }}</span>
+              <div style="height:8px;border-radius:9999px;background:#EFEDE7;overflow:hidden"><div style="height:100%;border-radius:9999px;background:{{ h.color }};width:{{ h.pct }}"></div></div>
+              <span style="text-align:right;font-weight:600;font-variant-numeric:tabular-nums">{{ h.x }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:20px">
+      <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px;min-width:0">
+        <h2 style="font-family:'Inter Tight',sans-serif;font-size:20px;font-weight:600;margin:0 0 4px">Best posting times</h2>
+        <div style="font-size:13px;color:#5F6672;margin-bottom:14px">Best: 7:30 am, 12:15 pm, 7:45 pm</div>
+        <div style="display:grid;grid-template-columns:72px repeat(7,minmax(0,1fr));gap:4px;font-size:12px">
+          <span></span>
+          <sc-for list="{{ heatDays }}" as="d"><span style="text-align:center;color:#5F6672;font-weight:600">{{ d }}</span></sc-for>
+          <sc-for list="{{ heat }}" as="r">
+            <span style="color:#5F6672;display:flex;align-items:center">{{ r.slot }}</span>
+            <sc-for list="{{ r.cells }}" as="c"><span style="height:28px;border-radius:4px;background:{{ c }}"></span></sc-for>
+          </sc-for>
+        </div>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px">
+        <h2 style="font-family:'Inter Tight',sans-serif;font-size:20px;font-weight:600;margin:0 0 12px">Formats</h2>
+        <sc-for list="{{ formatsRanked }}" as="f">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #E6E4DD;font-size:14px">
+            <span style="display:flex;gap:12px;align-items:center"><span style="color:#5F6672;font-variant-numeric:tabular-nums;width:14px">{{ f.n }}</span>{{ f.label }}</span>
+            <span style="font-variant-numeric:tabular-nums"><b>{{ f.avg }}</b> <span style="color:#5F6672">avg views</span></span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ is.agents }}" hint-placeholder-val="{{ false }}">
+    <div style="margin-bottom:24px">
+      <div style="font-size:13px;color:#5F6672">Your AI team · spend this month $43 of $180 in caps</div>
+      <h1 style="font-family:'Inter Tight',sans-serif;font-size:32px;font-weight:700;margin:4px 0 0">Seven agents, one loop</h1>
+    </div>
+    <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <sc-for list="{{ loopChain }}" as="l">
+          <button onClick="{{ l.pick }}" style="height:40px;padding:0 16px;border-radius:9999px;border:none;font-weight:600;font-size:14px;cursor:pointer;background:{{ l.bg }};color:{{ l.fg }}">{{ l.name }}</button>
+          <sc-if value="{{ l.arrow }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5F6672" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></sc-if>
+        </sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:16px;font-size:14px;color:#3E444D"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF5A36" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>The Performance Analyst feeds results back to the Trend Scout and the Remake Producer. Nothing posts without passing Compliance.</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:16px;flex:999 1 540px;min-width:0">
+        <sc-for list="{{ agents }}" as="a" hint-placeholder-count="7">
+          <div onClick="{{ a.pick }}" style="background:#FFFFFF;border-radius:12px;padding:20px;cursor:pointer;display:flex;flex-direction:column;gap:10px;border:{{ a.border }}">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+              <span style="font-family:'Inter Tight',sans-serif;font-weight:600;font-size:18px">{{ a.name }}</span>
+              <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:9999px;background:{{ a.pill.bg }};color:{{ a.pill.fg }}"><span style="width:7px;height:7px;border-radius:9999px;background:{{ a.pill.dot }}"></span>{{ a.pill.label }}</span>
+            </div>
+            <div style="font-size:14px;color:#3E444D;line-height:1.45">{{ a.last }}</div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#5F6672">This week</span><b>{{ a.done }}</b></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#5F6672">Spend / cap</span><b style="font-variant-numeric:tabular-nums">{{ a.spend }}</b></div>
+            <div style="height:6px;border-radius:9999px;background:#EFEDE7;overflow:hidden"><div style="height:100%;background:#FF5A36;border-radius:9999px;width:{{ a.spendPct }}"></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+              <span style="font-size:13px;font-weight:600;color:#C8401C">View log</span>
+              <button onClick="{{ a.toggle }}" style="display:flex;align-items:center;gap:8px;background:none;border:none;cursor:pointer;font-size:13px;color:#3E444D;height:44px;padding:0">{{ a.onLabel }}<span style="width:40px;height:24px;border-radius:9999px;position:relative;background:{{ a.swBg }}"><span style="position:absolute;top:3px;width:18px;height:18px;border-radius:9999px;background:#FFFFFF;left:{{ a.swX }}"></span></span></button>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px;position:sticky;top:24px;flex:1 1 280px;min-width:0">
+        <h2 style="font-family:'Inter Tight',sans-serif;font-size:20px;font-weight:600;margin:0">{{ agentLog.title }}</h2>
+        <div style="font-size:13px;color:#5F6672;margin:4px 0 8px">Every action is logged with its reason and cost.</div>
+        <sc-for list="{{ agentLog.items }}" as="l">
+          <div style="padding:14px 0;border-top:1px solid #E6E4DD">
+            <div style="font-size:12px;color:#5F6672;font-variant-numeric:tabular-nums">{{ l.meta }}</div>
+            <div style="font-weight:600;font-size:15px;margin-top:2px">{{ l.what }}</div>
+            <div style="font-size:13px;color:#3E444D;margin-top:2px;line-height:1.45">Why: {{ l.why }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <button onClick="{{ restartDemo }}" style="margin-top:24px;background:none;border:none;padding:0;font-weight:600;font-size:14px;color:#14171C;text-decoration:underline;cursor:pointer">Back to the start of the demo</button>
+  </sc-if>
+
+  <sc-if value="{{ is.brand }}" hint-placeholder-val="{{ false }}">
+    <div style="margin-bottom:24px">
+      <div style="font-size:13px;color:#5F6672">Used on every cut and remake</div>
+      <h1 style="font-family:'Inter Tight',sans-serif;font-size:32px;font-weight:700;margin:4px 0 0">Brand kit</h1>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px">
+      <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:16px">
+        <h2 style="font-family:'Inter Tight',sans-serif;font-size:18px;font-weight:600;margin:0">Logo and colours</h2>
+        <div style="display:flex;gap:14px;align-items:center"><div style="width:64px;height:64px;border-radius:12px;background:#12545A;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-family:'Inter Tight',sans-serif;font-weight:700;font-size:22px">MT</div><div style="font-size:13px;color:#5F6672">maya-torres-logo.png<br>Used on intro, outro and end cards</div></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <div><div style="height:48px;border-radius:8px;background:#12545A"></div><div style="font-size:13px;margin-top:6px">Deep teal</div><div style="font-size:12px;color:#5F6672">#12545A</div></div>
+          <div><div style="height:48px;border-radius:8px;background:#F3E9DC;border:1px solid #E6E4DD;box-sizing:border-box"></div><div style="font-size:13px;margin-top:6px">Warm sand</div><div style="font-size:12px;color:#5F6672">#F3E9DC</div></div>
+          <div><div style="height:48px;border-radius:8px;background:#FF5A36"></div><div style="font-size:13px;margin-top:6px">Coral</div><div style="font-size:12px;color:#5F6672">#FF5A36</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;padding-top:14px;border-top:1px solid #E6E4DD"><span style="color:#5F6672">Fonts</span><span>Inter Tight · Inter</span></div>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px">
+        <h2 style="font-family:'Inter Tight',sans-serif;font-size:18px;font-weight:600;margin:0 0 14px">Caption style</h2>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+          <sc-for list="{{ presets }}" as="p">
+            <button onClick="{{ p.pick }}" style="background:#FFFFFF;border-radius:10px;padding:6px;cursor:pointer;text-align:left;border:{{ p.bd }}">
+              <div style="aspect-ratio:9/16;border-radius:6px;background:#12545A;display:flex;align-items:flex-end;padding:8px;box-sizing:border-box">
+                <span style="font-family:'Inter Tight',sans-serif;font-weight:700;font-size:12px;line-height:1.3;color:{{ p.fg }};background:{{ p.bg }};padding:{{ p.pad }};border-radius:4px">Coach, don't carry.</span>
+              </div>
+              <div style="font-size:13px;font-weight:600;margin-top:6px;color:#14171C">{{ p.name }}</div>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:14px">
+        <h2 style="font-family:'Inter Tight',sans-serif;font-size:18px;font-weight:600;margin:0">Intro and outro</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="border:1px solid #E6E4DD;border-radius:10px;padding:10px"><div style="height:90px;border-radius:6px;background:#F3E9DC;display:flex;align-items:center;justify-content:center;color:#12545A;font-weight:700;font-family:'Inter Tight',sans-serif">MT</div><div style="font-size:13px;font-weight:600;margin-top:8px">Intro · 0.8 s</div><div style="font-size:12px;color:#5F6672">Logo sting, no sound</div></div>
+          <div style="border:1px solid #E6E4DD;border-radius:10px;padding:10px"><div style="height:90px;border-radius:6px;background:#12545A;display:flex;align-items:center;justify-content:center;color:#FFFFFF;font-size:12px;font-weight:600;text-align:center;padding:8px;box-sizing:border-box">Book a free call<br>mayatorres.example/call</div><div style="font-size:13px;font-weight:600;margin-top:8px">Outro · 2 s</div><div style="font-size:12px;color:#5F6672">Booking link end card</div></div>
+        </div>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:12px">
+        <h2 style="font-family:'Inter Tight',sans-serif;font-size:18px;font-weight:600;margin:0">Voice</h2>
+        <sc-for list="{{ voices }}" as="v">
+          <button onClick="{{ v.pick }}" style="display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;padding:14px;border-radius:10px;cursor:pointer;background:{{ v.bg }};border:{{ v.bd }}">
+            <span><span style="display:block;font-weight:600;font-size:15px;color:#14171C">{{ v.name }}</span><span style="display:block;font-size:13px;color:#5F6672">{{ v.note }}</span></span>
+            <sc-if value="{{ v.consent }}"><span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:9999px;background:#E3F4EC;color:#145C40;white-space:nowrap">Release signed 9 Nov 2026</span></sc-if>
+          </button>
+        </sc-for>
+        <div style="font-size:13px;color:#5F6672">We never clone a voice or likeness without a signed release.</div>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px">
+        <h2 style="font-family:'Inter Tight',sans-serif;font-size:18px;font-weight:600;margin:0 0 12px">Words</h2>
+        <div style="font-size:13px;font-weight:600;color:#5F6672;margin-bottom:8px">Always use</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"><span style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:9999px;background:#E3F4EC;color:#145C40">first-time managers</span><span style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:9999px;background:#E3F4EC;color:#145C40">burnout</span><span style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:9999px;background:#E3F4EC;color:#145C40">reframe</span></div>
+        <div style="font-size:13px;font-weight:600;color:#5F6672;margin-bottom:8px">Never use</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:9999px;background:#FBE3E3;color:#8E2626">hustle</span><span style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:9999px;background:#FBE3E3;color:#8E2626">crush it</span></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ is.settings }}" hint-placeholder-val="{{ false }}">
+    <div style="margin-bottom:24px">
+      <div style="font-size:13px;color:#5F6672">Maya Torres Coaching</div>
+      <h1 style="font-family:'Inter Tight',sans-serif;font-size:32px;font-weight:700;margin:4px 0 0">Settings and billing</h1>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:20px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+        <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px">
+          <h2 style="font-family:'Inter Tight',sans-serif;font-size:18px;font-weight:600;margin:0 0 6px">Connected accounts</h2>
+          <sc-for list="{{ accounts }}" as="a">
+            <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid #E6E4DD">
+              <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:15px">{{ a.name }}</div><div style="font-size:13px;color:#5F6672">{{ a.handle }}</div></div>
+              <span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:9999px;white-space:nowrap;background:{{ a.chip.bg }};color:{{ a.chip.fg }}">{{ a.chip.label }}</span>
+              <button onClick="{{ a.act }}" style="height:44px;padding:0 14px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;background:{{ a.btnBg }};color:{{ a.btnFg }};border:1px solid {{ a.btnBd }}">{{ a.btn }}</button>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px">
+          <h2 style="font-family:'Inter Tight',sans-serif;font-size:18px;font-weight:600;margin:0 0 6px">Data and rights</h2>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 0;border-top:1px solid #E6E4DD;font-size:14px"><span>Rights confirmed for 14 uploads</span><span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:9999px;background:#E3F4EC;color:#145C40">Up to date</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 0;border-top:1px solid #E6E4DD;font-size:14px"><span>Voice release · Maya Torres</span><span style="color:#5F6672">Signed 9 Nov 2026</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 0 0;border-top:1px solid #E6E4DD;font-size:14px"><span>Download everything we hold about you</span><button onClick="{{ exportData }}" style="height:44px;padding:0 14px;background:#FFFFFF;border:1px solid #D6D3CA;border-radius:10px;font-weight:600;font-size:14px;color:#14171C;cursor:pointer">Export my data</button></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <div style="background:#14171C;color:#F2F2EE;border-radius:12px;padding:22px">
+          <div style="font-size:12px;font-weight:600;letter-spacing:.06em;color:#FF7A5C">YOUR PLAN</div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-top:8px"><span style="font-family:'Inter Tight',sans-serif;font-weight:700;font-size:28px">Growth</span><span style="color:#A3A9B4;font-size:15px">$1,500 a month</span></div>
+          <div style="font-size:14px;color:#A3A9B4;margin-top:6px;line-height:1.5">90 posts a month · 2 remakes a week · 3 platforms · weekly report</div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:18px"><span style="color:#A3A9B4">Posts this month</span><b style="font-variant-numeric:tabular-nums">63 of 90</b></div>
+          <div style="height:6px;border-radius:9999px;background:#2A2F38;margin-top:8px;overflow:hidden"><div style="width:70%;height:100%;background:#FF7A5C;border-radius:9999px"></div></div>
+          <div style="font-size:13px;color:#A3A9B4;margin-top:8px">Renews 1 December</div>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px">
+          <h2 style="font-family:'Inter Tight',sans-serif;font-size:18px;font-weight:600;margin:0 0 6px">Invoices</h2>
+          <sc-for list="{{ invoices }}" as="i">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid #E6E4DD;font-size:14px;font-variant-numeric:tabular-nums"><span>{{ i.date }} <span style="color:#5F6672">· {{ i.what }}</span></span><span style="font-weight:600">{{ i.amt }}</span></div>
+          </sc-for>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid #E6E4DD;border-radius:12px;padding:22px">
+          <h2 style="font-family:'Inter Tight',sans-serif;font-size:18px;font-weight:600;margin:0 0 6px">Team</h2>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #E6E4DD"><span style="width:32px;height:32px;border-radius:9999px;background:#12545A;color:#FFFFFF;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center">MT</span><span style="flex:1;font-size:14px">Maya Torres</span><span style="font-size:13px;color:#5F6672">Owner</span></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #E6E4DD"><span style="width:32px;height:32px;border-radius:9999px;background:#6B4F3A;color:#FFFFFF;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center">JL</span><span style="flex:1;font-size:14px">Jordan Lee</span><span style="font-size:13px;color:#5F6672">Approver</span></div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  </div>
+  </main>
+</div>
+</sc-if>
+
+<sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#14171C;color:#F2F2EE;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:10px;font-size:14px;z-index:50">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3CC98F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>{{ toast }}
+  </div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;onboarding&quot;,&quot;home&quot;,&quot;upload&quot;,&quot;trends&quot;,&quot;remake&quot;,&quot;calendar&quot;,&quot;results&quot;,&quot;agents&quot;,&quot;brand&quot;,&quot;settings&quot;],&quot;default&quot;:&quot;home&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;uploadState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;done&quot;,&quot;loading&quot;,&quot;empty&quot;],&quot;default&quot;:&quot;done&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;States&quot;},&quot;instagramError&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;States&quot;}}">
+const TH=['#12545A','#1E3A40','#2F3E46','#6B4F3A'];
+const CHIPS={'Passed':['#E3F4EC','#145C40'],'Approved':['#E3F4EC','#145C40'],'Needs review':['#FBF0D9','#6E4A07'],'Blocked':['#FBE3E3','#8E2626'],'Scheduled':['#E3ECFB','#1F4FA8'],'Published':['#EFEDE7','#3E444D'],'Published (private)':['#EFEDE7','#3E444D'],'Sent back':['#FBF0D9','#6E4A07'],'Connected':['#E3F4EC','#145C40'],'Not connected':['#EFEDE7','#3E444D'],'Disconnected':['#FBE3E3','#8E2626'],'Private until approval':['#FBF0D9','#6E4A07']};
+const chip=s=>({label:s,bg:CHIPS[s][0],fg:CHIPS[s][1]});
+const EDGE={'Published':'#8A9099','Published (private)':'#8A9099','Scheduled':'#2F6FDE','Needs review':'#C98A12','Sent back':'#C98A12','Approved':'#1F9D6B'};
+const CUTS=[
+['You’re not tired. You’re over-responsible.','0:24','Hook clip',92,'Passed',''],
+['The meeting that cost me my best engineer','0:52','Story',88,'Passed',''],
+['3 words that stop a team from burning out','0:31','Hook clip',86,'Passed',''],
+['If your 1:1s feel like status updates, try this','0:44','Tip',84,'Passed',''],
+['New managers: stop saying “let me know if you need anything”','0:28','Hook clip',83,'Passed',''],
+['What I’d tell myself in my first month as a manager','0:58','Story',80,'Needs review','Mentions a former employer by name.'],
+['Burnout isn’t a workload problem','0:19','Quote card',79,'Passed',''],
+['Why your best people go quiet','0:36','Hook clip',77,'Passed',''],
+['A listener asked: how do I say no to my boss?','0:47','Reply',75,'Needs review','A listener’s name is visible on screen.'],
+['The 10-minute Friday habit','0:33','Tip',74,'Passed',''],
+['5 signs you’re managing, not leading','0:40','Carousel',72,'Passed',''],
+['Funny story about my first team offsite','0:29','Story',61,'Blocked','Venue background music. Swap in a library track or your own voice-over.']];
+const BEATC=['#FF5A36','#2F6FDE','#1F9D6B','#C98A12'];
+const TRENDS=[
+['The 3-word reframe','Leadership','+340%',94,['Hook question','Common belief','3-word reframe','Call to action'],'Short, quotable, and saves well. Fits Maya’s “reframe” language.'],
+['One question that changes a 1:1','Coaching','+95%',91,['Question','Why it works','How to ask it','Call to action'],'Practical and specific. Question hooks already win on Maya’s account.'],
+['“Things I stopped doing” list','Productivity','+210%',88,['Bold claim','Quick cut 1','Quick cuts 2–3','Payoff'],'Fast pacing; works from podcast clips plus text on screen.'],
+['POV: your first day as a manager','Leadership','+160%',86,['POV text','Scenes 1–3','Twist','Lesson'],'Speaks straight to first-time managers, Maya’s audience.'],
+['Stitch-style reply to a common question','Coaching','+90%',83,['Question on screen','Answer','Example','Call to action'],'Turns listener questions into posts, with names removed.'],
+['Green-screen myth buster','Wellness','+180%',81,['Myth on screen','What’s true','Proof','Call to action'],'Strong for burnout myths; needs a clear source for the proof beat.'],
+['Before and after a reframe','Wellness','+70%',72,['Before line','Reframe','After line','Invite'],'Simple to film; best as a carousel.'],
+['Day in the life, sped up','Productivity','+120%',64,['Time-lapse','Caption 1','Caption 2','Reflection'],'Needs new footage of Maya’s day; lower fit for now.']];
+const HOOKS=['Do you feel like you have to fix everything for your team?','Your team doesn’t need a hero. Three words instead:','The 3 words I wish I’d heard as a new manager'];
+const AGENTS=[
+['Trend Scout','Working','Scoring 3 new formats in Productivity.','14 trends scored',6,25,[['10:05 am · $0.60','Found “The 3-word reframe” rising in Leadership','+340% in 7 days across 41 accounts; format only, no footage kept.'],['9:30 am · $0.40','Scored 6 formats in Productivity','Nearby niche with 2 formats above Maya’s fit threshold of 80.']]],
+['Remake Producer','Waiting for you','Waiting for your approval on “The 3-word reframe”.','3 remakes',18,60,[['10:20 am · $2.10','Draft “The 3-word reframe” for Maya','Fit 94 for her niche; question hooks are her best type.'],['10:18 am · $0.40','Wrote 3 alternative hooks','A/B test planned on Instagram and TikTok.'],['10:12 am · $1.30','Generated 1 AI scene (desk notifications)','No matching client footage; labelled as AI.'],['10:06 am · $0.10','Picked 2 clips from Episodes 39 and 44','Maya on camera, matching the reframe beat.']]],
+['Multiplier','Idle','Cut 12 clips from Episode 47.','36 cuts',9,40,[['9:41 am · $1.84','Cut 12 clips from Episode 47','31 candidate moments; kept the 12 with the clearest hook in the first 2 seconds.']]],
+['Compliance','Working','Checking 5 variants of the reframe remake.','41 checks, 2 blocked',3,15,[['9:44 am · $0.30','9 passed, 2 need review, 1 blocked','Cut 12 has venue music; cut 6 names a former employer; cut 9 shows a listener’s name.']]],
+['Client Concierge','Idle','Sent Friday’s report; 5 approvals collected.','1 report, 5 approvals',2,10,[['Fri 5:00 pm · $0.20','Sent the weekly report to Maya','Scheduled every Friday; 6 calls booked this week.']]],
+['Publisher','Working','Next post: Instagram at 2:15 pm.','21 posts',1,10,[['12:15 pm · $0.05','Posted to TikTok (private)','TikTok posts stay private until our app is approved.'],['9:00 am · $0.05','Posted to YouTube Shorts','Approved by Maya on Sunday.']]],
+['Performance Analyst','Working','Question hooks beat the average by 2.1×.','21 posts analysed',4,20,[['1:00 pm · $0.40','Raised the share of question hooks next week','Question hooks averaged 2.1× views across 21 posts.']]]];
+const PILL={'Working':['#FFE8E1','#8F2C11','#FF5A36'],'Idle':['#EFEDE7','#3E444D','#8A9099'],'Waiting for you':['#FBF0D9','#6E4A07','#C98A12'],'Off':['#EFEDE7','#5F6672','#D6D3CA']};
+const PLAT=['Instagram','TikTok','YouTube Shorts'];
+const DAYS=['Mon 9','Tue 10','Wed 11','Thu 12','Fri 13','Sat 14','Sun 15'];
+function buildPosts(){
+  const P=[];let k=0;
+  const add=(d,pl,time,hook,status,ai)=>{P.push({id:'p'+P.length,d,pl,time,hook,status,ai:!!ai,color:TH[(k++)%4]});};
+  add(0,0,'7:30 am',CUTS[0][0],'Published');add(0,0,'2:15 pm','The 3-word reframe (remake)','Scheduled',1);
+  add(0,1,'12:15 pm',CUTS[7][0],'Published (private)');add(0,1,'7:45 pm',CUTS[4][0],'Needs review');
+  add(0,2,'9:00 am',CUTS[2][0],'Published');add(0,2,'5:00 pm',CUTS[9][0],'Scheduled');
+  const pool=[1,3,6,10,0,2,7,4,9];let j=0;const nx=()=>CUTS[pool[(j++)%pool.length]][0];
+  [['7:30 am','12:15 pm','2:15 pm','7:45 pm'],['8:00 am','12:15 pm','7:45 pm','9:30 pm'],['9:00 am','1:00 pm','5:00 pm']].forEach((ts,pl)=>ts.forEach(t=>{
+    if(pl===1&&t==='8:00 am')add(1,pl,t,CUTS[5][0],'Needs review');
+    else if(pl===1&&t==='7:45 pm')add(1,pl,t,CUTS[8][0],'Needs review');
+    else add(1,pl,t,nx(),'Scheduled',pl===0&&t==='2:15 pm');}));
+  for(let d=2;d<7;d++){const lite=d>=5;
+    [['7:30 am','2:15 pm'],['12:15 pm','7:45 pm'],['9:00 am','5:00 pm']].forEach((ts,pl)=>(lite?ts.slice(0,1):ts).forEach(t=>add(d,pl,t,nx(),'Scheduled')));}
+  return P;
+}
+const spark=(arr)=>{const mn=Math.min(...arr),mx=Math.max(...arr),r=mx-mn||1;return arr.map((v,i)=>`${(i/(arr.length-1)*200).toFixed(1)},${(32-(v-mn)/r*28).toFixed(1)}`).join(' ');};
+
+class Component extends DCLogic {
+  state={screen:null,cutStatus:{},cutFilter:'all',trendFilter:'all',hook:0,posts:buildPosts(),sel:'p3',mode:'each',aiLabel:{},agent:1,agentOn:[1,1,1,1,1,1,1],preset:0,voice:0,uploadState:null,igFixed:false,needsDone:{},toast:null,ob:0,tone:[70,40,65],acc:[1,1,1,0],rights:true,nearby:[1,1,1],goal:0,ppd:2};
+  componentWillUnmount(){clearTimeout(this._t);clearTimeout(this._l);}
+  scr(){return this.state.screen||this.props.startScreen||'home';}
+  go(s,extra){this.setState({screen:s,...(extra||{})});const m=document.querySelector('main');window.scrollTo(0,0);}
+  flash(msg){clearTimeout(this._t);this.setState({toast:msg});this._t=setTimeout(()=>this.setState({toast:null}),2600);}
+  upState(){return this.state.uploadState||this.props.uploadState||'done';}
+  startLoading(){this.setState({uploadState:'loading'});clearTimeout(this._l);this._l=setTimeout(()=>{this.setState({uploadState:'done'});this.flash('12 cuts ready. 3 need your eye before they post.');},3200);}
+  setPost(id,status){this.setState(s=>({posts:s.posts.map(p=>p.id===id?{...p,status}:p)}));}
+  renderVals(){
+    const S=this.state,scr=this.scr();
+    const is={app:scr!=='onboarding'};['onboarding','home','upload','trends','remake','calendar','results','agents','brand','settings'].forEach(k=>is[k]=scr===k);
+    const navKeys=[['home','Home'],['upload','Upload'],['trends','Trends'],['calendar','Calendar'],['results','Results'],['agents','Agents'],['brand','Brand kit'],['settings','Settings']];
+    const activeNav=scr==='remake'?'trends':scr;
+    const nav=navKeys.map(([k,l])=>({label:l,go:()=>this.go(k),bg:activeNav===k?'#FFE8E1':'transparent',fg:activeNav===k?'#8F2C11':'#14171C',fw:activeNav===k?600:400}));
+    // home
+    const igError=!!this.props.instagramError&&!S.igFixed;
+    const metrics=[
+      {label:'Posts this week',value:'21',points:spark([3,6,9,12,15,18,21]),delta:'On plan: 3 a day'},
+      {label:'Views',value:'48.3K',points:spark([4100,5600,6200,7900,8400,7300,8800]),delta:'+18% vs last week'},
+      {label:'Link clicks',value:'214',points:spark([18,22,26,31,35,38,44]),delta:'+22% vs last week'},
+      {label:'Calls booked',value:'6',points:spark([0,1,1,2,3,4,6]),delta:'+2 vs last week'}];
+    const needsRaw=[
+      {id:'n6',status:'Needs review',text:'Cut 6, “What I’d tell myself in my first month as a manager”, mentions a former employer.',btn:'Review',act:()=>this.go('upload')},
+      {id:'n9',status:'Needs review',text:'Cut 9, “A listener asked…”, shows a listener’s name on screen.',btn:'Review',act:()=>this.go('upload')},
+      {id:'n745',status:'Needs review',text:'7:45 pm TikTok post is waiting for approval.',btn:'Approve',act:()=>{this.setState(s=>({needsDone:{...s.needsDone,n745:1}}));this.setPost('p3','Approved');this.flash('Approved. Posting to TikTok at 7:45 pm.');}},
+      {id:'n12',status:'Blocked',text:'Cut 12 uses background music from a venue. Swap in a library track or your own voice-over.',btn:'Fix audio',act:()=>this.go('upload')}];
+    const needs=needsRaw.filter(n=>!S.needsDone[n.id]).map(n=>({...n,chip:chip(n.status)}));
+    const p3=S.posts.find(p=>p.id==='p3');
+    const today=[
+      ['7:30 am',CUTS[0][0],'Instagram','Published',TH[0]],['9:00 am',CUTS[2][0],'YouTube Shorts','Published',TH[1]],['12:15 pm',CUTS[7][0],'TikTok','Published (private)',TH[2]],
+      ['2:15 pm','The 3-word reframe (remake)','Instagram · AI scenes labelled','Scheduled',TH[3]],['5:00 pm',CUTS[9][0],'YouTube Shorts','Scheduled',TH[0]],['7:45 pm',CUTS[4][0],'TikTok',p3.status,TH[1]]]
+      .map(([time,title,sub,st,color])=>({time,title,sub,color,chip:chip(st)}));
+    const feed=[['1:00 pm · Performance Analyst','Question hooks beat the average by 2.1×. Raising their share next week.'],['12:15 pm · Publisher','Posted to TikTok (private until app approval).'],['10:20 am · Remake Producer','Draft ready: “The 3-word reframe” for Maya (similarity 12%).'],['10:05 am · Trend Scout','Found “The 3-word reframe” rising in Leadership (+340%).'],['9:44 am · Compliance','9 passed, 2 need review, 1 blocked (venue music).'],['9:41 am · Multiplier','Cut 12 clips from Episode 47 (cost $1.84).']].map(([meta,text])=>({meta,text}));
+    // upload
+    const us=this.upState();
+    const cs=i=>S.cutStatus[i]||CUTS[i][4];
+    const grp=f=>f==='Hook clip'?'hook':f==='Story'?'story':f==='Tip'?'tip':'other';
+    const cuts=CUTS.map((c,i)=>{const st=cs(i);const base={n:i+1,hook:c[0],len:c[1],format:c[2],score:c[3],chip:chip(st),reason:st==='Passed'||st==='Approved'?'':c[5],color:TH[i%4],preview:()=>this.flash('Preview: cut '+(i+1)+' · '+c[1])};
+      let a;if(st==='Passed')a={actLabel:'Approve',actBg:'#C8401C',actFg:'#FFFFFF',actBd:'#C8401C',act:()=>this.setState(s=>({cutStatus:{...s.cutStatus,[i]:'Approved'}}))};
+      else if(st==='Approved')a={actLabel:'Undo',actBg:'#FFFFFF',actFg:'#5F6672',actBd:'#D6D3CA',act:()=>this.setState(s=>({cutStatus:{...s.cutStatus,[i]:'Passed'}}))};
+      else if(st==='Blocked')a={actLabel:'Fix',actBg:'#FFFFFF',actFg:'#14171C',actBd:'#D6D3CA',act:()=>{this.setState(s=>({cutStatus:{...s.cutStatus,[i]:'Passed'},needsDone:{...s.needsDone,n12:1}}));this.flash('Swapped in a library track. Cut 12 passed.');}};
+      else a={actLabel:'Review',actBg:'#FFFFFF',actFg:'#14171C',actBd:'#D6D3CA',act:()=>{this.setState(s=>({cutStatus:{...s.cutStatus,[i]:'Passed'},needsDone:{...s.needsDone,['n'+(i+1)]:1}}));this.flash('Edited and re-checked. Cut '+(i+1)+' passed.');}};
+      return {...base,...a,g:grp(c[2])};}).filter(c=>S.cutFilter==='all'||c.g===S.cutFilter);
+    const counts={passed:0,review:0,blocked:0,approved:0};CUTS.forEach((c,i)=>{const st=cs(i);if(st==='Passed')counts.passed++;else if(st==='Approved')counts.approved++;else if(st==='Blocked')counts.blocked++;else counts.review++;});
+    const ok=counts.passed+counts.approved;
+    const fdef=[['all','All 12'],['hook','Hook clips 5'],['story','Stories 3'],['tip','Tips 2'],['other','Quote, carousel, reply 3']];
+    const cutFilters=fdef.map(([k,l])=>{const on=S.cutFilter===k;return {label:l,pick:()=>this.setState({cutFilter:k}),bg:on?'#14171C':'#FFFFFF',fg:on?'#FFFFFF':'#14171C',bd:on?'#14171C':'#D6D3CA'};});
+    const stepDefs=[['Transcribing','52 min, word timings'],['Finding moments','31 candidates'],['Cutting','12 kept, 9:16'],['Captioning','Maya’s caption style'],['Compliance check',`${ok} passed · ${counts.review} review · ${counts.blocked} blocked`]];
+    const activeIdx=us==='loading'?2:99;
+    const steps=stepDefs.map(([label,note],i)=>{const done=i<activeIdx,active=i===activeIdx;return {label,note:done?note:active?'7 of 12 cut…':'Waiting',done,active,bg:done?'#F3FAF6':active?'#FFF4F0':'#FAFAF7',bd:done?'#CBE9DA':active?'#FFD3C6':'#E6E4DD',fg:done?'#145C40':active?'#8F2C11':'#5F6672'};});
+    const shimmer=React.createElement(React.Fragment,null,[...Array(10)].map((_,i)=>React.createElement('div',{key:i,style:{background:'#FFFFFF',border:'1px solid #E6E4DD',borderRadius:12,padding:10,display:'flex',flexDirection:'column',gap:8}},
+      React.createElement('div',{style:{aspectRatio:'9/16',borderRadius:8,background:'linear-gradient(90deg,#EFEDE7 0%,#F7F6F2 50%,#EFEDE7 100%)',backgroundSize:'200% 100%',animation:'mlShimmer 1.4s linear infinite',animationDelay:(i*0.08)+'s'}}),
+      React.createElement('div',{style:{height:12,width:'70%',borderRadius:6,background:'#EFEDE7'}}),React.createElement('div',{style:{height:12,width:'40%',borderRadius:6,background:'#EFEDE7'}}))));
+    const up={isDone:us==='done',isLoading:us==='loading',isEmpty:us==='empty',hasSource:us!=='empty',title:us==='empty'?'Upload':'One video, 12 posts',
+      summary:`${ok} passed · ${counts.review} need your eye · ${counts.blocked} blocked`,scheduleLabel:`Schedule ${ok} passed cuts`,progressTitle:us==='loading'?'Working on Episode 47…':'Done in 3 min 41 s',steps};
+    // trends
+    const tf=S.trendFilter;
+    const trends=TRENDS.filter(t=>tf==='all'||(tf==='mine'?t[1]==='Coaching':t[1]!=='Coaching')).map(t=>({name:t[0],niche:t[1],growth:t[2],fit:t[3],fitPct:t[3]+'%',why:t[5],beats:t[4].map((b,i)=>({label:b,color:BEATC[i]}))}));
+    const trendFilters=[['mine','My niche'],['nearby','Nearby niches'],['all','All']].map(([k,l])=>{const on=tf===k;return {label:l,pick:()=>this.setState({trendFilter:k}),bg:on?'#14171C':'#FFFFFF',fg:on?'#FFFFFF':'#14171C',bd:on?'#14171C':'#D6D3CA'};});
+    // remake
+    const recipe=[['0–2 s','Hook question','A yes/no question the viewer feels.'],['2–8 s','Common belief','What most people in the niche think.'],['8–20 s','3-word reframe','Short, quotable, on screen in big type.'],['20–35 s','One example','A concrete thing to try this week.'],['35–40 s','Call to action','One next step, linked.']].map(([t,name,desc])=>({t,name,desc}));
+    const TAG={'Client footage':['#EFEDE7','#3E444D'],'AI scene':['#FFE8E1','#8F2C11'],'Graphic':['#EFEDE7','#3E444D']};
+    const shots=[['Maya to camera, office, medium close-up (her footage, Ep. 44)','Client footage'],['Overhead desk, many notifications popping up','AI scene'],['“Coach, don’t carry.” in large type over teal','Graphic'],['Maya in a 1:1, asking a question (her footage, Ep. 39)','Client footage'],['End card with booking link','Graphic']].map(([text,tag],i)=>({n:i+1,text,tag,bg:TAG[tag][0],fg:TAG[tag][1]}));
+    const hooks=HOOKS.map((h,i)=>({text:h,pick:()=>this.setState({hook:i}),bg:S.hook===i?'#FFE8E1':'#FFFFFF',bd:S.hook===i?'2px solid #C8401C':'1px solid #E6E4DD'}));
+    const checks=['No original footage used','No original audio used','New wording · 12% similar (limit 30%)','AI scene labelled on screen and on the platform','No real person’s likeness besides Maya (consent on file)'];
+    // calendar
+    const calDays=DAYS.map((d,i)=>({label:d,fg:i===0?'#C8401C':'#5F6672'}));
+    const calRows=PLAT.map((pl,pi)=>({platform:pl,cells:DAYS.map((_,di)=>({bg:di===0?'#FFF4F0':'#FAFAF7',posts:S.posts.filter(p=>p.d===di&&p.pl===pi).map(p=>({time:p.time,hook:p.hook,color:p.color,edge:EDGE[p.status],ring:p.id===S.sel?'#14171C':'#E6E4DD',sel:p.id===S.sel?'0 0 0 1px #14171C':'none',select:()=>this.setState({sel:p.id})}))}))}));
+    const sp=S.posts.find(p=>p.id===S.sel);
+    const aiOn=sp.ai||!!S.aiLabel[sp.id];
+    const sel={meta:`${DAYS[sp.d]} · ${sp.time} · ${PLAT[sp.pl]}`,chip:chip(sp.status==='Published (private)'?'Published (private)':sp.status),hook:sp.hook,color:sp.color,ai:sp.ai,aiNote:sp.ai?'Locked on · this post has AI scenes':'Off · no AI scenes',swBg:aiOn?'#C8401C':'#D6D3CA',swX:aiOn?'21px':'3px',swOp:sp.ai?0.6:1,actionable:sp.status==='Needs review'||sp.status==='Scheduled'||sp.status==='Sent back'};
+    const tom=S.posts.filter(p=>p.d===1);const tomReady=tom.filter(p=>p.status==='Scheduled').length,tomReview=tom.filter(p=>p.status==='Needs review'||p.status==='Sent back').length;
+    const batch={show:tomReady>0,text:tomReady>0?`Tomorrow: ${tomReady} posts ready, ${tomReview} need your eye.`:`Tomorrow: all ready posts approved. ${tomReview} still need your eye.`};
+    const modes=[['each','Approve each post'],['auto','Auto-approve after 24h unless I object']].map(([k,l])=>{const on=S.mode===k;return {label:l,pick:()=>this.setState({mode:k}),bg:on?'#FFFFFF':'transparent',fg:on?'#14171C':'#5F6672',sh:on?'0 1px 2px rgba(0,0,0,0.08)':'none'};});
+    // results
+    const FUN=[['Views',48300],['Profile visits',1930],['Link clicks',214],['Leads',31],['Calls booked',6]];
+    const funnel=FUN.map(([l,v],i)=>({label:l,value:v.toLocaleString('en-US'),pct:(v/48300*100).toFixed(2)+'%',rate:i?((v/FUN[i-1][1])*100).toFixed(1)+'%':''}));
+    const topPosts=[[CUTS[0][0],'Instagram','9,840',52,2],[CUTS[2][0],'YouTube Shorts','7,210',31,1],[CUTS[3][0],'Instagram','5,930',28,1],[CUTS[1][0],'YouTube Shorts','4,870',22,1],[CUTS[6][0],'Instagram','3,920',14,0]].map(([hook,platform,views,clicks,calls],i)=>({hook,platform,views,clicks,calls,color:TH[i%4]}));
+    const hookTypes=[['Question',2.1],['Bold claim',1.5],['Story opener',1.2],['Number list',0.9],['Quote',0.7]].map(([l,x],i)=>({label:l,x:x+'×',pct:(x/2.1*100)+'%',color:i===0?'#FF5A36':'#D6D3CA'}));
+    const SL=['7:30 am','9:00 am','12:15 pm','2:15 pm','5:00 pm','7:45 pm'];const base=[.85,.45,.75,.35,.5,.95];
+    const heat=SL.map((slot,r)=>({slot,cells:DAYS.map((_,d)=>{const v=Math.max(.06,Math.min(1,base[r]*(d>=5?.7:1)*(0.82+((r*7+d*3)%5)*0.06)));return `rgba(255,90,54,${v.toFixed(2)})`;})}));
+    const formatsRanked=[['Hook clip','3,100'],['Story','2,600'],['Tip','2,200'],['Quote card','1,500'],['Carousel','1,100']].map(([label,avg],i)=>({n:i+1,label,avg}));
+    // agents
+    const agents=AGENTS.map((a,i)=>{const on=!!S.agentOn[i];const st=on?a[1]:'Off';const p=PILL[st];return {name:a[0],last:on?a[2]:'Paused. Work for this agent is on hold.',done:a[3],spend:`$${a[4]} / $${a[5]}`,spendPct:(a[4]/a[5]*100)+'%',pill:{label:st,bg:p[0],fg:p[1],dot:p[2]},border:S.agent===i?'2px solid #14171C':'1px solid #E6E4DD',pick:()=>this.setState({agent:i}),onLabel:on?'On':'Off',swBg:on?'#C8401C':'#D6D3CA',swX:on?'19px':'3px',toggle:e=>{e.stopPropagation();this.setState(s=>{const o=[...s.agentOn];o[i]=o[i]?0:1;return {agentOn:o};});}};});
+    const LOOPC={3:['#E3F4EC','#145C40'],6:['#FFE8E1','#8F2C11']};
+    const loopChain=AGENTS.map((a,i)=>{const c=S.agent===i?['#14171C','#FFFFFF']:(LOOPC[i]||['#EFEDE7','#14171C']);return {name:a[0],arrow:i<6,pick:()=>this.setState({agent:i}),bg:c[0],fg:c[1]};});
+    const ag=AGENTS[S.agent];
+    const agentLog={title:ag[0]+' log',items:ag[6].map(([meta,what,why])=>({meta,what,why}))};
+    // brand
+    const presets=[['Teal highlight','#12545A','#F3E9DC','1px 4px'],['Bold white','#FFFFFF','transparent','0'],['Sand box','#14171C','#F3E9DC','4px 6px']].map(([name,fg,bg,pad],i)=>({name,fg,bg,pad,pick:()=>this.setState({preset:i}),bd:S.preset===i?'2px solid #14171C':'1px solid #E6E4DD'}));
+    const voices=[['My own voice','Recorded from 6 podcast episodes',true],['Stock voice · “Avery”','Warm, calm, US English',false]].map(([name,note,consent],i)=>({name,note,consent,pick:()=>this.setState({voice:i}),bg:S.voice===i?'#FFE8E1':'#FFFFFF',bd:S.voice===i?'2px solid #C8401C':'1px solid #E6E4DD'}));
+    // settings
+    const accounts=[['Instagram','@mayatorres.coach',igError?'Disconnected':'Connected'],['TikTok','@mayaleads',  'Private until approval'],['YouTube','Maya Torres','Connected'],['LinkedIn','Not linked yet','Not connected']].map(([name,handle,st])=>{const conn=st!=='Not connected'&&st!=='Disconnected';return {name,handle,chip:chip(st),btn:conn?'Disconnect':(st==='Disconnected'?'Reconnect':'Connect'),btnBg:conn?'#FFFFFF':'#C8401C',btnFg:conn?'#14171C':'#FFFFFF',btnBd:conn?'#D6D3CA':'#C8401C',act:()=>{if(st==='Disconnected'){this.setState({igFixed:true});this.flash('Instagram reconnected.');}else this.flash(conn?name+' stays connected in this demo.':'Opening '+name+' sign-in…');}};});
+    const invoices=[['1 Nov 2026','Growth','$1,500.00'],['1 Oct 2026','Growth','$1,500.00'],['17 Sep 2026','Pilot, 2 weeks','$750.00']].map(([date,what,amt])=>({date,what,amt}));
+    // onboarding
+    const obNames=['Brand kit','Connect accounts','Niche and goal'];
+    const obSteps=obNames.map((l,i)=>({label:(i+1)+' · '+l,bar:i<=S.ob?'#FF5A36':'#E6E4DD',fg:i<=S.ob?'#14171C':'#5F6672'}));
+    const [casual,energy,friendly]=S.tone;
+    const samples={fc:['Burnout is rarely about workload.','It is about who carries the decisions.'],cc:['You’re not tired.','You’re over-responsible.'],fe:['Stop absorbing every problem.','Coach your team through it.'],ce:['Stop fixing everything.','Coach, don’t carry.']};
+    const sk=(casual>50?'c':'f')+(energy>50?'e':'c');
+    const sample={pre:samples[sk][0],hl:samples[sk][1],note:friendly>50?'Friendly sign-off: “Book a free call, link in bio.”':'Expert sign-off: “Full framework in episode 47.”'};
+    const toneSliders=[['Formal','Casual'],['Calm','Energetic'],['Expert','Friendly']].map(([left,right],i)=>({left,right,value:S.tone[i],onChange:e=>{const v=+e.target.value;this.setState(s=>{const t=[...s.tone];t[i]=v;return {tone:t};});}}));
+    const obAccounts=[['Instagram','@mayatorres.coach'],['TikTok','Posts stay private until our app is approved by TikTok.'],['YouTube','Shorts on “Maya Torres”'],['LinkedIn','Optional. Video posts to your profile.']].map(([name,note],i)=>{const c=!!S.acc[i];return {name,note,connected:c,btn:c?'Disconnect':'Connect',btnBg:c?'#FFFFFF':'#C8401C',btnFg:c?'#14171C':'#FFFFFF',btnBd:c?'#D6D3CA':'#C8401C',border:c?'1px solid #E6E4DD':'1px solid #E6E4DD',toggle:()=>this.setState(s=>{const a=[...s.acc];a[i]=a[i]?0:1;return {acc:a};})};});
+    const nearbyChips=['Productivity','Leadership','Wellness','Career','Parenting'].map((l,i)=>{const on=!!S.nearby[i];return {label:l,toggle:()=>this.setState(s=>{const n=[...s.nearby];n[i]=n[i]?0:1;return {nearby:n};}),bg:on?'#FFE8E1':'#FFFFFF',fg:on?'#8F2C11':'#14171C',bd:on?'#FFD3C6':'#D6D3CA'};});
+    const goals=['Book discovery calls','Grow followers','Sell a course or product','Drive local bookings'].map((l,i)=>({label:l,pick:()=>this.setState({goal:i}),bg:S.goal===i?'#FFE8E1':'#FFFFFF',bd:S.goal===i?'2px solid #C8401C':'1px solid #D6D3CA'}));
+    const ob={s1:S.ob===0,s2:S.ob===1,s3:S.ob===2,rights:S.rights,ppd:S.ppd,ppdNote:`${S.ppd*3} posts a day across 3 platforms`,backLabel:S.ob===0?'Cancel':'Back',nextLabel:S.ob===2?'Start my first upload':'Continue'};
+    return {is,nav,igError,metrics,needs,needsCount:needs.length+' items',today,feed,up,cuts,cutFilters,shimmer,trends,trendFilters,recipe,shots,hooks,chosenHook:HOOKS[S.hook],checks,calDays,calRows,sel,batch,modes,funnel,topPosts,hookTypes,heat,heatDays:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],formatsRanked,agents,loopChain,agentLog,presets,voices,accounts,invoices,toast:S.toast,
+      obSteps,sample,toneSliders,obAccounts,nearbyChips,goals,ob,
+      toggleRights:()=>this.setState(s=>({rights:!s.rights})),ppdDown:()=>this.setState(s=>({ppd:Math.max(1,s.ppd-1)})),ppdUp:()=>this.setState(s=>({ppd:Math.min(6,s.ppd+1)})),
+      obBack:()=>S.ob===0?this.go('home'):this.setState({ob:S.ob-1}),
+      obNext:()=>{if(S.ob<2)this.setState({ob:S.ob+1});else{if(!S.rights){this.flash('Confirm you own what you upload to continue.');return;}this.go('upload',{uploadState:'empty'});}},
+      skipOnboarding:()=>this.go('home'),
+      goUpload:()=>this.go('upload'),goCalendar:()=>this.go('calendar'),goAgents:()=>this.go('agents'),goResults:()=>this.go('results'),goTrends:()=>this.go('trends'),goRemake:()=>this.go('remake'),
+      goWebsite:()=>{window.location.href='Mirrorline Website.dc.html';},
+      restartDemo:()=>this.go('onboarding',{ob:0}),
+      reconnect:()=>{this.setState({igFixed:true});this.flash('Instagram reconnected. The 2:15 pm post is back on.');},
+      startLoading:()=>this.startLoading(),
+      scheduleAll:()=>{this.flash(`${ok} cuts added to the calendar.`);this.go('calendar');},
+      approveRemake:()=>{this.flash('Approved. Multiplier is making 5 variants; Compliance checks each one.');this.go('calendar');},
+      toggleAiLabel:()=>{if(sp.ai)return;this.setState(s=>({aiLabel:{...s.aiLabel,[sp.id]:!s.aiLabel[sp.id]}}));},
+      approveSel:()=>{this.setPost(sp.id,'Approved');if(sp.id==='p3')this.setState(s=>({needsDone:{...s.needsDone,n745:1}}));this.flash('Approved. Posting '+sp.time+' on '+PLAT[sp.pl]+'.');},
+      sendBack:()=>{this.setPost(sp.id,'Sent back');this.flash('Sent back to the Multiplier with your note.');},
+      approveTomorrow:()=>{this.setState(s=>({posts:s.posts.map(p=>p.d===1&&p.status==='Scheduled'?{...p,status:'Approved'}:p)}));this.flash('Approved 9 posts for tomorrow.');},
+      downloadReport:()=>this.flash('Weekly report ready: Mirrorline-week-45.pdf'),
+      exportData:()=>this.flash('We’ll email your export within 24 hours.')};
+  }
+}
+</script>
+</body>
+</html>

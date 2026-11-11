@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E1116;color:#F5F3EC;font-family:'Inter Tight',system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+a{color:#F5B83D;text-decoration:none}a:hover{color:#C8A24A}
+button{font-family:inherit}
+::selection{background:#C8A24A;color:#0E1116}
+@keyframes mlFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+@keyframes mlMarquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes mlOrbit{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes mlBlink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes mlScan{0%{left:0%}100%{left:100%}}
+@keyframes mlPulse{0%,100%{box-shadow:0 0 0 0 rgba(245,184,61,.5)}50%{box-shadow:0 0 0 10px rgba(245,184,61,0)}}
+@keyframes mlSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes mlFill{from{width:0}to{width:100%}}
+@keyframes mlPop{from{opacity:0;transform:translateY(14px) scale(.92)}to{opacity:1;transform:none}}
+@keyframes mlMarqueeR{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+@keyframes mlGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+</style>
+</helmet>
+
+<div ref="{{ rootRef }}" style="overflow-x:hidden">
+
+<div ref="{{ progressRef }}" style="position:fixed;top:0;left:0;height:2px;width:0;background:linear-gradient(90deg,#F5B83D,#C8A24A,#A6842F);z-index:30"></div>
+
+<header ref="{{ navRef }}" style="position:fixed;top:0;left:0;right:0;z-index:20;transition:background 400ms cubic-bezier(0.2,0.8,0.2,1),border-color 400ms;border-bottom:1px solid transparent">
+  <a href="#/pricing" style="display:flex;align-items:center;justify-content:center;gap:10px;min-height:40px;padding:6px 16px;box-sizing:border-box;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);color:#0E1116;font-size:14px;font-weight:600;text-align:center">Now booking December pilots · 2 weeks, 12 videos, $750<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+  <div style="max-width:1280px;margin:0 auto;padding:0 32px;height:80px;display:flex;align-items:center;justify-content:space-between;gap:20px">
+    <a href="#/" style="display:flex;align-items:center;gap:12px;color:#F5F3EC">
+      <svg data-anim="spin" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F5B83D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>
+      <span style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:24px;letter-spacing:-0.01em">Mirrorline</span>
+    </a>
+    <nav style="display:flex;gap:32px;font-size:15px;font-weight:500">
+      <sc-for list="{{ navLinks }}" as="n">
+        <a href="{{ n.href }}" style="position:relative;padding:8px 0;color:{{ n.fg }}">{{ n.label }}<span style="position:absolute;left:0;right:0;bottom:0;height:1px;background:#C8A24A;transform-origin:left;transition:transform 400ms cubic-bezier(0.2,0.8,0.2,1);transform:{{ n.ul }}"></span></a>
+      </sc-for>
+    </nav>
+    <div style="display:flex;gap:10px;align-items:center">
+      <a href="Mirrorline App.dc.html" style="height:44px;display:flex;align-items:center;padding:0 16px;font-weight:600;font-size:15px;color:#F5F3EC">Sign in</a>
+      <a href="#cta" style="height:46px;display:flex;align-items:center;padding:0 22px;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);color:#0E1116;border-radius:999px;font-weight:600;font-size:15px;box-shadow:0 2px 10px -3px rgba(200,162,74,0.5)">Book a private demo</a>
+    </div>
+  </div>
+</header>
+
+<main ref="{{ mainRef }}">
+
+<sc-if value="{{ pg.home }}" hint-placeholder-val="{{ true }}">
+<div data-screen-label="Home">
+<section ref="{{ heroRef }}" style="position:relative;background:radial-gradient(1200px 640px at 50% -10%, rgba(245,184,61,0.20) 0%, transparent 60%),radial-gradient(800px 400px at 10% 100%, rgba(200,162,74,0.10) 0%, transparent 60%),#0E1116;padding:210px 0 72px;overflow:hidden">
+  <div data-glow="" style="position:absolute;width:640px;height:640px;border-radius:50%;background:radial-gradient(circle, rgba(245,184,61,0.14) 0%, transparent 65%);pointer-events:none;left:50%;top:40%;transform:translate(-50%,-50%);transition:left 600ms cubic-bezier(0.2,0.8,0.2,1),top 600ms cubic-bezier(0.2,0.8,0.2,1)"></div>
+  <div style="position:relative;max-width:1120px;margin:0 auto;padding:0 32px;display:flex;flex-direction:column;align-items:center;text-align:center">
+    <div data-reveal="" style="display:inline-flex;align-items:center;gap:10px;height:36px;padding:0 16px;border-radius:999px;border:1px solid rgba(245,184,61,0.30);background:rgba(245,184,61,0.10);font-size:13px;font-weight:600;letter-spacing:.08em;color:#F5B83D"><span data-anim="pulse" style="width:7px;height:7px;border-radius:50%;background:#F5B83D"></span>AN AI CONTENT STUDIO FOR COACHES AND LOCAL BUSINESSES</div>
+    <h1 data-reveal="" data-delay="120" style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(52px,7.4vw,112px);line-height:0.98;letter-spacing:-0.025em;margin:28px 0 26px">Turn one long video into <span style="display:block;min-height:1.05em"><span style="font-style:italic;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:0.12em;margin-right:-0.08em;box-decoration-break:clone;-webkit-box-decoration-break:clone">{{ typed }}</span><span data-anim="blink" style="display:inline-block;width:4px;height:0.8em;background:#F5B83D;vertical-align:-0.06em;margin-left:4px"></span></span></h1>
+    <p data-reveal="" data-delay="240" style="font-size:clamp(19px,1.6vw,23px);line-height:1.55;color:#B4B8C0;margin:0 0 40px;max-width:720px;text-wrap:pretty">Seven agents cut your videos, remake the formats rising in your niche, and publish to your own accounts several times a day. You record once a week and approve from your phone.</p>
+    <form onSubmit="{{ runDemo }}" data-reveal="" data-delay="360" style="width:100%;max-width:780px;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:8px 8px 8px 22px;border-radius:999px;background:rgba(26,31,39,0.92);border:1px solid #353C48;box-shadow:0 24px 48px rgba(0,0,0,0.4),0 0 0 6px rgba(245,184,61,0.06)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C8A24A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+      <input value="{{ link }}" onChange="{{ setLink }}" placeholder="Paste a YouTube, podcast or webinar link" style="flex:1;min-width:0;height:52px;background:transparent;border:none;outline:none;color:#F5F3EC;font-size:17px;font-family:inherit">
+      <button type="submit" style="height:56px;padding:0 26px;border-radius:999px;border:none;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);color:#0E1116;font-weight:600;font-size:16px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:8px;box-shadow:0 8px 30px -6px rgba(200,162,74,0.45)">{{ demo.btn }}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+    </form>
+    <div data-reveal="" data-delay="460" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center;margin-top:20px;font-size:14px;color:#7A8089">
+      <span>Posts to</span>
+      <sc-for list="{{ platforms }}" as="pl"><span style="height:30px;display:flex;align-items:center;padding:0 12px;border-radius:999px;border:1px solid #262C36;color:#B4B8C0;font-weight:500">{{ pl }}</span></sc-for>
+      <span>· only material you own</span>
+    </div>
+    <sc-if value="{{ demo.active }}" hint-placeholder-val="{{ false }}">
+      <div style="width:100%;max-width:780px;box-sizing:border-box;margin-top:24px;text-align:left;background:linear-gradient(180deg,#1A1F27 0%,#0E1116 100%);border:1px solid #262C36;border-radius:24px;padding:22px">
+        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:14px;margin-bottom:14px"><span style="color:#B4B8C0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">{{ demo.src }}</span><span style="color:#7A8089">Sample run · fictional demo client</span></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">
+          <sc-for list="{{ demo.steps }}" as="s">
+            <div style="display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:10px;font-size:14px;font-weight:600;transition:all 300ms;background:{{ s.bg }};color:{{ s.fg }};border:1px solid {{ s.bd }}">
+              <sc-if value="{{ s.done }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>
+              <sc-if value="{{ s.act }}"><span style="width:7px;height:7px;border-radius:50%;background:#F5B83D"></span></sc-if>{{ s.label }}
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ demo.done }}">
+          {{ demoCuts }}
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid #262C36">
+            <span style="font-size:16px"><b>12 cuts ready.</b> <span style="color:#B4B8C0">9 passed, 2 need your eye, 1 blocked for venue music.</span></span>
+            <a href="#cta" style="height:46px;display:flex;align-items:center;gap:8px;padding:0 20px;border-radius:999px;border:1px solid #C8A24A;color:#F5B83D;font-weight:600;font-size:15px">Get yours in 48 hours<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+  </div>
+</section>
+
+<section style="background:#0E1116;padding:48px 0 140px">
+  <div style="max-width:1280px;margin:0 auto;padding:0 32px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,max(180px,calc(25% - 1px))),1fr))">
+      <sc-for list="{{ tabs }}" as="t">
+        <button onClick="{{ t.pick }}" style="position:relative;text-align:left;background:none;border:none;cursor:pointer;padding:24px 20px 22px 0;display:flex;flex-direction:column;gap:8px;font-family:inherit">
+          <span style="position:absolute;left:0;right:12px;top:0;height:2px;background:#262C36;overflow:hidden">{{ t.bar }}</span>
+          <span style="font-size:13px;font-weight:600;letter-spacing:.1em;color:#C8A24A">{{ t.n }}</span>
+          <span style="font-family:Fraunces,Georgia,serif;font-size:26px;transition:color 300ms;color:{{ t.fg }}">{{ t.title }}</span>
+          <span style="font-size:15px;line-height:1.5;transition:color 300ms;color:{{ t.dfg }}">{{ t.desc }}</span>
+        </button>
+      </sc-for>
+    </div>
+    <div style="margin-top:28px;background:linear-gradient(180deg,#1A1F27 0%,#0E1116 100%);border:1px solid #262C36;border-radius:28px;padding:clamp(24px,4vw,48px);min-height:440px;box-shadow:0 24px 48px rgba(0,0,0,0.4)">
+      <div style="display:grid;grid-template-columns:{{ stage.cols }};gap:48px;align-items:center">
+        <sc-if value="{{ stage.m }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:18px"><span style="font-size:13px;font-weight:600;letter-spacing:.12em;color:#F5B83D">MULTIPLIER AGENT</span><h3 style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(36px,3.6vw,56px);line-height:1.04;letter-spacing:-0.02em;margin:0">One video. <span style="font-style:italic;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:0.12em;margin-right:-0.08em;box-decoration-break:clone;-webkit-box-decoration-break:clone">Twelve posts.</span></h3><p style="font-size:19px;line-height:1.6;color:#B4B8C0;margin:0">We find the moments worth posting and cut each one with its own hook, length and format, captioned in your brand style.</p><div style="font-size:15px;color:#7A8089;padding-top:16px;border-top:1px solid #262C36">52-minute episode · 31 moments · 12 cuts · 3 min 41 s</div></div>
+          <div>
+            <div style="position:relative;height:64px;display:flex;align-items:center;gap:3px;overflow:hidden;border-radius:12px;background:#141920;padding:0 12px">
+              <sc-for list="{{ wave }}" as="w"><span style="flex:1;border-radius:2px;height:{{ w.h }};background:{{ w.c }}"></span></sc-for>
+              <span data-anim="scan" style="position:absolute;top:0;bottom:0;width:2px;background:#F5B83D;box-shadow:0 0 18px 4px rgba(245,184,61,0.5)"></span>
+            </div>
+            {{ stageCuts }}
+          </div>
+        </sc-if>
+        <sc-if value="{{ stage.r }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:18px"><span style="font-size:13px;font-weight:600;letter-spacing:.12em;color:#F5B83D">TREND SCOUT · REMAKE PRODUCER</span><h3 style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(36px,3.6vw,56px);line-height:1.04;letter-spacing:-0.02em;margin:0">The format, <span style="font-style:italic;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:0.12em;margin-right:-0.08em;box-decoration-break:clone;-webkit-box-decoration-break:clone">never the footage.</span></h3><p style="font-size:19px;line-height:1.6;color:#B4B8C0;margin:0">A format rising in your niche becomes your own original: new script, your footage, labelled AI scenes, usually within 48 hours.</p><div style="font-size:15px;color:#7A8089;padding-top:16px;border-top:1px solid #262C36">“The 3-word reframe” · Leadership · +340% this week · 12% similar</div></div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:12px;font-size:12px;font-weight:600;letter-spacing:.1em;color:#7A8089"><span>RISING FORMAT</span><span>YOUR VERSION</span></div>
+            <sc-for list="{{ remakeRows }}" as="r">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:12px;align-items:stretch">
+                <div style="border-radius:12px;padding:14px 16px;font-size:15px;transition:all 400ms;background:{{ r.lbg }};border:1px solid {{ r.lbd }};color:{{ r.lfg }}">{{ r.beat }}</div>
+                <div style="border-radius:12px;padding:14px 16px;font-size:15px;line-height:1.45;transition:all 400ms;background:{{ r.rbg }};border:1px solid {{ r.rbd }};color:#F5F3EC">{{ r.mine }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ stage.p }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:18px"><span style="font-size:13px;font-weight:600;letter-spacing:.12em;color:#F5B83D">PUBLISHER AGENT</span><h3 style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(36px,3.6vw,56px);line-height:1.04;letter-spacing:-0.02em;margin:0">Show up <span style="font-style:italic;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:0.12em;margin-right:-0.08em;box-decoration-break:clone;-webkit-box-decoration-break:clone">every day.</span></h3><p style="font-size:19px;line-height:1.6;color:#B4B8C0;margin:0">Several posts a day on Instagram, TikTok and YouTube Shorts, through official APIs, to accounts you own. Approve each post, or let them go out after 24 hours.</p><div style="font-size:15px;color:#7A8089;padding-top:16px;border-top:1px solid #262C36">Growth plan · 21 posts a week · 2 trend remakes</div></div>
+          <div>{{ stageCal }}</div>
+        </sc-if>
+        <sc-if value="{{ stage.l }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:18px"><span style="font-size:13px;font-weight:600;letter-spacing:.12em;color:#F5B83D">PERFORMANCE ANALYST</span><h3 style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(36px,3.6vw,56px);line-height:1.04;letter-spacing:-0.02em;margin:0">Every post <span style="font-style:italic;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:0.12em;margin-right:-0.08em;box-decoration-break:clone;-webkit-box-decoration-break:clone">teaches the next.</span></h3><p style="font-size:19px;line-height:1.6;color:#B4B8C0;margin:0">Views, clicks and bookings per post feed back into what the Trend Scout looks for and what the Remake Producer makes next week.</p><div style="font-size:15px;color:#7A8089;padding-top:16px;border-top:1px solid #262C36">This week: question hooks beat the average by 2.1×</div></div>
+          <div>{{ stageFunnel }}</div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="background:#0E1116;padding:120px 0;border-top:1px solid #262C36;overflow:hidden">
+  <div style="max-width:1280px;margin:0 auto 56px;padding:0 32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:40px;align-items:end">
+    <div>
+      <div data-reveal="" style="font-size:13px;font-weight:600;letter-spacing:.12em;color:#F5B83D">WHAT IT LOOKS LIKE</div>
+      <h2 data-reveal="" data-delay="100" style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(44px,5vw,80px);line-height:1.02;letter-spacing:-0.025em;margin:18px 0 0">Made for people who <span style="font-style:italic;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:0.12em;margin-right:-0.08em;box-decoration-break:clone;-webkit-box-decoration-break:clone">sell what they know.</span></h2>
+    </div>
+    <p data-reveal="" data-delay="200" style="font-size:19px;line-height:1.6;color:#B4B8C0;margin:0">Every cut carries your colours, fonts and caption style. These are sample hooks for fictional businesses; yours will be cut from your own videos.</p>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div data-anim="marquee2" style="display:flex;gap:16px;width:max-content">
+      <sc-for list="{{ showA }}" as="c">
+        <div style="width:210px;flex-shrink:0;border-radius:18px;padding:8px;background:#1A1F27;border:1px solid #262C36">
+          <div style="aspect-ratio:9/16;border-radius:12px;position:relative;display:flex;align-items:flex-end;padding:14px;box-sizing:border-box;background:{{ c.color }}">
+            <span style="position:absolute;top:10px;left:10px;background:rgba(14,17,22,0.6);color:#F5F3EC;font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px">{{ c.niche }}</span>
+            <span style="position:absolute;top:10px;right:10px;background:#F5F3EC;color:#0E1116;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px">{{ c.len }}</span>
+            <div style="font-weight:700;font-size:16px;line-height:1.25;color:#FFFFFF">{{ c.pre }} <span style="background:#F3E9DC;color:#12545A;padding:0 4px;border-radius:4px;box-decoration-break:clone;-webkit-box-decoration-break:clone">{{ c.hl }}</span></div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <div data-anim="marqueeR" style="display:flex;gap:16px;width:max-content">
+      <sc-for list="{{ showB }}" as="c">
+        <div style="width:210px;flex-shrink:0;border-radius:18px;padding:8px;background:#1A1F27;border:1px solid #262C36">
+          <div style="aspect-ratio:9/16;border-radius:12px;position:relative;display:flex;align-items:flex-end;padding:14px;box-sizing:border-box;background:{{ c.color }}">
+            <span style="position:absolute;top:10px;left:10px;background:rgba(14,17,22,0.6);color:#F5F3EC;font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px">{{ c.niche }}</span>
+            <span style="position:absolute;top:10px;right:10px;background:#F5F3EC;color:#0E1116;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px">{{ c.len }}</span>
+            <div style="font-weight:700;font-size:16px;line-height:1.25;color:#FFFFFF">{{ c.pre }} <span style="background:#F3E9DC;color:#12545A;padding:0 4px;border-radius:4px;box-decoration-break:clone;-webkit-box-decoration-break:clone">{{ c.hl }}</span></div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<section style="background:#F7F6F2;color:#0E1116;padding:140px 0">
+  <div style="max-width:1280px;margin:0 auto;padding:0 32px">
+    <div data-reveal="" style="font-size:13px;font-weight:600;letter-spacing:.12em;color:#6A6F78">WHO IT'S FOR</div>
+    <h2 data-reveal="" data-delay="100" style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(44px,5vw,80px);line-height:1.02;letter-spacing:-0.025em;margin:18px 0 56px;max-width:960px">Your expertise, <span style="font-style:italic;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:0.12em;margin-right:-0.08em;box-decoration-break:clone;-webkit-box-decoration-break:clone">on every feed.</span></h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px">
+      <sc-for list="{{ audiences }}" as="a">
+        <a href="#/pricing" data-reveal="" data-delay="{{ a.delay }}" style="display:flex;flex-direction:column;gap:14px;min-height:300px;padding:32px;border-radius:20px;background:#FFFFFF;border:1px solid #E6E3DA;color:#0E1116;transition:transform 300ms cubic-bezier(0.2,0.8,0.2,1),box-shadow 300ms,border-color 300ms" style-hover="transform:translateY(-6px);box-shadow:0 8px 30px -6px rgba(200,162,74,0.45);border-color:#C8A24A">
+          <span style="font-family:Fraunces,Georgia,serif;font-style:italic;font-size:56px;line-height:.9;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:0.12em;align-self:flex-start">{{ a.n }}</span>
+          <span style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:28px;line-height:1.1">{{ a.t }}</span>
+          <span style="font-size:16px;line-height:1.6;color:#3A3F48">{{ a.b }}</span>
+          <span style="margin-top:auto;display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:#A6842F">Goal: {{ a.goal }}</span>
+        </a>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<section style="background:#0E1116;padding:140px 0">
+  <div style="max-width:1280px;margin:0 auto;padding:0 32px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:32px;flex-wrap:wrap;margin-bottom:56px">
+      <h2 data-reveal="" style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(44px,5vw,80px);line-height:1.02;letter-spacing:-0.025em;margin:0;max-width:820px">One demo week, <span style="font-style:italic;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:0.12em;margin-right:-0.08em;box-decoration-break:clone;-webkit-box-decoration-break:clone">in numbers.</span></h2>
+      <span data-reveal="" style="font-size:15px;color:#7A8089;max-width:360px">Maya Torres Coaching is a fictional client. Your numbers will differ, and we report them as they are.</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px">
+      <sc-for list="{{ proofs }}" as="p">
+        <div data-reveal="" data-delay="{{ p.delay }}" style="position:relative;overflow:hidden;border-radius:24px;padding:36px;background:linear-gradient(180deg,#1A1F27 0%,#0E1116 100%);border:1px solid #262C36;display:flex;flex-direction:column;gap:14px;min-height:300px;transition:border-color 300ms,transform 300ms cubic-bezier(0.2,0.8,0.2,1)" style-hover="border-color:#C8A24A;transform:translateY(-4px)">
+          <div style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(72px,7vw,112px);line-height:.9;letter-spacing:-0.03em;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:0.12em;align-self:flex-start"><span data-count="{{ p.n }}" data-dec="{{ p.dec }}">{{ p.n }}</span>{{ p.suf }}</div>
+          <div style="font-size:22px;font-weight:600;color:#F5F3EC">{{ p.big }}</div>
+          <div style="font-size:17px;line-height:1.6;color:#B4B8C0">{{ p.story }}</div>
+          <div style="margin-top:auto;font-size:13px;font-weight:600;letter-spacing:.08em;color:#7A8089">{{ p.agent }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<section style="background:#141920;padding:140px 0;border-top:1px solid #262C36">
+  <div style="max-width:1280px;margin:0 auto;padding:0 32px">
+    <div data-reveal="" style="font-size:13px;font-weight:600;letter-spacing:.12em;color:#F5B83D">THE HONEST COMPARISON</div>
+    <h2 data-reveal="" data-delay="100" style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(44px,5vw,80px);line-height:1.02;letter-spacing:-0.025em;margin:18px 0 56px;max-width:960px">Four ways to post <span style="font-style:italic;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:0.12em;margin-right:-0.08em;box-decoration-break:clone;-webkit-box-decoration-break:clone">every day.</span></h2>
+    <div data-reveal="" style="overflow-x:auto;border:1px solid #262C36;border-radius:24px;background:#0E1116">
+      <div style="min-width:780px;display:grid;grid-template-columns:140px repeat(4,minmax(0,1fr))">
+        <span style="padding:24px"></span>
+        <sc-for list="{{ compare.cols }}" as="c">
+          <span style="padding:22px 18px;font-family:Fraunces,Georgia,serif;font-size:20px;border-bottom:1px solid #262C36;color:{{ c.fg }};background:{{ c.bg }}">{{ c.label }}</span>
+        </sc-for>
+        <sc-for list="{{ compare.rows }}" as="r">
+          <span style="padding:18px 18px;font-size:13px;font-weight:600;color:#7A8089;border-bottom:1px solid #262C36">{{ r.label }}</span>
+          <sc-for list="{{ r.cells }}" as="x">
+            <span style="padding:18px 18px;font-size:15px;line-height:1.45;border-bottom:1px solid #262C36;background:{{ x.bg }};color:{{ x.fg }};font-weight:{{ x.fw }}">{{ x.v }}</span>
+          </sc-for>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;margin-top:24px">
+      <span style="font-size:14px;color:#7A8089">Typical figures, our estimates. Your mileage will vary.</span>
+      <a href="#/pricing" style="height:52px;display:flex;align-items:center;gap:10px;padding:0 26px;border-radius:999px;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);color:#0E1116;font-weight:600;font-size:16px">See plans and pricing<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+    </div>
+  </div>
+</section>
+
+<section style="background:#F7F6F2;color:#0E1116;padding:140px 0">
+  <div style="max-width:1280px;margin:0 auto;padding:0 32px">
+    <div data-reveal="" style="font-size:13px;font-weight:600;letter-spacing:.12em;color:#6A6F78">GO DEEPER</div>
+    <h2 data-reveal="" data-delay="100" style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(40px,4.6vw,72px);line-height:1.04;letter-spacing:-0.02em;margin:18px 0 56px;max-width:960px">See exactly how the work gets done.</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px">
+      <sc-for list="{{ teasers }}" as="t">
+        <a href="{{ t.href }}" data-reveal="" data-delay="{{ t.delay }}" style="position:relative;overflow:hidden;display:flex;flex-direction:column;gap:16px;min-height:320px;padding:36px;border-radius:24px;background:{{ t.bg }};color:{{ t.fg }};border:1px solid {{ t.bd }};transition:transform 300ms cubic-bezier(0.2,0.8,0.2,1),box-shadow 300ms,border-color 300ms" style-hover="transform:translateY(-6px);box-shadow:0 8px 30px -6px rgba(200,162,74,0.45);border-color:#C8A24A">
+          <span style="font-size:13px;font-weight:600;letter-spacing:.12em;color:{{ t.eyebrow }}">{{ t.kicker }}</span>
+          <span style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:40px;line-height:1.05;letter-spacing:-0.02em">{{ t.title }}</span>
+          <span style="font-size:17px;line-height:1.6;color:{{ t.muted }}">{{ t.body }}</span>
+          <span style="margin-top:auto;display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px;color:{{ t.link }}">{{ t.cta }}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span>
+        </a>
+      </sc-for>
+    </div>
+  </div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{ pg.sub }}" hint-placeholder-val="{{ false }}">
+<section style="position:relative;background:radial-gradient(1100px 520px at 85% -20%, rgba(245,184,61,0.18) 0%, transparent 60%),#0E1116;padding:230px 0 110px;overflow:hidden">
+  <div style="max-width:1280px;margin:0 auto;padding:0 32px">
+    <div data-reveal="" style="display:flex;align-items:center;gap:12px;font-size:13px;font-weight:600;letter-spacing:.12em;color:#F5B83D"><span style="width:32px;height:1px;background:#C8A24A"></span>{{ head.kicker }}</div>
+    <h1 data-reveal="" data-delay="100" style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(56px,8vw,128px);line-height:.98;letter-spacing:-0.03em;margin:24px 0 32px;max-width:1100px">{{ head.a }} <span style="font-style:italic;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:0.12em;margin-right:-0.08em;box-decoration-break:clone;-webkit-box-decoration-break:clone">{{ head.b }}</span></h1>
+    <p data-reveal="" data-delay="220" style="font-size:clamp(19px,1.6vw,23px);line-height:1.6;color:#B4B8C0;margin:0;max-width:680px">{{ head.sub }}</p>
+  </div>
+</section>
+</sc-if>
+
+<sc-if value="{{ pg.product }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Product">
+<section style="background:#F7F6F2;color:#0E1116;padding:120px 0">
+  <div style="max-width:1280px;margin:0 auto;padding:0 32px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:48px;align-items:end;margin-bottom:56px">
+      <h2 data-reveal="" style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(44px,5vw,80px);line-height:1.02;letter-spacing:-0.025em;margin:0">Multiply</h2>
+      <p data-reveal="" data-delay="150" style="font-size:21px;line-height:1.6;color:#3A3F48;margin:0;max-width:520px">Drop in a podcast, a webinar or a talk. We find the moments worth posting and cut each one with its own hook, length and format, captioned in your brand style.</p>
+    </div>
+    <div data-reveal="" style="background:#FFFFFF;border:1px solid #E6E3DA;border-radius:24px;padding:clamp(24px,3vw,40px);box-shadow:0 24px 48px rgba(14,17,22,0.08)">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px">
+        <div style="display:flex;align-items:center;gap:14px"><span style="width:56px;height:56px;border-radius:12px;background:#12545A;color:#FFFFFF;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px">52:14</span><div><div style="font-weight:600;font-size:18px">Episode 47: Why good managers burn out</div><div style="font-size:14px;color:#6A6F78">Lead Without Burnout · a fictional demo client</div></div></div>
+        <span style="font-size:14px;font-weight:600;color:#3A3F48">Done in 3 min 41 s</span>
+      </div>
+      <div style="position:relative;height:72px;display:flex;align-items:center;gap:3px;overflow:hidden;border-radius:10px;background:#F7F6F2;padding:0 12px">
+        <sc-for list="{{ wave }}" as="w"><span style="flex:1;border-radius:2px;height:{{ w.h }};background:{{ w.c }}"></span></sc-for>
+        <span data-anim="scan" style="position:absolute;top:0;bottom:0;width:2px;background:#C8A24A;box-shadow:0 0 18px 4px rgba(245,184,61,0.5)"></span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px;margin-top:28px">
+        <sc-for list="{{ cuts }}" as="c">
+          <div data-reveal="cut" data-delay="{{ c.delay }}" style="border-radius:12px;aspect-ratio:9/16;position:relative;display:flex;align-items:flex-end;padding:12px;box-sizing:border-box;background:{{ c.color }};transition:transform 300ms cubic-bezier(0.2,0.8,0.2,1)" style-hover="transform:translateY(-6px) scale(1.03)">
+            <span style="position:absolute;top:8px;left:8px;background:rgba(255,255,255,0.92);color:#0E1116;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px">{{ c.len }}</span>
+            <span style="font-weight:700;font-size:13px;line-height:1.25;color:#FFFFFF">{{ c.hook }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;margin-top:56px">
+      <sc-for list="{{ multStats }}" as="s">
+        <div data-reveal="" style="border-top:1px solid #D4CFC2;padding-top:20px">
+          <div style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:64px;line-height:1;letter-spacing:-0.02em"><span data-count="{{ s.n }}">{{ s.n }}</span>{{ s.suf }}</div>
+          <div style="font-size:16px;color:#3A3F48;margin-top:10px">{{ s.l }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<section style="background:#0E1116;padding:140px 0;position:relative;overflow:hidden">
+  <div style="position:absolute;inset:0;background:radial-gradient(900px 500px at 90% 50%, rgba(245,184,61,0.10) 0%, transparent 60%);pointer-events:none"></div>
+  <div style="position:relative;max-width:1280px;margin:0 auto;padding:0 32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,480px),1fr));gap:72px;align-items:center">
+    <div>
+      <div data-reveal="" style="font-size:13px;font-weight:600;letter-spacing:.12em;color:#F5B83D">TREND REMAKES · WITHIN 48 HOURS</div>
+      <h2 data-reveal="" data-delay="100" style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(44px,5vw,80px);line-height:1.02;letter-spacing:-0.025em;margin:20px 0 28px">We remake the format, <span style="font-style:italic;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:0.12em;margin-right:-0.08em;box-decoration-break:clone;-webkit-box-decoration-break:clone">never the footage.</span></h2>
+      <p data-reveal="" data-delay="200" style="font-size:20px;line-height:1.6;color:#B4B8C0;margin:0 0 20px">The Trend Scout spots formats rising in your niche and the ones next to it. The Remake Producer writes your version: a new script, your footage, clearly labelled AI scenes.</p>
+      <p data-reveal="" data-delay="280" style="font-size:20px;line-height:1.6;color:#B4B8C0;margin:0">No one else's video, audio, wording, face or voice. Every remake is checked for similarity before it can post.</p>
+    </div>
+    <div data-reveal="" data-delay="150" style="background:linear-gradient(180deg,#1A1F27 0%,#0E1116 100%);border:1px solid #262C36;border-radius:24px;padding:32px;box-shadow:0 24px 48px rgba(0,0,0,0.4)">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:999px;background:rgba(245,184,61,0.10);border:1px solid rgba(245,184,61,0.30);color:#F5B83D">Leadership</span><span style="font-size:15px;font-weight:600;color:#1FBF7B">+340% this week</span></div>
+      <div style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:34px;margin:18px 0 24px">The 3-word reframe</div>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px">
+        <sc-for list="{{ beats }}" as="b">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="aspect-ratio:9/16;border-radius:10px;display:flex;align-items:flex-end;padding:8px;box-sizing:border-box;transition:all 500ms cubic-bezier(0.2,0.8,0.2,1);background:{{ b.bg }};border:1px solid {{ b.bd }};transform:{{ b.tf }}"><span style="height:4px;width:100%;border-radius:999px;background:{{ b.bar }};transition:background 500ms"></span></div>
+            <span style="font-size:13px;line-height:1.3;transition:color 500ms;color:{{ b.fg }}">{{ b.label }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:28px;padding-top:20px;border-top:1px solid #262C36;font-size:15px;color:#B4B8C0">
+        <span style="display:flex;align-items:center;gap:10px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1FBF7B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>New wording · 12% similar (limit 30%)</span>
+        <span style="font-size:13px;font-weight:600;padding:4px 12px;border-radius:999px;background:rgba(31,191,123,0.14);color:#1FBF7B">Passed</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="background:#FFFFFF;color:#0E1116;padding:140px 0">
+  <div style="max-width:1280px;margin:0 auto;padding:0 32px">
+    <div data-reveal="" style="font-size:13px;font-weight:600;letter-spacing:.12em;color:#6A6F78">HOW IT WORKS</div>
+    <h2 data-reveal="" data-delay="100" style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(40px,4.6vw,72px);line-height:1.04;letter-spacing:-0.02em;margin:18px 0 64px;max-width:960px">You record once a week. <span style="font-style:italic;color:#6A6F78">We handle the rest, and show you every step.</span></h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px">
+      <sc-for list="{{ steps }}" as="s">
+        <div data-reveal="" data-delay="{{ s.delay }}" style="position:relative;overflow:hidden;background:linear-gradient(180deg,#FFFFFF 0%,#F7F3E6 100%);border:1px solid #E6E3DA;border-radius:20px;padding:32px;min-height:340px;display:flex;flex-direction:column;gap:16px;transition:transform 300ms cubic-bezier(0.2,0.8,0.2,1),box-shadow 300ms,border-color 300ms" style-hover="transform:translateY(-6px);box-shadow:0 8px 30px -6px rgba(200,162,74,0.45);border-color:#C8A24A">
+          <span style="font-family:Fraunces,Georgia,serif;font-style:italic;font-size:80px;line-height:.9;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:0.12em">{{ s.n }}</span>
+          <div style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:32px;letter-spacing:-0.01em">{{ s.title }}</div>
+          <div style="font-size:17px;line-height:1.6;color:#3A3F48">{{ s.body }}</div>
+          <div style="margin-top:auto;font-size:14px;font-weight:600;color:#6A6F78">{{ s.agent }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{ pg.agents }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Agents">
+<section style="background:#141920;padding:120px 0;border-top:1px solid #262C36">
+  <div style="max-width:1280px;margin:0 auto;padding:0 32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,480px),1fr));gap:72px;align-items:center">
+    <div style="position:relative;width:100%;max-width:560px;aspect-ratio:1;margin:0 auto">
+      <div style="position:absolute;inset:9%;border-radius:50%;border:1px dashed rgba(245,184,61,0.30)"></div>
+      <div data-anim="orbit" style="position:absolute;inset:9%">
+        <span style="position:absolute;left:50%;top:0;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#F5B83D;box-shadow:0 0 24px 6px rgba(245,184,61,0.55)"></span>
+      </div>
+      <div style="position:absolute;inset:30%;border-radius:50%;background:radial-gradient(circle,rgba(245,184,61,0.16),transparent 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+        <svg data-anim="spin" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#F5B83D" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>
+        <div style="font-family:Fraunces,Georgia,serif;font-style:italic;font-size:clamp(24px,2.6vw,36px);margin-top:8px">One loop</div>
+      </div>
+      <sc-for list="{{ orbit }}" as="o">
+        <button onClick="{{ o.pick }}" style="position:absolute;left:{{ o.x }};top:{{ o.y }};transform:translate(-50%,-50%);height:42px;padding:0 16px;border-radius:999px;font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer;transition:all 300ms cubic-bezier(0.2,0.8,0.2,1);background:{{ o.bg }};color:{{ o.fg }};border:1px solid {{ o.bd }};box-shadow:{{ o.sh }}">{{ o.name }}</button>
+      </sc-for>
+    </div>
+    <div>
+      <div style="background:#1A1F27;border:1px solid #262C36;border-radius:24px;padding:36px;min-height:260px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><span style="font-size:13px;font-weight:600;letter-spacing:.12em;color:#F5B83D">AGENT {{ agent.idx }}</span><span style="font-size:13px;color:#7A8089">{{ agent.cap }}</span></div>
+        <div style="font-family:Fraunces,Georgia,serif;font-size:clamp(36px,3.4vw,52px);line-height:1.05;margin-top:14px">{{ agent.name }}</div>
+        <div style="font-size:19px;line-height:1.6;color:#B4B8C0;margin-top:14px">{{ agent.does }}</div>
+        <div style="margin-top:22px;padding-top:18px;border-top:1px solid #262C36">
+          <div style="font-size:12px;font-weight:600;letter-spacing:.1em;color:#7A8089">FROM THE LOG</div>
+          <div style="font-size:16px;color:#F5F3EC;margin-top:8px;line-height:1.5">{{ agent.log }}</div>
+        </div>
+      </div>
+      <p style="font-size:17px;line-height:1.6;color:#7A8089;margin:24px 0 0">Click any agent on the ring. The Performance Analyst feeds results back to the Trend Scout and the Remake Producer. Nothing posts without passing Compliance.</p>
+    </div>
+  </div>
+</section>
+<section style="background:#F7F6F2;color:#0E1116;padding:140px 0">
+  <div style="max-width:1280px;margin:0 auto;padding:0 32px">
+    <h2 data-reveal="" style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(40px,4.6vw,72px);line-height:1.04;letter-spacing:-0.02em;margin:0 0 56px;max-width:900px">You stay in control. <span style="font-style:italic;color:#6A6F78">Every agent answers to you.</span></h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px">
+      <sc-for list="{{ controls }}" as="c">
+        <div data-reveal="" data-delay="{{ c.delay }}" style="background:#FFFFFF;border:1px solid #E6E3DA;border-radius:20px;padding:32px;transition:transform 300ms cubic-bezier(0.2,0.8,0.2,1),box-shadow 300ms,border-color 300ms" style-hover="transform:translateY(-4px);box-shadow:0 8px 30px -6px rgba(200,162,74,0.45);border-color:#C8A24A">
+          <div style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:28px;margin-bottom:12px">{{ c.t }}</div>
+          <div style="font-size:17px;line-height:1.6;color:#3A3F48">{{ c.b }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{ pg.trust }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Trust">
+<section style="background:#F7F6F2;color:#0E1116;padding:120px 0">
+  <div style="max-width:1280px;margin:0 auto;padding:0 32px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px">
+      <sc-for list="{{ rules }}" as="r">
+        <div data-reveal="" data-delay="{{ r.delay }}" style="background:#FFFFFF;border:1px solid #E6E3DA;border-radius:20px;padding:32px;transition:transform 300ms cubic-bezier(0.2,0.8,0.2,1),box-shadow 300ms,border-color 300ms" style-hover="transform:translateY(-4px);box-shadow:0 8px 30px -6px rgba(200,162,74,0.45);border-color:#C8A24A">
+          <span style="width:48px;height:48px;border-radius:10px;background:rgba(200,162,74,0.10);border:1px solid rgba(200,162,74,0.28);color:#A6842F;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg></span>
+          <div style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:26px;margin:22px 0 10px">{{ r.t }}</div>
+          <div style="font-size:16px;line-height:1.6;color:#3A3F48">{{ r.b }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+<section style="background:#0E1116;padding:140px 0">
+  <div style="max-width:1280px;margin:0 auto;padding:0 32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:72px;align-items:center">
+    <div>
+      <div data-reveal="" style="font-size:13px;font-weight:600;letter-spacing:.12em;color:#F5B83D">BEFORE ANYTHING POSTS</div>
+      <h2 data-reveal="" data-delay="100" style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(40px,4.6vw,72px);line-height:1.04;letter-spacing:-0.02em;margin:20px 0 24px">Every cut passes <span style="font-style:italic;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:0.12em">five checks.</span></h2>
+      <p data-reveal="" data-delay="200" style="font-size:20px;line-height:1.6;color:#B4B8C0;margin:0">When a check fails, we tell you why in plain words and how to fix it. You approve each post, or let approved formats go out after 24 hours unless you object.</p>
+    </div>
+    <div data-reveal="" data-delay="150" style="background:linear-gradient(180deg,#1A1F27 0%,#0E1116 100%);border:1px solid #262C36;border-radius:24px;padding:32px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-family:Fraunces,Georgia,serif;font-size:26px">Compliance agent</span><span style="font-size:13px;font-weight:600;padding:4px 12px;border-radius:999px;background:rgba(31,191,123,0.14);color:#1FBF7B">Passed</span></div>
+      <sc-for list="{{ checks }}" as="k">
+        <div data-reveal="" data-delay="{{ k.delay }}" style="display:flex;gap:14px;align-items:center;padding:16px 0;border-top:1px solid #262C36;font-size:17px">
+          <span style="width:30px;height:30px;border-radius:50%;background:rgba(31,191,123,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1FBF7B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>{{ k.t }}
+        </div>
+      </sc-for>
+      <div style="margin-top:12px;padding:16px 18px;border-radius:14px;background:rgba(227,72,88,0.10);border:1px solid rgba(227,72,88,0.30);font-size:15px;line-height:1.55;color:#F5F3EC"><b style="color:#E34858">Blocked example:</b> this cut uses audio from the original video. Swap in a track from the platform library or use your own voice-over.</div>
+    </div>
+  </div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{ pg.pricing }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Pricing">
+<section style="background:#FFFFFF;color:#0E1116;padding:120px 0">
+  <div style="max-width:1280px;margin:0 auto;padding:0 32px">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:40px">
+      <div data-reveal="" style="display:flex;background:#EFEDE6;border-radius:999px;padding:5px">
+        <sc-for list="{{ audience }}" as="a">
+          <button onClick="{{ a.pick }}" style="height:44px;padding:0 20px;border:none;border-radius:999px;font-weight:600;font-size:15px;cursor:pointer;transition:all 240ms;background:{{ a.bg }};color:{{ a.fg }};box-shadow:{{ a.sh }}">{{ a.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;align-items:stretch">
+      <sc-for list="{{ plans }}" as="p">
+        <div data-reveal="" data-delay="{{ p.delay }}" style="border-radius:24px;padding:2px;background:{{ p.frame }};transition:transform 300ms cubic-bezier(0.2,0.8,0.2,1)" style-hover="transform:translateY(-6px)">
+          <div style="height:100%;box-sizing:border-box;border-radius:22px;padding:36px;display:flex;flex-direction:column;gap:18px;background:{{ p.bg }};color:{{ p.fg }}">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:30px">{{ p.name }}</span><sc-if value="{{ p.tag }}"><span style="font-size:12px;font-weight:700;letter-spacing:.08em;padding:5px 12px;border-radius:999px;background:rgba(245,184,61,0.14);color:#F5B83D">{{ p.tag }}</span></sc-if></div>
+            <div style="display:flex;align-items:baseline;gap:8px"><span style="font-family:Fraunces,Georgia,serif;font-size:60px;line-height:1;letter-spacing:-0.02em">{{ p.price }}</span><span style="font-size:16px;color:{{ p.muted }}">{{ p.per }}</span></div>
+            <div style="font-size:14px;font-weight:600;color:#C8A24A;margin-top:-8px">{{ p.daily }}</div>
+            <div style="font-size:16px;color:{{ p.muted }};min-height:48px">{{ p.fit }}</div>
+            <div style="display:flex;flex-direction:column;gap:12px;padding-top:20px;border-top:1px solid {{ p.line }}">
+              <sc-for list="{{ p.items }}" as="i"><div style="display:flex;gap:12px;font-size:16px;line-height:1.45"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8A24A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M20 6 9 17l-5-5"></path></svg>{{ i }}</div></sc-for>
+            </div>
+            <a href="#cta" style="margin-top:auto;height:56px;display:flex;align-items:center;justify-content:center;border-radius:999px;font-weight:600;font-size:16px;background:{{ p.btnBg }};color:{{ p.btnFg }};border:1px solid {{ p.btnBd }}">{{ p.cta }}</a>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="font-size:15px;color:#6A6F78;margin-top:24px">Studio, a self-serve plan from $49 a month where you approve each post, is coming later.</div>
+  </div>
+</section>
+<section style="background:#F7F6F2;color:#0E1116;padding:120px 0">
+  <div style="max-width:1000px;margin:0 auto;padding:0 32px">
+    <h2 data-reveal="" style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(36px,4vw,56px);line-height:1.08;letter-spacing:-0.02em;margin:0 0 40px">Questions buyers ask first</h2>
+    <sc-for list="{{ faqs }}" as="f">
+      <div style="border-top:1px solid #D4CFC2">
+        <button onClick="{{ f.toggle }}" style="width:100%;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:26px 0;background:none;border:none;cursor:pointer;text-align:left;color:#0E1116;font-family:Fraunces,Georgia,serif;font-size:24px">{{ f.q }}<span style="flex-shrink:0;width:36px;height:36px;border-radius:50%;border:1px solid #D4CFC2;display:flex;align-items:center;justify-content:center;transition:transform 300ms cubic-bezier(0.2,0.8,0.2,1);transform:{{ f.rot }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0E1116" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span></button>
+        <div style="display:grid;transition:grid-template-rows 400ms cubic-bezier(0.2,0.8,0.2,1);grid-template-rows:{{ f.rows }}"><div style="overflow:hidden"><p style="margin:0 0 26px;font-size:17px;line-height:1.65;color:#3A3F48;max-width:760px">{{ f.a }}</p></div></div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+</div>
+</sc-if>
+
+</main>
+
+<section id="cta" style="position:relative;background:radial-gradient(1000px 500px at 50% 120%, rgba(245,184,61,0.22) 0%, transparent 60%),#0E1116;padding:160px 0 140px;text-align:center;overflow:hidden;border-top:1px solid #262C36">
+  <div style="max-width:1100px;margin:0 auto;padding:0 32px">
+    <h2 data-reveal="" style="font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(56px,8vw,128px);line-height:.98;letter-spacing:-0.03em;margin:0 0 32px">Record once. <span style="font-style:italic;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:0.12em;margin-right:-0.08em;box-decoration-break:clone;-webkit-box-decoration-break:clone">Show up everywhere.</span></h2>
+    <p data-reveal="" data-delay="120" style="font-size:21px;line-height:1.6;color:#B4B8C0;margin:0 auto 44px;max-width:640px">Send us one long video. After a 20-minute call, the 12 posts inside it land in your inbox within 48 hours. They're yours to keep either way.</p>
+    <div data-reveal="" data-delay="240" style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+      <a href="Mirrorline App.dc.html" style="height:64px;display:flex;align-items:center;gap:10px;padding:0 34px;background:linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%);color:#0E1116;border-radius:999px;font-weight:600;font-size:18px;box-shadow:0 8px 30px -6px rgba(200,162,74,0.45);transition:transform 240ms cubic-bezier(0.2,0.8,0.2,1)" style-hover="transform:translateY(-2px)">Book a private demo<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+      <a href="{{ nextPage.href }}" style="height:64px;display:flex;align-items:center;gap:10px;padding:0 30px;border:1px solid #353C48;color:#F5F3EC;border-radius:999px;font-weight:600;font-size:18px;transition:border-color 240ms" style-hover="border-color:#C8A24A">Next: {{ nextPage.label }}</a>
+    </div>
+  </div>
+</section>
+
+<footer style="background:#0E1116;border-top:1px solid #262C36">
+  <div style="max-width:1280px;margin:0 auto;padding:56px 32px 40px;display:flex;justify-content:space-between;gap:32px;flex-wrap:wrap">
+    <div style="display:flex;flex-direction:column;gap:12px;max-width:360px">
+      <div style="display:flex;align-items:center;gap:12px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F5B83D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg><span style="font-family:Fraunces,Georgia,serif;font-size:22px;color:#F5F3EC">Mirrorline</span></div>
+      <span style="font-size:14px;color:#7A8089;line-height:1.6">Placeholder name. All people and brands shown are fictional.</span>
+    </div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap;font-size:15px">
+      <sc-for list="{{ navLinks }}" as="n"><a href="{{ n.href }}" style="color:#B4B8C0">{{ n.label }}</a></sc-for>
+      <a href="Mirrorline App.dc.html" style="color:#B4B8C0">Sign in</a>
+    </div>
+  </div>
+</footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startPage&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;home&quot;,&quot;product&quot;,&quot;agents&quot;,&quot;trust&quot;,&quot;pricing&quot;],&quot;default&quot;:&quot;home&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;audience&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;coaches&quot;,&quot;local&quot;],&quot;default&quot;:&quot;coaches&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+const WORDS=['a week of posts.','twelve short videos.','booked calls.','a daily presence.'];
+const PAGES=[['home','Home','#/'],['product','Product','#/product'],['agents','Agents','#/agents'],['trust','Trust','#/trust'],['pricing','Pricing','#/pricing']];
+const HEADS={
+  product:['THE PRODUCT','One video.','Twelve posts.','Multiply your long videos, remake what’s rising in your niche, and publish every day. Here is exactly how the work gets done.'],
+  agents:['YOUR AI TEAM','Seven agents.','One loop.','Each agent has one job, a monthly spend cap and an off switch. Every action is logged with its reason and its cost.'],
+  trust:['TRUST','Rules we','don’t bend.','Shown in the product and enforced in code. A post that breaks one doesn’t go out, so you never worry about being banned or sued.'],
+  pricing:['PRICING','Start with a pilot.','Stay if it earns its keep.','Two weeks, 12 videos, one report. If the numbers aren’t there, you keep the videos and walk away.']};
+const AG=[
+ ['Trend Scout','Watches your niche and the ones next to it for formats on the rise.','10:05 am · found “The 3-word reframe” rising in Leadership, +340%','$6 of $25 cap'],
+ ['Remake Producer','Writes your version of a rising format: new script, your footage, labelled AI scenes.','10:20 am · draft ready for Maya, 12% similar','$18 of $60 cap'],
+ ['Multiplier','Turns one long video into 8–15 genuinely different short cuts.','9:41 am · cut 12 clips from Episode 47 for $1.84','$9 of $40 cap'],
+ ['Compliance','Checks every cut for rights, similarity, labels and consent before it can post.','9:44 am · 9 passed, 2 need review, 1 blocked','$3 of $15 cap'],
+ ['Client Concierge','Collects your approvals and sends the weekly report.','Friday · report sent, 5 approvals collected','$2 of $10 cap'],
+ ['Publisher','Posts through official APIs to accounts you own, several times a day.','12:15 pm · posted to TikTok, private until app approval','$1 of $10 cap'],
+ ['Performance Analyst','Reads views, clicks and bookings per post, and feeds winners back to the loop.','1:00 pm · question hooks beat the average by 2.1×','$4 of $20 cap']];
+const A={float1:'mlFloat 6s ease-in-out infinite',float2:'mlFloat 7s ease-in-out -2s infinite',float3:'mlFloat 8s ease-in-out -4s infinite',marquee:'mlMarquee 48s linear infinite',orbit:'mlOrbit 14s linear infinite',blink:'mlBlink 1s step-end infinite',scan:'mlScan 4s cubic-bezier(0.4,0,0.1,1) infinite',pulse:'mlPulse 2s ease-in-out infinite',spin:'mlSpin 18s linear infinite',marqueeR:'mlMarqueeR 70s linear infinite',marquee2:'mlMarquee 60s linear infinite'};
+const pageFromHash=()=>{const h=(location.hash||'').replace(/^#\/?/,'');return PAGES.some(p=>p[0]===h)?h:'home';};
+class Component extends DCLogic {
+  state={page:null,wi:0,len:0,del:false,beat:0,agent:0,aud:null,userPicked:false,faq:0,tab:0,cycle:0,demo:'idle',step:0,link:'',demoRun:0};
+  rootRef=React.createRef();navRef=React.createRef();progressRef=React.createRef();heroRef=React.createRef();mainRef=React.createRef();
+  componentDidMount(){
+    this.reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const h=(location.hash||'');
+    this.setState({page:(h.startsWith('#/')||h==='')?pageFromHash():(this.props.startPage||'home')});
+    this._hc=()=>{const h=location.hash;if(h.startsWith('#/')||h===''){this.setState({page:pageFromHash()});}};
+    window.addEventListener('hashchange',this._hc);
+    const tick=()=>{const {wi,len,del}=this.state;const w=WORDS[wi];
+      if(!del&&len<w.length){this.setState({len:len+1});this._ty=setTimeout(tick,70);}
+      else if(!del){this.setState({del:true});this._ty=setTimeout(tick,1800);}
+      else if(len>0){this.setState({len:len-1});this._ty=setTimeout(tick,35);}
+      else{this.setState({del:false,wi:(wi+1)%WORDS.length});this._ty=setTimeout(tick,300);}};
+    if(this.reduce)this.setState({len:WORDS[0].length});else this._ty=setTimeout(tick,900);
+    this._sc=()=>{const y=window.scrollY,hh=document.documentElement.scrollHeight-innerHeight;
+      if(this.progressRef.current)this.progressRef.current.style.width=(hh>0?y/hh*100:0)+'%';
+      const n=this.navRef.current;if(n){const s=y>40;n.style.background=s?'rgba(14,17,22,0.82)':'transparent';n.style.backdropFilter=s?'blur(14px)':'none';n.style.borderBottomColor=s?'#262C36':'transparent';}};
+    window.addEventListener('scroll',this._sc,{passive:true});this._sc();
+    this._mm=e=>{const hero=this.heroRef.current;if(!hero||this.reduce)return;const r=hero.getBoundingClientRect();if(e.clientY<r.top||e.clientY>r.bottom)return;const nx=(e.clientX-r.left)/r.width-.5,ny=(e.clientY-r.top)/r.height-.5;
+      hero.querySelectorAll('[data-par]').forEach(el=>{const d=parseFloat(el.getAttribute('data-par'));el.style.transform=`translate(${-nx*d*18}px,${-ny*d*14}px)`;});
+      const g=hero.querySelector('[data-glow]');if(g){g.style.left=(e.clientX-r.left)+'px';g.style.top=(e.clientY-r.top)+'px';}};
+    window.addEventListener('mousemove',this._mm);
+    if(!this.reduce){this._bt=setInterval(()=>this.setState(s=>({beat:(s.beat+1)%4})),1400);
+      this._ag=setInterval(()=>{if(this.curPage()==='agents'&&!this.state.userPicked)this.setState(s=>({agent:(s.agent+1)%7}));},2800);}
+    this.startTabs();
+    setTimeout(()=>this.setupPage(),60);setTimeout(()=>this.setupPage(),400);
+  }
+  componentDidUpdate(){
+    const p=this.curPage();
+    if(this._lastPage!==p){const first=this._lastPage===undefined;this._lastPage=p;
+      if(!first){window.scrollTo(0,0);
+        const m=this.mainRef.current;if(m&&!this.reduce){m.style.transition='none';m.style.opacity='0';m.style.transform='translateY(16px)';void m.offsetHeight;m.style.transition='opacity 700ms cubic-bezier(0.2,0.8,0.2,1), transform 700ms cubic-bezier(0.2,0.8,0.2,1)';m.style.opacity='1';m.style.transform='none';}}
+      setTimeout(()=>this.setupPage(),30);}
+  }
+  curPage(){return this.state.page||this.props.startPage||'home';}
+  setupPage(){
+    const root=this.rootRef.current;if(!root)return;
+    if(!this.reduce)root.querySelectorAll('[data-anim]').forEach(el=>{if(el.dataset.animOn)return;const a=A[el.getAttribute('data-anim')];if(a){el.style.animation=a;el.dataset.animOn='1';}});
+    const countUp=el=>{const to=parseFloat(el.getAttribute('data-count'));const dec=+(el.getAttribute('data-dec')||0);const t0=performance.now(),D=1600;
+      const f=t=>{const p=Math.min(1,(t-t0)/D),e=1-Math.pow(1-p,3);el.textContent=(to*e).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});if(p<1)requestAnimationFrame(f);};requestAnimationFrame(f);};
+    const items=[...root.querySelectorAll('[data-reveal]')].filter(el=>!el.dataset.rv);
+    if(this.reduce||!('IntersectionObserver' in window))return;
+    if(!this._io)this._io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;const el=e.target;const d=+(el.getAttribute('data-delay')||0);el.style.opacity='1';el.style.transform='none';
+      setTimeout(()=>{el.style.transition='transform 300ms cubic-bezier(0.2,0.8,0.2,1), box-shadow 300ms, border-color 300ms';el.style.transform='';},1000+d);
+      el.querySelectorAll('[data-count]').forEach(countUp);this._io.unobserve(el);}),{threshold:0.12});
+    items.forEach(el=>{el.dataset.rv='1';const cut=el.getAttribute('data-reveal')==='cut';const d=+(el.getAttribute('data-delay')||0);
+      el.style.opacity='0';el.style.transform=cut?'translateY(40px) scale(.85)':'translateY(28px)';
+      el.style.transition=`opacity 900ms cubic-bezier(0.2,0.8,0.2,1) ${d}ms, transform 900ms cubic-bezier(0.2,0.8,0.2,1) ${d}ms, box-shadow 300ms, border-color 300ms`;
+      this._io.observe(el);});
+  }
+  startTabs(){clearInterval(this._tb);if(this.reduce)return;this._tb=setInterval(()=>{if(this.curPage()==='home')this.setState(s=>({tab:(s.tab+1)%4,cycle:s.cycle+1}));},6500);}
+  pickTab=(i)=>{this.setState(s=>({tab:i,cycle:s.cycle+1}));this.startTabs();};
+  runDemo=(e)=>{if(e&&e.preventDefault)e.preventDefault();(this._dt||[]).forEach(clearTimeout);this.setState(s=>({demo:'working',step:0,demoRun:s.demoRun+1}));const f=this.reduce?0.2:1;this._dt=[1,2,3].map(k=>setTimeout(()=>this.setState({step:k}),k*750*f));this._dt.push(setTimeout(()=>this.setState({demo:'done',step:4}),3000*f));};
+  componentWillUnmount(){clearTimeout(this._ty);clearInterval(this._tb);(this._dt||[]).forEach(clearTimeout);clearInterval(this._bt);clearInterval(this._ag);this._io&&this._io.disconnect();window.removeEventListener('scroll',this._sc);window.removeEventListener('mousemove',this._mm);window.removeEventListener('hashchange',this._hc);}
+  renderVals(){
+    const S=this.state;const page=this.curPage();
+    const pg={home:page==='home',sub:page!=='home',product:page==='product',agents:page==='agents',trust:page==='trust',pricing:page==='pricing'};
+    const navLinks=PAGES.slice(1).map(([k,label,href])=>({label,href,fg:page===k?'#F5F3EC':'#B4B8C0',ul:page===k?'scaleX(1)':'scaleX(0)'}));
+    const idx=PAGES.findIndex(p=>p[0]===page);const nx=PAGES[(idx+1)%PAGES.length];
+    const nextPage={label:nx[1],href:nx[2]};
+    const hd=HEADS[page]||HEADS.product;const head={kicker:hd[0],a:hd[1],b:hd[2],sub:hd[3]};
+    const aud=S.aud||this.props.audience||'coaches';const local=aud==='local';
+    const TH=['#12545A','#1E3A40','#2F3E46','#6B4F3A'];
+    const heroCards=[
+      {pre:'Do you feel like you have to',hl:'fix everything?',len:'0:40',color:'#6B4F3A',platform:'TikTok · 2:15 pm',stat:'Scheduled',x:'30%',y:'2%',w:'44%',z:3,depth:'1',anim:'float1',fs:'22px',ai:true},
+      {pre:'You’re not tired.',hl:'You’re over-responsible.',len:'0:24',color:'#12545A',platform:'Instagram',stat:'9,840 views',x:'0%',y:'18%',w:'36%',z:2,depth:'0.6',anim:'float2',fs:'17px',ai:false},
+      {pre:'3 words that stop a team from',hl:'burning out',len:'0:31',color:'#1E3A40',platform:'YouTube Shorts',stat:'7,210 views',x:'66%',y:'26%',w:'34%',z:1,depth:'0.4',anim:'float3',fs:'16px',ai:false}];
+    const hooks=['You’re not tired. You’re over-responsible.','Coach, don’t carry.','Why your best people go quiet','The 10-minute Friday habit','Burnout isn’t a workload problem','5 signs you’re managing, not leading'];
+    const teasers=[
+      ['#/product','THE PRODUCT','One video, twelve posts.','Your long videos become daily short posts, and rising formats become your own originals within 48 hours.','See the product',0],
+      ['#/agents','YOUR AI TEAM','Seven agents, one loop.','Each with one job, a spend cap and an off switch. Every decision is logged with its reason.','Meet the agents',1],
+      ['#/trust','TRUST','Rules we don’t bend.','Your material only. Official APIs. AI scenes labelled. Nothing posts without passing compliance.','Read the rules',0]]
+      .map(([href,kicker,title,body,cta,dark],i)=>({href,kicker,title,body,cta,delay:String(i*100),bg:dark?'linear-gradient(180deg,#1A1F27 0%,#0E1116 100%)':'#FFFFFF',fg:dark?'#F5F3EC':'#0E1116',bd:dark?'#262C36':'#E6E3DA',muted:dark?'#B4B8C0':'#3A3F48',eyebrow:dark?'#F5B83D':'#6A6F78',link:dark?'#F5B83D':'#0E1116'}));
+    const wave=Array.from({length:84},(_,i)=>{const v=0.25+0.75*Math.abs(Math.sin(i*0.9)*Math.cos(i*0.23));const hot=[6,7,8,19,20,33,34,35,47,48,60,61,72,73].includes(i);return {h:Math.round(v*56)+'px',c:hot?'#C8A24A':'#D4CFC2'};});
+    const CUTH=[['You’re not tired. You’re over-responsible.','0:24'],['The meeting that cost me my best engineer','0:52'],['3 words that stop a team from burning out','0:31'],['If your 1:1s feel like status updates','0:44'],['New managers: stop saying this','0:28'],['My first month as a manager','0:58'],['Burnout isn’t a workload problem','0:19'],['Why your best people go quiet','0:36'],['How do I say no to my boss?','0:47'],['The 10-minute Friday habit','0:33'],['5 signs you’re managing, not leading','0:40'],['My first team offsite','0:29']];
+    const cuts=CUTH.map(([hook,len],i)=>({hook,len,color:TH[i%4],delay:String(i*70)}));
+    const multStats=[{n:'12',suf:'',l:'short cuts from one episode'},{n:'31',suf:'',l:'moments found and scored'},{n:'48',suf:' h',l:'to remake a rising format'},{n:'3',suf:'×',l:'posts a day on the Growth plan'}];
+    const steps=[['01','Multiply','One long video becomes 8–15 short cuts, each with its own hook, length and format.','Multiplier · Compliance'],['02','Remake','Formats rising in your niche become your own original videos within 48 hours.','Trend Scout · Remake Producer'],['03','Publish','Several posts a day on Instagram, TikTok and YouTube Shorts, to accounts you own.','Client Concierge · Publisher'],['04','Learn','Views, clicks and bookings per post shape what we make next week.','Performance Analyst']].map(([n,title,body,agent],i)=>({n,title,body,agent,delay:String(i*90)}));
+    const beats=['Hook question','Common belief','3-word reframe','Call to action'].map((label,i)=>{const on=S.beat===i;return {label,bg:on?'rgba(245,184,61,0.12)':'#141920',bd:on?'#C8A24A':'#262C36',bar:on?'#F5B83D':'#353C48',fg:on?'#F5F3EC':'#7A8089',tf:on?'translateY(-6px)':'none'};});
+    const orbit=AG.map((a,i)=>{const ang=-Math.PI/2+i*2*Math.PI/7;const on=S.agent===i;return {name:a[0],x:(50+41*Math.cos(ang)).toFixed(2)+'%',y:(50+41*Math.sin(ang)).toFixed(2)+'%',pick:()=>this.setState({agent:i,userPicked:true}),bg:on?'linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%)':'#1A1F27',fg:on?'#0E1116':'#F5F3EC',bd:on?'#C8A24A':'#262C36',sh:on?'0 8px 30px -6px rgba(200,162,74,0.45)':'none'};});
+    const ag=AG[S.agent];
+    const controls=[['Approve each post','Or let approved formats post after 24 hours unless you object. You choose, per platform.'],['Spend caps','Every agent has a monthly cap. Total spend this month for the demo client: $43 of $180.'],['An off switch','Turn any agent off. Its work pauses and nothing goes out on its behalf.']].map(([t,b],i)=>({t,b,delay:String(i*100)}));
+    const results=[{n:'48300',dec:'0',suf:'',l:'views'},{n:'214',dec:'0',suf:'',l:'link clicks'},{n:'6',dec:'0',suf:'',l:'discovery calls booked'},{n:'2.1',dec:'1',suf:'×',l:'views for question hooks'}].map((r,i)=>({...r,delay:String(i*100)}));
+    const rules=[['Only your material','We work from your own videos, or footage we hold the rights to.'],['Format, not footage','Remakes borrow an idea and a structure. Never another creator’s footage, audio, wording, face or voice.'],['Official APIs only','We post to accounts you connected and can disconnect at any time.'],['AI scenes labelled','On screen, and with each platform’s own AI label where one exists.'],['Consent first','No face-swaps. Voice and likeness only with a signed release.'],['No near-duplicates','Every post is a genuinely different cut.']].map(([t,b],i)=>({t,b,delay:String((i%3)*90)}));
+    const checks=['No original footage used','No original audio used','New wording · 12% similar (limit 30%)','AI scenes labelled on screen and on the platform','No real person’s likeness without consent'].map((t,i)=>({t,delay:String(i*90)}));
+    const fits=local?['Try it on your clinic, studio or gym','For one location that wants steady local reach','For multi-location or busy studios']:['Try it on your podcast or webinar','For coaches posting 3 times a day','For coaches with a team or a launch'];
+    const plans=[{name:'Pilot',price:'$750',per:'for 2 weeks',daily:'About $54 a day',fit:fits[0],items:['12 videos from your material','Scheduling on 3 platforms','One results report'],cta:'Start a pilot',tag:''},
+      {name:'Growth',price:'$1,500',per:'a month',daily:'About $50 a day',fit:fits[1],items:['90 posts a month, 3 a day','2 trend remakes a week','Instagram, TikTok, YouTube Shorts','Weekly report'],cta:'Choose Growth',tag:'MOST CHOSEN'},
+      {name:'Scale',price:'$3,000',per:'a month',daily:'About $100 a day',fit:fits[2],items:['180 posts a month, 6 a day','Daily trend remakes','AI product scenes, labelled','A/B hooks and a monthly strategy call'],cta:'Choose Scale',tag:''}]
+      .map((p,i)=>{const hi=p.name==='Growth';return {...p,delay:String(i*100),frame:hi?'linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%)':'#E6E3DA',bg:hi?'linear-gradient(180deg,#1A1F27 0%,#0E1116 100%)':'#FFFFFF',fg:hi?'#F5F3EC':'#0E1116',muted:hi?'#B4B8C0':'#6A6F78',line:hi?'#262C36':'#E6E3DA',btnBg:hi?'linear-gradient(135deg,#F5B83D 0%,#C8A24A 45%,#A6842F 100%)':'#FFFFFF',btnFg:'#0E1116',btnBd:hi?'#C8A24A':'#D4CFC2'};});
+    const audience=[['coaches','Coaches and consultants'],['local','Local businesses']].map(([k,l])=>{const on=aud===k;return {label:l,pick:()=>this.setState({aud:k}),bg:on?'#0E1116':'transparent',fg:on?'#F5F3EC':'#3A3F48',sh:on?'0 4px 12px rgba(14,17,22,0.12)':'none'};});
+    const faqs=[['Do you guarantee views or followers?','No. Nobody honest can. We guarantee the work: the number of posts in your plan, on time, every one checked. Then we report the real numbers, good or bad.'],['Will this get my accounts banned?','We post only through official platform APIs, to accounts you connect and can disconnect. TikTok posts stay private until our app is approved by TikTok.'],['Do I have to approve everything?','You choose. Approve each post on your phone with a swipe, or let posts go out after 24 hours unless you object.'],['What if I stop after the pilot?','You keep every video we made. There’s no long contract.']]
+      .map(([q,a],i)=>{const on=S.faq===i;return {q,a,rot:on?'rotate(45deg)':'none',rows:on?'1fr':'0fr',toggle:()=>this.setState({faq:on?-1:i})};});
+    const E=React.createElement,rd=this.reduce;
+    const pop=(d)=>rd?{}:{opacity:0,animation:'mlPop 600ms cubic-bezier(0.2,0.8,0.2,1) '+d+'ms forwards'};
+    const tabs=[['Multiply','One long video becomes 8–15 short cuts.'],['Remake','Rising formats, rebuilt as your originals.'],['Publish','Several posts a day, to accounts you own.'],['Learn','Every result shapes next week.']].map(([title,desc],i)=>{const on=S.tab===i;return {n:'0'+(i+1),title,desc,fg:on?'#F5F3EC':'#7A8089',dfg:on?'#B4B8C0':'#5A606A',pick:()=>this.pickTab(i),bar:on?E('span',{key:'b'+S.cycle,style:{position:'absolute',left:0,top:0,height:'100%',width:rd?'100%':0,background:'linear-gradient(90deg,#F5B83D,#C8A24A)',animation:rd?'none':'mlFill 6500ms linear forwards'}}):null};});
+    const stage={m:S.tab===0,r:S.tab===1,p:S.tab===2,l:S.tab===3,cols:S.tab===2?'repeat(auto-fit,minmax(min(100%,560px),1fr))':'repeat(auto-fit,minmax(min(100%,360px),1fr))'};
+    const cutGrid=(k)=>E('div',{key:k,style:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(92px,1fr))',gap:10,marginTop:18}},cuts.slice(0,6).map((c,i)=>E('div',{key:i,style:{aspectRatio:'9/16',borderRadius:10,background:c.color,position:'relative',display:'flex',alignItems:'flex-end',padding:8,boxSizing:'border-box',...pop(250+i*130)}},[E('span',{key:'l',style:{position:'absolute',top:6,left:6,background:'rgba(255,255,255,0.92)',color:'#0E1116',fontSize:10,fontWeight:700,padding:'1px 6px',borderRadius:999}},c.len),E('span',{key:'h',style:{fontSize:11,fontWeight:700,lineHeight:1.25,color:'#FFFFFF'}},c.hook)])));
+    const stageCuts=cutGrid('s'+S.cycle), demoCuts=cutGrid('d'+S.demoRun);
+    const MINE=['“Do you feel like you have to fix everything for your team?”','Most new managers think being needed means being good at the job.','Three words: coach, don’t carry.','Want more? Book a free call. The link is in my bio.'];
+    const remakeRows=['Hook question','Common belief','3-word reframe','Call to action'].map((beat,i)=>{const on=S.beat===i;return {beat,mine:MINE[i],lbg:on?'rgba(245,184,61,0.10)':'#141920',lbd:on?'#C8A24A':'#262C36',lfg:on?'#F5B83D':'#7A8089',rbg:on?'#262C36':'#1A1F27',rbd:on?'#C8A24A':'#262C36'};});
+    const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],PL=[['Instagram','7:30 am'],['TikTok','12:15 pm'],['Shorts','5:00 pm']];
+    const cells=[E('span',{key:'h0'})];DAYS.forEach((d,i)=>cells.push(E('span',{key:'d'+i,style:{fontSize:12,fontWeight:600,color:i===0?'#F5B83D':'#7A8089',padding:'0 2px 6px'}},d)));
+    PL.forEach(([p,t],pi)=>{cells.push(E('span',{key:'p'+pi,style:{fontSize:12,fontWeight:600,color:'#B4B8C0',display:'flex',alignItems:'center'}},p));DAYS.forEach((d,di)=>{const rem=(pi===0&&(di===1||di===4));cells.push(E('span',{key:pi+'-'+di,style:{height:56,borderRadius:8,minWidth:0,overflow:'hidden',background:rem?'rgba(245,184,61,0.12)':'#141920',border:'1px solid '+(rem?'#C8A24A':'#262C36'),borderLeft:'3px solid '+(rem?'#F5B83D':(di<1?'#7A8089':'#3A8DDE')),padding:'6px 5px',boxSizing:'border-box',display:'flex',flexDirection:'column',justifyContent:'space-between',fontSize:10,whiteSpace:'nowrap',color:'#B4B8C0',...pop(150+(di*3+pi)*55)}},[E('b',{key:'t',style:{color:'#F5F3EC',fontWeight:600}},t.replace(' am','a').replace(' pm','p')),E('span',{key:'s'},rem?'Remake':(di<1?'Posted':'Queued'))]));});});
+    const stageCal=E('div',{key:'c'+S.cycle,style:{display:'grid',gridTemplateColumns:'58px repeat(7,minmax(0,1fr))',gap:5}},cells);
+    const FUN=[['Views',48300],['Profile visits',1930],['Link clicks',214],['Leads',31],['Calls booked',6]];
+    const stageFunnel=E('div',{key:'f'+S.cycle,style:{display:'flex',flexDirection:'column',gap:14}},FUN.map(([l,v],i)=>E('div',{key:i,style:{display:'grid',gridTemplateColumns:'120px minmax(0,1fr) 72px',gap:14,alignItems:'center'}},[E('span',{key:'l',style:{fontSize:14,color:'#B4B8C0'}},l),E('span',{key:'b',style:{height:34,borderRadius:8,background:'#141920',overflow:'hidden',display:'block'}},E('span',{style:{display:'block',height:'100%',minWidth:6,width:(v/48300*100)+'%',borderRadius:8,background:i===4?'linear-gradient(90deg,#F5B83D,#C8A24A)':'#C8A24A',transformOrigin:'left',animation:rd?'none':'mlGrow 900ms cubic-bezier(0.2,0.8,0.2,1) '+(i*140)+'ms both'}})),E('span',{key:'v',style:{fontSize:i===4?24:16,fontWeight:600,textAlign:'right',color:i===4?'#F5B83D':'#F5F3EC',fontFamily:i===4?'Fraunces,Georgia,serif':'inherit'}},v.toLocaleString('en-US'))])));
+    const DST=['Transcribing','Finding moments','Cutting 9:16','Compliance check'];
+    const demo={active:S.demo!=='idle',done:S.demo==='done',btn:S.demo==='working'?'Working…':S.demo==='done'?'Run it again':'Show me my posts',src:(S.link||'').trim()||'Episode 47: Why good managers burn out · 52:14',
+      steps:DST.map((label,i)=>{const done=S.demo==='done'||i<S.step,act=S.demo==='working'&&i===S.step;return {label,done,act,bg:done?'rgba(31,191,123,0.12)':act?'rgba(245,184,61,0.12)':'#141920',fg:done?'#1FBF7B':act?'#F5B83D':'#7A8089',bd:done?'rgba(31,191,123,0.30)':act?'rgba(245,184,61,0.30)':'#262C36'};})};
+    const SHOW=[['Coach','You’re not tired.','You’re over-responsible.','0:24'],['Clinic','3 signs your back pain','isn’t about posture','0:31'],['Consultant','The pricing mistake','that costs you clients','0:42'],['Fitness studio','Do this before','every workout','0:19'],['Podcast','Why your best people','go quiet','0:36'],['Real estate','What to ask','before you list','0:28'],['Therapist','Burnout isn’t','a workload problem','0:22'],['Salon','Ask for this','at your next cut','0:21']];
+    const sh=(arr,o)=>[...arr,...arr].map((s,i)=>({niche:s[0],pre:s[1],hl:s[2],len:s[3],color:TH[(i+o)%4]}));
+    const showA=sh(SHOW,0),showB=sh([...SHOW.slice(4),...SHOW.slice(0,4)],2);
+    const audiences=[['Coaches and consultants','Turn webinars, podcasts and client Q&As into a steady stream of authority.','discovery calls'],['Clinics and wellness','Answer the questions patients ask every day, once, on camera.','booked appointments'],['Studios and gyms','Show the class, the coach and the result, every single day.','intro offers sold'],['Local services','Stay the name people remember when they need you.','local bookings']].map(([t,b,goal],i)=>({n:'0'+(i+1),t,b,goal,delay:String(i*90)}));
+    const proofs=[{n:'6',dec:'0',suf:'',big:'discovery calls booked',story:'in one week, from 21 posts cut out of a single podcast episode.',agent:'PUBLISHER · PERFORMANCE ANALYST'},{n:'2.1',dec:'1',suf:'×',big:'views on question hooks',story:'so next week the loop makes more of them, and tries them on TikTok first.',agent:'PERFORMANCE ANALYST'},{n:'3',dec:'0',suf:' min',big:'to cut twelve posts',story:'from a 52-minute episode, captioned in brand style and compliance-checked.',agent:'MULTIPLIER · COMPLIANCE'}].map((p,i)=>({...p,delay:String(i*100)}));
+    const CC=['Do it yourself','AI clipping app','In-house editor','Mirrorline Growth'];
+    const CR=[['Cost a month','Your evenings','$20–$100','$4,000+ salary','$1,500'],['Posts a week','2–3, when you can','As many as you edit','10–15','21'],['Your time','8–10 hours','3–5 hours','Managing a hire','One recording, 10 minutes of approvals'],['Trend remakes','No','No','If they spot them','2 a week, within 48 hours'],['Rights and AI labels','On you','On you','Depends on the person','Checked before every post'],['Reporting','Platform stats','Clip scores','Whatever they build','Weekly, through to booked calls']];
+    const compare={cols:CC.map((label,i)=>({label,fg:i===3?'#F5B83D':'#F5F3EC',bg:i===3?'rgba(245,184,61,0.08)':'transparent'})),rows:CR.map(r=>({label:r[0],cells:r.slice(1).map((v,i)=>({v,bg:i===3?'rgba(245,184,61,0.08)':'transparent',fg:i===3?'#F5F3EC':'#B4B8C0',fw:i===3?600:400}))}))};
+    return {tabs,stage,stageCuts,stageCal,stageFunnel,remakeRows,demo,demoCuts,link:S.link,setLink:e=>this.setState({link:e.target.value}),runDemo:this.runDemo,showA,showB,audiences,proofs,compare,platforms:['Instagram','TikTok','YouTube Shorts','LinkedIn'],navRef:this.navRef,progressRef:this.progressRef,heroRef:this.heroRef,mainRef:this.mainRef,
+      pg,navLinks,nextPage,head,typed:WORDS[S.wi].slice(0,S.len)||'\u200b',heroCards,marquee:[...hooks,...hooks],teasers,wave,cuts,multStats,steps,beats,orbit,
+      agent:{name:ag[0],does:ag[1],log:ag[2],cap:ag[3],idx:String(S.agent+1).padStart(2,'0')+' / 07'},controls,results,rules,checks,plans,audience,faqs,rootRef:this.rootRef};
+  }
+}
+</script>
+</body>
+</html>

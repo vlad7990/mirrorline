@@ -516,3 +516,61 @@ repurpose.io's $1.17 genuinely needs them.
 Unchanged: `PRICING_NOTE` still says these are introductory prices set per
 engagement, and 30_DAY_PLAN.md still calls them test prices. Nothing here
 turns them into a rate card.
+
+## 2026-11-11 · D25 · Adopting the v4 handoff: gold and ink, with three amendments
+
+Vlad supplied a full design handoff — marketing website (5 pages), web app
+(onboarding + 9 screens) and mobile (2 screens). It is now
+`docs/design/handoff-v4/`, and `CLAUDE.md` promotes it above the previous
+claude-design and Stitch references.
+
+**Why adopt it.** It is better than what we have, and it was checked rather
+than assumed. The designer read `02_BRAND_AND_VOICE.md` and built the
+non-negotiables in: the hero carries "only material you own"; the demo panel
+is labelled "Sample run · fictional demo client"; proof numbers say "fictional
+client. Your numbers will differ, and we report them as they are"; the
+comparison says "Typical figures, our estimates"; and the FAQ asks "Do you
+guarantee views or followers?" and answers "No. Nobody honest can." That is
+non-negotiable 7 handled deliberately rather than by luck.
+
+It also arrives independently at the same answers this morning's work did: a
+capacity line in the announcement bar, a four-way comparison table, and
+per-day pricing at **$54 / $50 / $100 a day** — the exact figures `perDayUsd`
+derives (D24). Useful confirmation that the direction was right and only the
+execution was behind.
+
+**Three amendments, which the handoff does not get to override.**
+
+1. **Upload, never a link.** The handoff's hero is "Paste a YouTube, podcast
+   or webinar link". A link to your own channel is legitimate; a generic paste
+   field invites someone else's video, which non-negotiable 1 forbids and
+   which is the behaviour that killed the earlier project. The gold pill, the
+   glow ring and "Show me my posts" are kept; what it accepts is a file. D22
+   stands.
+2. **The run is real.** The prototype plays a canned four-step animation
+   ending in fictional cuts. We have a working engine wired into that exact
+   spot as of this morning, so the design's visuals — step chips, staggered
+   pop-in thumbnails — are driven by actual job state. Keeping the scripted
+   version would be more polished and less true.
+3. **Geist stays; Fraunces does not.** Vlad's call, with the trade-off stated:
+   Fraunces is most of why the design reads as distinctive. What recovers most
+   of it is that **Geist Serif already ships in the `geist` package** we have
+   installed — same family, same licence, no new dependency, and a genuinely
+   editorial display face. One consequence to be honest about: neither Geist
+   Serif nor the `next/font` Sans export carries a true italic, so the
+   signature gold *italic* phrase becomes an upright serif phrase in the gold
+   gradient. The gradient, the `box-decoration-break: clone` and the optical
+   padding carry over unchanged.
+
+**Order of work.** Website first, app second — which is also the handoff's own
+"known theme split" recommendation. The studio keeps the coral glass-box
+system until its turn, so the engine path stays working while the public site
+changes underneath it. The app restyle adds the Light/Dark/System setting the
+handoff asks for; the website's dark/light band rhythm is art direction and
+deliberately not a theme.
+
+**Needs Vlad:** the comparison table carries competitor costs — "$20–$100" for
+clipping apps, "$4,000+ salary" for an in-house editor — under the note
+"Typical figures, our estimates." The handoff itself says marketing must
+validate these before launch. They are claims about third parties and the only
+numbers on the site we cannot derive ourselves.
