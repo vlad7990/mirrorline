@@ -2,12 +2,12 @@
 name: Mirrorline
 description: Glass-box design system for an AI content studio that turns a brand's own videos into daily short-form posts. Precision instrumentation you can inspect. Placeholder product name.
 colors:
-  primary: "#C8401C"
-  primary-hover: "#B33716"
+  primary: "#7A5C0F"
+  primary-hover: "#6E520D"
   on-primary: "#FFFFFF"
-  accent: "#FF5A36"
-  accent-soft: "#FFE7E0"
-  on-accent-soft: "#8F2C11"
+  accent: "#C8A24A"
+  accent-soft: "#FBF1D9"
+  on-accent-soft: "#6E520D"
   background: "#F6F7F9"
   surface: "#FFFFFF"
   surface-subtle: "#EFF1F4"
@@ -41,7 +41,7 @@ colors:
   dark-text: "#EEF1F6"
   dark-text-muted: "#9BA4B2"
   dark-ink: "#1C2430"
-  dark-accent: "#FF7A5C"
+  dark-accent: "#F5B83D"
   brand-demo-teal: "#12545A"
   brand-demo-sand: "#F3E9DC"
 typography:
@@ -117,7 +117,7 @@ typography:
     letterSpacing: -0.01em
 rounded:
   sm: 4px
-  thumb: 6px
+  thumb: 20px
   md: 8px
   lg: 10px
   xl: 14px
@@ -312,8 +312,8 @@ The demo content belongs to a fictional client, "Maya Torres Coaching". "Mirrorl
 
 ## Colors
 
-- **Primary (#C8401C):** a deep coral for primary buttons and key actions. White text on it passes 4.5:1 (4.99:1). It darkens to #B33716 on hover, in both themes — lightening it in dark mode drops white text below AA.
-- **Accent (#FF5A36):** a bright coral for the loop logo, sparklines, progress and fit bars, and highlights. It never carries white body text.
+- **Primary (#7A5C0F light, #8A6A14 dark):** a deep gold for primary buttons and key actions, so the studio and the public site share one brand hue (D26). White text clears AA on both — 6.24:1 and 5.06:1. Hover darkens rather than lightens, in both themes. Unlike the coral it replaced, gold cannot hold one value across the themes: it is a light hue, so the light theme needs it deeper for white to pass.
+- **Accent (#C8A24A light, #F5B83D dark):** the brighter gold, for the loop logo, sparklines, progress and fit bars, and highlights. It never carries white body text — white on it is 2.4:1, and a test asserts that so it stays banned.
 - **Accent soft (#FFE7E0):** the active navigation item, selected options and "working" agent states.
 - **Background (#F6F7F9) and surface (#FFFFFF):** a cool, precise near-white page with white cards and 1px #E2E5EA borders. The neutrals sit on one cold, almost chroma-free axis rather than the old warm off-white: a tool you inspect should not read as paper, and the colder ground gives the coral somewhere to be loud. The page-to-card step is 1.07:1, which is what lets a flat card have a visible edge without a shadow.
 - **Surface subtle (#EFF1F4):** inset blocks — agent log wells, read-only fields, storyboard frames.
@@ -423,7 +423,7 @@ Motion explains state changes. It never decorates.
 - Show trust on screen: AI labels, compliance results, approvals, consent records.
 - Pair every colour-coded status with a word.
 - Use real-looking but fictional data from the demo client, consistently across screens, and label demo data as sample data on public pages.
-- Keep white text only on primary (#C8401C), ink or the viewer; never on the bright accent.
+- Keep white text only on primary (#7A5C0F light / #8A6A14 dark), ink or the viewer; never on the bright accent.
 - Keep touch targets at 44px or larger and text contrast at 4.5:1 or higher.
 - Animate with the easing tokens, out-curves for entering, and let everything collapse under reduced motion.
 

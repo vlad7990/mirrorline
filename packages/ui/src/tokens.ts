@@ -46,12 +46,12 @@
  * is proved at >= 4.5:1 by src/__tests__/contrast.test.ts.
  */
 export const LIGHT_COLORS = {
-  primary: '#C8401C',
-  'primary-hover': '#B33716',
+  primary: '#7A5C0F',
+  'primary-hover': '#6E520D',
   'on-primary': '#FFFFFF',
-  accent: '#FF5A36',
-  'accent-soft': '#FFE7E0',
-  'on-accent-soft': '#8F2C11',
+  accent: '#C8A24A',
+  'accent-soft': '#FBF1D9',
+  'on-accent-soft': '#6E520D',
   background: '#F6F7F9',
   surface: '#FFFFFF',
   'surface-subtle': '#EFF1F4',
@@ -107,12 +107,12 @@ export const LIGHT_COLORS = {
  * holds 6.04:1, so the primary darkens on hover in both themes.
  */
 export const DARK_COLORS = {
-  primary: '#C8401C',
-  'primary-hover': '#B33716',
+  primary: '#8A6A14',
+  'primary-hover': '#7A5C0F',
   'on-primary': '#FFFFFF',
-  accent: '#FF7A5C',
-  'accent-soft': '#3A1E17',
-  'on-accent-soft': '#FFC2B1',
+  accent: '#F5B83D',
+  'accent-soft': '#2E2512',
+  'on-accent-soft': '#F5D98F',
   background: '#0F141B',
   surface: '#19202A',
   'surface-subtle': '#222A36',

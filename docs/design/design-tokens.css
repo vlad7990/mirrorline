@@ -10,9 +10,9 @@
   --ml-border-strong: #CBD0D8;
   --ml-text: #0E1116;
   --ml-text-muted: #596273;
-  --ml-accent: #FF5A36;
-  --ml-accent-strong: #C8401C;
-  --ml-accent-soft: #FFE7E0;
+  --ml-accent: #C8A24A;
+  --ml-accent-strong: #7A5C0F;
+  --ml-accent-soft: #FBF1D9;
   --ml-ink: #11151B;
   --ml-on-ink: #EEF1F6;
   --ml-success: #128A5E;
@@ -56,9 +56,9 @@
   --ml-border-strong: #404A59;
   --ml-text: #EEF1F6;
   --ml-text-muted: #9BA4B2;
-  --ml-accent: #FF7A5C;
-  --ml-accent-strong: #C8401C;
-  --ml-accent-soft: #3A1E17;
+  --ml-accent: #F5B83D;
+  --ml-accent-strong: #8A6A14;
+  --ml-accent-soft: #2E2512;
   /* Emphasis steps up, not down: there is no room below the page. */
   --ml-ink: #1C2430;
   --ml-success: #35C68C;

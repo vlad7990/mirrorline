@@ -24,12 +24,12 @@
   /* Colours — light. Cool, low-chroma neutrals on one ~220 hue axis, so the
      unchanged coral brand reads louder and 1px borders read as rules rather
      than creases. See tokens.ts for the full reasoning. */
-  --color-primary: #c8401c;
-  --color-primary-hover: #b33716;
+  --color-primary: #7a5c0f;
+  --color-primary-hover: #6e520d;
   --color-on-primary: #ffffff;
-  --color-accent: #ff5a36;
-  --color-accent-soft: #ffe7e0;
-  --color-on-accent-soft: #8f2c11;
+  --color-accent: #c8a24a;
+  --color-accent-soft: #fbf1d9;
+  --color-on-accent-soft: #6e520d;
   --color-background: #f6f7f9;
   --color-surface: #ffffff;
   --color-surface-subtle: #eff1f4;
@@ -242,12 +242,17 @@
    keeps 4.99:1 in both themes. */
 @layer base {
   .dark {
-    /* No --color-primary-hover override: the primary fill and its hover are
-       deliberately identical in both themes. Lightening the hover in dark mode
-       drops white text to 4.27:1 and fails AA, so it darkens here too. */
-    --color-accent: #ff7a5c;
-    --color-accent-soft: #3a1e17;
-    --color-on-accent-soft: #ffc2b1;
+    /* The brand hue is gold in both themes now (D26), but unlike the coral it
+       does not hold one value across them. Gold is a light hue: the light
+       theme needs it deep enough for white to clear AA on the fill, and the
+       dark theme can afford one step up without losing that. Hence an
+       explicit pair here rather than inheriting from :root.
+       White on #8a6a14 is 5.06:1; on its hover #7a5c0f, 6.24:1. */
+    --color-primary: #8a6a14;
+    --color-primary-hover: #7a5c0f;
+    --color-accent: #f5b83d;
+    --color-accent-soft: #2e2512;
+    --color-on-accent-soft: #f5d98f;
     --color-background: #0f141b;
     --color-surface: #19202a;
     --color-surface-subtle: #222a36;

@@ -7,7 +7,7 @@
       "bg": "#F6F7F9", "surface": "#FFFFFF", "surface-subtle": "#EFF1F4",
       "border": "#E2E5EA", "border-strong": "#CBD0D8",
       "text": "#0E1116", "text-muted": "#596273",
-      "accent": "#FF5A36", "accent-strong": "#C8401C", "accent-soft": "#FFE7E0",
+      "accent": "#C8A24A", "accent-strong": "#7A5C0F", "accent-soft": "#FBF1D9",
       "ink": "#11151B", "on-ink": "#EEF1F6",
       "success": "#128A5E", "warning": "#B7790A", "danger": "#C9343C", "info": "#2563D9"
     },
@@ -15,7 +15,7 @@
       "bg": "#0F141B", "surface": "#19202A", "surface-subtle": "#222A36",
       "border": "#2D3542", "border-strong": "#404A59",
       "text": "#EEF1F6", "text-muted": "#9BA4B2",
-      "accent": "#FF7A5C", "accent-strong": "#C8401C", "accent-soft": "#3A1E17",
+      "accent": "#F5B83D", "accent-strong": "#8A6A14", "accent-soft": "#3A1E17",
       "ink": "#1C2430", "on-ink": "#EEF1F6",
       "success": "#35C68C", "warning": "#E5AE38", "danger": "#F0686B", "info": "#6B9BF2"
     },
@@ -30,7 +30,7 @@
       "scheduled": { "bg": "#E2EAFA", "text": "#1C4AA3" },
       "published": { "bg": "#E9ECF1", "text": "#3A4250" }
     },
-    "demo-brand": { "teal": "#12545A", "sand": "#F3E9DC", "coral": "#FF5A36", "ink": "#11151B" }
+    "demo-brand": { "teal": "#12545A", "sand": "#F3E9DC", "coral": "#6B4F3A", "ink": "#11151B" }
   },
   "font": {
     "note": "Two voices: sans is the studio talking to the user, mono is the machine — logs, costs, timings, caps, counts, rates.",
