@@ -38,9 +38,14 @@ export function CapacityBar() {
   if (PILOT_PLACES <= 0) return null
 
   return (
+    // `aside`, not a bare div: it sits above the header and outside <main>,
+    // so without a landmark its text belongs to no region and axe reports it
+    // (moderate, "all page content should be contained by landmarks"). It is
+    // genuinely complementary to the page, which is what `aside` means.
+    //
     // Accent rather than the primary: the primary action in view is the
     // header's own button, and DESIGN.md allows one primary per section.
-    <div className="border-b border-border bg-accent-soft">
+    <aside aria-label="Pilot availability" className="border-b border-border bg-accent-soft">
       <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center justify-center gap-x-3 gap-y-1 px-5 py-2.5 text-center sm:px-8">
         <p className="m-0 text-label text-text">
           {/* A count is a figure, so it goes in the machine's voice — the same
@@ -52,6 +57,6 @@ export function CapacityBar() {
           Ask for a place →
         </LeadDialogButton>
       </div>
-    </div>
+    </aside>
   )
 }

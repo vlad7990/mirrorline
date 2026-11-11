@@ -416,3 +416,41 @@ non-negotiable 7 exists to stop.
 
 **Needs Vlad:** confirm 4 is the real number. It is the only figure on the
 public site that is a commitment rather than sample data.
+
+## 2026-11-11 · D22 · The hero takes an upload, not a link
+
+OpusClip and Vizard both lead with a working field — "Drop a video link or
+upload a file", "Paste a YouTube link here" — and that device is most of why
+their pages feel alive where a page of screenshots does not. It is the single
+biggest structural borrow available to us, and we were unusually ready for it:
+the engine shipped yesterday and `EngineLive` already did upload → job → cuts.
+
+Three things had to be decided rather than copied.
+
+**No link field.** Both competitors accept a YouTube URL, which means
+ingesting footage whose rights they have not established. Non-negotiable 1
+allows only client-owned material. So the hero takes an upload and says why,
+in one line under the field: *"Your own footage only — no links to other
+people's videos."* The constraint is the product, so it is stated rather than
+hidden. An e2e test asserts the **absence** of a URL input, because that
+absence is a product decision — if a link field ever appears there it is a
+breach, not a feature, and a test is the only thing that will notice.
+
+**A rights gate before the run, not after.** Picking a file is not consent.
+The owner field and the confirmation appear once a file is chosen, because
+asking before there is anything to confirm is noise.
+
+**It never renders `null`.** `EngineLive` hides itself when the engine is
+absent, which is right for a studio panel and wrong for a hero: every Vercel
+preview has no engine, and a hero that vanishes takes the page's main action
+with it. Without an engine the same control invites a pilot and says the run
+happens with us. Nothing pretends to start.
+
+The submit-and-poll machinery moved out of `EngineLive` into
+`useEngineJob`, because a second copy of the polling, the cleanup and the
+error paths is how the two drift apart. `EngineLive` keeps its own form,
+which was never the shared part, and its public types are unchanged.
+
+One accessibility fix caught by axe rather than by me: the capacity bar from
+D21 sat above the header and outside `<main>`, so its text belonged to no
+landmark. It is an `<aside>` now.

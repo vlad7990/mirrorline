@@ -31,8 +31,18 @@ import { cn } from '../cn'
 export interface ReelMediaProps {
   /** A muted, looping, 9:16 file under `public/reels/`. */
   readonly videoSrc: string
-  /** Its first frame. Shown before playback, and instead of it under reduced motion. */
-  readonly posterSrc: string
+  /**
+   * Its first frame. Shown before playback, and instead of it under reduced
+   * motion.
+   *
+   * Optional because a freshly rendered cut does not have one: the engine
+   * returns an mp4, not a still. Without a poster the frame falls back to the
+   * thumbnail's demo colour until the first frame decodes, which is why
+   * `VideoThumb` keeps that colour behind the media rather than going white.
+   * Sample footage checked into `public/reels/` should always carry one — on
+   * a twelve-tile wall the posters are what keep the page cheap.
+   */
+  readonly posterSrc?: string
   readonly className?: string
 }
 
@@ -90,7 +100,7 @@ export function ReelMedia({ videoSrc, posterSrc, className }: ReelMediaProps) {
       loop
       disablePictureInPicture
       preload="none"
-      poster={posterSrc}
+      {...(posterSrc ? { poster: posterSrc } : {})}
       src={videoSrc}
       className={cn('absolute inset-0 h-full w-full object-cover', className)}
     />

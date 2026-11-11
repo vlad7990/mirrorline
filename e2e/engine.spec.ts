@@ -68,3 +68,54 @@ test('a run cannot start until there is a file and a rights confirmation', async
   // Still disabled: there is no file yet. Both halves are required.
   await expect(start).toBeDisabled()
 })
+
+/* -------------------------------------------------------------------------- */
+/* The public hero control                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The hero borrows OpusClip's and Vizard's "the input is the product" device
+ * (docs/design/COMPETITOR_REFERENCES.md §2.1). Its rules differ from the
+ * studio panel's in one way that matters: it must never vanish. The studio
+ * can hide a control this machine cannot honour; a landing page that loses
+ * its main action on every deployment cannot.
+ */
+test('the hero keeps a way in when there is no engine', async ({ page }) => {
+  await stubEngine(page, false)
+  await page.goto('/')
+
+  // The field is still there — it is the shape of the page, not a feature flag.
+  await expect(page.getByText('Drop a talk, podcast or webinar')).toBeVisible()
+
+  // But it does not pretend a run can start here. It offers the pilot instead.
+  await expect(page.getByRole('button', { name: 'Cut it up' })).toHaveCount(0)
+  await expect(page.getByText(/We run the first cuts with you on a pilot call/)).toBeVisible()
+})
+
+test('the hero runs the engine where there is one, behind the rights gate', async ({ page }) => {
+  await stubEngine(page, true)
+  await page.goto('/')
+
+  // CLAUDE.md non-negotiable 1 again, on the public page this time: no file
+  // and no confirmation means no run, and the form says so before the API
+  // has to.
+  const cut = page.getByRole('button', { name: 'Cut it up' })
+  await expect(cut).toBeVisible()
+  await expect(cut).toBeDisabled()
+
+  // The rights gate stays out of the way until there is something to confirm.
+  await expect(page.getByLabel('Who owns this footage?')).toHaveCount(0)
+})
+
+test('the hero never offers to fetch someone else’s video', async ({ page }) => {
+  await stubEngine(page, true)
+  await page.goto('/')
+
+  // Both reference sites take a YouTube URL. We cannot: non-negotiable 1
+  // allows only client-owned material. This asserts the absence, because the
+  // absence is the product decision — if a link field ever appears here, it
+  // is a breach and not a feature.
+  await expect(page.locator('input[type="url"]')).toHaveCount(0)
+  await expect(page.getByPlaceholder(/paste.*link/i)).toHaveCount(0)
+  await expect(page.getByText(/no links to other people’s videos/)).toBeVisible()
+})

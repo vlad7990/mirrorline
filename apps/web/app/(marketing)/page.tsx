@@ -24,6 +24,7 @@ import { LOOP_CLOSING_LINE, PUBLIC_AGENTS } from '@/components/marketing/agents'
 import { CutWall } from '@/components/marketing/cut-wall'
 import { Faq, type FaqItem } from '@/components/marketing/faq'
 import { GateReadout } from '@/components/marketing/gate-readout'
+import { HeroUpload } from '@/components/marketing/hero-upload'
 import {
   ComingSoonLabel,
   SampleDataLabel,
@@ -233,9 +234,13 @@ export default function LandingPage() {
               We rebuild the format, never the footage. Your voice, your accounts, every cut checked
               before it can be scheduled.
             </p>
-            <div className="reveal flex flex-col gap-3 sm:flex-row sm:items-center">
-              <LeadDialogButton intent="pilot" />
-              <LeadDialogButton intent="demo" variant="secondary" size="lg" />
+            {/* The first step of the product rather than two buttons about
+                it — the device OpusClip and Vizard both lead with
+                (docs/design/COMPETITOR_REFERENCES.md §2.1). It keeps the
+                pilot and demo routes inside itself, so nothing is lost by
+                replacing the button pair. */}
+            <div className="reveal">
+              <HeroUpload />
             </div>
           </div>
 

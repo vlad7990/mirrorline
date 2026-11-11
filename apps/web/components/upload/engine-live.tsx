@@ -16,31 +16,21 @@
 import { AlertBar, Button, Card } from '@mirrorline/ui'
 import * as React from 'react'
 
-import type { EngineJobState, EngineSummary } from '@/lib/engine/types'
+import {
+  useEngineAvailability,
+  useEngineJob,
+  type EngineJobResult,
+} from '@/lib/engine/use-engine-job'
 
-import { toCutView, type CutView, type EngineCutWithUrl } from './cut-view'
-
-const POLL_MS = 2000
 const RIGHTS_LABEL =
   'I own this footage, or I hold a written licence for it, and I can show the record.'
 
-interface Availability {
-  readonly available: boolean
-  readonly reason: string
-}
-
-interface JobResponse {
-  readonly id: string
-  readonly state: EngineJobState
-  readonly sourceName: string
-  readonly error: string | null
-  readonly summary: (Omit<EngineSummary, 'cuts'> & { cuts: EngineCutWithUrl[] }) | null
-}
-
-export interface EngineLiveResult {
-  readonly cuts: readonly CutView[]
-  readonly summary: JobResponse['summary']
-}
+/**
+ * Unchanged for callers. The submit-and-poll machinery moved to
+ * `useEngineJob` when the public hero needed the same thing; what is left
+ * here is this screen's form, which was never the shared part.
+ */
+export type EngineLiveResult = EngineJobResult
 
 export interface EngineLiveProps {
   /** Raised when a run finishes, so the screen can show its cuts. */
@@ -48,101 +38,37 @@ export interface EngineLiveProps {
 }
 
 export function EngineLive({ onResult }: EngineLiveProps) {
-  const [availability, setAvailability] = React.useState<Availability | null>(null)
+  const availability = useEngineAvailability()
+  const job = useEngineJob()
   const [file, setFile] = React.useState<File | null>(null)
   const [transcript, setTranscript] = React.useState<File | null>(null)
   const [rightsHolder, setRightsHolder] = React.useState('')
   const [rightsConfirmed, setRightsConfirmed] = React.useState(false)
-  const [jobId, setJobId] = React.useState<string | null>(null)
-  const [state, setState] = React.useState<EngineJobState | null>(null)
-  const [error, setError] = React.useState<string | null>(null)
   const inputId = React.useId()
   const holderId = React.useId()
   const scriptId = React.useId()
 
+  // The hook owns the result; this screen only forwards it up. Keyed on the
+  // result identity, which changes once per run, so the parent is not told
+  // the same thing on every poll.
+  const { result } = job
   React.useEffect(() => {
-    let cancelled = false
-    fetch('/api/engine/status')
-      .then((response) => response.json() as Promise<Availability>)
-      .then((result) => {
-        if (!cancelled) setAvailability(result)
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setAvailability({ available: false, reason: 'the status check did not answer.' })
-        }
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  // Poll while a job is running. The interval is cleared on every exit path,
-  // including the one where the component unmounts mid-run.
-  React.useEffect(() => {
-    if (jobId === null) return undefined
-
-    let cancelled = false
-    const timer = setInterval(() => {
-      void fetch(`/api/engine/jobs/${jobId}`)
-        .then((response) => response.json() as Promise<JobResponse>)
-        .then((job) => {
-          if (cancelled) return
-          setState(job.state)
-
-          if (job.state === 'done' && job.summary) {
-            const cuts = job.summary.cuts.map((cut) => toCutView(cut, jobId))
-            onResult({ cuts, summary: job.summary })
-            setJobId(null)
-          }
-          if (job.state === 'failed') {
-            setError(job.error ?? 'the run failed and said nothing about why.')
-            setJobId(null)
-          }
-        })
-        .catch(() => {
-          if (!cancelled) setError('lost contact with the run.')
-        })
-    }, POLL_MS)
-
-    return () => {
-      cancelled = true
-      clearInterval(timer)
-    }
-  }, [jobId, onResult])
+    if (result) onResult(result)
+  }, [result, onResult])
 
   async function start(event: React.FormEvent) {
     event.preventDefault()
     if (file === null) return
 
-    setError(null)
     onResult(null)
-
-    const body = new FormData()
-    body.set('video', file)
-    if (transcript !== null) body.set('transcript', transcript)
-    body.set('rightsConfirmed', String(rightsConfirmed))
-    body.set('rightsHolder', rightsHolder)
-
-    try {
-      const response = await fetch('/api/engine/jobs', { method: 'POST', body })
-      const payload = (await response.json()) as { jobId?: string; error?: string }
-      if (!response.ok || !payload.jobId) {
-        setError(payload.error ?? `the upload was refused (${response.status}).`)
-        return
-      }
-      setJobId(payload.jobId)
-      setState('running')
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause))
-    }
+    await job.start({ video: file, transcript, rightsConfirmed, rightsHolder })
   }
 
   // Still asking, or the engine is not here. Either way there is nothing to
   // offer, and the screen's demo states carry on as before.
   if (availability === null || !availability.available) return null
 
-  const isRunning = jobId !== null && state === 'running'
+  const { error, isRunning } = job
   const canStart = file !== null && rightsConfirmed && rightsHolder.trim() !== '' && !isRunning
 
   return (
