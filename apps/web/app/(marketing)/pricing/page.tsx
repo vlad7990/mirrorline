@@ -44,7 +44,7 @@ export default function PricingPage() {
         shotCaption="The weekly report you get, on sample data from a fictional demo client."
       />
 
-      <Section tone="subtle" size="md" aria-labelledby="tiers-heading">
+      <Section className="band-snow" size="md" aria-labelledby="tiers-heading">
         <h2 id="tiers-heading" className="sr-only">
           Tiers
         </h2>
@@ -150,7 +150,7 @@ export default function PricingPage() {
         <p className="mt-6 mb-0 max-w-[68ch] text-meta text-text-muted">{PRICING_NOTE}</p>
       </Section>
 
-      <Section aria-labelledby="included-heading">
+      <Section className="band-ink-alt" aria-labelledby="included-heading">
         <SectionHeading
           headingClassName="text-site-h2 font-serif"
           id="included-heading"

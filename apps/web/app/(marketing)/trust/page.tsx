@@ -136,7 +136,7 @@ export default function TrustPage() {
         shotCaption="The approvals queue, on sample data from a fictional demo client."
       />
 
-      <Section tone="subtle" aria-labelledby="rules-heading">
+      <Section className="band-snow" aria-labelledby="rules-heading">
         <h2 id="rules-heading" className="sr-only">
           Our rules
         </h2>
@@ -208,7 +208,7 @@ export default function TrustPage() {
         </div>
       </Section>
 
-      <Section aria-labelledby="not-claimed-heading">
+      <Section className="band-ink-alt" aria-labelledby="not-claimed-heading">
         <SectionHeading
           headingClassName="text-site-h2 font-serif"
           id="not-claimed-heading"

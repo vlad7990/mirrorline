@@ -98,7 +98,7 @@ export default function AgentsPage() {
         shotCaption="The agents board, on sample data from a fictional demo client."
       />
 
-      <Section tone="subtle" aria-labelledby="agents-heading">
+      <Section className="band-snow" aria-labelledby="agents-heading">
         <SectionHeading
           headingClassName="text-site-h2 font-serif"
           id="agents-heading"
@@ -173,7 +173,7 @@ export default function AgentsPage() {
         </div>
       </Section>
 
-      <Section aria-labelledby="client-heading">
+      <Section className="band-ink-alt" aria-labelledby="client-heading">
         <SectionHeading
           headingClassName="text-site-h2 font-serif"
           id="client-heading"
@@ -224,7 +224,7 @@ export default function AgentsPage() {
         </div>
       </Section>
 
-      <Section tone="subtle" aria-labelledby="gate-heading">
+      <Section className="band-snow" aria-labelledby="gate-heading">
         <Card padding="lg" className="flex flex-col gap-4">
           <span className="grid size-11 place-items-center rounded-md bg-success-soft text-on-success-soft">
             <ShieldCheck aria-hidden="true" className="size-6" strokeWidth={1.8} />
