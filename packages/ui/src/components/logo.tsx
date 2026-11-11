@@ -67,6 +67,14 @@ export interface LogoWordmarkProps extends React.HTMLAttributes<HTMLSpanElement>
   size?: number
   /** Hide the word visually and keep the mark, for a collapsed sidebar. */
   markOnly?: boolean
+  /**
+   * Recolours the loop mark. `className` sets the word's colour; the mark
+   * defaults to the brand coral and needs its own override.
+   *
+   * The public site passes `text-gold-bright` (D25) — the site and the studio
+   * are two registers, and the mark follows whichever it is standing in.
+   */
+  markClassName?: string
 }
 
 const WORD_TO_MARK_RATIO = 0.68
@@ -79,11 +87,12 @@ export function LogoWordmark({
   size = DEFAULT_SIZE,
   markOnly = false,
   className,
+  markClassName,
   ...props
 }: LogoWordmarkProps) {
   return (
     <span className={cn('inline-flex items-center gap-2.5 text-text', className)} {...props}>
-      <LogoMark size={size} />
+      <LogoMark size={size} className={markClassName} />
       <span
         className={cn('font-heading font-bold', markOnly && 'sr-only')}
         style={{ fontSize: Math.round(size * WORD_TO_MARK_RATIO) }}

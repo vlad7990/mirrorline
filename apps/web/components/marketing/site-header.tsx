@@ -139,7 +139,9 @@ export function SiteHeader() {
             className="inline-flex items-center rounded-md text-on-ink-900"
             aria-label="Mirrorline, home"
           >
-            <LogoWordmark size={26} />
+            {/* The mark defaults to the studio's coral; on the site it is
+                gold, like everything else that carries the brand here. */}
+            <LogoWordmark size={26} markClassName="text-gold-bright" />
           </Link>
 
           <nav aria-label="Main" className="hidden items-center gap-1 md:flex">

@@ -29,7 +29,17 @@ export const ROUTES: readonly RouteEntry[] = [
     slug: 'index',
     name: 'Home (marketing)',
     area: 'marketing',
-    h1: 'One video. A week of posts.',
+    /*
+     * The hero's second line cycles (D25), so only the fixed part is stable
+     * enough to match on. `getByRole('heading', { name })` matches on a
+     * substring, which is what makes this work.
+     *
+     * The accessible name is this phrase plus the *first* cycling one: the
+     * animated span is `aria-hidden` and a visually hidden sibling carries
+     * the static text, so assistive technology never sees a half-typed
+     * value. Matching the prefix asserts that arrangement is still in place.
+     */
+    h1: 'Turn one long video into',
   },
   {
     path: '/how-it-works',

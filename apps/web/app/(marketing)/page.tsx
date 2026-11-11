@@ -17,7 +17,6 @@ import { cutSummary, cuts, funnel, metrics, sourceVideo } from '@mirrorline/mock
 import { Button, Card, cn, FunnelBar } from '@mirrorline/ui'
 import { ArrowRight, Film, Plug, Repeat, Tag } from 'lucide-react'
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import Link from 'next/link'
 
 import { LOOP_CLOSING_LINE, PUBLIC_AGENTS } from '@/components/marketing/agents'
@@ -26,6 +25,7 @@ import { CutWall } from '@/components/marketing/cut-wall'
 import { Faq, type FaqItem } from '@/components/marketing/faq'
 import { GateReadout } from '@/components/marketing/gate-readout'
 import { HeroUpload } from '@/components/marketing/hero-upload'
+import { TypedPhrase } from '@/components/marketing/typed-phrase'
 import {
   ComingSoonLabel,
   SampleDataLabel,
@@ -79,6 +79,29 @@ const LIMITS: readonly Limit[] = [
     Icon: Plug,
   },
 ]
+
+/* -------------------------------------------------------------------------- */
+/* Hero                                                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The cycling second line, verbatim from docs/design/handoff-v4.
+ *
+ * The first is what a static render and a reduced-motion reader see, so it
+ * has to stand alone as the headline's ending — "Turn one long video into a
+ * week of posts." reads correctly with no animation at all.
+ *
+ * Every one of these is a claim about what the product produces, never about
+ * what it achieves. "booked calls." is the closest to the line and stays on
+ * the right side of it: the studio schedules posts that carry a booking
+ * link, and non-negotiable 7 forbids promising the calls arrive.
+ */
+const HERO_PHRASES = [
+  'a week of posts.',
+  'twelve short videos.',
+  'booked calls.',
+  'a daily presence.',
+] as const
 
 /* -------------------------------------------------------------------------- */
 /* FAQ                                                                         */
@@ -222,58 +245,54 @@ export default function LandingPage() {
           The headline is five words. It was twelve, which reads fine at the
           46px the studio uses and breaks into four lines at the size a public
           page wants. The qualifier it used to carry moved into the subtext. */}
-      <Section size="lg">
-        {/* Aligned to the top, not centred: centring a short text column
-            against a tall figure pushes the headline into the middle of the
-            viewport, which reads as a layout bug rather than as space. */}
-        <div className="grid items-start gap-10 lg:grid-cols-12 lg:gap-12">
-          <div className="flex flex-col gap-6 lg:col-span-7">
-            <h1 className="reveal-lead m-0 text-balance font-heading text-hero text-text">
-              One video. A week of posts.
-            </h1>
-            <p className="reveal m-0 max-w-[46ch] text-subtitle font-normal text-text-muted">
-              We rebuild the format, never the footage. Your voice, your accounts, every cut checked
-              before it can be scheduled.
-            </p>
-            {/* The first step of the product rather than two buttons about
-                it — the device OpusClip and Vizard both lead with
-                (docs/design/COMPETITOR_REFERENCES.md §2.1). It keeps the
-                pilot and demo routes inside itself, so nothing is lost by
-                replacing the button pair. */}
-            <div className="reveal">
-              <HeroUpload />
-            </div>
-          </div>
+      {/* The handoff centres the hero and gives it the page's one action,
+          rather than setting a text column against a screenshot. The
+          screenshot moves down to the proof section, where it is evidence
+          instead of decoration. */}
+      <section className="band-ink relative overflow-hidden px-4 pb-24 pt-28 sm:px-8 sm:pt-36">
+        {/* The handoff's radial gold wash behind the headline. Decorative, so
+            it is hidden from assistive technology, and it sits underneath on
+            a negative z-index rather than by a stacking hack. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[640px] w-[640px] -translate-x-1/2 -translate-y-1/3 rounded-full bg-[radial-gradient(circle,rgba(245,184,61,0.14)_0%,transparent_70%)]"
+        />
 
-          {/* Bleeds past the container on wide screens so the composition is
-              a crop of something larger rather than a card sitting in a box. */}
-          <figure className="reveal m-0 lg:col-span-5 lg:-mr-[6vw] xl:-mr-[10vw]">
-            <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-[0_24px_60px_-28px_rgb(14_17_22_/_0.32)]">
-              <Image
-                src="/shots/studio-cuts-16x10-light.png"
-                alt="The Mirrorline studio after a run: vertical cuts from one upload, each with its hook, length and compliance verdict."
-                width={1440}
-                height={900}
-                priority
-                sizes="(min-width: 1024px) 42vw, 100vw"
-                className="block h-auto w-full dark:hidden"
-              />
-              <Image
-                src="/shots/studio-cuts-16x10-dark.png"
-                alt=""
-                aria-hidden="true"
-                width={1440}
-                height={900}
-                sizes="(min-width: 1024px) 42vw, 100vw"
-                className="hidden h-auto w-full dark:block"
-              />
-            </div>
-            <figcaption className="mt-3 text-meta text-text-muted">
-              The studio, on sample data from a fictional demo client.
-            </figcaption>
-          </figure>
+        <div className="mx-auto flex max-w-[1120px] flex-col items-center gap-7 text-center">
+          <p className="reveal-lead m-0 inline-flex items-center gap-2.5 rounded-full border border-ink-line bg-ink-800/80 px-4 py-2">
+            <span
+              aria-hidden="true"
+              className="animate-dot-pulse size-1.5 rounded-full bg-gold-bright"
+            />
+            <span className="site-eyebrow">
+              An AI content studio for coaches and local businesses
+            </span>
+          </p>
+
+          {/* Two lines by construction: the fixed phrase, then the cycling
+              one on its own line. Letting them wrap together would reflow the
+              whole headline on every keystroke. */}
+          <h1 className="reveal-lead m-0 text-balance text-site-hero text-on-ink-900">
+            Turn one long video into
+            <span className="block">
+              <TypedPhrase phrases={HERO_PHRASES} className="gold-phrase" />
+            </span>
+          </h1>
+
+          <p className="reveal m-0 max-w-[62ch] text-subtitle font-normal text-on-ink-muted">
+            Seven agents cut your videos, remake the formats rising in your niche, and publish to
+            your own accounts several times a day. You record once a week and approve from your
+            phone.
+          </p>
+
+          {/* The first step of the product rather than buttons about it — the
+              device OpusClip and Vizard both lead with, and the handoff after
+              them. Upload, never a link (D22, D25). */}
+          <div className="reveal w-full">
+            <HeroUpload />
+          </div>
         </div>
-      </Section>
+      </section>
 
       {/* The output, as proof ------------------------------------------- */}
       <Section aria-labelledby="proof-heading">

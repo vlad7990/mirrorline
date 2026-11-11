@@ -87,9 +87,11 @@ test('the hero keeps a way in when there is no engine', async ({ page }) => {
   // The field is still there — it is the shape of the page, not a feature flag.
   await expect(page.getByText('Drop a talk, podcast or webinar')).toBeVisible()
 
-  // But it does not pretend a run can start here. It offers the pilot instead.
-  await expect(page.getByRole('button', { name: 'Cut it up' })).toHaveCount(0)
+  // But it does not pretend a run can start here. It offers the pilot
+  // instead. Both paths share the handoff's "Show me my posts" label, so the
+  // tell is the line under the field rather than the button.
   await expect(page.getByText(/We run the first cuts with you on a pilot call/)).toBeVisible()
+  await expect(page.getByText(/This runs here and now/)).toHaveCount(0)
 })
 
 test('the hero runs the engine where there is one, behind the rights gate', async ({ page }) => {
@@ -99,9 +101,11 @@ test('the hero runs the engine where there is one, behind the rights gate', asyn
   // CLAUDE.md non-negotiable 1 again, on the public page this time: no file
   // and no confirmation means no run, and the form says so before the API
   // has to.
-  const cut = page.getByRole('button', { name: 'Cut it up' })
+  const cut = page.getByRole('button', { name: 'Show me my posts' })
   await expect(cut).toBeVisible()
   await expect(cut).toBeDisabled()
+  // The live path says the run happens here; the pilot path does not.
+  await expect(page.getByText(/This runs here and now/)).toBeVisible()
 
   // The rights gate stays out of the way until there is something to confirm.
   await expect(page.getByLabel('Who owns this footage?')).toHaveCount(0)
@@ -117,5 +121,8 @@ test('the hero never offers to fetch someone else’s video', async ({ page }) =
   // is a breach and not a feature.
   await expect(page.locator('input[type="url"]')).toHaveCount(0)
   await expect(page.getByPlaceholder(/paste.*link/i)).toHaveCount(0)
-  await expect(page.getByText(/no links to other people’s videos/)).toBeVisible()
+  // The handoff's own placeholder, which we must never ship.
+  await expect(page.getByText(/Paste a YouTube/i)).toHaveCount(0)
+  // And the constraint stated positively, under the field.
+  await expect(page.getByText(/only material you own/)).toBeVisible()
 })

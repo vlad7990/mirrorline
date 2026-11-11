@@ -457,10 +457,19 @@
      Same clamp rule as the scale above: rem + vw in the middle term, never vw
      alone, so browser zoom still works (WCAG 1.4.4).
      --------------------------------------------------------------------- */
+  /*
+   * The ceiling is 5.5rem rather than the handoff's 7rem (112px).
+   *
+   * The handoff sets Fraunces, which is narrower than Geist Serif at the same
+   * size. At 112px "Turn one long video into" broke onto three lines in the
+   * 1120px hero column, and the headline is written to be two: the fixed
+   * phrase, then the cycling one. Measured, not guessed — same method as the
+   * 4.5rem ceiling on `.text-hero` above.
+   */
   .text-site-hero {
     font-family: var(--font-serif);
-    font-size: clamp(3.25rem, 1.6rem + 6.2vw, 7rem);
-    line-height: 0.98;
+    font-size: clamp(3rem, 1.6rem + 4.6vw, 5.5rem);
+    line-height: 1;
     letter-spacing: -0.02em;
     font-weight: 400;
   }
@@ -515,6 +524,52 @@
     -webkit-background-clip: border-box;
     background-clip: border-box;
     color: var(--color-gold-deep);
+  }
+
+  /*
+   * The typing caret, and the pulsing dot on the hero eyebrow pill.
+   *
+   * Both are decoration on an endless loop, so both stop dead under
+   * prefers-reduced-motion rather than slowing down. `TypedPhrase` also stops
+   * typing in that case, so the caret has nothing to mark and is not
+   * rendered at all — this rule is the belt to that braces.
+   */
+  @keyframes mirrorline-caret {
+    0%,
+    45% {
+      opacity: 1;
+    }
+    55%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  .animate-caret {
+    animation: mirrorline-caret 1.1s steps(1, end) infinite;
+  }
+
+  @keyframes mirrorline-dot-pulse {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.45;
+      transform: scale(0.82);
+    }
+  }
+
+  .animate-dot-pulse {
+    animation: mirrorline-dot-pulse 2.4s var(--ease-in-out) infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-caret,
+    .animate-dot-pulse {
+      animation: none;
+    }
   }
 
   /*

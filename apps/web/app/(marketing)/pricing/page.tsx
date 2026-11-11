@@ -61,14 +61,17 @@ export default function PricingPage() {
                 key={tier.id}
                 className={cn(
                   'grid gap-4 p-5 sm:p-6 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_minmax(0,13rem)] lg:items-start lg:gap-8',
-                  tier.isSuggested ? 'bg-accent-soft/40' : null,
+                  // Gold, not the studio's coral tint. The band remap (D25)
+                  // made this page's text light, and light text on a pale
+                  // coral wash is a serious contrast failure — axe caught it.
+                  tier.isSuggested ? 'bg-gold/10' : null,
                 )}
               >
                 <div className="flex flex-col gap-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="m-0 font-heading text-title text-text">{tier.name}</h3>
                     {tier.isSuggested ? (
-                      <span className="rounded-full bg-accent-soft px-3 py-1 text-caption font-semibold text-on-accent-soft">
+                      <span className="rounded-full bg-gold-gradient px-3 py-1 text-caption font-semibold text-ink-900">
                         Suggested
                       </span>
                     ) : null}

@@ -21,9 +21,13 @@ for (const route of ROUTES) {
     expect(response?.status(), `status for ${route.path}`).toBe(200)
 
     // Exactly one top-level heading, and it says what the route table claims.
-    const headings = page.getByRole('heading', { level: 1 })
-    await expect(headings).toHaveCount(1)
-    await expect(headings).toHaveText(route.h1)
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
+    // Matched by accessible name rather than `toHaveText`: the home hero's
+    // second line types and retypes itself, so its textContent is never
+    // stable and carries the visually hidden copy as well. The accessible
+    // name is the thing that actually has to be right, and asserting it also
+    // proves the animated span stayed `aria-hidden`.
+    await expect(page.getByRole('heading', { level: 1, name: route.h1 })).toBeVisible()
 
     // Exactly one main landmark, for the root layout's skip link to land on.
     await expect(page.getByRole('main')).toHaveCount(1)
