@@ -42,11 +42,18 @@ export const ROUTES: readonly RouteEntry[] = [
     h1: 'Turn one long video into',
   },
   {
-    path: '/how-it-works',
-    slug: 'how-it-works',
-    name: 'How it works',
+    path: '/product',
+    slug: 'product',
+    name: 'Product',
     area: 'marketing',
-    h1: 'Seven agents, one loop',
+    h1: 'One video.',
+  },
+  {
+    path: '/agents',
+    slug: 'agents',
+    name: 'Agents',
+    area: 'marketing',
+    h1: 'Seven agents.',
   },
   {
     path: '/pricing',

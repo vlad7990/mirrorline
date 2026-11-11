@@ -35,9 +35,10 @@ export interface NavLink {
 }
 
 export const NAV_LINKS: readonly NavLink[] = [
-  { href: '/how-it-works', label: 'How it works' },
-  { href: '/pricing', label: 'Pricing' },
+  { href: '/product', label: 'Product' },
+  { href: '/agents', label: 'Agents' },
   { href: '/trust', label: 'Trust' },
+  { href: '/pricing', label: 'Pricing' },
 ]
 
 /** Past this, the nav row goes translucent. The handoff's number. */

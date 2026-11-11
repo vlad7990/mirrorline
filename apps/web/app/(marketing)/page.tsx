@@ -14,6 +14,7 @@
  */
 
 import { cutSummary, cuts, funnel, metrics, sourceVideo } from '@mirrorline/mock'
+import { SiteCta } from '@/components/marketing/site-cta'
 import { Button, Card, cn, FunnelBar } from '@mirrorline/ui'
 import { ArrowRight, Film, Plug, Repeat, Tag } from 'lucide-react'
 import type { Metadata } from 'next'
@@ -38,7 +39,6 @@ import {
 } from '@/components/marketing/primitives'
 import { SELLABLE_TIERS, perDayUsd } from '@/components/marketing/pricing-tiers'
 
-import { LeadDialogButton } from './components/lead-form'
 
 export const metadata: Metadata = {
   title: 'Turn one long video into daily short-form growth',
@@ -492,7 +492,7 @@ export default function LandingPage() {
           lead="Each agent has one job, its own spend cap and its own log. A format found on Monday becomes your videos, posted all week, and the results shape the next week."
           aside={
             <Button asChild variant="secondary" className="press">
-              <Link href="/how-it-works">
+              <Link href="/agents">
                 How it works
                 <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.8} />
               </Link>
@@ -627,25 +627,7 @@ export default function LandingPage() {
         </div>
       </Section>
 
-      {/* Closing CTA ----------------------------------------------------- */}
-      <Section tone="subtle" size="md" aria-labelledby="cta-heading">
-        <Card tone="ink" padding="lg" className="flex flex-col gap-5">
-          <div className="flex max-w-[52ch] flex-col gap-3">
-            <h2 id="cta-heading" className="m-0 font-heading text-headline text-on-ink">
-              Start with two weeks
-            </h2>
-            <p className="m-0 text-body text-on-ink">
-              A <span className="machine">$750</span> pilot: <span className="machine">12</span>{' '}
-              videos from your own footage, a posting schedule and one report. If it is not worth
-              the next month, stop there.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <LeadDialogButton intent="pilot" />
-            <LeadDialogButton intent="demo" variant="secondary" size="lg" />
-          </div>
-        </Card>
-      </Section>
+      <SiteCta next={{ href: '/product', label: 'Product' }} />
     </>
   )
 }

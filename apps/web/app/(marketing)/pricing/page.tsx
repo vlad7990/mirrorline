@@ -6,12 +6,13 @@
  * discount, and no comparison column against anybody else.
  */
 
-import { Card, cn } from '@mirrorline/ui'
+import { cn } from '@mirrorline/ui'
 import { Check } from 'lucide-react'
 import type { Metadata } from 'next'
 
 import { PageHero } from '@/components/marketing/page-hero'
 import { ComingSoonLabel, Section, SectionHeading } from '@/components/marketing/primitives'
+import { SiteCta } from '@/components/marketing/site-cta'
 import { PRICING_NOTE, PRICING_TIERS, perDayUsd } from '@/components/marketing/pricing-tiers'
 
 import { LeadDialogButton } from '../components/lead-form'
@@ -171,23 +172,7 @@ export default function PricingPage() {
         </ul>
       </Section>
 
-      <Section tone="subtle" size="md" aria-labelledby="pricing-cta-heading">
-        <Card tone="ink" padding="lg" className="flex flex-col gap-5">
-          <div className="flex max-w-[52ch] flex-col gap-3">
-            <h2 id="pricing-cta-heading" className="m-0 font-heading text-headline text-on-ink">
-              Not sure which one fits
-            </h2>
-            <p className="m-0 text-body text-on-ink">
-              Tell us how much video you already have and how often you want to post. We will say
-              which tier makes sense, including when the answer is none of them yet.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <LeadDialogButton intent="demo" />
-            <LeadDialogButton intent="pilot" variant="secondary" size="lg" />
-          </div>
-        </Card>
-      </Section>
+      <SiteCta next={{ href: '/', label: 'Home' }} />
     </>
   )
 }

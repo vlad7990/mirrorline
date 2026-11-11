@@ -14,8 +14,8 @@ import * as React from 'react'
 
 import { PageHero } from '@/components/marketing/page-hero'
 import { SampleDataLabel, Section, SectionHeading } from '@/components/marketing/primitives'
+import { SiteCta } from '@/components/marketing/site-cta'
 
-import { LeadDialogButton } from '../components/lead-form'
 
 export const metadata: Metadata = {
   title: 'Our rules',
@@ -230,23 +230,7 @@ export default function TrustPage() {
         </p>
       </Section>
 
-      <Section tone="subtle" size="md" aria-labelledby="trust-cta-heading">
-        <Card padding="lg" className="flex flex-col gap-5">
-          <div className="flex max-w-[52ch] flex-col gap-3">
-            <h2 id="trust-cta-heading" className="m-0 font-heading text-headline text-text">
-              Ask us the hard question
-            </h2>
-            <p className="m-0 text-body text-text-muted">
-              If something on this page is not clear enough, say so on the call. We would rather
-              lose the work than talk around it.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <LeadDialogButton intent="demo" />
-            <LeadDialogButton intent="pilot" variant="secondary" size="lg" />
-          </div>
-        </Card>
-      </Section>
+      <SiteCta next={{ href: '/pricing', label: 'Pricing' }} />
     </>
   )
 }

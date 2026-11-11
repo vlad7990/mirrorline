@@ -1,5 +1,5 @@
 /**
- * /how-it-works — the seven-agent loop in depth, then the client's side of it.
+ * /agents — the seven-agent loop in depth, then the client's side of it.
  *
  * The agent copy lives in @/components/marketing/agents, transcribed from
  * docs/specs/04_AGENTS_SPEC.md. Each agent gets what it does, what it will not
@@ -21,11 +21,11 @@ import {
   SectionHeading,
 } from '@/components/marketing/primitives'
 import { PageHero } from '@/components/marketing/page-hero'
+import { SiteCta } from '@/components/marketing/site-cta'
 
-import { LeadDialogButton } from '../components/lead-form'
 
 export const metadata: Metadata = {
-  title: 'How it works',
+  title: 'Agents',
   description:
     'Seven agents, one loop: Trend Scout, Remake Producer, Multiplier, Compliance, Client Concierge, Publisher and Performance Analyst. What each one does, and what it will not do.',
 }
@@ -82,11 +82,16 @@ const CLIENT_STEPS: readonly ClientStep[] = [
   },
 ]
 
-export default function HowItWorksPage() {
+export default function AgentsPage() {
   return (
     <>
       <PageHero
-        title="Seven agents, one loop"
+        eyebrow="The agents"
+        title={
+          <>
+            Seven agents. <span className="gold-phrase">One loop.</span>
+          </>
+        }
         lead="A format found on Monday becomes your own videos, posted through the week, and the results shape what gets made next. Each agent has one job, its own spend cap and its own log."
         shot="agents-16x10"
         shotAlt="The agents board: each agent with its own switch, spend cap and log, and Compliance locked on."
@@ -298,22 +303,7 @@ export default function HowItWorksPage() {
         </Card>
       </Section>
 
-      <Section size="md" aria-labelledby="how-cta-heading">
-        <Card tone="ink" padding="lg" className="flex flex-col gap-5">
-          <div className="flex max-w-[52ch] flex-col gap-3">
-            <h2 id="how-cta-heading" className="m-0 font-heading text-headline text-on-ink">
-              See it with your own footage
-            </h2>
-            <p className="m-0 text-body text-on-ink">
-              Bring one long video. We will show you what the Multiplier and the gate make of it.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <LeadDialogButton intent="pilot" />
-            <LeadDialogButton intent="demo" variant="secondary" size="lg" />
-          </div>
-        </Card>
-      </Section>
+      <SiteCta next={{ href: '/trust', label: 'Trust' }} />
     </>
   )
 }

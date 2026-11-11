@@ -18,6 +18,8 @@ import * as React from 'react'
 import { Section } from './primitives'
 
 export interface PageHeroProps {
+  /** Small gold kicker above the title. The handoff gives every page one. */
+  eyebrow?: string
   title: React.ReactNode
   lead: React.ReactNode
   /**
@@ -36,15 +38,32 @@ export interface PageHeroProps {
   action?: React.ReactNode
 }
 
-export function PageHero({ title, lead, shot, shotAlt, shotCaption, action }: PageHeroProps) {
+export function PageHero({
+  eyebrow,
+  title,
+  lead,
+  shot,
+  shotAlt,
+  shotCaption,
+  action,
+}: PageHeroProps) {
   return (
-    <Section size="lg">
+    // Ink, and taller than the studio's rhythm: this is the top of a page on
+    // a brand surface, which the handoff gives far more air than a product
+    // screen would get (D25).
+    <Section size="lg" className="band-ink pt-10 sm:pt-16">
       {/* Top-aligned, not centred: a short text column centred against a
           tall figure pushes the headline into the middle of the viewport. */}
       <div className="grid items-start gap-10 lg:grid-cols-12 lg:gap-12">
         <div className="flex flex-col gap-5 lg:col-span-7">
-          <h1 className="reveal-lead m-0 text-balance font-heading text-hero text-text">{title}</h1>
-          <p className="reveal m-0 max-w-[52ch] text-subtitle font-normal text-text-muted">{lead}</p>
+          {eyebrow ? <span className="site-eyebrow reveal-lead">{eyebrow}</span> : null}
+          {/* Serif, and the display size rather than the hero one: a sub-page
+              title is a statement, and the landing page keeps the larger of
+              the two so the hierarchy between them stays readable. */}
+          <h1 className="reveal-lead m-0 text-balance text-site-h2 text-on-ink-900">{title}</h1>
+          <p className="reveal m-0 max-w-[52ch] text-subtitle font-normal text-on-ink-muted">
+            {lead}
+          </p>
           {action ? <div className="reveal flex flex-wrap gap-3">{action}</div> : null}
         </div>
 
