@@ -101,17 +101,29 @@ export default function HowItWorksPage() {
           lead="In order, with the limit that comes with it. Every limit below is a rule in the product, not a preference, and every cap is one you set."
           aside={<SampleDataLabel />}
         />
-        <ol className="mt-8 flex list-none flex-col gap-4 p-0">
-          {PUBLIC_AGENTS.map((agent) => {
+        <ol className="mt-8 m-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2">
+          {PUBLIC_AGENTS.map((agent, position) => {
             const budget = AGENT_BUDGETS.get(agent.id)
+            const isFirst = position === 0
 
             return (
-              <Card as="li" key={agent.id} padding="lg" className="flex flex-col gap-4">
+              <Card
+                as="li"
+                key={agent.id}
+                className={cn(
+                  'reveal flex flex-col gap-3',
+                  // Seven items in a two-column grid leaves an orphan. The
+                  // first agent takes the full width instead: it is where the
+                  // loop starts, so the one that is different is the one that
+                  // earns it, and the remaining six pair off exactly.
+                  isFirst && 'sm:col-span-2',
+                )}
+              >
                 {/* No "Step N of 7" counter: the <ol> already carries the order
                     for assistive tech, and the agents are introduced in sequence
                     on the page. A counter on every card is furniture. */}
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <h3 className="m-0 font-heading text-title text-text">{agent.name}</h3>
+                  <h3 className="m-0 font-heading text-subtitle text-text">{agent.name}</h3>
                   {budget ? (
                     <p className="m-0 text-meta text-text-muted">
                       spend cap{' '}
@@ -122,17 +134,26 @@ export default function HowItWorksPage() {
                   ) : null}
                 </div>
 
-                <p className="m-0 max-w-[68ch] text-body text-text-muted">{agent.does}</p>
+                <p className="m-0 max-w-[68ch] text-meta text-text-muted">{agent.does}</p>
 
-                <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface-subtle p-4">
-                  <h4 className="eyebrow m-0">What it will not do</h4>
-                  <p className="m-0 max-w-[68ch] text-meta text-text">{agent.limit}</p>
+                {/* The limit used to sit in a panel inside the card. A card
+                    inside a card is always one card too many, and it was the
+                    main reason this page ran to six thousand pixels. A
+                    hairline separates it just as well.
+
+                    mt-auto pins this to the bottom, so the dividing rule lands
+                    on the same line across a row whatever the prose above it
+                    does. */}
+                <div className="mt-auto flex flex-col gap-1.5 border-t border-border pt-3">
+                  <p className="m-0 max-w-[68ch] text-meta text-text">
+                    <span className="font-semibold">Will not: </span>
+                    {agent.limit}
+                  </p>
+                  <p className="m-0 max-w-[68ch] text-meta text-text-muted">
+                    <span className="font-semibold text-text">In the loop: </span>
+                    {agent.inLoop}
+                  </p>
                 </div>
-
-                <p className="m-0 max-w-[68ch] text-meta text-text-muted">
-                  <span className="font-semibold text-text">In the loop: </span>
-                  {agent.inLoop}
-                </p>
               </Card>
             )
           })}
