@@ -360,3 +360,59 @@ Also fixed in passing: `apps/web/lib/engine/types.test.ts` had three
 `noUncheckedIndexedAccess` errors and had been failing `pnpm typecheck` since
 the engine-integration commit. The gate was red at `HEAD`, which means that
 commit did not run it.
+
+## 2026-11-11 · D20 · Video thumbnails go to 20px, against DESIGN.md's own argument
+
+Vlad supplied five reference sites to borrow from. They are measured in
+`docs/design/COMPETITOR_REFERENCES.md`; the headline finding is that our type
+scale is already at parity with them and the real gaps are video and corner
+radius.
+
+DESIGN.md argued the opposite of this change, in terms, at "Shapes": *"Softer
+corners read as consumer software; machined corners read as an instrument."*
+That is a real position and it was right for the studio. It is wrong for a
+9:16 frame. A vertical frame is a picture of a phone, and at 6px it read as a
+table cell — which is exactly the "plain index cards" complaint in
+`docs/plan/DESIGN_BACKLOG.md`. Vizard ships 24px on the identical shape.
+
+So the rule is split rather than reversed: **the chrome stays machined, the
+footage does not.** `--radius-thumb` is now the one role that runs softer than
+the scale around it, and DESIGN.md says so explicitly instead of being quietly
+contradicted by the code.
+
+20px rather than Vizard's 24px because our frames sit inside 10px cards, and
+at 24px the inner corner visibly fights the outer one.
+
+Changed in four places, which is three too many — `DESIGN.md`,
+`packages/ui/src/tokens.ts`, `packages/ui/src/styles/theme.css`, and the
+`docs/design/design-tokens.{css,json}` handoff pair. Only the first two are
+covered by the sync test. **Worth doing properly later:** generate the handoff
+files from `tokens.ts` rather than maintaining them by hand.
+
+One consequence that is easy to miss: the badges inside the frame were inset
+10px, which at a 20px radius puts them inside the curve. They moved to 14px,
+matching the frame's own content padding.
+
+Asked and answered by Vlad rather than assumed, because overruling a written
+design position is his call and not an agent's.
+
+## 2026-11-11 · D21 · A capacity bar, because every proof device these sites use is closed to us
+
+All five reference sites lead with volume proof — "20M+ creators", "980,434+
+creators", "Loved by 4M+ businesses", Trustpilot 4.8/5, testimonials with
+faces, case studies with view counts. Non-negotiable 7 forbids every one of
+these, and we have no customers to draw real ones from. Social proof is the
+primary persuasion device on all five pages and it is simply unavailable.
+
+beCreatives has one device we *can* use: a bar above the nav reading "5
+dedicated editor spots open this week". It suits a done-for-you retainer,
+which is our Day-0 model, and it is a statement about our own intake rather
+than a claim about our customers. It works at zero customers.
+
+`CapacityBar` renders `PILOT_PLACES`, one constant, and removes itself at
+zero. The risk is obvious and is written at the constant: a capacity line that
+never changes becomes manufactured scarcity, which is the thing
+non-negotiable 7 exists to stop.
+
+**Needs Vlad:** confirm 4 is the real number. It is the only figure on the
+public site that is a commitment rather than sample data.

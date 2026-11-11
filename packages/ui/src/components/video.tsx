@@ -200,7 +200,9 @@ export const VideoThumb = React.forwardRef<HTMLDivElement, VideoThumbProps>(func
     <div
       ref={ref}
       className={cn(
-        // DESIGN.md "Shapes": "Video thumbnails 8px".
+        // DESIGN.md "Shapes": video thumbnails 20px — the one role that is
+        // deliberately softer than the machined chrome scale. `overflow-hidden`
+        // is what makes any `media` passed in take the same corner.
         'relative flex aspect-[9/16] flex-col justify-end overflow-hidden rounded-thumb p-3.5',
         className,
       )}
@@ -226,13 +228,15 @@ export const VideoThumb = React.forwardRef<HTMLDivElement, VideoThumbProps>(func
       {/* A length is a timing, which DESIGN.md puts in the machine's voice
           alongside costs and counts: "timings (0:24, 52:14)". Mono. */}
       {length ? (
-        <span className="machine absolute left-2.5 top-2.5 rounded-sm bg-on-primary px-1.5 py-0.5 text-caption text-ink">
+        <span className="machine absolute left-3.5 top-3.5 rounded-sm bg-on-primary px-1.5 py-0.5 text-caption text-ink">
           {length}
         </span>
       ) : null}
 
+      {/* Badges inset 14px to match the content padding, not the old 10px: at
+          a 20px corner radius a 10px inset puts them inside the curve. */}
       {cutNumber !== undefined || aiScene ? (
-        <span className="absolute right-2.5 top-2.5 flex items-center gap-1.5">
+        <span className="absolute right-3.5 top-3.5 flex items-center gap-1.5">
           {aiScene ? <AiLabel /> : null}
           {cutNumber !== undefined ? (
             <span className="rounded-sm bg-on-primary px-1.5 py-0.5 font-body text-caption text-ink">

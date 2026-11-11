@@ -38,7 +38,7 @@
     "mono": "Geist Mono, ui-monospace, SFMono-Regular, Menlo, monospace",
     "size": { "display": 46, "h1": 32, "h2": 20, "h3": 17, "body": 15, "label": 14, "meta": 13, "small": 12, "metric": 30, "mono": 13 }
   },
-  "radius": { "card": 10, "button": 8, "chip": 999, "thumb": 6, "small": 4, "panel": 14 },
+  "radius": { "card": 10, "button": 8, "chip": 999, "thumb": 20, "small": 4, "panel": 14 },
   "space": { "unit": 8, "page-x": 40, "card": 22 },
   "motion": {
     "ease-out": "cubic-bezier(0.23, 1, 0.32, 1)",

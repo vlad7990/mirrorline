@@ -158,15 +158,24 @@ export const THUMBNAIL_COLORS = [
 ] as const
 
 /**
- * Shape. The whole scale tightened by ~2px (sm 6→4, thumb 8→6, md 10→8,
- * lg 12→10, xl 16→14). Softer corners read as consumer-friendly; an
- * instrument reads as machined. Nothing goes below 4px, because a 2px corner
- * on a 1px border renders as a notch rather than a radius.
+ * Shape. The chrome scale tightened by ~2px (sm 6→4, md 10→8, lg 12→10,
+ * xl 16→14). Softer corners read as consumer-friendly; an instrument reads as
+ * machined. Nothing goes below 4px, because a 2px corner on a 1px border
+ * renders as a notch rather than a radius.
+ *
+ * `thumb` is the deliberate exception and runs the other way — see its note.
  */
 export const RADIUS = {
   sm: '4px',
-  /** DESIGN.md "Shapes": video thumbnails. Between sm and md. */
-  thumb: '6px',
+  /**
+   * DESIGN.md "Shapes": video thumbnails, 20px. The one place that reads as
+   * consumer software on purpose — a 9:16 frame is a phone screen, and at the
+   * old 6px it read as a table cell. Vizard ships 24px on the same shape
+   * (docs/design/COMPETITOR_REFERENCES.md); 20px keeps the frame from fighting
+   * the 10px card it sits inside. Out of numeric order in this object because
+   * it is a role, not a step on the scale.
+   */
+  thumb: '20px',
   md: '8px',
   lg: '10px',
   xl: '14px',

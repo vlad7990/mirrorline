@@ -364,9 +364,10 @@ This split is semantic, not decorative. A number in mono means "a machine measur
 ## Shapes
 
 - **Cards:** 10px radius; large previews and wizard panels 14px.
-- **Buttons and inputs:** 8px radius. Video thumbnails 6px; tiny thumbnails and log rows 4px.
+- **Buttons and inputs:** 8px radius. Tiny thumbnails and log rows 4px.
+- **Video thumbnails: 20px.** The one deliberate exception to the machined scale, and the only place that reads as consumer software on purpose. A 9:16 frame is a phone screen, and at 6px it read as a table cell. Measured against the references in `docs/design/COMPETITOR_REFERENCES.md`: Vizard ships 24px on the same shape. 20px rather than 24px so the frame still sits inside a 10px card without the corners fighting.
 - **Chips, pills and progress bars:** fully rounded.
-- The whole scale tightened by about 2px from the first version. Softer corners read as consumer software; machined corners read as an instrument. Nothing goes below 4px, because a 2px corner on a 1px border renders as a notch rather than a radius.
+- The rest of the scale tightened by about 2px from the first version. Softer corners read as consumer software; machined corners read as an instrument — the chrome stays an instrument, the footage does not. Nothing goes below 4px, because a 2px corner on a 1px border renders as a notch rather than a radius.
 - **Logo:** an open circle with an arrow (a loop) in accent coral. The loop motif repeats in empty states and the learning-loop card.
 - **Icons:** simple 1.6–2px stroke icons. No emoji, no 3D, no robots or sparkles.
 
