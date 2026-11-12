@@ -8,23 +8,27 @@
 
 ## Preview link
 
-**https://mirrorline-l2cumrggy-vn-mn-product-group.vercel.app** — status Ready,
-deployed 10 Nov 2026, from `e661188`.
+**https://mirrorline-43562sm2o-vn-mn-product-group.vercel.app** — status Ready,
+deployed 11 Nov 2026, from `8abcf14`.
 
-Engine v0 is wired to the upload screen, though **not on this preview**: the
-engine needs Python and ffmpeg, which a Vercel function has neither of, so the
-screen asks `/api/engine/status` first and keeps its demo states when the
-answer is no. Run it locally to see the live panel. Design and reasoning in
-`docs/plan/ENGINE_WIRING.md`.
+This is the **gold-and-ink redesign** (D25), adopted from
+`docs/design/handoff-v4`. Five pages — Home, Product, Agents, Trust, Pricing.
+`/how-it-works` is gone: it was always the agents page, so it became
+`/agents`, and the old path 308s there.
 
-The public pages got a brand type scale (fluid `clamp()`, which the codebase
-had none of), scroll motion that the landing page previously had none of, and
-a real screenshot in every hero instead of half a viewport of nothing. The
-studio keeps its fixed product scale on purpose.
+Engine v0 is wired to the upload screen **and to the hero's upload control**,
+though neither runs **on this preview**: the engine needs Python and ffmpeg,
+and a Vercel function has neither. Both ask `/api/engine/status` first. The
+studio panel hides itself when the answer is no; the hero cannot, because a
+landing page that loses its main action has lost the page — so it offers a
+pilot instead. Run it locally to see a real run. See
+`docs/plan/ENGINE_WIRING.md` and D22.
 
 Still placeholder: the cut wall on `/` is coloured blocks rather than reels.
-Generating them needs Higgsfield credits (free plan, 0 credits, about 46
-needed). See "Needs Vlad".
+The plumbing is built and tested — `VideoThumb` takes a `media` slot,
+`ReelMedia` plays a file while it is in view, and `reel-assets.ts` is the
+manifest — but the manifest is empty because Higgsfield is unfunded. **This
+is the single highest-value unblock, and it is item 0 under "Needs Vlad".**
 
 <details>
 <summary>Earlier previews</summary>
