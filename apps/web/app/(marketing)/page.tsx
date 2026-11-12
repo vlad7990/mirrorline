@@ -29,11 +29,11 @@ import { Faq, type FaqItem } from '@/components/marketing/faq'
 import { GateReadout } from '@/components/marketing/gate-readout'
 import { CountUp } from '@/components/marketing/count-up'
 import { FeatureTabs } from '@/components/marketing/feature-tabs'
+import { HeroCinematic, UPLOAD_ANCHOR_ID } from '@/components/marketing/hero-cinematic'
 import { HeroUpload } from '@/components/marketing/hero-upload'
 import { AUDIENCES, PROOF_CARDS } from '@/components/marketing/home-content'
 import { ShowcaseMarquee } from '@/components/marketing/showcase-marquee'
 import { SplitReveal } from '@/components/marketing/split-reveal'
-import { TypedPhrase } from '@/components/marketing/typed-phrase'
 import {
   ComingSoonLabel,
   SampleDataLabel,
@@ -256,50 +256,35 @@ export default function LandingPage() {
           rather than setting a text column against a screenshot. The
           screenshot moves down to the proof section, where it is evidence
           instead of decoration. */}
-      <section className="band-ink relative overflow-hidden px-4 pb-24 pt-28 sm:px-8 sm:pt-36">
-        {/* The handoff's radial gold wash behind the headline. Decorative, so
-            it is hidden from assistive technology, and it sits underneath on
-            a negative z-index rather than by a stacking hack. */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[640px] w-[640px] -translate-x-1/2 -translate-y-1/3 rounded-full bg-[radial-gradient(circle,rgba(245,184,61,0.14)_0%,transparent_70%)]"
+      <HeroCinematic phrases={HERO_PHRASES} />
+
+      {/* Start here ------------------------------------------------------ */}
+      {/* The upload, in its own band. It used to *be* the hero (D22); the
+          cinematic rebuild moved it here and the hero's one action points at
+          this id (D34). It is still the first step of the product and still
+          the first thing below the fold — what changed is that it no longer
+          shares a frame with a headline and a backdrop. */}
+      <Section
+        id={UPLOAD_ANCHOR_ID}
+        className="band-ink-alt scroll-mt-24"
+        size="md"
+        aria-labelledby="start-heading"
+      >
+        <SectionHeading
+          id="start-heading"
+          eyebrow="Start here"
+          title={
+            <>
+              Your own footage, <span className="gold-phrase">and nothing else.</span>
+            </>
+          }
+          lead="Drop in a talk, a podcast or a webinar you recorded. The run happens on this machine, and the rights question is asked before anything starts rather than after."
+          headingClassName="text-site-h2 font-serif"
         />
-
-        <div className="mx-auto flex max-w-[1120px] flex-col items-center gap-7 text-center">
-          <p className="reveal-lead m-0 inline-flex items-center gap-2.5 rounded-full border border-ink-line bg-ink-800/80 px-4 py-2">
-            <span
-              aria-hidden="true"
-              className="animate-dot-pulse size-1.5 rounded-full bg-gold-bright"
-            />
-            <span className="site-eyebrow">
-              An AI content studio for coaches and local businesses
-            </span>
-          </p>
-
-          {/* Two lines by construction: the fixed phrase, then the cycling
-              one on its own line. Letting them wrap together would reflow the
-              whole headline on every keystroke. */}
-          <h1 className="reveal-lead m-0 text-balance text-site-hero text-on-ink-900">
-            Turn one long video into
-            <span className="block">
-              <TypedPhrase phrases={HERO_PHRASES} className="gold-phrase" />
-            </span>
-          </h1>
-
-          <p className="reveal m-0 max-w-[62ch] text-subtitle font-normal text-on-ink-muted">
-            Seven agents cut your videos, remake the formats rising in your niche, and publish to
-            your own accounts several times a day. You record once a week and approve from your
-            phone.
-          </p>
-
-          {/* The first step of the product rather than buttons about it — the
-              device OpusClip and Vizard both lead with, and the handoff after
-              them. Upload, never a link (D22, D25). */}
-          <div className="reveal w-full">
-            <HeroUpload />
-          </div>
+        <div className="reveal mt-8">
+          <HeroUpload />
         </div>
-      </section>
+      </Section>
 
       {/* What it does, in four steps ------------------------------------ */}
       <Section className="band-ink-alt" aria-labelledby="steps-heading">

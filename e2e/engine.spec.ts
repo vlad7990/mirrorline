@@ -70,17 +70,22 @@ test('a run cannot start until there is a file and a rights confirmation', async
 })
 
 /* -------------------------------------------------------------------------- */
-/* The public hero control                                                     */
+/* The public upload control                                                   */
 /* -------------------------------------------------------------------------- */
 
 /**
- * The hero borrows OpusClip's and Vizard's "the input is the product" device
- * (docs/design/COMPETITOR_REFERENCES.md §2.1). Its rules differ from the
- * studio panel's in one way that matters: it must never vanish. The studio
- * can hide a control this machine cannot honour; a landing page that loses
- * its main action on every deployment cannot.
+ * The public upload control borrows OpusClip's and Vizard's "the input is the
+ * product" device (docs/design/COMPETITOR_REFERENCES.md §2.1). Its rules
+ * differ from the studio panel's in one way that matters: it must never
+ * vanish. The studio can hide a control this machine cannot honour; a landing
+ * page that loses its main action on every deployment cannot.
+ *
+ * It sat *inside* the hero until 2026-11-12 (D22) and now has its own band
+ * immediately below it (D34). These tests are named for the control rather
+ * than for the hero, because the control is the thing whose behaviour they
+ * pin — and because a test named after a layout outlives the layout.
  */
-test('the hero keeps a way in when there is no engine', async ({ page }) => {
+test('the upload keeps a way in when there is no engine', async ({ page }) => {
   await stubEngine(page, false)
   await page.goto('/')
 
@@ -94,7 +99,7 @@ test('the hero keeps a way in when there is no engine', async ({ page }) => {
   await expect(page.getByText(/This runs here and now/)).toHaveCount(0)
 })
 
-test('the hero runs the engine where there is one, behind the rights gate', async ({ page }) => {
+test('the upload runs the engine where there is one, behind the rights gate', async ({ page }) => {
   await stubEngine(page, true)
   await page.goto('/')
 
@@ -137,7 +142,7 @@ async function dropFile(page: Page, name: string, type: string) {
   await pill.dispatchEvent('drop', { dataTransfer: handle })
 }
 
-test('the hero accepts a dropped video, as its own placeholder promises', async ({ page }) => {
+test('the upload accepts a dropped video, as its own placeholder promises', async ({ page }) => {
   await stubEngine(page, true)
   await page.goto('/')
 
@@ -150,7 +155,7 @@ test('the hero accepts a dropped video, as its own placeholder promises', async 
   await expect(page.getByLabel('Who owns this footage?')).toBeVisible()
 })
 
-test('the hero says so when a dropped file is not a video it can open', async ({ page }) => {
+test('the upload says so when a dropped file is not a video it can open', async ({ page }) => {
   await stubEngine(page, true)
   await page.goto('/')
 
@@ -163,7 +168,7 @@ test('the hero says so when a dropped file is not a video it can open', async ({
   await expect(page.getByLabel('Who owns this footage?')).toHaveCount(0)
 })
 
-test('the hero never offers to fetch someone else’s video', async ({ page }) => {
+test('the upload never offers to fetch someone else’s video', async ({ page }) => {
   await stubEngine(page, true)
   await page.goto('/')
 

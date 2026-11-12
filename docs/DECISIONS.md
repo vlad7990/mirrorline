@@ -456,6 +456,11 @@ One accessibility fix caught by axe rather than by me: the capacity bar from
 D21 sat above the header and outside `<main>`, so its text belonged to no
 landmark. It is an `<aside>` now.
 
+> **Superseded in part by D34 (2026-11-12).** The hero no longer *is* the
+> upload control: the cinematic rebuild moved it to its own band directly
+> below. Everything else here stands unchanged — no link field, the rights
+> gate before the run, and a control that never renders `null`.
+
 ## 2026-11-11 · D23 · The alternatives, named — and we lose two rows on purpose
 
 beCreatives runs "The Video Editing Choices In 2026" against freelancers,
@@ -966,3 +971,56 @@ the heading's accessible name went empty, and the band's
 `aria-labelledby="showcase-heading"` lost its name with it. It splits
 `host.firstElementChild` now: the heading carries the label, the wrapper
 carries none.
+
+## 2026-11-12 · D34 · The hero becomes a cinematic frame, and the upload moves out of it
+
+Vlad supplied an Aura WebStudios Figma frame ("Motion 01") and asked for it as
+our hero. Asked how literally, he chose the literal rebuild with the upload
+relocated, and a bespoke generated backdrop. **This reopens D22**, which is
+annotated rather than deleted.
+
+**What our hero was, and the honest problem with it.** Type on black, centred,
+with the upload pill as its centre of gravity. Functional and completely
+without visual interest — Vlad's instinct that the reference looked better was
+correct, and nothing about the previous hero argued otherwise.
+
+**What the reference is, and the honest problem with *that*.** A magazine
+cover: a full-bleed photograph, layered display type, a card row, a numbered
+index, and **no interactive control anywhere**. Taken literally that is
+incompatible with D22, where the hero *is* the product's first step. So the
+upload moved to its own band immediately below, under its own heading, and the
+hero's single action is an anchor pointing at it.
+
+What D22 keeps: no link field, the rights gate before the run, the real engine
+behind it, and a control that never renders `null`. The e2e tests that pin all
+of that still pass unchanged — they assert the control, not its address. They
+*are* renamed, from "the hero…" to "the upload…", because a test named after a
+layout outlives the layout and then lies about it.
+
+**What this costs, stated plainly.** The first thing a visitor sees is no
+longer something they can act on. OpusClip and Vizard both lead with a working
+field, and `COMPETITOR_REFERENCES.md` §2.1 is why we copied that device in the
+first place. We have traded one scroll of friction for a hero that looks like
+a product worth paying for. If the pilot conversion rate falls, this is the
+first thing to put back.
+
+**The backdrop is generated, so it is labelled on the frame itself.** A dark
+post-production studio: a wall of vertical screens, a warm practical, haze,
+and a near-black left third. That left third is not decoration — it is what
+makes white display type on a photograph pass contrast, which is the part of
+the reference that would otherwise have cost us.
+
+It is also deliberately a *room*: no people, no figures, nothing that could be
+read as a customer or a result. The label sits above the index row rather than
+below it, and that position was measured rather than guessed — below, the hero
+ran 916px against a 900px viewport and pushed the label off-screen. A label
+for a generated image that you have to scroll to find is not a label.
+
+**What was not taken.** The reference's dense body column, set over the
+busiest part of its photograph. A landing page whose job is "are these people
+legitimate" cannot open with fourteen lines of small text laid over a picture,
+and it would have been a contrast fight we would lose. Its imagery and copy
+are not ours to use either.
+
+The numbered index needed no invented content: `FEATURE_TABS` already carried
+`number`, `title` and `description` for exactly four steps.
