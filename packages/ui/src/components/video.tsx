@@ -165,6 +165,41 @@ function thumbColor(index: number): string {
   return THUMBNAIL_COLORS[safe] ?? THUMBNAIL_COLORS[0]
 }
 
+export interface ReelStillProps {
+  /** A 9:16 image under `public/reels/`. */
+  readonly src: string
+  readonly className?: string
+}
+
+/**
+ * A generated still inside a 9:16 frame.
+ *
+ * The counterpart to `ReelMedia`, and deliberately in this module rather than
+ * beside it: a still needs no `IntersectionObserver`, no playback and no
+ * effect, so it stays server-rendered and a wall of stills ships zero
+ * JavaScript. `ReelMedia` is the one client component in the video module and
+ * this exists so it does not have to be used for imagery that never moves.
+ *
+ * Decorative, exactly as `ReelMedia` is: the hook is real text burned into the
+ * caption and repeated below the frame, so the image carries no information of
+ * its own and an empty `alt` is correct rather than lazy.
+ *
+ * `loading="lazy"` and `decoding="async"` because twelve of these sit below
+ * the fold on the landing page and none of them should block first paint.
+ */
+export function ReelStill({ src, className }: ReelStillProps) {
+  return (
+    <img
+      src={src}
+      alt=""
+      aria-hidden="true"
+      loading="lazy"
+      decoding="async"
+      className={cn('absolute inset-0 h-full w-full object-cover', className)}
+    />
+  )
+}
+
 /** Splits the caption so the key phrase can sit on its sand highlight. */
 function renderCaption(caption: string, highlight?: string): React.ReactNode {
   if (!highlight) return caption
@@ -225,22 +260,35 @@ export const VideoThumb = React.forwardRef<HTMLDivElement, VideoThumbProps>(func
         />
       ) : null}
 
-      {/* A length is a timing, which DESIGN.md puts in the machine's voice
-          alongside costs and counts: "timings (0:24, 52:14)". Mono. */}
-      {length ? (
-        <span className="machine absolute left-3.5 top-3.5 rounded-sm bg-on-primary px-1.5 py-0.5 text-caption text-ink">
-          {length}
-        </span>
-      ) : null}
+      {/* One row rather than two absolutely-positioned corners.
 
-      {/* Badges inset 14px to match the content padding, not the old 10px: at
-          a 20px corner radius a 10px inset puts them inside the curve. */}
-      {cutNumber !== undefined || aiScene ? (
-        <span className="absolute right-3.5 top-3.5 flex items-center gap-1.5">
-          {aiScene ? <AiLabel /> : null}
-          {cutNumber !== undefined ? (
-            <span className="rounded-sm bg-on-primary px-1.5 py-0.5 font-body text-caption text-ink">
-              Cut {cutNumber}
+          They used to be independent (`left-3.5` and `right-3.5`), which is
+          fine until the two sides are together wider than the frame — then
+          they silently overlap and the length is what loses. A cut wall tile
+          is ~230px at 1440px and ~165px at 390px, and a length plus an AI
+          label plus a cut number does not fit on one line at either. As a
+          flex row they wrap instead, and `ml-auto` keeps the right-hand group
+          right-aligned whether or not there is a length beside it.
+
+          Inset 14px to match the content padding, not the old 10px: at a 20px
+          corner radius a 10px inset puts the badges inside the curve. */}
+      {length || cutNumber !== undefined || aiScene ? (
+        <span className="absolute inset-x-3.5 top-3.5 flex flex-wrap items-start gap-1.5">
+          {/* A length is a timing, which DESIGN.md puts in the machine's voice
+              alongside costs and counts: "timings (0:24, 52:14)". Mono. */}
+          {length ? (
+            <span className="machine rounded-sm bg-on-primary px-1.5 py-0.5 text-caption text-ink">
+              {length}
+            </span>
+          ) : null}
+          {cutNumber !== undefined || aiScene ? (
+            <span className="ml-auto flex items-center gap-1.5">
+              {aiScene ? <AiLabel /> : null}
+              {cutNumber !== undefined ? (
+                <span className="rounded-sm bg-on-primary px-1.5 py-0.5 font-body text-caption text-ink">
+                  Cut {cutNumber}
+                </span>
+              ) : null}
             </span>
           ) : null}
         </span>

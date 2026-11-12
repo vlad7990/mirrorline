@@ -1,45 +1,74 @@
 /**
  * Which cuts have a real 9:16 file behind them, and which are still a colour.
  *
- * `docs/plan/DESIGN_BACKLOG.md` names the landing page cut wall as the open
- * complaint: it is twelve coloured `<div>`s where reels belong. The fix needs
+ * `docs/plan/DESIGN_BACKLOG.md` named the landing page cut wall as the open
+ * complaint: it was twelve coloured `<div>`s where reels belong. The fix needed
  * two halves — the plumbing to put footage in a frame, and the footage. This
- * module is the first half. It is the single place that answers "do we have a
- * reel for this cut yet", so the call site never has to guess and no frame can
- * claim to be a reel when the file is not there.
+ * module is the join between them. It is the single place that answers "do we
+ * have something for this cut yet", so the call site never has to guess and no
+ * frame can claim to be footage when the file is not there.
  *
- * The manifest is empty today. Higgsfield is on an unfunded account, so
- * nothing has been generated. Every lookup misses, every frame falls back to
- * its demo colour, and the wall renders exactly as it did before this file
- * existed. When credits land, generated stills and loops go in `public/reels/`
- * and get listed here, one line per cut.
+ * **All twelve cuts now carry a generated still** (D28). They are stills and
+ * not loops: `videoSrc` is optional precisely so a frame can be real imagery
+ * without pretending to move. A cut with a `videoSrc` plays in view; a cut with
+ * only a poster renders as a still image with no client JS at all.
  *
  * Two CLAUDE.md non-negotiables govern what may ever be listed:
- *   4. AI scenes are always labelled. Anything generated is marked `aiScene`
- *      on its frame, which the cut wall already reads from the schedule.
+ *   4. AI scenes are always labelled. Every file here is generated, so the
+ *      section that renders them says so in its own words — see `CutWall`.
+ *      The per-frame `aiScene` badge keeps meaning what it means inside the
+ *      product, which is a property of the fictional client's schedule.
  *   7. Demo data is labelled "Sample data" on public pages. These are frames
- *      for a fictional client, not customer results, and the section that
- *      renders them carries that label.
+ *      for a fictional client, not customer results.
  */
 
 export interface ReelAsset {
-  /** Served from `public/reels/`. Muted, looping, 9:16. */
-  readonly videoSrc: string
-  /** The first frame, shown before and instead of playback. */
+  /**
+   * The still, served from `public/reels/`. Always present: a frame with no
+   * image is not an entry, it is an absence, and `reelAsset` returns null.
+   */
   readonly posterSrc: string
+  /**
+   * A muted, looping, 9:16 file, when the cut has one.
+   *
+   * Optional because a generated still is a legitimate end state, not a
+   * half-finished video. Twelve looping files decoding at once is the easiest
+   * way to make a landing page feel broken on a phone, and a still costs no
+   * JavaScript. Where a cut has one, `ReelMedia` plays it in view.
+   */
+  readonly videoSrc?: string
 }
 
 /**
  * Cut id (`cut-01`…`cut-12`, from `@mirrorline/mock`) to its generated files.
  *
- * Empty while Higgsfield is unfunded — see the module note. A test asserts
- * that emptiness so the blocker is recorded in code and not only in a doc;
- * delete that expectation in the same commit that adds the first entry.
+ * Generated 2026-11-12 with Nano Banana Pro from a single reference portrait,
+ * so the same fictional presenter appears in every frame. That constraint is
+ * the point rather than a nicety: these are twelve cuts of **one** 52-minute
+ * episode, so the room, the light and the sweater do not change between them.
+ * A set where the wardrobe drifted would quietly contradict the claim the
+ * section makes.
+ *
+ * A test asserts that every file listed here exists on disk, so an entry can
+ * never outlive its asset.
  */
-export const REEL_MANIFEST: Readonly<Record<string, ReelAsset>> = {}
+export const REEL_MANIFEST: Readonly<Record<string, ReelAsset>> = {
+  'cut-01': { posterSrc: '/reels/cut-01.webp' },
+  'cut-02': { posterSrc: '/reels/cut-02.webp' },
+  'cut-03': { posterSrc: '/reels/cut-03.webp' },
+  'cut-04': { posterSrc: '/reels/cut-04.webp' },
+  'cut-05': { posterSrc: '/reels/cut-05.webp' },
+  'cut-06': { posterSrc: '/reels/cut-06.webp' },
+  'cut-07': { posterSrc: '/reels/cut-07.webp' },
+  'cut-08': { posterSrc: '/reels/cut-08.webp' },
+  'cut-09': { posterSrc: '/reels/cut-09.webp' },
+  'cut-10': { posterSrc: '/reels/cut-10.webp' },
+  'cut-11': { posterSrc: '/reels/cut-11.webp' },
+  'cut-12': { posterSrc: '/reels/cut-12.webp' },
+}
 
 /**
- * The generated reel for a cut, or `null` when there is not one yet.
+ * The generated asset for a cut, or `null` when there is not one yet.
  *
  * The manifest is a parameter so the lookup stays a pure function the tests
  * can drive without touching the real list.

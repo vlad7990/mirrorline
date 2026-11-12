@@ -639,3 +639,65 @@ recommendation. The studio keeps the re-hued glass-box system so the engine
 path stays working while the public site changes underneath it. This is a
 deferral and not a decision that the re-hue was sufficient — there are still no
 gold app mockups to build against.
+
+## 2026-11-12 · D28 · The cut wall gets real footage, and every frame says it is generated
+
+Vlad signed the CLI into the funded Higgsfield workspace, which closes the one
+hard blocker in `docs/plan/DESIGN_BACKLOG.md`. The wall that was "twelve
+coloured `<div>`s where reels belong" — the complaint he raised twice — now
+carries twelve generated 9:16 stills.
+
+Worth recording about the login itself: the account was authenticated and
+still returned `workspace_membership_required`, because the funded workspace
+was not *selected*. `higgsfield workspace set <id>` fixed it. The backlog
+predicted this exact failure, and it is the reason "status reads 0" must never
+be read as "there is no money".
+
+**Stills, not loops, and the type says so.** `ReelAsset.videoSrc` is now
+optional. Seedance at 4s/480p is 12 credits a clip, so twelve loops would have
+spent 144 of 200 with nothing left for a retry — but cost is the weaker
+argument. The stronger one is that twelve videos decoding at once is the
+easiest way to make a landing page feel broken on a phone, and a still costs
+no JavaScript at all. `ReelStill` is therefore a plain server-rendered `<img>`
+in the static video module, not a variant of `ReelMedia`, which stays the one
+client component in that module. The wall ships **zero** client JS for its
+media: verified in the browser as twelve `<img>` and no `<video>`.
+
+**One reference, twelve moments.** All twelve come from a single reference
+portrait through Nano Banana Pro, because these are twelve cuts of *one*
+52-minute episode. The room, the light and the sweater must not change between
+them; only the moment does. A set where the wardrobe drifted would quietly
+contradict the claim the section makes. One frame was regenerated: the cut
+whose hook is "3 words…" had come back holding up two fingers.
+
+**Every frame carries the AI label, and that is a change of rule.** The badge
+used to be driven only by the fiction — the demo client's schedule marks some
+posts as having AI scenes. None of the twelve cuts is so marked, so with real
+generated pixels on screen the wall would have shown **no** AI label at all.
+`VideoThumb` states the rule in its own prop contract — the badge is "required
+whenever AI footage is used" — and non-negotiable 4 says AI scenes are always
+labelled. So `isAiLabelled` is now "the fiction says so **or** the frame is
+really showing generated imagery". The schedule-derived set is kept rather than
+deleted: it is the half that survives these placeholders being swapped for real
+client footage, which is what the wall stands in for.
+
+The section's own note says the rest in plain words: the presenter is not a
+real person, every frame is AI-generated, and we say so because labelling
+generated material is the rule we hold clients' videos to.
+
+**One regression, caught by looking.** Adding a third badge overflowed the
+frame: `length` sat at `left-3.5` and the badge group at `right-3.5`, two
+independent absolute corners that silently overlap once their combined width
+exceeds a ~230px tile. The length is what lost — frames rendered `0:1` and
+`0:3`. They are one wrapping flex row now, which is a fix for every call site
+and not just this one. Unit tests would not have caught it and did not; the
+screenshot did.
+
+A test now asserts that every file named in the manifest exists on disk. The
+module's promise is that no frame claims to be footage that is not there, and
+only the filesystem can keep that promise honest — a renamed asset would
+otherwise ship as a broken image and pass every other expectation.
+
+Cost: 32.5 of 200 credits. The remaining ~167 are why motion is still open
+rather than done — `DESIGN_BACKLOG.md` is explicit that motion work lands on
+real footage, and the footage only just arrived.

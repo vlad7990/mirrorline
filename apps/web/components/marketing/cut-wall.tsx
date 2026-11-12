@@ -14,10 +14,10 @@
  */
 
 import { cuts, sourceVideo, todaySchedule, weekPosts, type Cut } from '@mirrorline/mock'
-import { ReelMedia, StatusChip, VideoThumb, ViewerPanel } from '@mirrorline/ui'
+import { ReelMedia, ReelStill, StatusChip, VideoThumb, ViewerPanel } from '@mirrorline/ui'
 import * as React from 'react'
 
-import { reelAsset } from './reel-assets'
+import { reelAsset, type ReelAsset } from './reel-assets'
 
 /**
  * CLAUDE.md non-negotiable 4: "AI scenes are always labelled, in the UI and on
@@ -30,6 +30,27 @@ const AI_LABELLED_CUT_IDS: ReadonlySet<string> = new Set(
   ),
 )
 
+/**
+ * Whether this frame must carry the "AI scene" badge.
+ *
+ * Two independent reasons, and either is sufficient:
+ *
+ * 1. The fiction says so — the demo client's schedule marks the post as having
+ *    AI scenes. That is the product behaviour this section demonstrates.
+ * 2. **The frame is really showing generated imagery.** Every file in the reel
+ *    manifest was generated (D28), and `VideoThumb` states the rule in its own
+ *    prop contract: the badge is "required whenever AI footage is used". A
+ *    label that applied only to the fiction while real generated pixels went
+ *    unmarked would be exactly the gap non-negotiable 4 exists to close.
+ *
+ * Today reason 2 covers all twelve, so the set is doing no visible work. It
+ * stays because it is the one that survives the assets being swapped for real
+ * client footage, which is what this wall is a stand-in for.
+ */
+function isAiLabelled(cutId: string, reel: ReelAsset | null): boolean {
+  return AI_LABELLED_CUT_IDS.has(cutId) || reel !== null
+}
+
 /** Compliance verdicts map onto the shared status vocabulary. */
 const COMPLIANCE_STATUS = {
   passed: 'passed',
@@ -40,6 +61,21 @@ const COMPLIANCE_STATUS = {
 /** Six per row at 1440px, so the stagger stays inside DESIGN.md's ceiling. */
 const STAGGER_CEILING = 6
 
+/**
+ * What goes behind the badges: a player, a still, or nothing.
+ *
+ * Split out of the frame so the three cases read as three cases. A cut with a
+ * file that moves gets the client-side player; a cut with only a generated
+ * still gets a plain server-rendered `<img>` and costs no JavaScript; a cut
+ * with neither keeps its flat demo colour rather than pretending to be
+ * footage.
+ */
+function frameMedia(reel: ReelAsset | null): React.ReactNode {
+  if (reel === null) return undefined
+  if (reel.videoSrc === undefined) return <ReelStill src={reel.posterSrc} />
+  return <ReelMedia posterSrc={reel.posterSrc} videoSrc={reel.videoSrc} />
+}
+
 interface CutFrameProps {
   readonly cut: Cut
   /** Position in the wall. Drives the demo thumbnail colour and the stagger. */
@@ -47,9 +83,8 @@ interface CutFrameProps {
 }
 
 function CutFrame({ cut, position }: CutFrameProps) {
-  // Null for every cut until Higgsfield is funded and files land in
-  // `public/reels/`. A frame without one stays its flat demo colour rather
-  // than pretending to be footage — see ./reel-assets.
+  // Present for all twelve cuts since D28. The colour behind it still matters:
+  // it is what shows while the image decodes, so a frame is never a white hole.
   const reel = reelAsset(cut.id)
 
   return (
@@ -58,15 +93,13 @@ function CutFrame({ cut, position }: CutFrameProps) {
       style={{ '--index': position % STAGGER_CEILING } as React.CSSProperties}
     >
       <VideoThumb
-        aiScene={AI_LABELLED_CUT_IDS.has(cut.id)}
+        aiScene={isAiLabelled(cut.id, reel)}
         caption={cut.hook}
         cutNumber={cut.index}
         highlight={cut.highlightPhrase}
         index={position}
         length={cut.lengthLabel}
-        media={
-          reel ? <ReelMedia posterSrc={reel.posterSrc} videoSrc={reel.videoSrc} /> : undefined
-        }
+        media={frameMedia(reel)}
       />
       <p className="m-0 text-meta text-on-viewer">
         {cut.format} <span className="machine">{cut.lengthLabel}</span>

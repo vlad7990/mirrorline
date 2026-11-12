@@ -331,8 +331,10 @@ export default function LandingPage() {
         </div>
         <p className="mt-4 mb-0 max-w-[68ch] text-meta text-text-muted">
           Sample data. These frames belong to Maya Torres Coaching, a fictional demo client: a
-          leadership coach with a weekly podcast. They show the shape of the work. They are not a
-          customer result and they are not an average.
+          leadership coach with a weekly podcast. The presenter is not a real person and every
+          frame here is AI-generated — said plainly, because labelling generated material is the
+          rule we hold your videos to. They show the shape of the work. They are not a customer
+          result and they are not an average.
         </p>
       </Section>
 

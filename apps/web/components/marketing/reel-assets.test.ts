@@ -1,15 +1,18 @@
 /**
  * The reel manifest is the join between a mock cut and a real generated file.
  *
- * It exists so the cut wall can show actual 9:16 footage for the cuts we have
+ * It exists so the cut wall can show actual 9:16 imagery for the cuts we have
  * generated and fall back to the flat demo colour for the ones we have not,
- * without either case being a special branch at the call site. Today the
- * manifest is empty — Higgsfield has no credits — so every lookup misses and
- * the wall renders exactly as it does now. That is the point: the plumbing
- * lands tested before the assets exist, and nothing on the page claims to be
- * a reel until a file is really there.
+ * without either case being a special branch at the call site. All twelve are
+ * generated now (D28), so the interesting expectations moved: the manifest
+ * must cover every cut the wall renders, and every file it names must really
+ * be on disk.
  */
 
+import { existsSync } from 'node:fs'
+import path from 'node:path'
+
+import { cuts } from '@mirrorline/mock'
 import { describe, expect, it } from 'vitest'
 
 import { REEL_MANIFEST, reelAsset, type ReelAsset } from './reel-assets'
@@ -72,21 +75,45 @@ describe('reelAsset', () => {
 })
 
 describe('REEL_MANIFEST', () => {
-  it('is empty while Higgsfield has no credits', () => {
-    // The one place that records the blocker in code rather than in a doc.
-    // Delete this expectation in the same commit that adds the first asset.
-    expect(Object.keys(REEL_MANIFEST)).toHaveLength(0)
+  it('covers every cut the wall renders', () => {
+    // The wall reads `cuts` straight from the mock, so a cut with no entry is
+    // a hole in the grid. This is the expectation that replaced "the manifest
+    // is empty while Higgsfield has no credits".
+    for (const cut of cuts) {
+      expect(REEL_MANIFEST[cut.id], `${cut.id} has no generated still`).toBeDefined()
+    }
   })
 
-  it('points every entry it does have at a real 9:16 file pair', () => {
+  it('names every entry with a cut id and a 9:16 file', () => {
     // Arrange
     const entries = Object.entries(REEL_MANIFEST)
 
     // Assert
+    expect(entries.length).toBeGreaterThan(0)
     for (const [cutId, asset] of entries) {
       expect(cutId, 'cut ids come from @mirrorline/mock').toMatch(/^cut-\d{2}$/)
-      expect(asset.videoSrc).toMatch(/^\/reels\/[\w-]+\.(mp4|webm)$/)
       expect(asset.posterSrc).toMatch(/^\/reels\/[\w-]+\.(jpg|webp|avif)$/)
+      // Optional, but when present it must be a real video extension rather
+      // than a second still smuggled into the motion slot.
+      if (asset.videoSrc !== undefined) {
+        expect(asset.videoSrc).toMatch(/^\/reels\/[\w-]+\.(mp4|webm)$/)
+      }
+    }
+  })
+
+  it('points every listed file at one that actually exists', () => {
+    // The module promises that no frame claims to be footage when the file is
+    // not there. Only the filesystem can keep that promise honest: a renamed
+    // or deleted asset would otherwise ship as a broken image on the landing
+    // page and pass every other test here.
+    const publicDir = path.join(__dirname, '..', '..', 'public')
+
+    for (const [cutId, asset] of Object.entries(REEL_MANIFEST)) {
+      for (const src of [asset.posterSrc, asset.videoSrc]) {
+        if (src === undefined) continue
+        const onDisk = path.join(publicDir, src)
+        expect(existsSync(onDisk), `${cutId}: ${src} is listed but missing`).toBe(true)
+      }
     }
   })
 })
