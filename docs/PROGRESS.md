@@ -8,8 +8,15 @@
 
 ## Preview link
 
-**https://mirrorline-43562sm2o-vn-mn-product-group.vercel.app** — status Ready,
-deployed 11 Nov 2026, from `8abcf14`.
+**https://mirrorline-7a7hye3hz-vn-mn-product-group.vercel.app** — status Ready,
+deployed 12 Nov 2026, from `3a1f06b`.
+
+**The reels are real now** (D28–D29). The cut wall on `/` is twelve generated
+9:16 frames, each with a five-second silent loop behind it, staggered so no
+two tiles play the same frame. The three held-back frames on `/agents` take
+the same footage. Every one carries the AI label, and the section says in
+plain words that the presenter is not a real person. Go and look at the proof
+section on `/` — that is the change this preview is for.
 
 This is the **gold-and-ink redesign** (D25), adopted from
 `docs/design/handoff-v4`. Five pages — Home, Product, Agents, Trust, Pricing.
@@ -24,14 +31,17 @@ landing page that loses its main action has lost the page — so it offers a
 pilot instead. Run it locally to see a real run. See
 `docs/plan/ENGINE_WIRING.md` and D22.
 
-Still placeholder: the cut wall on `/` is coloured blocks rather than reels.
-The plumbing is built and tested — `VideoThumb` takes a `media` slot,
-`ReelMedia` plays a file while it is in view, and `reel-assets.ts` is the
-manifest — but the manifest is empty because Higgsfield is unfunded. **This
-is the single highest-value unblock, and it is item 0 under "Needs Vlad".**
+The hero also accepts a dragged file now (D31). It had always said "Drop a
+talk, podcast or webinar" and ignored the drop, which meant the browser
+navigated away from the page instead — on the control the whole hero is built
+around.
 
 <details>
 <summary>Earlier previews</summary>
+
+https://mirrorline-43562sm2o-vn-mn-product-group.vercel.app — 11 Nov 2026,
+from `8abcf14`. The gold-and-ink redesign, with the cut wall still coloured
+blocks: Higgsfield was unfunded and the reel manifest was empty.
 
 https://mirrorline-9diwjwc5w-vn-mn-product-group.vercel.app — 17:54 EST, the
 design-engineering pass: FAQ animation, chevron token, Tooltip provider.
