@@ -701,3 +701,51 @@ otherwise ship as a broken image and pass every other expectation.
 Cost: 32.5 of 200 credits. The remaining ~167 are why motion is still open
 rather than done — `DESIGN_BACKLOG.md` is explicit that motion work lands on
 real footage, and the footage only just arrived.
+
+## 2026-11-12 · D29 · The reels move, and no two of them move together
+
+`DESIGN_BACKLOG.md` item 3: "motion work lands on real footage." The footage
+landed in D28, so this is that. Every cut now has a five-second silent loop
+behind its poster.
+
+**Kling 3.0 Turbo, not Seedance 2.0.** 7.5 credits a clip against 12, which
+matters at twelve clips, but the better reason is that a seated podcast shot
+is exactly what Kling 3.0 is for — a single plane with no strong dynamics.
+Seedance's advantage is multi-shot and heavy motion, neither of which a
+locked-off talking head needs. Judged on one test clip before spending the
+other 82.5.
+
+**Image-to-video from the poster we already shipped**, so the first frame and
+the poster are the same picture and there is no pop when playback starts.
+Every prompt locks the camera off: twelve tiles that each drift or push in is
+motion sickness, not craft. The movement that earns its place is the person
+talking.
+
+**55 MB became 1.1 MB.** Kling returns ~4.5 MB of 720p per clip and the tiles
+render about 230px wide, so each is re-encoded to 404px at 20fps, crf 30 —
+roughly 95 KB, measured against crf 34 and VP9 rather than guessed. No audio
+track at all: the wall is silent by design, so an audio stream would be bytes
+nobody can hear.
+
+**The part that was only visible once it ran.** All twelve started the instant
+the section scrolled into view, so they played in perfect lockstep — the same
+woman blinking, gesturing and looping in unison, twelve times over. It read as
+a video wall in a shop window rather than twelve separate cuts. `ReelMedia`
+takes a `startOffsetSeconds` now and `cutMedia` derives one from the cut id:
+`1.3s` apart walks the whole five-second loop without landing two neighbours
+on the same frame. Measured after the change, the twelve sit at 0.3 through
+4.4 seconds.
+
+Derived from the id and never `Math.random()`. These frames server-render
+first, and a random offset would differ between server and client — a
+hydration mismatch, and a silent one.
+
+The offset is applied once before the first play rather than on every
+intersection, so a tile scrolled past and back resumes instead of snapping
+back to its offset. Under `prefers-reduced-motion: reduce` nothing seeks and
+nothing plays: verified as 0 of 12 playing, all at `currentTime` 0, posters
+standing in.
+
+Cost: 90 credits including the test clip, leaving 77.5. All five gates pass —
+lint, typecheck, 269 unit tests, build, licence-check, and e2e at 101 passed
+with no flake this run.

@@ -177,22 +177,20 @@ nothing is hardcoded, so the demo story stays consistent across screens.
 
 ## Needs Vlad
 
-0. **Higgsfield login, to unblock the cut wall.** Top of the list because it is
-   the one thing holding the design complaint open
-   (`docs/plan/DESIGN_BACKLOG.md`). The plumbing shipped on 2026-11-11 and the
-   manifest stays empty until there is real footage.
+0. ~~**Higgsfield login, to unblock the cut wall.**~~ **Done 2026-11-12.** Vlad
+   ran the login; the cut wall has real footage and the twice-raised design
+   complaint is closed (D28, `docs/plan/DESIGN_BACKLOG.md`).
 
-   The CLI authenticates by browser OAuth (PKCE) — there is no API key to hand
-   over, so an agent cannot do this. It is signed in as `vbreygin@gmail.com`
-   with 0 credits; the funded account is `filmreecon@gmail.com`. Run:
-   ```
-   higgsfield auth logout
-   higgsfield auth login
-   ```
-   and sign in as `filmreecon@gmail.com`. `higgsfield account status` should
-   then show credits. If they sit on a team rather than a personal account,
-   `status` still reads 0 — then `higgsfield workspace list` and
-   `higgsfield workspace set <id>`.
+   Keep the wrinkle, because it will recur: authentication succeeded and
+   `higgsfield account status` still failed with
+   `workspace_membership_required`, because the funded workspace was not
+   *selected*. `higgsfield workspace list` showed it and
+   `higgsfield workspace set <id>` fixed it. **A status that reads 0, or
+   errors, never means "there is no money".**
+
+   Costs measured rather than assumed, for whoever budgets the next batch:
+   Nano Banana Pro at 9:16 is **2 credits**, Kling 3.0 Turbo 5s is **7.5**,
+   Seedance 2.0 at 4s/480p is **12**.
 
 1. **Two repo hooks blocked parts of the work and cost real throughput.**
    - `pre:edit-write:gateguard-fact-force` requires four facts recited in a

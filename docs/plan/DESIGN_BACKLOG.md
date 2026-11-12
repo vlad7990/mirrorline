@@ -17,16 +17,30 @@ fresh round of self-congratulation.
 
 | Asked for | State |
 |---|---|
-| Reels in the cut cards | **Not done.** The landing page cut wall is still coloured `<div>`s with text. This is the thing named twice and still missing. |
+| Reels in the cut cards | **Done 2026-11-12.** All twelve cuts carry generated 9:16 footage, and so do the three held-back frames on the agents page, which were the biggest empty blocks on the site. See D28. |
 | Macro animation | **Barely.** One scroll reveal (`.reveal`, transform only). No orchestrated entrance, no scroll-telling, no pinning. |
 | Micro-interactions | **Barely.** A 3% press dip, a chevron rotation, overlay enter/exit. Nothing that reads as craft. |
 | Modern type | **Partly done.** `.text-hero` / `.text-section` are fluid `clamp()` now; before this there was no `clamp()` in the repo at all. The studio keeps a fixed scale deliberately. |
 | Cards not plain | **One section done.** The how-it-works agent list is a 2-col grid now. Landing page cards, pricing bodies and trust bodies are untouched. |
 | Catchy | **No.** The site is honest and legible. It is not yet memorable. |
 
-## The one hard blocker
+## The one hard blocker — CLEARED 2026-11-12
 
-**Higgsfield has 0 credits** on the account the CLI is signed in to
+Vlad ran the login. One wrinkle worth keeping, because it will recur: the CLI
+authenticated as `filmreecon@gmail.com` and `account status` still failed with
+`workspace_membership_required`, because the funded workspace was not
+*selected*. `higgsfield workspace list` showed it (`Private`, starter, 200
+credits, SELECTED empty) and `higgsfield workspace set <id>` fixed it. **A
+status that reads 0 — or errors — never means "there is no money".**
+
+Spent so far: 32.5 credits on twelve stills plus a reference portrait and one
+regeneration, and 7.5 on a test clip. The original estimate below was for
+seven frames; twelve cost less than that, because Nano Banana Pro is 2 credits
+at 9:16 rather than the 6.5 assumed.
+
+The historical note follows, since the arithmetic is still the reference:
+
+**Higgsfield had 0 credits** on the account the CLI was signed in to
 (`vbreygin@gmail.com`, free plan). A 9:16 image costs 6.5; the seven frames
 planned need about 46.
 
@@ -101,23 +115,40 @@ than a dependency; usable as reference for individual effects, not as a base.
 
 1. ~~**`gh search` first.**~~ **Done 2026-11-11** — see the section above.
    Conclusion: hand-roll the reel card, adopt `motion` (MIT) for motion work.
-2. **Fix the cut wall.** This is the named complaint. **Half done 2026-11-11:**
-   the plumbing is in and tested — `VideoThumb` takes a `media` slot,
-   `ReelMedia` plays a file while it is in view, and
-   `apps/web/components/marketing/reel-assets.ts` is the manifest that says
-   which cuts have footage. The manifest is empty, so the page is visually
-   unchanged and nothing claims to be a reel. **Still blocked on credits** for
-   the other half: generate 9:16 stills or loops, drop them in
-   `public/reels/`, add one manifest line each. Do not fill the manifest with
-   anything that is not a real generated file.
-3. **Real motion.** Still open. `motion@14.12.0` is MIT and cleared (D19), and
-   is the right choice when it is needed; it is deliberately **not** installed
-   yet, because nothing imports it. `animation-timeline: view()` in
-   `packages/ui/src/styles/theme.css` already covers reveals with no
-   dependency. Do not bolt motion onto the coloured blocks — that is the
-   anti-pattern below. Motion work lands on real footage.
-4. **The remaining bodies.** Landing page cards, pricing, trust, and the lower
-   half of how-it-works are all still the original flat stacks.
+2. ~~**Fix the cut wall.**~~ **Done 2026-11-12** (D28). Twelve generated 9:16
+   frames, one per cut, all from a single reference portrait because they are
+   twelve cuts of one episode and the room cannot drift between them. The
+   media branch lives in `components/marketing/cut-media.tsx` so every surface
+   shares it, which is what pulled the agents page's three held-back frames in
+   too. Every frame carries the AI label, because `VideoThumb`'s own contract
+   requires it whenever AI footage is used and nothing in the mock schedule
+   would have triggered it. A test asserts each manifest file exists on disk.
+3. **Real motion.** **The reels move, done 2026-11-12** (D29): every cut has a
+   five-second silent loop, staggered 1.3s apart so no two tiles play the same
+   frame — in lockstep they read as a shop-window video wall rather than
+   twelve cuts. Nothing plays under `prefers-reduced-motion`.
+
+   `motion@14.12.0` is still **not** installed, and still MIT and cleared
+   (D19) for when something needs it. It was not needed here: the motion that
+   answers the complaint is footage, not tweened DOM.
+   `animation-timeline: view()` in `packages/ui/src/styles/theme.css` still
+   covers the reveals with no dependency. **Interface** motion — orchestrated
+   entrances, real micro-interactions — remains open and is where `motion`
+   would earn its place.
+4. **The remaining bodies.** Partly done 2026-11-12, and the list above was
+   partly stale — checked by looking at each page rather than trusting it.
+   - **Trust: done.** Seven rules were one stack of full-width cards whose
+     text ran to 68ch, leaving the right half of each empty. Two columns from
+     lg now, rule left and meaning right.
+   - **Agents: done**, and it was the worst case on the site despite not being
+     on this list — see item 2.
+   - **Pricing: already fine.** The tier table is row-based with per-day
+     figures, a highlighted tier and per-tier CTAs; the lower band is a
+     two-column checklist. Nothing to do.
+   - **Home audience cards: left alone, deliberately.** Four plain cards, but
+     they are not interactive, and the obvious "fix" — a hover lift — would
+     imply they are clickable when they are not. They need a real idea rather
+     than a hover state.
 
 ## What not to repeat
 

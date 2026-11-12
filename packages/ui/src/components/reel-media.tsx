@@ -43,6 +43,20 @@ export interface ReelMediaProps {
    * a twelve-tile wall the posters are what keep the page cheap.
    */
   readonly posterSrc?: string
+  /**
+   * Where in the clip this tile starts, in seconds.
+   *
+   * A wall of twelve tiles all starting the moment the section scrolls into
+   * view plays in perfect lockstep: the same person blinks, gestures and
+   * loops in unison twelve times over, which reads as a video wall in a shop
+   * window rather than as twelve separate cuts. Offsetting each one
+   * desynchronises them.
+   *
+   * It must be derived from something stable, never random — this renders on
+   * the server first, and a random offset would differ between server and
+   * client and trip hydration.
+   */
+  readonly startOffsetSeconds?: number
   readonly className?: string
 }
 
@@ -56,7 +70,12 @@ const PLAY_THRESHOLD = 0.5
 /** Matches the token layer's reduced-motion branch in `theme.css`. */
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
 
-export function ReelMedia({ videoSrc, posterSrc, className }: ReelMediaProps) {
+export function ReelMedia({
+  videoSrc,
+  posterSrc,
+  startOffsetSeconds = 0,
+  className,
+}: ReelMediaProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
 
   React.useEffect(() => {
@@ -66,6 +85,18 @@ export function ReelMedia({ videoSrc, posterSrc, className }: ReelMediaProps) {
     // Honouring the preference by never starting, rather than by starting and
     // pausing, so no frame of motion plays for a reader who asked for none.
     if (window.matchMedia(REDUCED_MOTION_QUERY).matches) return
+
+    // Seek once, before the first play rather than on every entry, so a tile
+    // scrolled past and back resumes where it was instead of snapping to the
+    // offset again. `duration` is NaN until metadata arrives, hence the wait.
+    let seeked = startOffsetSeconds <= 0
+    const seekToOffset = () => {
+      if (seeked || !Number.isFinite(video.duration) || video.duration === 0) return
+      seeked = true
+      video.currentTime = startOffsetSeconds % video.duration
+    }
+    seekToOffset()
+    video.addEventListener('loadedmetadata', seekToOffset)
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -84,8 +115,11 @@ export function ReelMedia({ videoSrc, posterSrc, className }: ReelMediaProps) {
     )
 
     observer.observe(video)
-    return () => observer.disconnect()
-  }, [])
+    return () => {
+      observer.disconnect()
+      video.removeEventListener('loadedmetadata', seekToOffset)
+    }
+  }, [startOffsetSeconds])
 
   return (
     <video

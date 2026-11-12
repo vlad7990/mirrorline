@@ -14,6 +14,29 @@ import * as React from 'react'
 import { reelAsset } from './reel-assets'
 
 /**
+ * How far apart consecutive cuts start, in seconds.
+ *
+ * The clips are five seconds long, so 1.3 walks the whole loop without ever
+ * landing two neighbours on the same frame: twelve tiles spread across the
+ * clip rather than clustering at the start.
+ */
+const STAGGER_STEP_SECONDS = 1.3
+
+/**
+ * A stable start offset for a cut, derived from its id.
+ *
+ * Derived rather than random on purpose. These frames render on the server
+ * first, and `Math.random()` would produce a different offset there than in
+ * the browser, which is a hydration mismatch. The trailing digits of the cut
+ * id are already a stable sequence, so they are the seed.
+ */
+function startOffsetFor(cutId: string): number {
+  const digits = cutId.match(/\d+$/)
+  if (digits === null) return 0
+  return Number(digits[0]) * STAGGER_STEP_SECONDS
+}
+
+/**
  * What goes behind the badges: a player, a still, or nothing.
  *
  * Three cases, written as three cases. A cut with a file that moves gets the
@@ -26,7 +49,13 @@ export function cutMedia(cutId: string): React.ReactNode {
   const reel = reelAsset(cutId)
   if (reel === null) return undefined
   if (reel.videoSrc === undefined) return <ReelStill src={reel.posterSrc} />
-  return <ReelMedia posterSrc={reel.posterSrc} videoSrc={reel.videoSrc} />
+  return (
+    <ReelMedia
+      posterSrc={reel.posterSrc}
+      startOffsetSeconds={startOffsetFor(cutId)}
+      videoSrc={reel.videoSrc}
+    />
+  )
 }
 
 /**

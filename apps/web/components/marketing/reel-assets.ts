@@ -8,10 +8,11 @@
  * have something for this cut yet", so the call site never has to guess and no
  * frame can claim to be footage when the file is not there.
  *
- * **All twelve cuts now carry a generated still** (D28). They are stills and
- * not loops: `videoSrc` is optional precisely so a frame can be real imagery
- * without pretending to move. A cut with a `videoSrc` plays in view; a cut with
- * only a poster renders as a still image with no client JS at all.
+ * **All twelve cuts carry a generated still and a five-second loop** (D28,
+ * D29). `videoSrc` stays optional anyway: a still is a legitimate end state,
+ * not a half-finished video, and a cut with only a poster renders as a plain
+ * image with no client JS at all. A cut with a `videoSrc` plays while it is
+ * in view and holds the poster otherwise.
  *
  * Two CLAUDE.md non-negotiables govern what may ever be listed:
  *   4. AI scenes are always labelled. Every file here is generated, so the
@@ -53,18 +54,18 @@ export interface ReelAsset {
  * never outlive its asset.
  */
 export const REEL_MANIFEST: Readonly<Record<string, ReelAsset>> = {
-  'cut-01': { posterSrc: '/reels/cut-01.webp' },
-  'cut-02': { posterSrc: '/reels/cut-02.webp' },
-  'cut-03': { posterSrc: '/reels/cut-03.webp' },
-  'cut-04': { posterSrc: '/reels/cut-04.webp' },
-  'cut-05': { posterSrc: '/reels/cut-05.webp' },
-  'cut-06': { posterSrc: '/reels/cut-06.webp' },
-  'cut-07': { posterSrc: '/reels/cut-07.webp' },
-  'cut-08': { posterSrc: '/reels/cut-08.webp' },
-  'cut-09': { posterSrc: '/reels/cut-09.webp' },
-  'cut-10': { posterSrc: '/reels/cut-10.webp' },
-  'cut-11': { posterSrc: '/reels/cut-11.webp' },
-  'cut-12': { posterSrc: '/reels/cut-12.webp' },
+  'cut-01': { posterSrc: '/reels/cut-01.webp', videoSrc: '/reels/cut-01.mp4' },
+  'cut-02': { posterSrc: '/reels/cut-02.webp', videoSrc: '/reels/cut-02.mp4' },
+  'cut-03': { posterSrc: '/reels/cut-03.webp', videoSrc: '/reels/cut-03.mp4' },
+  'cut-04': { posterSrc: '/reels/cut-04.webp', videoSrc: '/reels/cut-04.mp4' },
+  'cut-05': { posterSrc: '/reels/cut-05.webp', videoSrc: '/reels/cut-05.mp4' },
+  'cut-06': { posterSrc: '/reels/cut-06.webp', videoSrc: '/reels/cut-06.mp4' },
+  'cut-07': { posterSrc: '/reels/cut-07.webp', videoSrc: '/reels/cut-07.mp4' },
+  'cut-08': { posterSrc: '/reels/cut-08.webp', videoSrc: '/reels/cut-08.mp4' },
+  'cut-09': { posterSrc: '/reels/cut-09.webp', videoSrc: '/reels/cut-09.mp4' },
+  'cut-10': { posterSrc: '/reels/cut-10.webp', videoSrc: '/reels/cut-10.mp4' },
+  'cut-11': { posterSrc: '/reels/cut-11.webp', videoSrc: '/reels/cut-11.mp4' },
+  'cut-12': { posterSrc: '/reels/cut-12.webp', videoSrc: '/reels/cut-12.mp4' },
 }
 
 /**
