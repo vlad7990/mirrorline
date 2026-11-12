@@ -18,7 +18,7 @@ fresh round of self-congratulation.
 | Asked for | State |
 |---|---|
 | Reels in the cut cards | **Done 2026-11-12.** All twelve cuts carry generated 9:16 footage, and so do the three held-back frames on the agents page, which were the biggest empty blocks on the site. See D28. |
-| Macro animation | **Improved 2026-11-12** (D30). The cut wall's entrance was firing on mount, twelve sections below the fold, so it had none — `.log-in` is a mount animation and `.stagger` sets a delay a view timeline ignores. `.reveal-item` staggers by scroll *range* instead, and the wall and audience grid now arrive as a cascade. Scroll-telling and pinning are still untouched. |
+| Macro animation | **Improved 2026-11-12** (D30). The cut wall's entrance was firing on mount, twelve sections below the fold, so it had none — `.log-in` is a mount animation and `.stagger` sets a delay a view timeline ignores. `.reveal-item` staggers by scroll *range* instead, and the wall and audience grid now arrive as a cascade. Scroll-telling and pinning are **done 2026-11-12** (D35): the seven-agent loop pins from lg and advances one agent per scroll step, falling back to the full ladder on narrow screens and under reduced motion. |
 | Micro-interactions | **One real one added 2026-11-12** (D31), and it was a defect rather than a flourish: the hero said "Drop a talk, podcast or webinar" and ignored the drop, which also meant the browser navigated away from the page. It accepts a drag now, and the gold ring widens to answer. The rest still stands — a 3% press dip, a chevron rotation, overlay enter/exit. |
 | Modern type | **Partly done.** `.text-hero` / `.text-section` are fluid `clamp()` now; before this there was no `clamp()` in the repo at all. The studio keeps a fixed scale deliberately. |
 | Cards not plain | **One section done.** The how-it-works agent list is a 2-col grid now. Landing page cards, pricing bodies and trust bodies are untouched. |
@@ -106,7 +106,12 @@ richer than a one-shot reveal. Needs a `docs/DECISIONS.md` entry.
 17.2k stars. Not adopted yet — it overrides global scroll behaviour and is an
 accessibility risk. Only pull it in if a specific section needs it.
 
-**Rejected: GSAP.** Its licence is not on the non-negotiable-10 allowlist.
+~~**Rejected: GSAP.** Its licence is not on the non-negotiable-10 allowlist.~~
+**Reversed 2026-11-12 by Vlad (D33).** Still not on the allowlist and still
+not an OSI-permissive licence — it is in as a *named* exception pinned to the
+package, with the termination and non-compete terms written into the rule. It
+is used for two things only, both of which CSS cannot do: splitting a heading
+into words (D33) and pinning a section (D35).
 
 **Also noted:** `magicuidesign/magicui` (23.2k) is copy-paste components rather
 than a dependency; usable as reference for individual effects, not as a base.

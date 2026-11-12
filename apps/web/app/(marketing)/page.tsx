@@ -15,13 +15,14 @@
 
 import { cutSummary, cuts, funnel, metrics, sourceVideo } from '@mirrorline/mock'
 import { SiteCta } from '@/components/marketing/site-cta'
-import { Button, Card, cn, FunnelBar } from '@mirrorline/ui'
+import { Button, Card, FunnelBar } from '@mirrorline/ui'
 import { ArrowRight, Film, Plug, Repeat, Tag } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import * as React from 'react'
 
-import { LOOP_CLOSING_LINE, PUBLIC_AGENTS } from '@/components/marketing/agents'
+import { LOOP_CLOSING_LINE } from '@/components/marketing/agents'
+import { AgentLoop } from '@/components/marketing/agent-loop'
 import { Choices } from '@/components/marketing/choices'
 import { CutWall } from '@/components/marketing/cut-wall'
 import { ReelBackdrop } from '@/components/marketing/reel-backdrop'
@@ -514,64 +515,18 @@ export default function LandingPage() {
             </Button>
           }
         />
-        {/* A ladder, not seven tiles: the rail draws the hand-off from one agent
-            down to the next, so the order is in the layout rather than on a
-            counter, and Compliance is marked because nothing gets past it.
-            One column at every width, so all seven are always visible and
-            nothing hides behind a scrollbar. */}
-        <ol className="mt-8 flex list-none flex-col p-0">
-          {PUBLIC_AGENTS.map((agent, index) => {
-            const isGate = agent.id === GATE_AGENT_ID
-            const isLast = index === PUBLIC_AGENTS.length - 1
+        {/* A ladder, not seven tiles: the rail draws the hand-off from one
+            agent down to the next, so the order is in the layout rather than
+            on a counter, and Compliance is marked because nothing gets past
+            it.
 
-            return (
-              /* Each agent lights as it reaches the middle of the screen and
-                 dims again as it leaves, so the hand-off is read at the pace
-                 the reader scrolls rather than arriving all at once. The
-                 seven are a sequence, which is the one thing a static ladder
-                 cannot say. See docs/design/MOTION_STUDY.md §1. */
-              /* `text-text` is the resting colour the name inherits when the
-                 animation is absent — no scroll-timeline support, or reduced
-                 motion. Without it the heading would fall back to whatever
-                 the band happens to set. */
-              <li key={agent.id} className="scroll-lit flex gap-4 text-text sm:gap-5">
-                <div className="flex flex-col items-center gap-1.5">
-                  {/* The step number repeats what the <ol> already says, so it
-                      is decoration for the eye only. It is the machine's own
-                      counter, so it is set in the machine's voice. */}
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      'machine grid size-8 shrink-0 place-items-center rounded-full border',
-                      'text-caption font-semibold',
-                      isGate
-                        ? 'border-success bg-success-soft text-on-success-soft'
-                        : 'border-border-strong bg-surface text-text-muted',
-                    )}
-                  >
-                    {agent.step}
-                  </span>
-                  {isLast ? null : <span aria-hidden="true" className="w-px flex-1 bg-border" />}
-                </div>
-                <div className={cn('flex min-w-0 flex-col gap-1', isLast ? 'pb-0' : 'pb-6')}>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    {/* No colour of its own: it inherits the row's, which is
-                        what `.scroll-lit` animates. The description stays
-                        muted throughout — lighting both would be a section
-                        that flashes rather than one that reads. */}
-                    <h3 className="m-0 font-heading text-subtitle">{agent.name}</h3>
-                    {isGate ? (
-                      <span className="rounded-full bg-success-soft px-2.5 py-0.5 text-caption font-semibold text-on-success-soft">
-                        The gate
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="m-0 max-w-[68ch] text-meta text-text-muted">{agent.short}</p>
-                </div>
-              </li>
-            )
-          })}
-        </ol>
+            Pinned from lg (D35): the section holds while the reader scrolls
+            and the hand-off advances one agent at a time. Every name and line
+            stays in the list at all widths, so the unpinned fallback is this
+            same ladder rather than a fragment of it. */}
+        <div className="mt-8">
+          <AgentLoop gateAgentId={GATE_AGENT_ID} />
+        </div>
         {/* The automated re-plan is post-MVP, so the loop's closing hand-off is
             labelled rather than sold. CLAUDE.md non-negotiable 7. */}
         <div className="mt-2 flex flex-col items-start gap-2 border-t border-border pt-5">

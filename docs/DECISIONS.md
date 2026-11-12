@@ -1024,3 +1024,41 @@ are not ours to use either.
 
 The numbered index needed no invented content: `FEATURE_TABS` already carried
 `number`, `title` and `description` for exactly four steps.
+
+## 2026-11-12 · D35 · The agent loop is pinned, and the fallback is the whole list
+
+The last device from `docs/design/MOTION_STUDY.md` — "section scrolls" — and
+the only one that genuinely needed ScrollTrigger. A view timeline can drive an
+animation from scroll position; it cannot hold an element still and convert
+further scrolling into a sequence. This is the second thing GSAP has earned
+under D33's exception, and still the whole of what it is used for.
+
+**Why this section.** Seven agents handing to each other is the clearest
+explanation of what the product is, and it was a static list — the one thing a
+sequence cannot be read as. Pinning spends the reader's attention on the thing
+most worth explaining.
+
+**The fallback is the entire list, not a fragment.** Every agent's name and
+line sits in the `<ol>` at all times; the stage is a magnified duplicate of a
+row already on screen. With no JavaScript, no GSAP, a narrow screen or reduced
+motion, this is exactly the ladder it replaced — verified as seven rows and
+seven names with no pin spacer present. The stage is `aria-hidden` for the
+same reason: a screen reader that heard both would hear every agent twice.
+
+**It does not pin below `lg`.** A pinned section on a short touch screen eats
+the viewport and fights the scroll, which is the objection that kept
+ScrollSmoother out in D32. `gsap.matchMedia` scopes the pin to
+`(min-width: 1024px) and (prefers-reduced-motion: no-preference)`, and
+returning its teardown means crossing either boundary unpins and restores the
+ladder rather than leaving it stuck.
+
+**One bug, and it is the obvious one in hindsight.** Pinned at `top top`, the
+section sits under the sticky header: the stage's counter and the ladder's
+first row were both behind it, leaving only a description visible. The header
+bottom measures 123px; a first guess of 104 still clipped. It pins at 140 now,
+and the clearance carries the measurement in a comment so the next person does
+not re-guess it.
+
+No `scrub`: scrub ties a tween to progress and there is no tween here, only an
+index, so `onUpdate` reads progress directly. React bails out on an identical
+value, which makes it cheap enough to call every scroll frame.
