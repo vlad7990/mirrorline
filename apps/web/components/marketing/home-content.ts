@@ -138,6 +138,17 @@ export interface Audience {
   readonly body: string
   /** What they are actually buying. Phrased as a goal, never as a promise. */
   readonly goal: string
+  /**
+   * The `SHOWCASE_CARDS` niche whose sample hook this audience is shown with.
+   *
+   * A name rather than an index, so reordering either list cannot silently
+   * pair a clinic with a gym's hook. A test pins every one of these to a card
+   * that exists.
+   *
+   * These are hooks for **fictional businesses**, which is why the section
+   * rendering them carries the sample-data label — non-negotiable 7.
+   */
+  readonly sampleNiche: string
 }
 
 export const AUDIENCES: readonly Audience[] = [
@@ -146,24 +157,28 @@ export const AUDIENCES: readonly Audience[] = [
     title: 'Coaches and consultants',
     body: 'Turn webinars, podcasts and client Q&As into a steady stream of authority.',
     goal: 'discovery calls',
+    sampleNiche: 'Coach',
   },
   {
     number: '02',
     title: 'Clinics and wellness',
     body: 'Answer the questions patients ask every day, once, on camera.',
     goal: 'booked appointments',
+    sampleNiche: 'Clinic',
   },
   {
     number: '03',
     title: 'Studios and gyms',
     body: 'Show the class, the coach and the result, every single day.',
     goal: 'intro offers sold',
+    sampleNiche: 'Fitness studio',
   },
   {
     number: '04',
     title: 'Local services',
     body: 'Stay the name people remember when they need you.',
     goal: 'local bookings',
+    sampleNiche: 'Salon',
   },
 ]
 

@@ -21,7 +21,7 @@ fresh round of self-congratulation.
 | Macro animation | **Improved 2026-11-12** (D30). The cut wall's entrance was firing on mount, twelve sections below the fold, so it had none — `.log-in` is a mount animation and `.stagger` sets a delay a view timeline ignores. `.reveal-item` staggers by scroll *range* instead, and the wall and audience grid now arrive as a cascade. Scroll-telling and pinning are **done 2026-11-12** (D35): the seven-agent loop pins from lg and advances one agent per scroll step, falling back to the full ladder on narrow screens and under reduced motion. |
 | Micro-interactions | **One real one added 2026-11-12** (D31), and it was a defect rather than a flourish: the hero said "Drop a talk, podcast or webinar" and ignored the drop, which also meant the browser navigated away from the page. It accepts a drag now, and the gold ring widens to answer. The rest still stands — a 3% press dip, a chevron rotation, overlay enter/exit. |
 | Modern type | **Partly done.** `.text-hero` / `.text-section` are fluid `clamp()` now; before this there was no `clamp()` in the repo at all. The studio keeps a fixed scale deliberately. |
-| Cards not plain | **One section done.** The how-it-works agent list is a 2-col grid now. Landing page cards, pricing bodies and trust bodies are untouched. |
+| Cards not plain | **Done 2026-11-12.** Trust is a two-column rule/meaning split (4c09249); pricing was already a row table; the home audience cards are now a sample frame beside their detail (D36). The last flat stack is gone. |
 | Catchy | **No.** The site is honest and legible. It is not yet memorable. |
 
 ## The one hard blocker — CLEARED 2026-11-12

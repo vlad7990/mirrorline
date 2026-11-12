@@ -15,7 +15,7 @@
 
 import { cutSummary, cuts, funnel, metrics, sourceVideo } from '@mirrorline/mock'
 import { SiteCta } from '@/components/marketing/site-cta'
-import { Button, Card, FunnelBar } from '@mirrorline/ui'
+import { Button, Card, FunnelBar, VideoThumb } from '@mirrorline/ui'
 import { ArrowRight, Film, Plug, Repeat, Tag } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
@@ -32,7 +32,7 @@ import { CountUp } from '@/components/marketing/count-up'
 import { FeatureTabs } from '@/components/marketing/feature-tabs'
 import { HeroCinematic, UPLOAD_ANCHOR_ID } from '@/components/marketing/hero-cinematic'
 import { HeroUpload } from '@/components/marketing/hero-upload'
-import { AUDIENCES, PROOF_CARDS } from '@/components/marketing/home-content'
+import { AUDIENCES, PROOF_CARDS, SHOWCASE_CARDS } from '@/components/marketing/home-content'
 import { ShowcaseMarquee } from '@/components/marketing/showcase-marquee'
 import { SplitReveal } from '@/components/marketing/split-reveal'
 import {
@@ -423,29 +423,68 @@ export default function LandingPage() {
           }
           lead="You have the expertise and the recordings. What you do not have is an evening a day to cut them up."
           headingClassName="text-site-h2 font-serif"
+          /* The cards carry sample hooks now, so the section has to say so —
+             non-negotiable 7. It did not need this when they were four boxes
+             of our own copy. */
+          aside={<SampleDataLabel />}
         />
-        <ul className="m-0 mt-10 grid list-none grid-cols-1 gap-5 p-0 sm:grid-cols-2 lg:grid-cols-4">
-          {AUDIENCES.map((audience, position) => (
-            /* Four across at lg, so all four enter together and need the
-               index to arrive as a sequence rather than a block. */
-            <li
-              className="reveal-item"
-              key={audience.number}
-              style={{ '--index': position } as React.CSSProperties}
-            >
-              <Card className="flex h-full flex-col gap-3">
-                <span className="machine text-metric text-gold-deep">{audience.number}</span>
-                <h3 className="m-0 font-heading text-title text-text">{audience.title}</h3>
-                <p className="m-0 text-meta text-text-muted">{audience.body}</p>
-                {/* A goal, never a promise. Non-negotiable 7 rules out
-                    saying these will arrive — only that they are what the
-                    work is aimed at. */}
-                <p className="m-0 mt-auto pt-2 text-meta text-gold-text">
-                  Aimed at: {audience.goal}
-                </p>
-              </Card>
-            </li>
-          ))}
+        {/* Two across, not four, and each card is a frame beside its detail
+            rather than a box of text. Four equal text boxes were the last of
+            the "plain stacks" in DESIGN_BACKLOG, and the obvious fix — a
+            hover lift — would have been a lie, because these are not
+            interactive. What they actually lacked was something to look at,
+            so each one now shows the shape of a post for that audience
+            (docs/design/MOTION_STUDY.md §4).
+
+            The hooks are the showcase's own fictional-business samples,
+            matched by niche rather than by index so reordering either list
+            cannot pair a clinic with a gym's hook. */}
+        <ul className="m-0 mt-10 grid list-none grid-cols-1 gap-5 p-0 lg:grid-cols-2">
+          {AUDIENCES.map((audience, position) => {
+            const sample = SHOWCASE_CARDS.find((card) => card.niche === audience.sampleNiche)
+
+            return (
+              <li
+                className="reveal-item"
+                key={audience.number}
+                style={{ '--index': position % 2 } as React.CSSProperties}
+              >
+                <Card className="flex h-full gap-5">
+                  {/* The frame keeps the demo colour rather than borrowing a
+                      generated still: every still we have is one fictional
+                      coach, and putting her face on "Clinics and wellness"
+                      would say something untrue about who these are. */}
+                  {sample ? (
+                    <div className="w-[104px] shrink-0 sm:w-[124px]">
+                      <VideoThumb
+                        caption={`${sample.lead} ${sample.highlight}`}
+                        highlight={sample.highlight}
+                        index={position}
+                        length={sample.lengthLabel}
+                      />
+                    </div>
+                  ) : null}
+
+                  <div className="flex min-w-0 flex-col gap-2">
+                    {/* `gold-text`, not `gold-deep`. This was `text-metric`
+                        before the cards were rebuilt, and large text only
+                        needs 3:1 — at mono size it needs 4.5:1 and gold-deep
+                        does not clear it on the snow band. axe caught it;
+                        shrinking text is exactly when that happens. */}
+                    <span className="machine text-mono text-gold-text">{audience.number}</span>
+                    <h3 className="m-0 font-heading text-title text-text">{audience.title}</h3>
+                    <p className="m-0 text-meta text-text-muted">{audience.body}</p>
+                    {/* A goal, never a promise. Non-negotiable 7 rules out
+                        saying these will arrive — only that they are what the
+                        work is aimed at. */}
+                    <p className="m-0 mt-auto border-t border-border pt-3 text-meta text-gold-text">
+                      Aimed at: {audience.goal}
+                    </p>
+                  </div>
+                </Card>
+              </li>
+            )
+          })}
         </ul>
       </Section>
 

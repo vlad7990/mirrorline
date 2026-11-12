@@ -1062,3 +1062,36 @@ not re-guess it.
 No `scrub`: scrub ties a tween to progress and there is no tween here, only an
 index, so `onUpdate` reads progress directly. React bails out on an identical
 value, which makes it cheap enough to call every scroll frame.
+
+## 2026-11-12 · D36 · The audience cards get something to look at
+
+The last of the "plain stacks" in `DESIGN_BACKLOG.md`. Four equal boxes of our
+own copy, and twice I declined the obvious fix: these cards are not
+interactive, so a hover lift would say they were clickable when they are not.
+What they actually lacked was not an affordance, it was something to look at.
+
+So each is a **9:16 sample frame beside its detail** — the image/detail split
+recommended in `MOTION_STUDY.md` §4, from the Arigo work cards. Four across
+became two, because a frame plus a paragraph needs the width.
+
+**No new imagery, and no credits spent.** The hooks are `SHOWCASE_CARDS`, the
+fictional-business samples already on the page — a coach's hook against
+coaches, a clinic's against clinics. Matched by **niche name rather than by
+index**, so reordering either list cannot silently pair a clinic with a gym's
+hook, and a unit test pins every name to a card that exists.
+
+**The frames keep the demo colour rather than a generated still.** Every still
+we have is one fictional coach, and putting her face on "Clinics and wellness"
+would say something untrue about who those cards are for. A burned-in hook on
+a brand colour is what the showcase marquee already does.
+
+The section gained a `SampleDataLabel` in the same change. It did not need one
+while the cards were four boxes of our own copy; it does now that they carry
+sample hooks — non-negotiable 7.
+
+**One regression, caught by axe rather than by me.** The `01`–`04` numeral was
+`text-metric`, and large text only needs 3:1. Shrinking it to mono size moved
+it to the 4.5:1 threshold, which `gold-deep` does not clear on the snow band;
+all four cards failed. It is `gold-text` now, the token the "Aimed at:" line
+already used. Shrinking text is exactly when this happens, and the only reason
+it did not ship is that the e2e suite runs axe on every route in both themes.
