@@ -142,61 +142,76 @@ export default function TrustPage() {
         </h2>
         <ol className="flex list-none flex-col gap-4 p-0">
           {RULES.map((rule) => (
-            <Card as="li" key={rule.id} padding="lg" className="flex flex-col gap-3">
+            <Card
+              as="li"
+              key={rule.id}
+              padding="lg"
+              /* Two columns from lg: the rule on the left, what it means on
+                 the right. As one stack the body ran to 68ch and left the
+                 right half of every card empty, so seven rules read as seven
+                 identical slabs — the "plain stacks" complaint in
+                 DESIGN_BACKLOG.md. A rules page is the one place a
+                 name-and-definition column is the natural shape rather than
+                 decoration. Single column below lg, where there is no room
+                 for two and the stack is the right answer anyway. */
+              className="grid gap-x-10 gap-y-3 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]"
+            >
               {/* No "Rule N of 7" counter: the <ol> carries the count for
                   assistive tech, and the rules are not ranked. */}
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                <h3 className="m-0 font-heading text-title text-text">{rule.title}</h3>
+              <div className="flex flex-col gap-1.5">
+                <h3 className="m-0 text-balance font-heading text-title text-text">{rule.title}</h3>
                 {rule.readout ? (
                   <p className="machine m-0 text-mono text-text-muted">{rule.readout}</p>
                 ) : null}
               </div>
-              {rule.paragraphs.map((paragraph) => (
-                <p key={paragraph} className="m-0 max-w-[68ch] text-body text-text-muted">
-                  {paragraph}
-                </p>
-              ))}
-              {rule.id === AI_LABEL_RULE_ID && AI_LABELLED_CUT ? (
-                /* The claim, shown. DESIGN.md: a 9:16 frame sits on the viewer
-                   surface, identical in both themes, and the AI label sits on
-                   the frame rather than in the small print. */
-                <ViewerPanel
-                  className="mt-1"
-                  footnote={
-                    <>
-                      Sample data, from Maya Torres Coaching, a fictional demo client. The badge is
-                      the same one you see in the studio.
-                    </>
-                  }
-                  readout={
-                    <>
-                      cut <span className="machine">{AI_LABELLED_CUT.index}</span>, length{' '}
-                      <span className="machine">{AI_LABELLED_CUT.lengthLabel}</span>
-                    </>
-                  }
-                  title="How a generated scene is labelled"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="w-[132px] shrink-0">
-                      <VideoThumb
-                        aiScene
-                        caption={AI_LABELLED_CUT.hook}
-                        cutNumber={AI_LABELLED_CUT.index}
-                        highlight={AI_LABELLED_CUT.highlightPhrase}
-                        index={AI_LABELLED_CUT.index}
-                        length={AI_LABELLED_CUT.lengthLabel}
-                      />
+              <div className="flex min-w-0 flex-col gap-3">
+                {rule.paragraphs.map((paragraph) => (
+                  <p key={paragraph} className="m-0 max-w-[68ch] text-body text-text-muted">
+                    {paragraph}
+                  </p>
+                ))}
+                {rule.id === AI_LABEL_RULE_ID && AI_LABELLED_CUT ? (
+                  /* The claim, shown. DESIGN.md: a 9:16 frame sits on the
+                     viewer surface, identical in both themes, and the AI label
+                     sits on the frame rather than in the small print. */
+                  <ViewerPanel
+                    className="mt-1"
+                    footnote={
+                      <>
+                        Sample data, from Maya Torres Coaching, a fictional demo client. The badge
+                        is the same one you see in the studio.
+                      </>
+                    }
+                    readout={
+                      <>
+                        cut <span className="machine">{AI_LABELLED_CUT.index}</span>, length{' '}
+                        <span className="machine">{AI_LABELLED_CUT.lengthLabel}</span>
+                      </>
+                    }
+                    title="How a generated scene is labelled"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-[132px] shrink-0">
+                        <VideoThumb
+                          aiScene
+                          caption={AI_LABELLED_CUT.hook}
+                          cutNumber={AI_LABELLED_CUT.index}
+                          highlight={AI_LABELLED_CUT.highlightPhrase}
+                          index={AI_LABELLED_CUT.index}
+                          length={AI_LABELLED_CUT.lengthLabel}
+                        />
+                      </div>
+                      <div className="flex min-w-0 flex-col gap-2">
+                        <AiLabel />
+                        <p className="m-0 text-meta text-on-viewer">
+                          The badge rides with the post. Where the platform has its own AI label, we
+                          set that too, and you can ask for the video without the generated scene.
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex min-w-0 flex-col gap-2">
-                      <AiLabel />
-                      <p className="m-0 text-meta text-on-viewer">
-                        The badge rides with the post. Where the platform has its own AI label, we
-                        set that too, and you can ask for the video without the generated scene.
-                      </p>
-                    </div>
-                  </div>
-                </ViewerPanel>
-              ) : null}
+                  </ViewerPanel>
+                ) : null}
+              </div>
             </Card>
           ))}
         </ol>

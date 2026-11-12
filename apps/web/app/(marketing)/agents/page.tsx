@@ -14,6 +14,7 @@ import type { Metadata } from 'next'
 import * as React from 'react'
 
 import { LOOP_CLOSING_LINE, PUBLIC_AGENTS } from '@/components/marketing/agents'
+import { cutMedia, hasGeneratedMedia } from '@/components/marketing/cut-media'
 import {
   ComingSoonLabel,
   SampleDataLabel,
@@ -277,12 +278,19 @@ export default function AgentsPage() {
                   style={{ '--index': index } as React.CSSProperties}
                 >
                   <div className="w-[88px] shrink-0 sm:w-full">
+                    {/* These are the biggest frames on the site at sm and up —
+                        three across, nearly full width. Empty they were the
+                        largest coloured blocks left after the cut wall was
+                        fixed, so they take the same generated footage, and
+                        the AI label that footage requires (D28). */}
                     <VideoThumb
+                      aiScene={hasGeneratedMedia(cut.id)}
                       caption={cut.hook}
                       cutNumber={cut.index}
                       highlight={cut.highlightPhrase}
                       index={index}
                       length={cut.lengthLabel}
+                      media={cutMedia(cut.id)}
                     />
                   </div>
                   <div className="flex min-w-0 flex-col items-start gap-2">

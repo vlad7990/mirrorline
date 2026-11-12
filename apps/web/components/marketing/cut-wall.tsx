@@ -14,10 +14,10 @@
  */
 
 import { cuts, sourceVideo, todaySchedule, weekPosts, type Cut } from '@mirrorline/mock'
-import { ReelMedia, ReelStill, StatusChip, VideoThumb, ViewerPanel } from '@mirrorline/ui'
+import { StatusChip, VideoThumb, ViewerPanel } from '@mirrorline/ui'
 import * as React from 'react'
 
-import { reelAsset, type ReelAsset } from './reel-assets'
+import { cutMedia, hasGeneratedMedia } from './cut-media'
 
 /**
  * CLAUDE.md non-negotiable 4: "AI scenes are always labelled, in the UI and on
@@ -47,8 +47,8 @@ const AI_LABELLED_CUT_IDS: ReadonlySet<string> = new Set(
  * stays because it is the one that survives the assets being swapped for real
  * client footage, which is what this wall is a stand-in for.
  */
-function isAiLabelled(cutId: string, reel: ReelAsset | null): boolean {
-  return AI_LABELLED_CUT_IDS.has(cutId) || reel !== null
+function isAiLabelled(cutId: string): boolean {
+  return AI_LABELLED_CUT_IDS.has(cutId) || hasGeneratedMedia(cutId)
 }
 
 /** Compliance verdicts map onto the shared status vocabulary. */
@@ -61,21 +61,6 @@ const COMPLIANCE_STATUS = {
 /** Six per row at 1440px, so the stagger stays inside DESIGN.md's ceiling. */
 const STAGGER_CEILING = 6
 
-/**
- * What goes behind the badges: a player, a still, or nothing.
- *
- * Split out of the frame so the three cases read as three cases. A cut with a
- * file that moves gets the client-side player; a cut with only a generated
- * still gets a plain server-rendered `<img>` and costs no JavaScript; a cut
- * with neither keeps its flat demo colour rather than pretending to be
- * footage.
- */
-function frameMedia(reel: ReelAsset | null): React.ReactNode {
-  if (reel === null) return undefined
-  if (reel.videoSrc === undefined) return <ReelStill src={reel.posterSrc} />
-  return <ReelMedia posterSrc={reel.posterSrc} videoSrc={reel.videoSrc} />
-}
-
 interface CutFrameProps {
   readonly cut: Cut
   /** Position in the wall. Drives the demo thumbnail colour and the stagger. */
@@ -83,23 +68,19 @@ interface CutFrameProps {
 }
 
 function CutFrame({ cut, position }: CutFrameProps) {
-  // Present for all twelve cuts since D28. The colour behind it still matters:
-  // it is what shows while the image decodes, so a frame is never a white hole.
-  const reel = reelAsset(cut.id)
-
   return (
     <li
       className="log-in stagger flex min-w-0 flex-col gap-2"
       style={{ '--index': position % STAGGER_CEILING } as React.CSSProperties}
     >
       <VideoThumb
-        aiScene={isAiLabelled(cut.id, reel)}
+        aiScene={isAiLabelled(cut.id)}
         caption={cut.hook}
         cutNumber={cut.index}
         highlight={cut.highlightPhrase}
         index={position}
         length={cut.lengthLabel}
-        media={frameMedia(reel)}
+        media={cutMedia(cut.id)}
       />
       <p className="m-0 text-meta text-on-viewer">
         {cut.format} <span className="machine">{cut.lengthLabel}</span>
