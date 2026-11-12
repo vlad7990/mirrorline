@@ -111,6 +111,58 @@ test('the hero runs the engine where there is one, behind the rights gate', asyn
   await expect(page.getByLabel('Who owns this footage?')).toHaveCount(0)
 })
 
+/**
+ * The placeholder says "Drop a talk, podcast or webinar", so a drop has to
+ * work. It did not until 2026-11-12 (D31): the field invited a gesture it
+ * ignored, and the browser's own default for a dropped file is to navigate
+ * to it, which throws the page away mid-visit.
+ *
+ * Driven through a synthetic DataTransfer because Playwright cannot drag a
+ * file in from the real desktop. That still exercises what was broken: the
+ * dragover default being prevented, and the dropped file reaching state.
+ */
+async function dropFile(page: Page, name: string, type: string) {
+  const handle = await page.evaluateHandle(
+    ([fileName, fileType]) => {
+      const transfer = new DataTransfer()
+      transfer.items.add(new File(['x'], fileName as string, { type: fileType as string }))
+      return transfer
+    },
+    [name, type],
+  )
+
+  const pill = page.getByText('Drop a talk, podcast or webinar')
+  await pill.dispatchEvent('dragenter', { dataTransfer: handle })
+  await pill.dispatchEvent('dragover', { dataTransfer: handle })
+  await pill.dispatchEvent('drop', { dataTransfer: handle })
+}
+
+test('the hero accepts a dropped video, as its own placeholder promises', async ({ page }) => {
+  await stubEngine(page, true)
+  await page.goto('/')
+
+  await dropFile(page, 'episode-47.mp4', 'video/mp4')
+
+  // The field shows the file, which is the only visible proof it landed.
+  await expect(page.getByText('episode-47.mp4')).toBeVisible()
+  // And the rights gate appears, exactly as it does for a picked file:
+  // dropping is a way in, not a way around non-negotiable 1.
+  await expect(page.getByLabel('Who owns this footage?')).toBeVisible()
+})
+
+test('the hero says so when a dropped file is not a video it can open', async ({ page }) => {
+  await stubEngine(page, true)
+  await page.goto('/')
+
+  await dropFile(page, 'notes.pdf', 'application/pdf')
+
+  // A refused drop that does nothing visible is the same defect as a drop
+  // that does nothing at all, only quieter.
+  await expect(page.getByText(/not a video we can open/)).toBeVisible()
+  // And it must not have been accepted anyway.
+  await expect(page.getByLabel('Who owns this footage?')).toHaveCount(0)
+})
+
 test('the hero never offers to fetch someone else’s video', async ({ page }) => {
   await stubEngine(page, true)
   await page.goto('/')

@@ -19,7 +19,7 @@ fresh round of self-congratulation.
 |---|---|
 | Reels in the cut cards | **Done 2026-11-12.** All twelve cuts carry generated 9:16 footage, and so do the three held-back frames on the agents page, which were the biggest empty blocks on the site. See D28. |
 | Macro animation | **Improved 2026-11-12** (D30). The cut wall's entrance was firing on mount, twelve sections below the fold, so it had none — `.log-in` is a mount animation and `.stagger` sets a delay a view timeline ignores. `.reveal-item` staggers by scroll *range* instead, and the wall and audience grid now arrive as a cascade. Scroll-telling and pinning are still untouched. |
-| Micro-interactions | **Barely.** A 3% press dip, a chevron rotation, overlay enter/exit. Nothing that reads as craft. |
+| Micro-interactions | **One real one added 2026-11-12** (D31), and it was a defect rather than a flourish: the hero said "Drop a talk, podcast or webinar" and ignored the drop, which also meant the browser navigated away from the page. It accepts a drag now, and the gold ring widens to answer. The rest still stands — a 3% press dip, a chevron rotation, overlay enter/exit. |
 | Modern type | **Partly done.** `.text-hero` / `.text-section` are fluid `clamp()` now; before this there was no `clamp()` in the repo at all. The studio keeps a fixed scale deliberately. |
 | Cards not plain | **One section done.** The how-it-works agent list is a 2-col grid now. Landing page cards, pricing bodies and trust bodies are untouched. |
 | Catchy | **No.** The site is honest and legible. It is not yet memorable. |

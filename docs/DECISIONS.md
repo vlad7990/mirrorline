@@ -790,3 +790,39 @@ fade genuinely parks text at reduced contrast and axe was right to fail it.
 (D19) and remains the right answer for gesture, spring or layout animation —
 none of which this is. This is six lines of CSS the browser runs off the main
 thread.
+
+## 2026-11-12 · D31 · The hero said "drop a file" and ignored the drop
+
+Looking for the micro-interactions `DESIGN_BACKLOG.md` calls "barely…
+nothing that reads as craft" turned up something worse than a missing
+flourish. The hero's placeholder has always read **"Drop a talk, podcast or
+webinar"**, and dropping one did nothing.
+
+Not merely nothing. The browser's default action for a file dropped on a page
+is to navigate to it, so the gesture the field invites would throw the visit
+away and leave the reader looking at a video file. On the page's single most
+important control, the one non-negotiable 1 shaped the whole hero around.
+
+This is the same class of defect as an unlabelled AI scene: the interface
+states something that is not true. It is listed here as a decision rather than
+a bug fix because the fix had three choices in it.
+
+**The drag state is the existing ring, not a new affordance.** The handoff's
+gold ring is already what marks this as the page's one action, so a drag
+widens and warms that ring rather than introducing a dashed outline or an
+overlay. The same affordance answering, instead of a second one appearing.
+
+**A depth counter, not a boolean.** `dragleave` fires every time the cursor
+crosses onto a child, so a plain boolean makes the highlight strobe as the
+pointer passes the icon or the button inside the pill.
+
+**Extension as a second opinion on type.** A dropped `.mkv` routinely arrives
+with `type: ''`, because the browser only reports MIME types the OS has
+registered. Rejecting on an empty type would quietly mean "drop a file your
+operating system happens to recognise", so the extension is checked when the
+MIME is blank. A refused drop says so in an `AlertBar`: a rejection with no
+visible result is the original defect again, only quieter.
+
+Two e2e tests cover it, and both were **checked against the broken code** —
+with the `onDrop` handler removed they fail, with it they pass. A test written
+after the fix that never saw the bug is a test that proves nothing.

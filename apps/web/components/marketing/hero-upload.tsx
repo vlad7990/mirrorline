@@ -42,6 +42,25 @@ const CUTS_SHOWN = 6
 const VIDEO_ACCEPT = 'video/mp4,video/quicktime,video/x-matroska,video/webm'
 
 /**
+ * The same list as an extension fallback.
+ *
+ * A dropped `.mkv` often arrives with `type: ''` — the browser only reports
+ * MIME types the OS has registered, and Matroska frequently is not one of
+ * them. Rejecting on an empty type would turn "drop a file" into "drop a file
+ * your operating system happens to recognise", so the extension is a second
+ * opinion rather than the only one.
+ */
+const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.mkv', '.webm'] as const
+
+/** Whether a dropped file is something the pipeline can actually open. */
+function isAcceptedVideo(file: File): boolean {
+  if (VIDEO_ACCEPT.split(',').includes(file.type)) return true
+  if (file.type !== '') return false
+  const name = file.name.toLowerCase()
+  return VIDEO_EXTENSIONS.some((extension) => name.endsWith(extension))
+}
+
+/**
  * The handoff's four step chips.
  *
  * The engine reports "running" and then "done" — it does not say which of
@@ -62,9 +81,49 @@ export function HeroUpload() {
   const [file, setFile] = React.useState<File | null>(null)
   const [rightsHolder, setRightsHolder] = React.useState('')
   const [rightsConfirmed, setRightsConfirmed] = React.useState(false)
+  const [isDropTarget, setIsDropTarget] = React.useState(false)
+  const [dropError, setDropError] = React.useState<string | null>(null)
   const fileId = React.useId()
   const holderId = React.useId()
   const confirmId = React.useId()
+
+  /**
+   * Depth counter, because `dragleave` fires when the cursor crosses onto a
+   * child element. Tracking a boolean alone makes the highlight flicker every
+   * time the pointer passes over the icon or the button inside the pill.
+   */
+  const dragDepth = React.useRef(0)
+
+  const endDrag = React.useCallback(() => {
+    dragDepth.current = 0
+    setIsDropTarget(false)
+  }, [])
+
+  /**
+   * Accept a dropped video.
+   *
+   * The placeholder has always read "Drop a talk, podcast or webinar", and
+   * until now dropping one did nothing — worse than nothing, since the
+   * browser's default for a dropped file is to navigate to it, which throws
+   * the page away. An invitation the page does not honour is the same class
+   * of problem as an unlabelled AI scene: the interface says something that
+   * is not true.
+   */
+  function onDrop(event: React.DragEvent) {
+    event.preventDefault()
+    endDrag()
+
+    const dropped = event.dataTransfer.files[0]
+    if (dropped === undefined) return
+
+    if (!isAcceptedVideo(dropped)) {
+      setDropError(`${dropped.name} is not a video we can open. Try MP4, MOV, MKV or WebM.`)
+      return
+    }
+
+    setDropError(null)
+    setFile(dropped)
+  }
 
   const isLive = availability?.available === true
   const canStart = file !== null && rightsConfirmed && rightsHolder.trim() !== '' && !job.isRunning
@@ -74,6 +133,7 @@ export function HeroUpload() {
     setFile(null)
     setRightsConfirmed(false)
     setRightsHolder('')
+    setDropError(null)
   }, [job])
 
   async function onSubmit(event: React.FormEvent) {
@@ -88,11 +148,46 @@ export function HeroUpload() {
         <AlertBar title="The run did not finish" description={job.error} className="w-full" />
       ) : null}
 
+      {/* A refused drop that does nothing visible is the same defect as a
+          drop that does nothing at all, just quieter. */}
+      {dropError ? (
+        <AlertBar title="That file will not open" description={dropError} className="w-full" />
+      ) : null}
+
       <form className="flex w-full max-w-[780px] flex-col gap-3" onSubmit={onSubmit}>
         {/* The handoff's pill: dark fill, a hairline border, and a wide soft
             gold ring outside it. The ring is what makes this read as the
-            page's one action rather than as a form field. */}
-        <div className="flex flex-col gap-2 rounded-[999px] border border-ink-line-strong bg-ink-700/90 p-2 shadow-[0_0_0_6px_rgba(245,184,61,0.06)] sm:flex-row sm:items-center">
+            page's one action rather than as a form field.
+
+            Dragging a file over it widens and warms that ring. The ring was
+            already the thing that says "this is the action", so intensifying
+            it is the honest signal — it is the same affordance answering,
+            not a new one appearing. */}
+        <div
+          onDragEnter={(event) => {
+            event.preventDefault()
+            dragDepth.current += 1
+            setIsDropTarget(true)
+          }}
+          onDragOver={(event) => {
+            // Without this the drop event never fires and the browser
+            // navigates to the file instead, losing the page.
+            event.preventDefault()
+          }}
+          onDragLeave={(event) => {
+            event.preventDefault()
+            dragDepth.current -= 1
+            if (dragDepth.current <= 0) endDrag()
+          }}
+          onDrop={onDrop}
+          className={cn(
+            'flex flex-col gap-2 rounded-[999px] border bg-ink-700/90 p-2 sm:flex-row sm:items-center',
+            'transition-[box-shadow,border-color] duration-[var(--duration-dropdown)] ease-[var(--ease-out)]',
+            isDropTarget
+              ? 'border-gold shadow-[0_0_0_10px_rgba(245,184,61,0.16)]'
+              : 'border-ink-line-strong shadow-[0_0_0_6px_rgba(245,184,61,0.06)]',
+          )}
+        >
           <label
             htmlFor={fileId}
             className={cn(
@@ -114,7 +209,12 @@ export function HeroUpload() {
               type="file"
               accept={VIDEO_ACCEPT}
               className="sr-only"
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              onChange={(event) => {
+                // Picking a file answers whatever the last drop complained
+                // about, so the warning goes with it.
+                setDropError(null)
+                setFile(event.target.files?.[0] ?? null)
+              }}
             />
           </label>
 
