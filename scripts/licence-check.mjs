@@ -58,6 +58,28 @@ const LGPL_DYNAMIC_BINARY_EXCEPTIONS = new Set([
   '@img/sharp-libvips-linuxmusl-x64',
 ]);
 
+/**
+ * GSAP, named rather than allow-listed by licence string (docs/DECISIONS.md
+ * D33). Vlad's decision, with the trade-off on record.
+ *
+ * Its `license` field is not an SPDX identifier at all — it is the prose
+ * "Standard 'no charge' license: https://gsap.com/standard-license." Putting
+ * that string into ALLOWED_LICENCES would quietly admit any future package
+ * that copied the wording, so the exception is pinned to the package name
+ * *and* to that licence, and to nothing else.
+ *
+ * What it is: free for commercial use, every plugin included, since Webflow
+ * took it on. What it is not: an OSI-permissive licence. It reserves
+ * termination at Webflow's discretion, lets them amend the terms
+ * unilaterally, and prohibits use in tools competing with Webflow's visual
+ * animation builder. We make short videos out of podcasts and their own FAQ
+ * encourages building on top, so the non-compete is not thought to reach us —
+ * but it is a term MIT does not have, and rule 10 exists because this project
+ * has to survive a lawyer reading it.
+ */
+const GSAP_LICENCE_EXCEPTIONS = new Set(['gsap']);
+const GSAP_LICENCE_PATTERN = /standard\s+'?no charge'?\s+license/i;
+
 const readJson = (path) => {
   try {
     return JSON.parse(readFileSync(path, 'utf8'));
@@ -111,6 +133,9 @@ const licenceOf = (manifest) => {
  */
 const isAllowed = (expression, name) => {
   if (name && LGPL_DYNAMIC_BINARY_EXCEPTIONS.has(name) && /^LGPL-3\.0/.test(expression)) {
+    return true;
+  }
+  if (name && GSAP_LICENCE_EXCEPTIONS.has(name) && GSAP_LICENCE_PATTERN.test(expression)) {
     return true;
   }
   if (expression === 'UNKNOWN') return false;

@@ -32,6 +32,7 @@ import { FeatureTabs } from '@/components/marketing/feature-tabs'
 import { HeroUpload } from '@/components/marketing/hero-upload'
 import { AUDIENCES, PROOF_CARDS } from '@/components/marketing/home-content'
 import { ShowcaseMarquee } from '@/components/marketing/showcase-marquee'
+import { SplitReveal } from '@/components/marketing/split-reveal'
 import { TypedPhrase } from '@/components/marketing/typed-phrase'
 import {
   ComingSoonLabel,
@@ -359,9 +360,14 @@ export default function LandingPage() {
         aria-labelledby="showcase-heading"
       >
         <div className="mx-auto mb-10 w-full max-w-[1200px] px-5 sm:px-8">
-          <h2 id="showcase-heading" className="m-0 max-w-[20ch] text-site-h2 text-on-ink-900">
-            Made for people who <span className="gold-phrase">sell what they know.</span>
-          </h2>
+          {/* The one GSAP effect on the page, and the one thing CSS could not
+              do: the sentence is split into its words and they arrive in
+              order. Everything else here is scroll-driven CSS (D32). */}
+          <SplitReveal>
+            <h2 id="showcase-heading" className="m-0 max-w-[20ch] text-site-h2 text-on-ink-900">
+              Made for people who <span className="gold-phrase">sell what they know.</span>
+            </h2>
+          </SplitReveal>
           <p className="m-0 mt-3 max-w-[62ch] text-body text-on-ink-muted">
             Sample hooks for fictional businesses, to show the shape of the work. Yours would be
             cut from your own recordings. These are not customers and not customer results.

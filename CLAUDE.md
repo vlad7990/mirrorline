@@ -83,7 +83,7 @@ docs/                Specs, plan, designs, decisions, progress
    - Demo data is labelled "Sample data" on public pages.
 8. **Old drives:** code from the GenAIUniq drives is NOT in this repo and must not be added until a written IP assignment exists. Then only modules on the reuse list in `docs/specs/07_CLAUDE_CODE_HANDOFF.md`.
 9. **Secrets:** never in code or commits; use `.env.local` (git-ignored). Never print secrets.
-10. **Licences:** dependencies must be MIT, Apache-2.0, BSD, ISC or MPL-2.0. AGPL tools (Postiz) run only as separate, unmodified services. FLUX.1 dev is not allowed.
+10. **Licences:** dependencies must be MIT, Apache-2.0, BSD, ISC or MPL-2.0. AGPL tools (Postiz) run only as separate, unmodified services. FLUX.1 dev is not allowed. **One named exception: `gsap`**, on Vlad's decision (D33) — free for commercial use including all plugins, but not an OSI-permissive licence: Webflow may terminate it at their discretion, may amend the terms unilaterally, and bars use in tools competing with their visual animation builder. Pinned to that one package in `scripts/licence-check.mjs`; it widens nothing else.
 11. **Money and production:** no paid API calls beyond test mode; no production deploys; no real social posting.
 
 ## Working rules (auto mode, unattended)

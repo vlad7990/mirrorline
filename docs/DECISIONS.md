@@ -902,3 +902,67 @@ the band, the backdrop drifts −67 → +52px, the lit row reaches full
 `--color-text` while its neighbours sit at the muted floor, and under reduced
 motion all four report `animation-name: none` with the agent names at full
 contrast.
+
+## 2026-11-12 · D33 · Non-negotiable 10 gains one named exception: GSAP
+
+Vlad asked why we could not use GSAP, and then decided he wanted it. This is
+his call on his own rule, recorded with the trade-off rather than quietly
+actioned. **CLAUDE.md non-negotiable 10 is amended in place** — the exception
+is written into the rule itself, not worked around in the checker.
+
+**What was verified first**, because I had asserted the blocker twice without
+checking it. GSAP's npm `license` field is not an SPDX identifier at all; it
+is the prose string `Standard 'no charge' license:
+https://gsap.com/standard-license.` Older releases linked a page titled "Why
+GreenSock doesn't employ an MIT license" — being outside MIT is deliberate on
+their side, not an oversight.
+
+**What the licence actually says**, read rather than assumed. It is genuinely
+free for commercial use, every plugin included, since Webflow took it on. It
+also reserves three things no permissive licence does: termination at
+Webflow's discretion, unilateral amendment by posting revised terms, and a
+prohibition on use in tools competing with Webflow's visual animation builder.
+
+**On that non-compete I corrected myself.** I first raised it as a risk to us.
+Their own FAQ says they want to encourage developers to build on top,
+including visual tools that do not directly compete with Webflow's
+animation-building capabilities. We turn podcasts into short videos. The
+clause is not thought to reach us, and overstating it would have been as
+unhelpful as ignoring it.
+
+**How it is allowed in.** Not by adding the licence string to
+`ALLOWED_LICENCES` — that would admit any future package that copied the
+wording. It is a named exception pinned to the package `gsap` *and* to that
+licence pattern, in the same shape as the existing narrow LGPL
+dynamic-binary exception. `pnpm licence-check` goes 422 → 423 packages and
+stays green.
+
+**What it is actually for.** One thing, and the scroll mechanics from D32 stay
+as CSS: a working, tested, zero-JavaScript implementation is not worth
+replacing with a dependency. GSAP earns its place only on what CSS cannot do —
+splitting a sentence into its words. `SplitReveal` uses SplitText on the
+showcase heading. The second real argument is coverage: `animation-timeline`
+needs Chrome 115, Safari 26 or Firefox 159, and everyone older currently gets
+a static page.
+
+Three things it does that the reference site does not:
+
+* **Reduced motion is honoured.** Arigo's bundle contains no
+  `prefers-reduced-motion` handling whatsoever. `gsap.matchMedia()` scopes the
+  animation to `no-preference`; verified as zero split pieces and the heading
+  untouched at full opacity.
+* **The text is real without JavaScript.** The heading is server-rendered and
+  SplitText operates on the DOM it finds. If the chunk never loads, it is
+  simply a heading.
+* **It is lazy.** GSAP is imported dynamically, lands in its own chunks (52K
+  core, 44K ScrollTrigger, 20K SplitText) and is not inlined into the page
+  entry. Shared First Load JS is unchanged at 102 kB.
+
+**One accessibility regression, caught by measuring the accessible name.**
+SplitText puts the original sentence back as an `aria-label` on the element it
+is handed, and marks every word `aria-hidden`. Handed the wrapper `<div>`, it
+labelled the wrapper and left the `<h2>` holding nothing but hidden nodes — so
+the heading's accessible name went empty, and the band's
+`aria-labelledby="showcase-heading"` lost its name with it. It splits
+`host.firstElementChild` now: the heading carries the label, the wrapper
+carries none.
