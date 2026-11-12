@@ -826,3 +826,79 @@ visible result is the original defect again, only quieter.
 Two e2e tests cover it, and both were **checked against the broken code** —
 with the `onDrop` handler removed they fail, with it they pass. A test written
 after the fix that never saw the bug is a test that proves nothing.
+
+## 2026-11-12 · D32 · Arigo's scroll mechanics, rebuilt — and two traps in doing it
+
+Vlad asked for the design components from arigo-reactjs.vercel.app and was
+explicit that he wanted the mechanics and not their content: scrolling up and
+down, scrolling left and right, section scrolls, text appearing and
+disappearing, images behind scrolling sections.
+
+The study is `docs/design/MOTION_STUDY.md`. The short version is that none of
+it can be installed — that site runs GSAP, ScrollTrigger, ScrollSmoother and
+SplitText, and GSAP's licence is not on non-negotiable 10's allowlist. So each
+device is rebuilt as a scroll-driven CSS animation. The licence check still
+reports the same 422 packages: nothing was added.
+
+Four utilities, all inside the existing
+`@supports (animation-timeline: view())` and
+`prefers-reduced-motion: no-preference` block, so a reader who asks for
+stillness gets none of it:
+
+* `.scroll-lit` — a row that lights as it reaches the middle of the screen and
+  dims as it leaves. On the seven-agent ladder, which was a static list of
+  something that is actually a sequence.
+* `.rail-track` / `.rail-scroll-*` — the marquee rails driven by scroll
+  position instead of a sixty-second clock.
+* `.parallax-layer` — a backdrop that drifts against the scroll.
+
+**It dims, it never disappears.** The obvious reading of "text appearing and
+disappearing" is a fade, and a fade is the thing `mirrorline-reveal` already
+carries a warning about: a view-timeline animation holds its start state, so
+text parked at the start sits at that contrast for as long as it is on screen.
+Both ends of `.scroll-lit` are existing tokens that pass on their own. What
+changes is emphasis, not legibility.
+
+### Two traps, both found by measuring rather than by looking
+
+Neither would have been caught by a screenshot, and both produce an animation
+that is *declared*, *attached to a real timeline*, *reported as running*, and
+completely motionless.
+
+**1. A fixed `animation-duration` silently kills a scroll-driven animation.**
+The rails carried `style={{ animationDuration: '60s' }}` for the timer
+marquee. A scroll-driven animation needs `auto` to span its timeline; any
+fixed duration makes it finish at once and park at its end state. An inline
+style also beats every class, so no CSS could have overridden it. The duration
+moved to a `--marquee-duration` custom property that only the timer path
+reads.
+
+**2. `overflow: hidden` establishes a scroll container, and a view timeline is
+measured against its nearest scrollport.** The showcase band had
+`overflow-hidden` so the rails could run off both edges. That made the band
+itself the scrollport, and the rails never move *relative to the band* — so
+the timeline sat frozen at a constant 54.33% at every scroll position.
+`overflow-x: clip` suppresses the overflow without becoming a scrollport. The
+same trap was waiting in `Section`'s new `backdrop` mode, where I had reached
+for `overflow-hidden` by reflex; it is `overflow-clip` now.
+
+A third, smaller one: an anonymous `view()` on the rail resolved against the
+marquee's own `overflow-x: auto` wrapper, where it is permanently covered.
+`.rail-track` declares a **named** timeline on that wrapper instead, whose own
+scrollport is the document.
+
+### The backdrop is constrained, not decorative licence
+
+`ReelBackdrop` may only go in a band that already carries the AI disclosure.
+Every frame in it is generated, non-negotiable 4 says generated material is
+always labelled, and a montage drifting behind an unlabelled section would be
+exactly the gap D28 closed. Today that means the home proof band and nowhere
+else, and the component's own note says so. `Section` gained a `backdrop` prop
+rather than letting callers improvise, because full-bleed cannot be done from
+inside the centred column.
+
+Verified by measurement rather than by eye: the rail travels 0 → −576px across
+the band, the backdrop drifts −67 → +52px, the lit row reaches full
+`--color-text` while its neighbours sit at the muted floor, and under reduced
+motion all four report `animation-name: none` with the agent names at full
+contrast.

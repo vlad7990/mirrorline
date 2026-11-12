@@ -23,12 +23,26 @@ export interface SectionProps extends React.HTMLAttributes<HTMLElement> {
   tone?: 'page' | 'subtle'
   /** Tighter vertical rhythm, for short bands. */
   size?: 'md' | 'lg'
+  /**
+   * A full-bleed layer behind the column — the images behind a scrolling
+   * section (`docs/design/MOTION_STUDY.md` §3).
+   *
+   * Full-bleed is the whole point, so it cannot simply be a child: children
+   * sit inside the centred 1200px column. It renders before the column and
+   * below it, and switches the band to `relative isolate overflow-hidden`.
+   *
+   * It is decorative and must say so — `aria-hidden`, and a scrim heavy
+   * enough that nothing on top of it loses contrast. Any generated imagery
+   * put here still needs the section to carry its AI label, non-negotiable 4.
+   */
+  backdrop?: React.ReactNode
 }
 
 /** A full-bleed band with a centred 1200px column. */
 export function Section({
   tone = 'page',
   size = 'lg',
+  backdrop,
   className,
   children,
   ...props
@@ -38,11 +52,23 @@ export function Section({
       className={cn(
         tone === 'subtle' ? 'bg-surface-subtle' : 'bg-background',
         size === 'lg' ? 'py-16 sm:py-20' : 'py-12 sm:py-14',
+        // Only when there is a backdrop: `relative` gives it something to
+        // position against, and the clip stops a parallax layer spilling
+        // into the bands above and below as it travels.
+        //
+        // `overflow-clip` rather than `overflow-hidden`, and that is not
+        // interchangeable here: `hidden` establishes a scroll container, and
+        // a view timeline is measured against its nearest scrollport. A
+        // parallax layer inside a `hidden` band is measured against the band
+        // it cannot move within, so it freezes at a constant progress. `clip`
+        // suppresses overflow without becoming a scrollport.
+        backdrop ? 'relative isolate overflow-clip' : undefined,
         className,
       )}
       {...props}
     >
-      <div className="mx-auto w-full max-w-[1200px] px-5 sm:px-8">{children}</div>
+      {backdrop}
+      <div className="relative mx-auto w-full max-w-[1200px] px-5 sm:px-8">{children}</div>
     </section>
   )
 }

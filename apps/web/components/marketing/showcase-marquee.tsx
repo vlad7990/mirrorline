@@ -22,6 +22,7 @@
  */
 
 import { THUMBNAIL_COLORS, cn } from '@mirrorline/ui'
+import * as React from 'react'
 
 import { SHOWCASE_CARDS, type ShowcaseCard } from './home-content'
 
@@ -48,14 +49,37 @@ function Rail({ cards, direction, durationSeconds, label }: RailProps) {
       role="group"
       aria-label={label}
       tabIndex={0}
-      className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      /* `rail-track` names the view timeline the rail inside reads. It has to
+         live here rather than on the rail: this element is an `overflow-x`
+         scroll container, so an anonymous `view()` on a descendant would be
+         measured horizontally *inside* it — permanently covered, permanently
+         parked. This wrapper's own scrollport is the document. */
+      className="rail-track overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
+      {/* Both classes on purpose, and the order in theme.css decides which
+          wins. The timer marquee is the floor; where the browser has view
+          timelines, `.rail-scroll-*` is defined later and takes over, so the
+          rail answers the scroll instead of running on a clock — stop
+          scrolling and it stops, rather than drifting at the reader.
+
+          Under reduced motion neither applies: the timer classes are listed
+          in the `reduce` block and the scroll classes live inside
+          `no-preference`. The rail is still scrollable by hand, which is why
+          the wrapper is focusable. */}
       <ul
         className={cn(
           'm-0 flex w-max list-none gap-4 p-0',
-          direction === 'left' ? 'animate-marquee-left' : 'animate-marquee-right',
+          direction === 'left'
+            ? 'animate-marquee-left rail-scroll-left'
+            : 'animate-marquee-right rail-scroll-right',
         )}
-        style={{ animationDuration: `${durationSeconds}s` }}
+        /* A variable, not `animationDuration`. An inline duration beats every
+           class, and a scroll-driven animation needs `auto` to span its
+           timeline — a fixed one finishes instantly and parks at the end,
+           which is exactly what the rail did until this was measured. The
+           timer fallback reads the variable; the scroll-driven path is left
+           on `auto`. */
+        style={{ '--marquee-duration': `${durationSeconds}s` } as React.CSSProperties}
       >
         {doubled.map((card, index) => {
           const isDuplicate = index >= cards.length

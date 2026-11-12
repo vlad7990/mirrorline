@@ -611,12 +611,22 @@
     }
   }
 
+  /* The duration comes from a custom property rather than an inline style,
+     and that is load-bearing rather than tidy. A scroll-driven animation
+     needs `animation-duration: auto` to span its timeline; any fixed
+     duration makes it finish at once and sit parked at its end state. An
+     inline `style={{ animationDuration }}` beats every class, so it would
+     break `.rail-scroll-*` on the same element and there would be no way to
+     override it from CSS. Through a variable, the timer path keeps its
+     duration and the scroll-driven path keeps `auto`. */
   .animate-marquee-left {
     animation: mirrorline-marquee-left linear infinite;
+    animation-duration: var(--marquee-duration, 60s);
   }
 
   .animate-marquee-right {
     animation: mirrorline-marquee-right linear infinite;
+    animation-duration: var(--marquee-duration, 60s);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -775,6 +785,85 @@
         animation-timeline: view();
         animation-range: entry calc(var(--index, 0) * 5%) cover 30%;
       }
+
+      /* ---------------------------------------------------------------
+         Scroll mechanics, borrowed from arigo-reactjs.vercel.app and
+         rebuilt (docs/design/MOTION_STUDY.md).
+
+         That site runs GSAP + ScrollTrigger + ScrollSmoother, none of
+         which we can use: GSAP's licence is not on non-negotiable 10's
+         allowlist. Each of these is the same idea expressed as a
+         scroll-driven CSS animation, which the browser runs off the main
+         thread and which costs no JavaScript at all.
+
+         It also ships zero `prefers-reduced-motion` handling. Everything
+         here sits inside this block, so a reader who asks for stillness
+         gets the page with none of it.
+         --------------------------------------------------------------- */
+
+      /* A row that lights as it reaches the middle of the screen and dims
+         again as it leaves — the "text appearing and disappearing" device.
+
+         **It dims, it never disappears.** `mirrorline-reveal` carries the
+         same warning and it was learned the hard way: a view-timeline
+         animation holds its start state, so a row parked at the start sits
+         at that contrast for as long as it stays there. Fading real text
+         toward transparent would put it below 4.5:1 on screen, which axe
+         failed us for once already. Both ends of this are readable. */
+      .scroll-lit {
+        animation: mirrorline-scroll-lit linear both;
+        animation-timeline: view();
+        /* The middle third of the pass, not the whole of it. Measured: over
+           the full range a short row never reaches the midpoint while any
+           neighbour is near it either, so every row sat somewhere in between
+           and none ever lit. Compressing the ramp lets whichever row is at
+           the centre of the screen actually arrive at full strength. */
+        animation-range: cover 30% cover 70%;
+      }
+
+      /* A rail that travels sideways as the page travels down — "scrolling
+         left and right", driven by the reader rather than by a timer.
+
+         The marquee version runs on an infinite clock, so it moves whether
+         or not anyone is watching. Tied to a view timeline it answers the
+         scroll: stop, and it stops.
+
+         **Why a named timeline and not `view()`.** An anonymous `view()`
+         resolves against the element's nearest scrollport, and a marquee
+         rail lives inside an `overflow-x: auto` wrapper — which is one. The
+         rail was therefore measured horizontally inside its own container,
+         where it is permanently 100% covered, and sat parked at the end of
+         its travel at every scroll position. It was measured doing exactly
+         that before this comment existed.
+
+         `.rail-track` goes on the wrapper, whose own nearest scrollport is
+         the document, so it measures the band's passage down the page. The
+         rail then names that timeline instead of asking for its own. */
+      .rail-track {
+        view-timeline-name: --rail-track;
+        view-timeline-axis: block;
+      }
+
+      .rail-scroll-left {
+        animation: mirrorline-rail-left linear both;
+        animation-timeline: --rail-track;
+        animation-range: cover 0% cover 100%;
+      }
+
+      .rail-scroll-right {
+        animation: mirrorline-rail-right linear both;
+        animation-timeline: --rail-track;
+        animation-range: cover 0% cover 100%;
+      }
+
+      /* A layer that travels slower than the page — the images behind a
+         scrolling section. The layer must be oversized by the caller, or
+         moving it exposes an edge at the extremes. */
+      .parallax-layer {
+        animation: mirrorline-parallax linear both;
+        animation-timeline: view();
+        animation-range: cover 0% cover 100%;
+      }
     }
   }
 
@@ -806,6 +895,66 @@
 
     to {
       transform: translateY(0);
+    }
+  }
+
+  /* Dim, lit, dim. The midpoint is where the row sits at the middle of the
+     screen, which is where the reader is looking.
+
+     `color` rather than `opacity`, so what changes is a known token pair and
+     not an arbitrary blend against whatever is behind. The ends use the muted
+     token, which is a documented AA pass on both bands — the row is quieter
+     at the edges of the screen, never unreadable. The slight lift is what
+     makes it read as attention rather than as a light switch. */
+  @keyframes mirrorline-scroll-lit {
+    0% {
+      color: var(--color-text-muted);
+      transform: translateY(6px);
+    }
+
+    50% {
+      color: var(--color-text);
+      transform: translateY(0);
+    }
+
+    100% {
+      color: var(--color-text-muted);
+      transform: translateY(-6px);
+    }
+  }
+
+  /* The scroll-driven rails. Short travel on purpose: this runs across the
+     whole time the band is on screen, and a long pass would outrun the
+     reader and leave the rail parked at its end for the rest of the scroll. */
+  @keyframes mirrorline-rail-left {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform: translateX(-16%);
+    }
+  }
+
+  @keyframes mirrorline-rail-right {
+    from {
+      transform: translateX(-16%);
+    }
+
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  /* The backdrop drifts against the scroll. 6% each way against a layer the
+     caller has oversized, so the edge never comes into frame. */
+  @keyframes mirrorline-parallax {
+    from {
+      transform: translateY(-6%);
+    }
+
+    to {
+      transform: translateY(6%);
     }
   }
 

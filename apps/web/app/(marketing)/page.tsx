@@ -24,6 +24,7 @@ import * as React from 'react'
 import { LOOP_CLOSING_LINE, PUBLIC_AGENTS } from '@/components/marketing/agents'
 import { Choices } from '@/components/marketing/choices'
 import { CutWall } from '@/components/marketing/cut-wall'
+import { ReelBackdrop } from '@/components/marketing/reel-backdrop'
 import { Faq, type FaqItem } from '@/components/marketing/faq'
 import { GateReadout } from '@/components/marketing/gate-readout'
 import { CountUp } from '@/components/marketing/count-up'
@@ -319,7 +320,11 @@ export default function LandingPage() {
       </Section>
 
       {/* The output, as proof ------------------------------------------- */}
-      <Section aria-labelledby="proof-heading">
+      {/* The one band that may carry a generated backdrop: it already states
+          that every frame is AI-generated and that the presenter is not a
+          real person, so the layer behind the panel is covered by the same
+          disclosure. See ReelBackdrop's own note. */}
+      <Section aria-labelledby="proof-heading" backdrop={<ReelBackdrop />}>
         <SectionHeading
           id="proof-heading"
           eyebrow="The output"
@@ -342,7 +347,17 @@ export default function LandingPage() {
       {/* The showcase --------------------------------------------------- */}
       {/* Full-bleed: the rails are meant to run off both edges, so this one
           section opts out of the 1200px column the others keep. */}
-      <section className="band-ink-alt overflow-hidden py-16 sm:py-20" aria-labelledby="showcase-heading">
+      {/* `overflow-x-clip`, not `overflow-hidden`, and the difference is
+          load-bearing: `hidden` establishes a scroll container, which becomes
+          the scrollport every view timeline inside it is measured against.
+          The scroll-driven rails were frozen at a constant 54% of their
+          timeline because of it — they never move relative to this section,
+          only relative to the page. `clip` suppresses the overflow without
+          creating a scroll container, so the rails see the document again. */}
+      <section
+        className="band-ink-alt overflow-x-clip py-16 sm:py-20"
+        aria-labelledby="showcase-heading"
+      >
         <div className="mx-auto mb-10 w-full max-w-[1200px] px-5 sm:px-8">
           <h2 id="showcase-heading" className="m-0 max-w-[20ch] text-site-h2 text-on-ink-900">
             Made for people who <span className="gold-phrase">sell what they know.</span>
@@ -519,7 +534,16 @@ export default function LandingPage() {
             const isLast = index === PUBLIC_AGENTS.length - 1
 
             return (
-              <li key={agent.id} className="flex gap-4 sm:gap-5">
+              /* Each agent lights as it reaches the middle of the screen and
+                 dims again as it leaves, so the hand-off is read at the pace
+                 the reader scrolls rather than arriving all at once. The
+                 seven are a sequence, which is the one thing a static ladder
+                 cannot say. See docs/design/MOTION_STUDY.md §1. */
+              /* `text-text` is the resting colour the name inherits when the
+                 animation is absent — no scroll-timeline support, or reduced
+                 motion. Without it the heading would fall back to whatever
+                 the band happens to set. */
+              <li key={agent.id} className="scroll-lit flex gap-4 text-text sm:gap-5">
                 <div className="flex flex-col items-center gap-1.5">
                   {/* The step number repeats what the <ol> already says, so it
                       is decoration for the eye only. It is the machine's own
@@ -540,7 +564,11 @@ export default function LandingPage() {
                 </div>
                 <div className={cn('flex min-w-0 flex-col gap-1', isLast ? 'pb-0' : 'pb-6')}>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <h3 className="m-0 font-heading text-subtitle text-text">{agent.name}</h3>
+                    {/* No colour of its own: it inherits the row's, which is
+                        what `.scroll-lit` animates. The description stays
+                        muted throughout — lighting both would be a section
+                        that flashes rather than one that reads. */}
+                    <h3 className="m-0 font-heading text-subtitle">{agent.name}</h3>
                     {isGate ? (
                       <span className="rounded-full bg-success-soft px-2.5 py-0.5 text-caption font-semibold text-on-success-soft">
                         The gate
