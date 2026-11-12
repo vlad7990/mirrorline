@@ -415,7 +415,8 @@ never changes becomes manufactured scarcity, which is the thing
 non-negotiable 7 exists to stop.
 
 **Needs Vlad:** confirm 4 is the real number. It is the only figure on the
-public site that is a commitment rather than sample data.
+public site that is a commitment rather than sample data. *Answered in D27:
+confirmed, 4 stands.*
 
 ## 2026-11-11 · D22 · The hero takes an upload, not a link
 
@@ -573,4 +574,68 @@ deliberately not a theme.
 clipping apps, "$4,000+ salary" for an in-house editor — under the note
 "Typical figures, our estimates." The handoff itself says marketing must
 validate these before launch. They are claims about third parties and the only
-numbers on the site we cannot derive ourselves.
+numbers on the site we cannot derive ourselves. *Answered in D27: the rows stay
+figure-free.*
+
+## 2026-11-11 · D26 · The app restyle as a token swap, not nine screen edits
+
+Recorded late. `DESIGN.md` and `packages/ui/src/styles/theme.css` both cite
+D26 for the gold brand hue, but the entry itself was never written — the
+reasoning lived only in commit `0ed132e`. This is that reasoning, so the
+citations resolve.
+
+The studio's palette is token-driven, so six values re-hue every screen at
+once:
+
+```
+primary  #C8401C -> #7A5C0F light / #8A6A14 dark   (white 6.24:1 / 5.06:1)
+accent   #FF5A36 -> #C8A24A light / #F5B83D dark
+```
+
+**Gold cannot hold one value across the themes, where the coral could.** Gold
+is a light hue, so the light theme needs it deeper for white to clear AA on
+the fill. The `.dark` block now overrides `primary` explicitly rather than
+inheriting it, which is a structural change the coral never needed and the one
+thing about this swap that is not symmetrical.
+
+Structure, status chips, neutrals and the viewer surface are untouched. The
+contrast suite proves every pair still clears 4.5:1 and that white-on-accent
+is still banned at 2.4:1.
+
+**What this is not.** The handoff documents the app in the *coral* palette
+(`README` line 106). Gold for the app is a one-line recommendation at line 21,
+not a design — there are **no gold app mockups in the bundle**. So this makes
+the studio share the site's brand family; it is not a transcription the way the
+site was. Calling it "the app restyle" would overstate it. The Light/Dark/System
+setting the same line asks for already existed.
+
+Also corrected here: `DESIGN.md` front-matter still carried `thumb: 6px` from
+before D20, and its brand entries were stale.
+
+**Needs Vlad:** whether the studio wants a real redesign on top of this.
+*Answered in D27: deferred.*
+
+## 2026-11-11 · D27 · Three answers from Vlad, closing the open Needs-Vlad lines
+
+Asked at the start of the next session rather than assumed, because all three
+were marked for him.
+
+**PILOT_PLACES stays 4** (D21). Confirmed as the real intake number, which
+closes the only figure on the public site that is a commitment rather than
+sample data. The risk written at the constant does not go away: a capacity line
+that never changes becomes manufactured scarcity. The constant is the place to
+notice that, and `CapacityBar` still removes itself at zero.
+
+**The comparison rows stay figure-free** (D23, D25). No competitor costs go on
+the site. The handoff's "$20–$100" and "$4,000+ salary" are claims about third
+parties under a "typical figures, our estimates" hedge, and we would have to
+stand behind them. D23's argument holds on its own: the rows are approaches,
+and what the section actually argues is what a method costs you in rights and
+risk, not what it costs in dollars.
+
+**The studio redesign is deferred** (D25, D26). Public site first, which is
+D25's own order of work and the handoff's own "known theme split"
+recommendation. The studio keeps the re-hued glass-box system so the engine
+path stays working while the public site changes underneath it. This is a
+deferral and not a decision that the re-hue was sufficient — there are still no
+gold app mockups to build against.
