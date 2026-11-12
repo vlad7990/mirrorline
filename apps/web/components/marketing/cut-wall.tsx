@@ -70,7 +70,13 @@ interface CutFrameProps {
 function CutFrame({ cut, position }: CutFrameProps) {
   return (
     <li
-      className="log-in stagger flex min-w-0 flex-col gap-2"
+      /* `reveal-item`, not `log-in stagger`. `.log-in` runs on mount, and
+         this wall sits far below the fold: every tile finished animating
+         before the reader had scrolled anywhere near it, so the wall had no
+         arrival at all. A view timeline ties it to the scroll instead, and
+         the index wraps at the column count so each row arrives in sequence
+         rather than as a block. */
+      className="reveal-item flex min-w-0 flex-col gap-2"
       style={{ '--index': position % STAGGER_CEILING } as React.CSSProperties}
     >
       <VideoThumb

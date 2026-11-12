@@ -749,3 +749,44 @@ standing in.
 Cost: 90 credits including the test clip, leaving 77.5. All five gates pass —
 lint, typecheck, 269 unit tests, build, licence-check, and e2e at 101 passed
 with no flake this run.
+
+## 2026-11-12 · D30 · The cut wall's entrance was animating where nobody could see it
+
+`DESIGN_BACKLOG.md` calls the macro animation "barely… no orchestrated
+entrance". Auditing before adding anything turned up why, and it was a bug
+rather than an absence.
+
+**`.log-in` runs on mount, not on scroll.** The cut wall's twelve tiles
+carried `log-in stagger`, which is a keyframe animation with a delay — so all
+twelve played their arrival at page load, twelve sections below the fold, and
+had long finished by the time a reader scrolled to them. The wall had no
+entrance at all. That is the worst kind of missing motion: the code says it is
+there, and it reads as deliberate.
+
+`.log-in` is right where it came from — a log line arriving in an agent
+transcript, already on screen. It is wrong for anything below the fold.
+
+**`.stagger` cannot fix it, and that is the interesting part.** It sets
+`animation-delay`, and a view-timeline animation ignores delay outright: its
+progress is scroll position, not elapsed time. The two systems in the file do
+not compose. The scroll-driven equivalent of a delay is a later *range*, so
+`.reveal-item` pushes each item's range start 5% deeper per `--index`.
+Measured mid-entry, a row of six sits at 9.8, 10.4, 11.0, 11.8, 12.6 and
+13.5px of travel — a cascade rather than a block.
+
+**Index only where items share a row.** Applied to a vertical stack it makes
+things worse, not better: every element has its own view timeline, so a stack
+already arrives one card at a time, and an index offset would hold the
+seventh card still until it was a third of the way up the screen. That reads
+as lag. The trust rules take plain `.reveal`; the cut wall and the audience
+grid take `.reveal-item` with the index wrapped at the column count — unwrapped,
+a twelve-item grid's last tiles would never finish moving.
+
+Movement only, no opacity, inheriting the lesson written at `mirrorline-reveal`:
+a view-timeline animation holds its start state until the element enters, so a
+fade genuinely parks text at reduced contrast and axe was right to fail it.
+
+**No library.** `motion@14.12.0` stays uninstalled. It is MIT and cleared
+(D19) and remains the right answer for gesture, spring or layout animation —
+none of which this is. This is six lines of CSS the browser runs off the main
+thread.

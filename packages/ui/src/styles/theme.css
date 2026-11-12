@@ -754,6 +754,27 @@
         animation-timeline: view();
         animation-range: entry 0% cover 32%;
       }
+
+      /* One item in a row or grid that should arrive as a sequence.
+
+         `.stagger` cannot do this job. It sets `animation-delay`, and a
+         view-timeline animation ignores delay entirely — its progress is
+         scroll position, not elapsed time. The equivalent is to push each
+         item's range start a little deeper, so items in the same row cross
+         their start line one after another as the reader scrolls.
+
+         Set --index per child exactly as `.stagger` wants it:
+
+           <li className="reveal-item" style={{ '--index': index }}>
+
+         5% a step against a 30% range keeps the sixth item well inside the
+         range rather than parked at its start state. Wrap the index at the
+         column count, or a long grid's last rows never finish moving. */
+      .reveal-item {
+        animation: mirrorline-reveal linear both;
+        animation-timeline: view();
+        animation-range: entry calc(var(--index, 0) * 5%) cover 30%;
+      }
     }
   }
 

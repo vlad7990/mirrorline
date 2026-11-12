@@ -19,6 +19,7 @@ import { Button, Card, cn, FunnelBar } from '@mirrorline/ui'
 import { ArrowRight, Film, Plug, Repeat, Tag } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import * as React from 'react'
 
 import { LOOP_CLOSING_LINE, PUBLIC_AGENTS } from '@/components/marketing/agents'
 import { Choices } from '@/components/marketing/choices'
@@ -417,8 +418,14 @@ export default function LandingPage() {
           headingClassName="text-site-h2 font-serif"
         />
         <ul className="m-0 mt-10 grid list-none grid-cols-1 gap-5 p-0 sm:grid-cols-2 lg:grid-cols-4">
-          {AUDIENCES.map((audience) => (
-            <li key={audience.number}>
+          {AUDIENCES.map((audience, position) => (
+            /* Four across at lg, so all four enter together and need the
+               index to arrive as a sequence rather than a block. */
+            <li
+              className="reveal-item"
+              key={audience.number}
+              style={{ '--index': position } as React.CSSProperties}
+            >
               <Card className="flex h-full flex-col gap-3">
                 <span className="machine text-metric text-gold-deep">{audience.number}</span>
                 <h3 className="m-0 font-heading text-title text-text">{audience.title}</h3>

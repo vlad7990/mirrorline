@@ -153,8 +153,14 @@ export default function TrustPage() {
                  DESIGN_BACKLOG.md. A rules page is the one place a
                  name-and-definition column is the natural shape rather than
                  decoration. Single column below lg, where there is no room
-                 for two and the stack is the right answer anyway. */
-              className="grid gap-x-10 gap-y-3 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]"
+                 for two and the stack is the right answer anyway.
+
+                 `reveal` without an index: each card has its own view
+                 timeline, so a vertical stack already arrives one at a time.
+                 An index offset here would hold card seven still until it was
+                 a third of the way up the screen, which reads as lag. The
+                 index belongs where items share a row. */
+              className="reveal grid gap-x-10 gap-y-3 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]"
             >
               {/* No "Rule N of 7" counter: the <ol> carries the count for
                   assistive tech, and the rules are not ranked. */}
