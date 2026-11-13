@@ -12,24 +12,42 @@
  */
 
 import { AlertBar } from '@mirrorline/ui'
+import type * as React from 'react'
 
 import { RAISED_ALERTS, type KpiAlert } from '@/lib/studio/insights'
 
 /**
  * The sentence that says why the user is seeing this now.
  *
- * It has to differ by kind, and that is the whole point of the fix. The old
- * single line read "2 weeks running — we raise this after two, not after one"
- * under *every* alert, including the disconnection — which was false twice
- * over: the disconnection had not been running for two weeks, and we no
- * longer wait two weeks to mention one.
+ * It has to differ by kind. The single line this replaced read "2 weeks
+ * running — we raise this after two, not after one" under *every* alert,
+ * including the disconnection, which was false twice over: the disconnection
+ * had not been running for two weeks, and we no longer wait two weeks to
+ * mention one.
+ *
+ * **Only the measurements are mono.** DESIGN.md "Typography — two voices"
+ * gives Geist Mono to "everything the agents produced or measured" — the date
+ * posting stopped, the number of weeks. The explanation around them is the
+ * studio talking, and a whole sentence set in mono read as a readout of
+ * something rather than as us saying it. This returns a node rather than a
+ * string because that split cannot be expressed in one.
  */
-function timingNote(alert: KpiAlert): string {
+function timingNote(alert: KpiAlert): React.ReactNode {
   if (alert.kind === 'connection') {
-    return `Posting stopped on ${alert.since}. We raise this the same day — there is nothing to wait and see about.`
+    return (
+      <>
+        Posting stopped on <span className="machine">{alert.since}</span>. We raise this the same
+        day — there is nothing to wait and see about.
+      </>
+    )
   }
 
-  return `${alert.weeksOffTrack} weeks running — we raise this after two, not after one.`
+  return (
+    <>
+      <span className="machine">{alert.weeksOffTrack}</span> weeks running — we raise this after
+      two, not after one.
+    </>
+  )
 }
 
 export interface AlertsBoardProps {
@@ -54,7 +72,7 @@ export function AlertsBoard({ alerts = RAISED_ALERTS }: AlertsBoardProps) {
           title={alert.title}
           description={
             <>
-              {alert.message} <span className="machine">{timingNote(alert)}</span>
+              {alert.message} {timingNote(alert)}
             </>
           }
         />
