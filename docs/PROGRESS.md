@@ -107,9 +107,27 @@ dark. No token value changed; the bug was scope and so is the fix.
   screen-reader user has been through this product, and saying so beats a
   clean badge.
 
-**Still to come:** PR8 (the studio: Results as seven tabs, Goals and KPIs,
-Accounts, Portfolio, onboarding) and PR9 (Supabase migrations, the agents
-spec, the two audits, the banned-phrase CI test and the final sweep).
+### PR8 · the studio — `ff594ce`
+
+**https://mirrorline-3rccgplhu-vn-mn-product-group.vercel.app**
+
+- Results is 15 §5's seven tabs, as links on `?tab=` rather than a widget —
+  every tab has a URL, the panel is server-rendered, and the axe sweep now
+  walks all seven instead of the one a widget would have left open. Goals and
+  KPIs, Accounts and Portfolio are new screens sharing those tabs' components.
+- Home drops the four activity tiles for the goal bar, three KPI cards and the
+  off-track alerts; onboarding asks the 2×2 and takes the industry as **free
+  text** (the three-item dropdown is gone, and nothing replaces it); Trends is
+  the Niche Scan with views per follower; Remake shows the Originality Gate's
+  own result including the draft it rejected; Settings gains Repost Watch,
+  plain billing with a visible cancel, full file export and custom KPIs.
+- **Two honesty rules are now held by test, not by comment:** an unconnected
+  account renders a connect prompt rather than zeroed KPIs, and the ledger
+  names the sales column it has no data for instead of filling it with zeroes.
+  axe also caught the KPI card's gold failing AA on the studio's dark surface.
+
+**Still to come:** PR9 (Supabase migrations, the agents spec, the two audits,
+the banned-phrase CI test and the final sweep).
 
 ---
 
