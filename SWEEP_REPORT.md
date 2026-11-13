@@ -95,20 +95,18 @@ for the changelog that turned out not to match anything.
 
 ---
 
-## 4 · Dead code: one file, left in place
+## 4 · Dead code: one file, now removed
 
-`components/results/report-button.tsx` has no call sites. It opened a toast
-saying the weekly-report PDF was not ready; the Ledger tab now has a real CSV
-download and a real print-to-PDF, so the stub is superseded and contradicts the
-shipped behaviour.
+`components/results/report-button.tsx` had no call sites. It opened a toast
+saying the weekly-report PDF was not ready; the Ledger tab has a real CSV
+download and a real print-to-PDF, so the stub was superseded and contradicted
+the shipped behaviour.
 
-**It is still in the repo.** CLAUDE.md working rules: "never delete files you
-did not create." Flagged here instead, as the working rules intend. One line to
-remove, with no other change:
-
-```sh
-git rm apps/web/components/results/report-button.tsx
-```
+It sat here as a finding for a day because CLAUDE.md's working rules say
+"never delete files you did not create", which made the deletion Vlad's to
+make. **He authorised it on 13 November and it is gone**, along with the
+comment in `ledger-export.tsx` that pointed at it — a comment naming a deleted
+file is the next person's wild goose chase.
 
 `components/results/funnel-card.tsx` was checked for the same reason and is
 **not** dead — it is still the four-stage funnel used elsewhere.

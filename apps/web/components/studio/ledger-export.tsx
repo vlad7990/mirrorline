@@ -5,9 +5,10 @@
  *
  * **Both are real.** The CSV is built here and downloaded; the PDF is the
  * browser's own print-to-PDF, which is a genuine PDF of the ledger rather than
- * a button that opens a "coming soon" toast. `report-button.tsx` was that
- * toast, and a stub is the right answer only while there is no honest
- * alternative — here there is one, and it is four lines.
+ * a button that opens a "coming soon" toast. The studio had exactly that
+ * toast until this landed, and a stub is the right answer only while there is
+ * no honest alternative — here there is one, and it is four lines. The stub
+ * was deleted on 13 November, once nothing pointed at it.
  *
  * The CSV is assembled rather than templated so a value containing a comma
  * cannot split a row. The ledger's own fields are numbers and short week

@@ -56,20 +56,26 @@ Vlad's decision (D33); it widens nothing else.
 
 ## Three findings
 
-**1 · `.env.example` and the code disagree on several names.** The file offers
-`STRIPE_SECRET_KEY`; `lib/billing/checkout.ts:41` reads
-`STRIPE_TEST_SECRET_KEY`. It also offers `NEXT_PUBLIC_SUPABASE_URL` and
-`NEXT_PUBLIC_SUPABASE_ANON_KEY`, which nothing reads — the only Supabase access
-is server-side through the service-role key, which is correct, and which makes
-those two an invitation to expose a browser client that does not exist.
-`N8N_WEBHOOK_URL`, which the code does read, is missing from the file; it
-offers `N8N_BASE_URL` and `N8N_API_KEY` instead, and nothing reads either.
+**1 · `.env.example` disagreed with the code on four names. Fixed 13 November.**
+The file offered `STRIPE_SECRET_KEY` while `lib/billing/checkout.ts:41` reads
+`STRIPE_TEST_SECRET_KEY`; it offered `NEXT_PUBLIC_SUPABASE_URL` where the code
+reads `SUPABASE_URL`; and it offered `N8N_BASE_URL` plus `N8N_API_KEY` where
+the code reads `N8N_WEBHOOK_URL`. Someone pasting a Stripe key into
+`STRIPE_SECRET_KEY` got a silent no-op and would have concluded billing was
+broken.
 
-*Severity: low, and worth fixing before anyone follows the file.* Someone
-pasting a Stripe key into `STRIPE_SECRET_KEY` gets a silent no-op and concludes
-billing is broken. Left as a finding rather than fixed in this PR: renaming a
-variable in `.env.example` while Vlad may already have a populated `.env.local`
-is a change to make with him watching.
+Three names were also removed because nothing read them:
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` and
+`N8N_API_KEY`. The two `NEXT_PUBLIC_` ones were worse than unused — the only
+Supabase access is server-side through the service-role key, which is correct,
+so those two invited someone to wire up a browser client this app does not
+have.
+
+The file now has three sections — read today, not read yet, and set on the
+command line — so it is honest about which keys do anything, and it carries
+rename instructions for an existing `.env.local`. Held as a finding for a day
+on purpose: renaming a variable while Vlad may already have a populated
+`.env.local` was a change to make with him watching, and he authorised it.
 
 **2 · The Stripe key name is load-bearing, and that is deliberate.**
 `STRIPE_TEST_SECRET_KEY` rather than `STRIPE_SECRET_KEY` means a live key

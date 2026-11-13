@@ -36,16 +36,16 @@ pushed. The `Branch: main` line above is stale; this is where the work is.
 
 ### Open — the five follow-ups
 
-**Three of the five are done.** The two that remain were deferred on purpose,
-and both are one-line changes waiting on a word from Vlad.
+**All five are done.** Four and five waited a day on purpose and were
+authorised on 13 November.
 
 | # | Follow-up | State | Where it lives |
 |---|---|---|---|
 | 1 | Studio nav back to 8 items | **Done** — `nav-items.ts`, plus three replacement entry points | see below |
 | 2 | Immediate connection alerts | **Done** — `insights.ts`, `alerts-board.tsx`, the `alerts` CHECK | see below |
 | 3 | Industry-neutral demo workspaces | **Done** — `portfolio.ts`, `workspace-switcher.tsx` | see below |
-| 4 | `.env.example` fix | **Not started**, deliberately — Needs Vlad C | `.env.example` |
-| 5 | Remove `report-button.tsx` | **Not started**, deliberately — Needs Vlad D | `apps/web/components/results/report-button.tsx` |
+| 4 | `.env.example` fix | **Done** — four names corrected, three unread ones removed | `.env.example` |
+| 5 | Remove `report-button.tsx` | **Done** — deleted, with the comment that named it | `SWEEP_REPORT.md` §4 |
 
 Detail where it is not obvious from the table:
 
@@ -152,9 +152,15 @@ Full detail under "Needs Vlad" below; one line each:
   unexecuted; treat the first `db push` as a first run.
 - **B** — a Stripe **test-mode** key as `STRIPE_TEST_SECRET_KEY`. The code
   refuses anything not starting `sk_test_`.
-- **C** — `.env.example` disagrees with the code on four variable names. Left
-  unfixed because you may already have a populated `.env.local`.
-- **D** — one-line `git rm` of the dead `report-button.tsx`.
+- ~~**C** — `.env.example` disagrees with the code on four variable names.~~
+  **Done 13 November.** `SUPABASE_URL`, `STRIPE_TEST_SECRET_KEY` and
+  `N8N_WEBHOOK_URL` are the real names now, three unread ones are gone, and
+  the file carries the rename list. **If you already have a `.env.local`,
+  rename `NEXT_PUBLIC_SUPABASE_URL` → `SUPABASE_URL`, `STRIPE_SECRET_KEY` →
+  `STRIPE_TEST_SECRET_KEY`, `N8N_BASE_URL` → `N8N_WEBHOOK_URL`** — that file is
+  git-ignored, so nothing here could do it for you.
+- ~~**D** — one-line `git rm` of the dead `report-button.tsx`.~~ **Done
+  13 November**, with the comment that pointed at it.
 - **E** — the written IP assignment, still the single gate on the whole
   GenAIUniq reuse list. `docs/provenance.md`'s register stays empty until it
   exists.
@@ -502,19 +508,26 @@ B. **A Stripe test-mode key as `STRIPE_TEST_SECRET_KEY`.** Not
    `STRIPE_SECRET_KEY` — see C — and not a live key: `lib/billing/checkout.ts`
    rejects anything that does not begin `sk_test_`, and a unit test holds that.
 
-C. **`.env.example` disagrees with the code on four variable names**
-   (`SERVICES_AUDIT.md` finding 1). It offers `STRIPE_SECRET_KEY`,
-   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `N8N_BASE_URL`
-   and `N8N_API_KEY`; the code reads `STRIPE_TEST_SECRET_KEY`, `SUPABASE_URL`,
-   `SUPABASE_SERVICE_ROLE_KEY` and `N8N_WEBHOOK_URL`. Someone following the
-   file gets a silent no-op. **Left unfixed on purpose** — you may already
-   have a populated `.env.local`, and renaming a variable under you is the
-   wrong kind of surprise. One word from you and it is a two-minute change.
+C. ~~**`.env.example` disagrees with the code on four variable names.**~~
+   **Done 13 November.** The file now reads `SUPABASE_URL`,
+   `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_TEST_SECRET_KEY` and
+   `N8N_WEBHOOK_URL` — exactly what the code reads — in three sections: read
+   today, not read yet, and set on the command line. `N8N_API_KEY` and the two
+   `NEXT_PUBLIC_` names are gone, because nothing read them and the public
+   ones invited a browser client this app does not have.
 
-D. **`git rm apps/web/components/results/report-button.tsx`** when you are
-   happy to lose it. It is dead — the Ledger tab has a real CSV download and a
-   real print-to-PDF now — and it is left in place only because the working
-   rules say never to delete a file I did not create (`SWEEP_REPORT.md` §4).
+   **One thing only you can do:** if you already have a `.env.local`, rename
+   `NEXT_PUBLIC_SUPABASE_URL` → `SUPABASE_URL`, `STRIPE_SECRET_KEY` →
+   `STRIPE_TEST_SECRET_KEY`, and `N8N_BASE_URL` → `N8N_WEBHOOK_URL`. That file
+   is git-ignored and was never read here, so nothing in this repo could
+   migrate it for you. Until then those three keys are no-ops, exactly as
+   before — nothing breaks, nothing starts working either.
+
+D. ~~**`git rm apps/web/components/results/report-button.tsx`**~~ **Done
+   13 November.** Dead since the Ledger tab got a real CSV download and a real
+   print-to-PDF; held back only because the working rules say never to delete
+   a file I did not create. Removed with the comment in `ledger-export.tsx`
+   that named it (`SWEEP_REPORT.md` §4).
 
 E. **The written IP assignment** remains the single gate on the whole
    GenAIUniq reuse list. `docs/provenance.md`'s register is empty and stays
