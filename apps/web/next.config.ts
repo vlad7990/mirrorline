@@ -27,7 +27,14 @@ const nextConfig: NextConfig = {
    * rather than 404.
    */
   async redirects() {
-    return [{ source: '/how-it-works', destination: '/agents', permanent: true }];
+    /*
+     * `/how-it-works` used to 308 to `/agents`: the path existed in the old
+     * site map with no page behind it, and the agents page was the closest
+     * thing. 16 §4 makes it a real route — Scan → Make → Post & prove, with
+     * the first week's timeline — so the redirect is gone rather than
+     * shadowing the page that now answers to that name.
+     */
+    return [];
   },
 };
 

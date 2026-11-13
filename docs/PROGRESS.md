@@ -39,6 +39,28 @@ last. Every one is a preview; **nothing is promoted to production**.
   rhythm (D39). "What else you could do instead" is merged into the new
   table, per 16 §3 row 4.
 
+### PR3+PR4 · the metrics section, and the full 19-section order — `43af3ae`
+
+**https://mirrorline-lz6yfg7wn-vn-mn-product-group.vercel.app**
+
+- **The home page is now 16 §3's nineteen sections in 16 §3's order.** The
+  new ones are the metrics dashboard preview, "Not a farm" (which absorbs
+  "Four things we will not do"), plain billing, and a final CTA whose second
+  button follows the picker.
+- KPI cards are composed from existing tokens and carry the honesty rules as
+  *types*: the preview deliberately shows one **not-connected** KPI and one
+  labelled **projection**, because a preview of nothing but healthy green
+  numbers would flatter us in the one direction non-negotiable 7 forbids.
+- Pricing gains **Creator ($499)** and reprices **Studio to $79 as a
+  waitlist**, each plan with a "best for" that names an account type, never a
+  trade.
+
+**One `theme.css` fix (D40), a bug rather than a design change.** The band
+utilities pinned the neutral tokens and left the status ones following the
+visitor's system theme, so a green figure inside a light band rendered at
+about 1.9:1 — an AA failure that appeared only for visitors whose OS prefers
+dark. No token value changed; the bug was scope and so is the fix.
+
 ---
 
 ## Preview link

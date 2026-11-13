@@ -12,6 +12,7 @@
  * supports its own argument, never the same one twice.
  */
 
+import { cn } from '@mirrorline/ui'
 import Image from 'next/image'
 import * as React from 'react'
 
@@ -26,15 +27,21 @@ export interface PageHeroProps {
   /**
    * Basename under /shots, without the theme suffix: the component asks for
    * `<name>-light.png` and `<name>-dark.png` itself.
+   *
+   * **Optional, and left out on purpose where there is nothing honest to
+   * show.** `/compare`, `/businesses` and `/individuals` are arguments rather
+   * than product tours, and the only alternative to omitting the frame would
+   * be putting an unrelated screen beside a headline it does not illustrate.
+   * Without it the text column runs the full width rather than leaving a hole.
    */
-  shot: string
+  shot?: string
   /**
    * What the screenshot shows, for someone who cannot see it. Written as a
    * sentence about the product, not as "screenshot of the agents page".
    */
-  shotAlt: string
+  shotAlt?: string
   /** The line under the frame. Says it is sample data, every time. */
-  shotCaption: string
+  shotCaption?: string
   /** A CTA row, when the page has one. */
   action?: React.ReactNode
   /**
@@ -73,7 +80,7 @@ export function PageHero({
       {/* Top-aligned, not centred: a short text column centred against a
           tall figure pushes the headline into the middle of the viewport. */}
       <div className="grid items-start gap-10 lg:grid-cols-12 lg:gap-12">
-        <div className="flex flex-col gap-5 lg:col-span-7">
+        <div className={cn('flex flex-col gap-5', shot ? 'lg:col-span-7' : 'lg:col-span-9')}>
           {eyebrow ? <span className="site-eyebrow reveal-lead">{eyebrow}</span> : null}
           {/* Serif, and the display size rather than the hero one: a sub-page
               title is a statement, and the landing page keeps the larger of
@@ -87,11 +94,12 @@ export function PageHero({
 
         {/* Bleeds past the container on wide screens, so the frame reads as a
             crop of something larger rather than a card in a box. */}
+        {shot ? (
         <figure className="reveal m-0 lg:col-span-5 lg:-mr-[6vw] xl:-mr-[10vw]">
           <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-[0_24px_60px_-28px_rgb(14_17_22_/_0.32)]">
             <Image
               src={`/shots/${shot}-light.png`}
-              alt={shotAlt}
+              alt={shotAlt ?? ''}
               width={1440}
               height={900}
               priority
@@ -112,6 +120,7 @@ export function PageHero({
           </div>
           <figcaption className="mt-3 text-meta text-text-muted">{shotCaption}</figcaption>
         </figure>
+        ) : null}
       </div>
 
       {/* Non-negotiable 4. Unconditional, because the backdrop is: a label

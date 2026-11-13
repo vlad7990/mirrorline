@@ -25,6 +25,12 @@ const BUILT_ROUTES = new Set([
   '/terms',
   '/sign-in',
   '/sign-up',
+  // PR5
+  '/how-it-works',
+  '/metrics',
+  '/compare',
+  '/businesses',
+  '/individuals',
 ])
 
 describe('site map', () => {

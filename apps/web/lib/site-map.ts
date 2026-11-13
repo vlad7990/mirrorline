@@ -33,10 +33,10 @@ export interface SiteLink {
  */
 export const NAV_LINKS: readonly SiteLink[] = [
   { href: '/product', label: 'Product', isLive: true },
-  { href: '/how-it-works', label: 'How it works', isLive: false },
-  { href: '/metrics', label: 'Metrics', isLive: false },
+  { href: '/how-it-works', label: 'How it works', isLive: true },
+  { href: '/metrics', label: 'Metrics', isLive: true },
   { href: '/pricing', label: 'Pricing', isLive: true },
-  { href: '/compare', label: 'Compare', isLive: false },
+  { href: '/compare', label: 'Compare', isLive: true },
   { href: '/resources', label: 'Resources', isLive: false },
 ]
 
@@ -58,10 +58,10 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
     heading: 'Product',
     links: [
       { href: '/product', label: 'Product', isLive: true },
-      { href: '/how-it-works', label: 'How it works', isLive: false },
-      { href: '/metrics', label: 'Metrics', isLive: false },
+      { href: '/how-it-works', label: 'How it works', isLive: true },
+      { href: '/metrics', label: 'Metrics', isLive: true },
       { href: '/agents', label: 'Agents', isLive: true },
-      { href: '/compare', label: 'Compare', isLive: false },
+      { href: '/compare', label: 'Compare', isLive: true },
       { href: '/pricing', label: 'Pricing', isLive: true },
     ],
   },
