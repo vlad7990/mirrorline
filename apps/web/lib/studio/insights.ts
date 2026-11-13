@@ -20,7 +20,7 @@
  * is reserved for things that are actually broken — a disconnected account, a
  * blocked post.
  */
-export type AlertTone = 'attention' | 'danger'
+export type KpiAlertTone = 'attention' | 'danger'
 
 export interface KpiAlert {
   readonly id: string
@@ -30,7 +30,7 @@ export interface KpiAlert {
   readonly message: string
   /** 15 §5: an alert needs two in a row. Below that there is no alert. */
   readonly weeksOffTrack: number
-  readonly tone: AlertTone
+  readonly tone: KpiAlertTone
 }
 
 /** 15 §5. Below this a KPI is having a week, not a problem. */

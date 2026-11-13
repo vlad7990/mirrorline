@@ -21,6 +21,12 @@ import {
   isAlertWorthRaising,
 } from './insights'
 import { PORTFOLIO_TOTALS, SAMPLE_PORTFOLIO, hasAgreedTarget } from './portfolio'
+import {
+  DEFAULT_RESULTS_TAB,
+  RESULTS_TABS,
+  parseResultsTab,
+  resultsTabHref,
+} from './results-tabs'
 
 const KPI_KEYS = new Set(KPI_DEFINITIONS.map((definition) => definition.key))
 
@@ -149,6 +155,35 @@ describe('the content leaderboard', () => {
 
     // 15 §5 tab 3: "top posts by the user's goal, not by views".
     expect(sends).toEqual(descending)
+  })
+})
+
+describe('the Results tabs', () => {
+  test('carries the seven tabs 15 §5 names, in its order', () => {
+    expect(RESULTS_TABS.map((tab) => tab.label)).toEqual([
+      'Overview',
+      'Funnel',
+      'Content',
+      'Accounts',
+      'Goals and KPIs',
+      'Ledger',
+      'Agent insights',
+    ])
+  })
+
+  test('falls back to Overview for a stale or hand-edited tab', () => {
+    // A bad link should land the reader on their dashboard, not on an error.
+    expect(parseResultsTab('nonsense')).toBe(DEFAULT_RESULTS_TAB)
+    expect(parseResultsTab(undefined)).toBe(DEFAULT_RESULTS_TAB)
+  })
+
+  test('reads the first value when a parameter repeats', () => {
+    expect(parseResultsTab(['ledger', 'funnel'])).toBe('ledger')
+  })
+
+  test('gives the default tab the bare path, so each screen has one URL', () => {
+    expect(resultsTabHref('overview')).toBe('/app/results')
+    expect(resultsTabHref('ledger')).toBe('/app/results?tab=ledger')
   })
 })
 
