@@ -279,7 +279,7 @@ export default function LandingPage() {
               Your own footage, <span className="gold-phrase">and nothing else.</span>
             </>
           }
-          lead="Drop in a talk, a podcast or a webinar you recorded. The run happens on this machine, and the rights question is asked before anything starts rather than after."
+          lead="Drop in a talk, a podcast or a webinar you recorded. The rights question is asked before anything starts, rather than after."
           headingClassName="text-site-h2 font-serif"
         />
         <div className="reveal mt-8">

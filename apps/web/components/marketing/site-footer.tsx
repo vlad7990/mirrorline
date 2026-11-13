@@ -10,35 +10,20 @@
 import { LogoWordmark } from '@mirrorline/ui'
 import Link from 'next/link'
 
-interface FooterColumn {
-  readonly heading: string
-  readonly links: readonly { readonly href: string; readonly label: string }[]
-}
+import { DRAFT_LEGAL_LINKS, FOOTER_COLUMNS, liveLinks } from '@/lib/site-map'
 
-const COLUMNS: readonly FooterColumn[] = [
-  {
-    heading: 'Product',
-    links: [
-      { href: '/how-it-works', label: 'How it works' },
-      { href: '/pricing', label: 'Pricing' },
-      { href: '/trust', label: 'Our rules' },
-    ],
-  },
-  {
-    heading: 'Account',
-    links: [
-      { href: '/sign-in', label: 'Sign in' },
-      { href: '/sign-up', label: 'Create an account' },
-    ],
-  },
-  {
-    heading: 'Documents (drafts)',
-    links: [
-      { href: '/privacy', label: 'Privacy notice (draft)' },
-      { href: '/terms', label: 'Terms (draft)' },
-    ],
-  },
-]
+/**
+ * 16 §4's footer, minus routes that have not landed.
+ *
+ * A column whose links are all still unbuilt would render as a heading over
+ * nothing, so empty columns drop out entirely. The Legal column is empty until
+ * PR7, and the existing drafts stand in for it until then.
+ */
+const COLUMNS = FOOTER_COLUMNS.map((column) => ({
+  ...column,
+  heading: column.heading === 'Legal' ? 'Documents (drafts)' : column.heading,
+  links: column.heading === 'Legal' ? DRAFT_LEGAL_LINKS : liveLinks(column.links),
+})).filter((column) => column.links.length > 0)
 
 export function SiteFooter() {
   return (
@@ -47,9 +32,13 @@ export function SiteFooter() {
         <div className="flex flex-col gap-10 md:flex-row md:justify-between">
           <div className="flex max-w-[34ch] flex-col gap-3">
             <LogoWordmark size={26} />
+            {/* Industry-agnostic, per 16 §1 and 10 §1. This line used to name
+                coaches, consultants and local service businesses, which is
+                the positioning D38 retired. */}
             <p className="m-0 text-meta text-text-muted">
-              An AI content studio for coaches, consultants and local service businesses. Your own
-              footage, your own accounts, posted through the official platform APIs.
+              Short-video growth for any business or individual, in any industry. Your own footage or
+              originals we make for you, posted to your own accounts through the official platform
+              APIs.
             </p>
           </div>
 

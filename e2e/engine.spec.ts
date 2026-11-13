@@ -96,7 +96,7 @@ test('the upload keeps a way in when there is no engine', async ({ page }) => {
   // instead. Both paths share the handoff's "Show me my posts" label, so the
   // tell is the line under the field rather than the button.
   await expect(page.getByText(/We run the first cuts with you on a pilot call/)).toBeVisible()
-  await expect(page.getByText(/This runs here and now/)).toHaveCount(0)
+  await expect(page.getByText(/The run starts the moment you confirm/)).toHaveCount(0)
 })
 
 test('the upload runs the engine where there is one, behind the rights gate', async ({ page }) => {
@@ -109,8 +109,11 @@ test('the upload runs the engine where there is one, behind the rights gate', as
   const cut = page.getByRole('button', { name: 'Show me my posts' })
   await expect(cut).toBeVisible()
   await expect(cut).toBeDisabled()
-  // The live path says the run happens here; the pilot path does not.
-  await expect(page.getByText(/This runs here and now/)).toBeVisible()
+  // The live path says a run can start now; the pilot path offers a call
+  // instead. The wording changed in D39 — it used to say "on this machine",
+  // which was true of a checkout and meaningless to a visitor — but the
+  // distinction the assertion protects is the same one.
+  await expect(page.getByText(/The run starts the moment you confirm/)).toBeVisible()
 
   // The rights gate stays out of the way until there is something to confirm.
   await expect(page.getByLabel('Who owns this footage?')).toHaveCount(0)

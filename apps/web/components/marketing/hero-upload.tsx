@@ -241,10 +241,14 @@ export function HeroUpload() {
               {platform}
             </span>
           ))}
+          {/* "This runs here and now, on this machine" was true of a local
+              checkout and meaningless to a visitor, who has no machine in
+              this sentence. Removed per the master prompt; what replaces it
+              says the same thing from the reader's side. */}
           <span>
             ·{' '}
             {isLive
-              ? 'only material you own. This runs here and now, on this machine.'
+              ? 'only material you own. The run starts the moment you confirm that.'
               : 'only material you own. We run the first cuts with you on a pilot call.'}
           </span>
         </p>

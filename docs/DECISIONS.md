@@ -1240,3 +1240,93 @@ upload band below. A four-way picker in the hero reopens D34. The default,
 unless Vlad says otherwise, is to put the picker in the band directly below the
 hero, which keeps D34 and still sets the choice before any of the page's
 examples are read.
+
+## 2026-11-13 · D39 · The four open questions from D38, answered
+
+Vlad took all four defaults, so they are decisions now rather than proposals.
+
+**1. The loop section keeps its length.** D35's pin stays at
+`SCROLL_PER_AGENT = 320` across seven agents. Step 2's "shorten the 3,183px
+loop section" is **not actioned**: the height is the mechanic, and the complaint
+it came from — a static list of something that is a sequence — was fixed by the
+pin rather than by the length. Shortening it now would undo yesterday's work to
+satisfy a note written before it.
+
+**2. The light band stays, and gains a partner.** Rather than removing the one
+`band-snow`, a second light band joins it, so the ink / snow alternation reads
+as a rhythm instead of an outlier. This is the reading of "remove the lone
+light band" that keeps DESIGN.md's art direction: the complaint was that one
+light band looks like a mistake, and two look like a decision. Nineteen
+sections give it room that fourteen did not.
+
+**3. The picker sits below the hero, not in it.** D34 stands: the hero's only
+action remains the anchor. The picker opens the band directly beneath it, which
+is also where the upload control lives, so the first screenful after the hero
+is the two things a visitor can actually do. 16 §3 row 1 asks for the picker
+"in the hero"; it is one scroll below, and every section that reads the choice
+sits below *that*, so nothing is sequenced wrongly.
+
+**4. Section headings take the hero's scale and alignment, not its gradient.**
+`text-site-h2` and the hero's left edge on every section; the gold gradient
+stays on one accent phrase per *page*, as DESIGN.md requires. Applying the
+gradient to all nineteen headings would break the "one accent phrase per
+headline, never two" rule nineteen times and turn the device into wallpaper.
+
+### Two untrue things removed in the same change
+
+Both were in Step 2's list, and my first pass reported them already gone. That
+was wrong, and the way it was wrong is worth recording: the search used
+`grep --include=*.tsx` unquoted in zsh, which expands the glob against the
+current directory, fails with "no matches found" and returns nothing. A tool
+wrapper swallowed the error, so an empty result read as "the phrase is absent"
+when it actually meant "the search never ran". **An empty grep result is only
+evidence if the grep ran.**
+
+- **The fake "4 places".** `PILOT_PLACES = 4` fed "Now booking pilots · 4
+  places this month" in the header's gold strip. The constant's own comment
+  said "this must track reality" and it had never been edited, which is the
+  manufactured scarcity non-negotiable 7 exists to prevent. The strip survives,
+  carrying two things that are true: we are booking pilots, and the Niche Scan
+  is free. `capacity-bar.tsx` is deleted rather than left at zero.
+- **"The run happens on this machine."** On the home page's upload band and
+  again inside `HeroUpload`. It was true of a local checkout and meaningless to
+  a visitor, who has no machine in that sentence — and on every deployed
+  preview there is no engine at all. Replaced with the same fact from the
+  reader's side: the rights question comes before the run, and the run starts
+  when they confirm.
+
+The identical phrase survives in `engine-live.tsx`, `runner.ts` and
+`jobs.ts`. Those are the studio's engine panel and two code comments, where
+"this machine" is accurate and is addressed to whoever is running the
+checkout. The rule is about claims made to visitors, not about the word.
+
+### `isLive`, and why the nav is a table
+
+Spec 16 names twenty-odd routes that land across nine pull requests. A nav
+listing all of them from the start ships previews full of 404s; a nav edited in
+every PR conflicts in every PR. So `lib/site-map.ts` declares the whole map
+once with an `isLive` flag, the header and footer render only what exists, and
+a unit test asserts every live entry has a page behind it. Adding a route is
+one flag and one line in that test.
+
+It also closes an existing drift: the header and the footer each kept their own
+list, and the footer already linked `/how-it-works`, which has never had a
+route.
+
+### The account choice, and the one hydration trap in it
+
+`AccountChoiceProvider` resolves **URL first, then storage, then the default**.
+A link someone was sent has to beat whatever that person picked last week, or a
+shared `?who=individual&account=new` opens on the wrong reading.
+
+Storage is applied in an effect, never during render. Reading `localStorage`
+while rendering makes the server and client markup disagree, and React patches
+the difference silently rather than failing — so the bug ships. The first paint
+is always the default on both sides.
+
+The provider needs `useSearchParams`, which opts every component beneath it out
+of static rendering unless it sits inside a Suspense boundary. One boundary in
+the marketing layout keeps all seven public pages prerendered; without it
+`next build` fails the route rather than warning. Verified: every marketing
+route still builds as `○ (Static)` and shared First Load JS is unchanged at
+102 kB.
