@@ -91,6 +91,20 @@ export const ROUTES: readonly RouteEntry[] = [
     h1: 'You are already making it.',
   },
   {
+    path: '/niche-scan',
+    slug: 'niche-scan',
+    name: 'Niche Scan',
+    area: 'marketing',
+    h1: 'What is working in your niche,',
+  },
+  {
+    path: '/niche-scan/sample',
+    slug: 'niche-scan-sample',
+    name: 'Sample Niche Scan',
+    area: 'marketing',
+    h1: 'What a scan',
+  },
+  {
     path: '/pricing',
     slug: 'pricing',
     name: 'Pricing',

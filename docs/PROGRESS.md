@@ -61,6 +61,20 @@ visitor's system theme, so a green figure inside a light band rendered at
 about 1.9:1 — an AA failure that appeared only for visitors whose OS prefers
 dark. No token value changed; the bug was scope and so is the fix.
 
+### PR5 · five new routes — `bebc3dc`
+
+**https://mirrorline-kmifwh6zj-vn-mn-product-group.vercel.app**
+
+- **`/metrics`** (goal cascade, seven goals, seven tiers, dashboard, honesty
+  rules), **`/how-it-works`** (three phases and the first week with dates on
+  it), **`/compare`** (five approaches, categories never brands, plus the
+  three reasons to pick something else), **`/businesses`** and
+  **`/individuals`** — segmented by account stage, naming no trade anywhere.
+- The `/how-it-works → /agents` redirect is gone; that path existed in the
+  footer for weeks with no page behind it.
+- Nav and footer now list five more routes. The e2e sweep covers them all, so
+  the suite is 131 checks rather than 111.
+
 ---
 
 ## Preview link

@@ -44,7 +44,7 @@ export const NAV_LINKS: readonly SiteLink[] = [
 export const NICHE_SCAN: SiteLink = {
   href: '/niche-scan',
   label: 'Get my free Niche Scan',
-  isLive: false,
+  isLive: true,
 }
 
 export interface FooterColumn {
@@ -81,7 +81,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
     links: [
       { href: '/sign-in', label: 'Sign in', isLive: true },
       { href: '/sign-up', label: 'Create an account', isLive: true },
-      { href: '/niche-scan', label: 'Free Niche Scan', isLive: false },
+      { href: '/niche-scan', label: 'Free Niche Scan', isLive: true },
     ],
   },
   {

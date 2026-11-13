@@ -31,6 +31,8 @@ const BUILT_ROUTES = new Set([
   '/compare',
   '/businesses',
   '/individuals',
+  '/niche-scan',
+  '/niche-scan/sample',
 ])
 
 describe('site map', () => {

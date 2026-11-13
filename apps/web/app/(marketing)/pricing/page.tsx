@@ -14,6 +14,14 @@ import { PageHero } from '@/components/marketing/page-hero'
 import { ComingSoonLabel, Section, SectionHeading } from '@/components/marketing/primitives'
 import { SiteCta } from '@/components/marketing/site-cta'
 import { PRICING_NOTE, PRICING_TIERS, perDayUsd } from '@/components/marketing/pricing-tiers'
+import { actionCopy, checkoutMode } from '@/lib/billing/checkout'
+
+/**
+ * Resolved once, on the server. Never `test` unless a `sk_test_` key is in
+ * the environment, which nothing in this repo sets — so the buttons say what
+ * will happen rather than implying a charge.
+ */
+const CHECKOUT_MODE = checkoutMode()
 
 import { LeadDialogButton } from '../components/lead-form'
 
@@ -116,6 +124,11 @@ export default function PricingPage() {
 
                 <div className="flex min-w-0 flex-col gap-3">
                   <p className="m-0 max-w-[62ch] text-body text-text-muted">{tier.summary}</p>
+                  {/* "Best for" per plan, which 09 §11 requires. It names an
+                      account type, never a trade — a test asserts that. */}
+                  <p className="m-0 max-w-[62ch] text-meta text-gold-text">
+                    Best for: {tier.bestFor}
+                  </p>
                   <ul className="m-0 flex list-none flex-col gap-2 p-0 sm:flex-row sm:flex-wrap sm:gap-x-5">
                     {tier.includes.map((line) => (
                       <li key={line} className="flex items-start gap-2 text-meta text-text">
@@ -128,24 +141,31 @@ export default function PricingPage() {
                   </ul>
                 </div>
 
+                {/* One action per plan, from the checkout adapter: Pilot and
+                    Creator can be bought, Growth and Scale are set up on a
+                    call, Studio takes a waitlist and nothing else. Stripe is
+                    not configured here, so the note under the button says so
+                    rather than the button pretending to take money. */}
                 <div className="flex flex-col gap-2 lg:items-stretch">
+                  <LeadDialogButton
+                    intent={tier.id === 'pilot' || tier.id === 'creator' ? 'pilot' : 'demo'}
+                    // Gold, not the studio's coral primary: this is the
+                    // public site, and one gold action per row is what
+                    // marks the suggested tier (D25).
+                    variant={tier.isSuggested ? 'gold' : 'secondary'}
+                    size="lg"
+                    fullWidth
+                  >
+                    {actionCopy(tier.id, CHECKOUT_MODE).label}
+                  </LeadDialogButton>
+                  <p className="m-0 text-caption text-text-muted">
+                    {actionCopy(tier.id, CHECKOUT_MODE).note}
+                  </p>
                   {isComingLater ? (
-                    <p className="m-0 text-meta text-text-muted">
-                      Not built yet, so there is nothing to buy and no waiting list to join.
+                    <p className="m-0 text-caption text-text-muted">
+                      Opens in month 2. Nothing is charged for joining.
                     </p>
-                  ) : (
-                    <LeadDialogButton
-                      intent={tier.id === 'pilot' ? 'pilot' : 'demo'}
-                      // Gold, not the studio's coral primary: this is the
-                      // public site, and one gold action per row is what
-                      // marks the suggested tier (D25).
-                      variant={tier.isSuggested ? 'gold' : 'secondary'}
-                      size="lg"
-                      fullWidth
-                    >
-                      {tier.id === 'pilot' ? 'Start a pilot' : `Talk about ${tier.name}`}
-                    </LeadDialogButton>
-                  )}
+                  ) : null}
                 </div>
               </li>
             )
