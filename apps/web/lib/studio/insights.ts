@@ -58,8 +58,14 @@ export const SAMPLE_ALERTS: readonly KpiAlert[] = [
     id: 'alert-reconnect-instagram',
     kpiKey: 'posts_published',
     title: 'Instagram needs reconnecting',
+    // The date belongs to `since` and is written once, by the timing note the
+    // UI builds from it. This message said "disconnected us on 11 November"
+    // and the note then said "Posting stopped on 11 November" — the same date
+    // twice in one alert, and the same fact twice, in two different voices.
+    // It was also two sources of truth for one date: change `since` and the
+    // prose would have quietly gone stale.
     message:
-      'Instagram disconnected us on 11 November. Nothing has gone out there since, and we will not post anywhere on your behalf until you reconnect it.',
+      'Instagram signed us out, and we will not post anywhere on your behalf until you reconnect it.',
     since: '11 November',
   },
   {

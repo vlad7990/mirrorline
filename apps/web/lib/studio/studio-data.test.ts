@@ -22,6 +22,7 @@ import {
   ALERT_WEEKS_THRESHOLD,
   type ConnectionAlert,
   RAISED_ALERTS,
+  SAMPLE_ALERTS,
   SAMPLE_FORMAT_RANKING,
   type TrendAlert,
   isAlertWorthRaising,
@@ -175,6 +176,20 @@ describe('alerts', () => {
 
     expect(raised).toBeDefined()
     expect(raised?.id).toBe('alert-reconnect-instagram')
+  })
+
+  test('a connection alert does not repeat the date it already carries', () => {
+    // The UI writes the date once, from `since`. A message that also spells
+    // it out says it twice in one alert and gives the date two sources of
+    // truth — change `since` and the prose goes quietly stale.
+    for (const alert of SAMPLE_ALERTS) {
+      if (alert.kind !== 'connection') continue
+
+      expect(
+        alert.message.includes(alert.since),
+        `${alert.id} repeats "${alert.since}" in its message; the timing note already says it`,
+      ).toBe(false)
+    }
   })
 
   test('every raised alert names a KPI that exists', () => {
