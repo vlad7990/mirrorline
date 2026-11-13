@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { workspace } from '@mirrorline/mock'
 import { describe, expect, test } from 'vitest'
 
 import { KPI_DEFINITIONS } from '@/components/kpi/sample-dashboard'
@@ -25,7 +26,7 @@ import {
   type TrendAlert,
   isAlertWorthRaising,
 } from './insights'
-import { PORTFOLIO_TOTALS, SAMPLE_PORTFOLIO, hasAgreedTarget } from './portfolio'
+import { PORTFOLIO_TOTALS, SAMPLE_PORTFOLIO, hasAgreedTarget, isCurrentBrand } from './portfolio'
 import {
   DEFAULT_RESULTS_TAB,
   RESULTS_TABS,
@@ -256,8 +257,60 @@ describe('the portfolio', () => {
   })
 
   test('every brand keeps its own goal rather than sharing one', () => {
-    const goals = new Set(SAMPLE_PORTFOLIO.map((brand) => brand.goalKey))
+    const goals = SAMPLE_PORTFOLIO.map((brand) => brand.goalKey)
 
-    expect(goals.size).toBeGreaterThan(1)
+    // Not "more than one" — every brand. Two of three sharing a goal would
+    // still pass a size check and would still be the wrong screen.
+    expect(new Set(goals).size).toBe(SAMPLE_PORTFOLIO.length)
+  })
+
+  test('every brand is a different trade', () => {
+    // 16 §1: the product works for any business in any industry, and this is
+    // the only screen that shows more than one business. It was three views
+    // of one coaching business once; an edit that made them one trade again
+    // would pass every other check in the repo, so it fails here.
+    const niches = SAMPLE_PORTFOLIO.map((brand) => brand.niche.toLowerCase())
+
+    expect(new Set(niches).size).toBe(SAMPLE_PORTFOLIO.length)
+    for (const niche of niches) {
+      expect(niche.length).toBeGreaterThan(0)
+    }
+  })
+
+  test('no two brands share a word in their trade', () => {
+    // "Coaching" and "Business coaching" are different strings and the same
+    // industry. Comparing the words catches that; comparing the strings does
+    // not.
+    const wordsPerBrand = SAMPLE_PORTFOLIO.map(
+      (brand) =>
+        new Set(
+          brand.niche
+            .toLowerCase()
+            .split(/[^a-z]+/)
+            .filter(Boolean),
+        ),
+    )
+
+    for (const [index, words] of wordsPerBrand.entries()) {
+      for (const [otherIndex, otherWords] of wordsPerBrand.entries()) {
+        if (index >= otherIndex) continue
+        const shared = [...words].filter((word) => otherWords.has(word))
+
+        expect(
+          shared,
+          `${SAMPLE_PORTFOLIO[index]?.name} and ${SAMPLE_PORTFOLIO[otherIndex]?.name} share "${shared.join(', ')}"`,
+        ).toEqual([])
+      }
+    }
+  })
+
+  test('includes the signed-in workspace, and only once', () => {
+    // The switcher and the portfolio both decide "you are here" from this, so
+    // zero matches would leave neither highlighting anything, and two would
+    // have them highlighting different brands.
+    const current = SAMPLE_PORTFOLIO.filter(isCurrentBrand)
+
+    expect(current).toHaveLength(1)
+    expect(current[0]?.name).toBe(workspace.name)
   })
 })

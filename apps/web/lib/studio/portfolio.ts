@@ -10,13 +10,45 @@
  * **It rolls up, it does not average.** There is no single "portfolio health"
  * figure here and there will not be one. Averaging a leads goal against an
  * awareness goal produces a number that is not about anything.
+ *
+ * ## Why these three businesses are nothing like each other
+ *
+ * The first version of this list was three brands belonging to one coaching
+ * business — the coach, her podcast and her workshops. Every figure was
+ * correct and the screen still made the wrong argument: 16 §1 says the product
+ * works for any business in any industry, and the one screen that shows more
+ * than one business was showing three views of a single trade.
+ *
+ * **A demo client has to have an industry.** Businesses do, and a fictional
+ * one with no trade would be the fake thing — `workspace.niche` exists because
+ * Trend Scout researches a real niche. What was wrong was never that the demo
+ * account is a coaching business; it is that it was the *only* one, so every
+ * screenshot and every preview read as a coaching tool. The fix is plurality,
+ * not neutrality by erasure.
+ *
+ * So: a coach chasing leads, a furniture maker chasing sales, and a plumber
+ * chasing bookings. Three trades, three goals, three KPI sets. A test holds
+ * the spread, because an edit that quietly made them one industry again would
+ * pass every other check in the repo.
+ *
+ * The coaching brand is the signed-in workspace, named from the
+ * `@mirrorline/mock` fixture rather than retyped, so the portfolio and every
+ * other studio screen cannot disagree about which brand you are in.
  */
+
+import { workspace } from '@mirrorline/mock'
 
 import { type GoalKey } from '@/lib/audience/account-type'
 
 export interface PortfolioBrand {
   readonly id: string
   readonly name: string
+  /**
+   * The brand's own trade, in its own words — the same free text onboarding
+   * asks for (16 §1). On the card, so a reader can see at a glance that these
+   * are unlike businesses and not just unlike names.
+   */
+  readonly niche: string
   readonly goalKey: GoalKey
   /** The goal in the user's own words, as it was typed in onboarding. */
   readonly outcome: string
@@ -37,37 +69,45 @@ export interface PortfolioBrand {
 
 export const SAMPLE_PORTFOLIO: readonly PortfolioBrand[] = [
   {
+    // The signed-in workspace. Named from the fixture, not retyped.
     id: 'brand-coaching',
-    name: 'Maya Torres Coaching',
+    name: workspace.name,
+    niche: workspace.niche,
     goalKey: 'leads',
     outcome: 'Get more customers from short video',
     headlineKpiName: 'Leads per week',
     current: 52,
     target: 120,
     unitLabel: 'leads',
+    // The three the mock has connected. LinkedIn is not one of them.
     accountCount: 3,
     postsThisWeek: 21,
     periodElapsed: 6 / 13,
   },
   {
-    id: 'brand-show',
-    name: 'Lead Without Burnout (the show)',
-    goalKey: 'audience',
-    outcome: 'Grow the show’s audience',
-    headlineKpiName: 'Net new followers per week',
-    current: 1_410,
-    target: 5_000,
-    unitLabel: 'followers',
+    // A product brand selling through a tracked link: the one goal the
+    // coaching account cannot demonstrate, because it sells nothing online.
+    id: 'brand-furniture',
+    name: 'Rivet & Oak',
+    niche: 'Handmade furniture',
+    goalKey: 'sales',
+    outcome: 'Sell more of the small pieces',
+    headlineKpiName: 'Revenue from tracked links',
+    current: 18_400,
+    target: 45_000,
+    unitLabel: 'dollars',
     accountCount: 2,
     postsThisWeek: 14,
     periodElapsed: 6 / 13,
   },
   {
-    // Inside its baseline: no target, so no progress bar and no pace note.
-    id: 'brand-workshops',
-    name: 'Manager Workshops',
+    // A local service, and still inside its baseline: no target, so no
+    // progress bar and no pace note.
+    id: 'brand-plumbing',
+    name: 'Brightwater Plumbing',
+    niche: 'Plumbing and heating repairs',
     goalKey: 'bookings',
-    outcome: 'Fill the Thursday workshops',
+    outcome: 'Keep the diary full through winter',
     headlineKpiName: 'Bookings per week',
     current: 4,
     target: 0,
@@ -77,6 +117,17 @@ export const SAMPLE_PORTFOLIO: readonly PortfolioBrand[] = [
     periodElapsed: null,
   },
 ]
+
+/**
+ * The brand the rest of the studio is showing.
+ *
+ * Matched on the fixture's own name rather than carried as a flag on the row:
+ * a flag can be set on two rows, and then two screens disagree about where
+ * you are. A test asserts the portfolio contains it.
+ */
+export function isCurrentBrand(brand: PortfolioBrand): boolean {
+  return brand.name === workspace.name
+}
 
 /** 09 §Plans: the portfolio belongs to the Scale plan. */
 export const PORTFOLIO_PLAN_NAME = 'Scale'

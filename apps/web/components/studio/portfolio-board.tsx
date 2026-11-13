@@ -22,6 +22,7 @@ import {
   type PortfolioBrand,
   SAMPLE_PORTFOLIO,
   hasAgreedTarget,
+  isCurrentBrand,
 } from '@/lib/studio/portfolio'
 
 import { GoalProgress } from '../kpi/goal-progress'
@@ -83,9 +84,18 @@ function BrandCard({ brand }: { brand: PortfolioBrand }) {
   return (
     <Card as="section" aria-labelledby={headingId} className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
-        <h3 id={headingId} className="m-0 font-heading text-title text-text">
-          {brand.name}
-        </h3>
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <h3 id={headingId} className="m-0 font-heading text-title text-text">
+            {brand.name}
+            {isCurrentBrand(brand) ? (
+              <span className="text-meta font-normal text-text-muted"> · you are here</span>
+            ) : null}
+          </h3>
+          {/* The trade, in the brand's own words. On the card because the
+              argument this screen makes is that these are unlike businesses,
+              and three unlike names do not show that on their own. */}
+          <span className="text-meta text-text-muted">{brand.niche}</span>
+        </span>
         {/* Not gold. `--color-gold-text` is a public-site token fixed for a
             light band, and the studio has a dark theme — axe caught it here
             first. The studio's own accent pair is theme-aware. */}

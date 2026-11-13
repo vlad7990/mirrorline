@@ -36,14 +36,14 @@ pushed. The `Branch: main` line above is stale; this is where the work is.
 
 ### Open — the five follow-ups
 
-**Two of the five are done.** The rest were raised as findings and open
-questions at the end of the PR9 report.
+**Three of the five are done.** The two that remain were deferred on purpose,
+and both are one-line changes waiting on a word from Vlad.
 
 | # | Follow-up | State | Where it lives |
 |---|---|---|---|
 | 1 | Studio nav back to 8 items | **Done** — `nav-items.ts`, plus three replacement entry points | see below |
 | 2 | Immediate connection alerts | **Done** — `insights.ts`, `alerts-board.tsx`, the `alerts` CHECK | see below |
-| 3 | Industry-neutral demo workspaces | **Not started** | `packages/mock/src/data.ts` |
+| 3 | Industry-neutral demo workspaces | **Done** — `portfolio.ts`, `workspace-switcher.tsx` | see below |
 | 4 | `.env.example` fix | **Not started**, deliberately — Needs Vlad C | `.env.example` |
 | 5 | Remove `report-button.tsx` | **Not started**, deliberately — Needs Vlad D | `apps/web/components/results/report-button.tsx` |
 
@@ -101,12 +101,40 @@ Detail where it is not obvious from the table:
    Covered three ways: two unit tests on the rule (verified to fail when the
    fix is reverted), one asserting the SQL matches the app, and an end-to-end
    assertion that both sentences appear on `/app/home`.
-3. **Demo workspace.** Still "Maya Torres Coaching", `niche: 'Coaching'`,
-   `ownerRole: 'Leadership coach for first-time managers'`. Legitimate as one
-   fictional client's own niche, but it is the only demo account in the repo,
-   so every screenshot and every public preview reads as a coaching product.
-   Two or three workspaces in unlike niches would carry the agnostic claim
-   16 §1 makes.
+3. **Demo workspaces — done.** The signed-in workspace is still Maya Torres
+   Coaching, and deliberately so: **a demo client has to have an industry**,
+   businesses do, and a fictional one with no trade would be the fake thing —
+   `workspace.niche` exists precisely because Trend Scout researches a real
+   niche. What was wrong was never that the demo account is a coaching
+   business; it is that it was the *only* one, so every screenshot read as a
+   coaching tool. The fix is plurality, not neutrality by erasure.
+
+   Portfolio was the screen making the wrong argument. Its three brands were
+   one coaching business seen three ways — the coach, her podcast, her
+   workshops — on the one screen in the product that shows more than one
+   business. They are now a coach chasing leads, a furniture maker chasing
+   sales and a plumber chasing bookings: three trades, three goals, three KPI
+   sets. Each card shows the trade, because three unlike names do not show it
+   on their own.
+
+   The workspace switcher now lists those brands instead of claiming one. Its
+   comment used to read "there is one workspace in the demo, so the menu says
+   so plainly rather than pretending there are more", which stopped being true
+   the moment Portfolio shipped with three — one screen claiming one workspace
+   while another showed three. Both read `SAMPLE_PORTFOLIO` now, so they
+   cannot drift, and the brands you are not in are disabled with the reason
+   written underneath rather than silently doing nothing.
+
+   Four tests hold it: every brand a different goal (every brand, not "more
+   than one" — two of three sharing would pass a size check and still be the
+   wrong screen), every brand a different trade, **no two trades sharing a
+   word** — "Coaching" and "Business coaching" are different strings and the
+   same industry — and the signed-in workspace present exactly once, since
+   both screens read "you are here" from that. Verified by renaming one brand's
+   trade to "Business coaching" and watching the word-level test name the pair.
+
+   `packages/mock` is untouched, so the fixture's parity with
+   `08_MOCK_DATA.md` and every existing e2e assertion still hold.
 
 Also open, from the PR9 report: Portfolio appears in the nav for a Growth-plan
 workspace (double-labelled, but arguable), and editable targets do not persist,
