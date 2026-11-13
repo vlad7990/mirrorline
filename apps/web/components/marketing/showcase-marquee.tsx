@@ -85,7 +85,7 @@ function Rail({ cards, direction, durationSeconds, label }: RailProps) {
           const isDuplicate = index >= cards.length
           return (
             <li
-              key={`${card.niche}-${index}`}
+              key={`${card.context}-${index}`}
               aria-hidden={isDuplicate ? 'true' : undefined}
               className="w-[210px] shrink-0"
             >
@@ -95,7 +95,7 @@ function Rail({ cards, direction, durationSeconds, label }: RailProps) {
               >
                 <header className="flex items-start justify-between gap-2">
                   <span className="rounded-full bg-on-primary/90 px-2 py-0.5 text-caption font-semibold text-ink">
-                    {card.niche}
+                    {card.context}
                   </span>
                   <span className="machine rounded-sm bg-on-primary/90 px-1.5 py-0.5 text-caption text-ink">
                     {card.lengthLabel}

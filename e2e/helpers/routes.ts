@@ -39,7 +39,7 @@ export const ROUTES: readonly RouteEntry[] = [
      * the static text, so assistive technology never sees a half-typed
      * value. Matching the prefix asserts that arrangement is still in place.
      */
-    h1: 'Turn one long video into',
+    h1: 'Original short video,',
   },
   {
     path: '/product',

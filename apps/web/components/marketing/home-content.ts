@@ -77,7 +77,16 @@ export const FEATURE_TABS: readonly FeatureTab[] = [
 /* -------------------------------------------------------------------------- */
 
 export interface ShowcaseCard {
-  readonly niche: string
+  /**
+   * What the post is *for*, as a goal from 15 §2 — not what trade made it.
+   *
+   * This field held an industry ("Coach", "Clinic", "Real estate") until v4.
+   * Labelling a sample by its industry quietly turns the site into a list of
+   * the industries we serve, which is the thing 16 §1 and 10 §1 forbid. A
+   * goal label says the same useful thing — here is the shape of a post aimed
+   * at bookings — without implying we are built for anyone in particular.
+   */
+  readonly context: string
   /** The hook's opening, in plain weight. */
   readonly lead: string
   /** The phrase that takes the sand highlight. */
@@ -86,46 +95,65 @@ export interface ShowcaseCard {
 }
 
 /**
- * Sample hooks for fictional businesses, straight from the handoff.
+ * Sample hooks from fictional accounts.
  *
  * Not customer work and not customer results — the section rendering them
  * says so. They show the *shape* of what comes out, which is the only claim
  * available to us before there is a first client.
+ *
+ * The hooks deliberately span different kinds of work without naming any
+ * trade, per 13's "examples rotate through different kinds of business and
+ * individual" and the rule that none is featured above another.
  */
 export const SHOWCASE_CARDS: readonly ShowcaseCard[] = [
   {
-    niche: 'Coach',
+    context: 'Leads',
     lead: 'You’re not tired.',
     highlight: 'You’re over-responsible.',
     lengthLabel: '0:24',
   },
   {
-    niche: 'Clinic',
-    lead: '3 signs your back pain',
-    highlight: 'isn’t about posture',
+    context: 'Bookings',
+    lead: '3 signs the thing you booked',
+    highlight: 'isn’t the thing you needed',
     lengthLabel: '0:31',
   },
   {
-    niche: 'Consultant',
+    context: 'Sales',
     lead: 'The pricing mistake',
-    highlight: 'that costs you clients',
+    highlight: 'that costs you customers',
     lengthLabel: '0:42',
   },
   {
-    niche: 'Fitness studio',
+    context: 'Community',
     lead: 'Do this before',
-    highlight: 'every workout',
+    highlight: 'you start, every time',
     lengthLabel: '0:19',
   },
-  { niche: 'Podcast', lead: 'Why your best people', highlight: 'go quiet', lengthLabel: '0:36' },
-  { niche: 'Real estate', lead: 'What to ask', highlight: 'before you list', lengthLabel: '0:28' },
   {
-    niche: 'Therapist',
+    context: 'Audience growth',
+    lead: 'Why your best people',
+    highlight: 'go quiet',
+    lengthLabel: '0:36',
+  },
+  {
+    context: 'Awareness',
+    lead: 'What to ask',
+    highlight: 'before you commit',
+    lengthLabel: '0:28',
+  },
+  {
+    context: 'Launching an account',
     lead: 'Burnout isn’t',
     highlight: 'a workload problem',
     lengthLabel: '0:22',
   },
-  { niche: 'Salon', lead: 'Ask for this', highlight: 'at your next cut', lengthLabel: '0:21' },
+  {
+    context: 'Returning customers',
+    lead: 'Ask for this',
+    highlight: 'on your next visit',
+    lengthLabel: '0:21',
+  },
 ]
 
 /* -------------------------------------------------------------------------- */
@@ -138,47 +166,70 @@ export interface Audience {
   readonly body: string
   /** What they are actually buying. Phrased as a goal, never as a promise. */
   readonly goal: string
+  /** The plan 13 §1 pre-selects for this account type. */
+  readonly plan: string
+  /** Posts a week, from 13 §1. In the machine's voice where it renders. */
+  readonly cadence: string
   /**
-   * The `SHOWCASE_CARDS` niche whose sample hook this audience is shown with.
+   * The `SHOWCASE_CARDS` context whose sample hook this card is shown with.
    *
    * A name rather than an index, so reordering either list cannot silently
-   * pair a clinic with a gym's hook. A test pins every one of these to a card
-   * that exists.
+   * pair one card with another's hook. A test pins every one of these to a
+   * card that exists.
    *
-   * These are hooks for **fictional businesses**, which is why the section
+   * These are hooks from **fictional accounts**, which is why the section
    * rendering them carries the sample-data label — non-negotiable 7.
    */
-  readonly sampleNiche: string
+  readonly sampleContext: string
 }
 
+/**
+ * The four account types from 13 §1 — the **only** segmentation we use.
+ *
+ * These were four industries until v4 ("Coaches and consultants", "Clinics and
+ * wellness", "Studios and gyms", "Local services"). That card set was the
+ * clearest contradiction of 16 §1 anywhere on the site: a visitor who was none
+ * of those four read it as "not for me", and a visitor who was one of them
+ * read it as a vertical product. Account type and account stage are what
+ * actually change what we do — the plan, the input mix and the cadence all
+ * follow from them, and none of them follows from a trade.
+ */
 export const AUDIENCES: readonly Audience[] = [
   {
     number: '01',
-    title: 'Coaches and consultants',
-    body: 'Turn webinars, podcasts and client Q&As into a steady stream of authority.',
-    goal: 'discovery calls',
-    sampleNiche: 'Coach',
+    title: 'A business, growing an account it has',
+    body: 'There is a page, it posts rarely, and there are recordings nobody has cut up. That back catalogue is already a month of posts.',
+    goal: 'leads and booked work',
+    plan: 'Pilot, then Growth or Scale',
+    cadence: '7–21 posts a week',
+    sampleContext: 'Leads',
   },
   {
     number: '02',
-    title: 'Clinics and wellness',
-    body: 'Answer the questions patients ask every day, once, on camera.',
-    goal: 'booked appointments',
-    sampleNiche: 'Clinic',
+    title: 'A business, starting a new account',
+    body: 'Nothing on one platform or on any of them. We start it properly, with originals, rather than with three posts and silence.',
+    goal: 'a presence that compounds',
+    plan: 'Pilot, then Growth',
+    cadence: '7–14 posts a week',
+    sampleContext: 'Awareness',
   },
   {
     number: '03',
-    title: 'Studios and gyms',
-    body: 'Show the class, the coach and the result, every single day.',
-    goal: 'intro offers sold',
-    sampleNiche: 'Fitness studio',
+    title: 'An individual with an audience',
+    body: 'A creator, expert or personal brand already making long-form and posting a fraction of it. The raw material exists; the cutting does not.',
+    goal: 'reach that turns into work',
+    plan: 'Creator',
+    cadence: '14–28 posts a week',
+    sampleContext: 'Audience growth',
   },
   {
     number: '04',
-    title: 'Local services',
-    body: 'Stay the name people remember when they need you.',
-    goal: 'local bookings',
-    sampleNiche: 'Salon',
+    title: 'An individual starting from zero',
+    body: 'No audience yet, and no library to draw on. Three repeatable series beat sporadic effort, so that is where we start.',
+    goal: 'the first thousand followers',
+    plan: 'Studio, on the waitlist',
+    cadence: '7–14 posts a week',
+    sampleContext: 'Launching an account',
   },
 ]
 

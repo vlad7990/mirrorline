@@ -23,15 +23,29 @@ import * as React from 'react'
 
 import { LOOP_CLOSING_LINE } from '@/components/marketing/agents'
 import { AgentLoop } from '@/components/marketing/agent-loop'
-import { Choices } from '@/components/marketing/choices'
 import { CutWall } from '@/components/marketing/cut-wall'
 import { ReelBackdrop } from '@/components/marketing/reel-backdrop'
 import { Faq, type FaqItem } from '@/components/marketing/faq'
 import { GateReadout } from '@/components/marketing/gate-readout'
 import { CountUp } from '@/components/marketing/count-up'
 import { FeatureTabs } from '@/components/marketing/feature-tabs'
-import { HeroCinematic, UPLOAD_ANCHOR_ID } from '@/components/marketing/hero-cinematic'
+import {
+  CHOICE_ANCHOR_ID,
+  HeroCinematic,
+  UPLOAD_ANCHOR_ID,
+} from '@/components/marketing/hero-cinematic'
 import { HeroUpload } from '@/components/marketing/hero-upload'
+import {
+  AudiencePicker,
+  AudiencePickerStatus,
+} from '@/components/marketing/home/audience-picker'
+import {
+  ChangedIn2026,
+  ContrastTable,
+  NicheScanExplainer,
+  TwoWaysIn,
+} from '@/components/marketing/home/argument-sections'
+import { ProblemPicker } from '@/components/marketing/home/problem-picker'
 import { AUDIENCES, PROOF_CARDS, SHOWCASE_CARDS } from '@/components/marketing/home-content'
 import { ShowcaseMarquee } from '@/components/marketing/showcase-marquee'
 import { SplitReveal } from '@/components/marketing/split-reveal'
@@ -45,9 +59,9 @@ import { SELLABLE_TIERS, perDayUsd } from '@/components/marketing/pricing-tiers'
 
 
 export const metadata: Metadata = {
-  title: 'Turn one long video into daily short-form growth',
+  title: 'Original short video, every day, on the accounts you own',
   description:
-    'Mirrorline is an AI content studio for coaches, consultants and local service businesses. Your own footage becomes short vertical videos, posted to your own accounts through the official platform APIs.',
+    'Mirrorline runs short-video growth for any business or individual, in any industry. Send your own videos or we create originals from formats growing in your niche, posted to your own accounts through the official platform APIs.',
 }
 
 /* -------------------------------------------------------------------------- */
@@ -104,11 +118,18 @@ const LIMITS: readonly Limit[] = [
  * the right side of it: the studio schedules posts that carry a booking
  * link, and non-negotiable 7 forbids promising the calls arrive.
  */
+/**
+ * The cycling second line, completing "Original short video, …".
+ *
+ * Each one has to be true of **both** ways in and of any niche — the old set
+ * ("a week of posts", "twelve short videos") described the Multiplier alone
+ * and said nothing to an account with no footage yet.
+ */
 const HERO_PHRASES = [
-  'a week of posts.',
-  'twelve short videos.',
-  'booked calls.',
-  'a daily presence.',
+  'every day.',
+  'on accounts you own.',
+  'in any niche.',
+  'never a repost.',
 ] as const
 
 /* -------------------------------------------------------------------------- */
@@ -259,35 +280,146 @@ export default function LandingPage() {
           instead of decoration. */}
       <HeroCinematic phrases={HERO_PHRASES} />
 
-      {/* Start here ------------------------------------------------------ */}
-      {/* The upload, in its own band. It used to *be* the hero (D22); the
-          cinematic rebuild moved it here and the hero's one action points at
-          this id (D34). It is still the first step of the product and still
-          the first thing below the fold — what changed is that it no longer
-          shares a frame with a headline and a backdrop. */}
+      {/* 1b. The picker --------------------------------------------------
+          16 §3 row 1 puts this in the hero; D34 had already emptied the hero
+          of controls and D39 keeps it that way, so it opens the band directly
+          below instead. Everything that reads the choice sits beneath it. */}
+      <Section
+        id={CHOICE_ANCHOR_ID}
+        className="band-ink-alt scroll-mt-24"
+        size="md"
+        aria-labelledby="choose-heading"
+      >
+        <SectionHeading
+          id="choose-heading"
+          eyebrow="Start here"
+          title={
+            <>
+              Two questions, <span className="gold-phrase">no industry list.</span>
+            </>
+          }
+          lead="We never ask what trade you are in. Our agents research your niche themselves — these two answers are only so the rest of this page shows you the right examples."
+          headingClassName="text-site-h2 font-serif"
+        />
+        <div className="reveal mt-8 flex flex-col gap-4">
+          <AudiencePicker />
+          <AudiencePickerStatus />
+          <p className="m-0 max-w-[62ch] text-meta text-on-ink-muted">
+            Whichever you pick, the first step is the same and it is free: a Niche Scan of what is
+            actually growing where you are.
+          </p>
+        </div>
+      </Section>
+
+      {/* 2. Sound familiar? ---------------------------------------------- */}
+      <Section aria-labelledby="problems-heading">
+        <SectionHeading
+          id="problems-heading"
+          eyebrow="Sound familiar?"
+          title={
+            <>
+              You have tried this before, <span className="gold-phrase">and it did not hold.</span>
+            </>
+          }
+          lead="Six things people say about the tools, the agencies and the doing-it-yourself. Open the one that is yours."
+          headingClassName="text-site-h2 font-serif"
+        />
+        <div className="mt-8">
+          <ProblemPicker />
+        </div>
+      </Section>
+
+      {/* 3. What changed in 2026 ----------------------------------------- */}
+      <Section className="band-ink-alt" size="md" aria-labelledby="changed-heading">
+        <SectionHeading
+          id="changed-heading"
+          eyebrow="What changed in 2026"
+          title={
+            <>
+              The shortcut <span className="gold-phrase">stopped working.</span>
+            </>
+          }
+          lead="Three rule changes, and between them they explain why the posting that used to work does not any more."
+          headingClassName="text-site-h2 font-serif"
+        />
+        <div className="mt-8">
+          <ChangedIn2026 />
+        </div>
+      </Section>
+
+      {/* 4. We built the opposite ---------------------------------------- */}
+      {/* The second light band (D39). One snow section read as an outlier;
+          two read as the alternation DESIGN.md's public-site section calls
+          deliberate art direction. */}
+      <Section className="band-snow" aria-labelledby="opposite-heading">
+        <SectionHeading
+          id="opposite-heading"
+          eyebrow="We built the opposite"
+          title={
+            <>
+              Every row here is <span className="gold-phrase">a complaint we read.</span>
+            </>
+          }
+          lead="We studied what people say about clipping tools, agencies, doing it yourself and repost pages, then built the other thing. Categories, never brand names — the argument is about the method, whoever sells it."
+          headingClassName="text-site-h2 font-serif"
+        />
+        <div className="mt-10">
+          <ContrastTable />
+        </div>
+      </Section>
+
+      {/* 5. Any niche ---------------------------------------------------- */}
+      <Section aria-labelledby="niche-heading">
+        <SectionHeading
+          id="niche-heading"
+          eyebrow="Any niche"
+          title={
+            <>
+              Our agents <span className="gold-phrase">research yours.</span>
+            </>
+          }
+          lead="This is why there is no industry page anywhere on this site. The Niche Scan finds what is growing where you are, every week, whatever that is."
+          headingClassName="text-site-h2 font-serif"
+        />
+        <div className="mt-10">
+          <NicheScanExplainer />
+        </div>
+      </Section>
+
+      {/* 6. Start here: two ways in --------------------------------------
+          The upload used to *be* the hero (D22); the cinematic rebuild moved
+          it here and 16 §3 row 6 puts it alongside the other way in, so the
+          band now names both rather than only the footage you already have. */}
       <Section
         id={UPLOAD_ANCHOR_ID}
         className="band-ink-alt scroll-mt-24"
-        size="md"
         aria-labelledby="start-heading"
       >
         <SectionHeading
           id="start-heading"
-          eyebrow="Start here"
+          eyebrow="Two ways in"
           title={
             <>
-              Your own footage, <span className="gold-phrase">and nothing else.</span>
+              Your footage, <span className="gold-phrase">or originals we make.</span>
             </>
           }
-          lead="Drop in a talk, a podcast or a webinar you recorded. The rights question is asked before anything starts, rather than after."
+          lead="Most accounts use both, and the mix changes as the library grows. Neither costs more than the other."
           headingClassName="text-site-h2 font-serif"
         />
-        <div className="reveal mt-8">
+        <TwoWaysIn className="mt-10" />
+        <div className="reveal mt-10 border-t border-ink-line pt-10">
+          <h3 className="m-0 mb-2 font-heading text-title text-on-ink-900">
+            Send us something now
+          </h3>
+          <p className="m-0 mb-6 max-w-[62ch] text-meta text-on-ink-muted">
+            Drop in a talk, a podcast or a webinar you recorded. The rights question is asked before
+            anything starts, rather than after.
+          </p>
           <HeroUpload />
         </div>
       </Section>
 
-      {/* What it does, in four steps ------------------------------------ */}
+      {/* 7. How the loop runs -------------------------------------------- */}
       <Section className="band-ink-alt" aria-labelledby="steps-heading">
         <SectionHeading
           id="steps-heading"
@@ -392,21 +524,11 @@ export default function LandingPage() {
         </p>
       </Section>
 
-      {/* The alternatives ----------------------------------------------- */}
-      {/* Straight after the limits, because the limits are what the
-          comparison is actually about: the row a repost tool loses is the
-          row our four limits exist to win. */}
-      <Section aria-labelledby="choices-heading">
-        <SectionHeading
-          id="choices-heading"
-          eyebrow="The choices"
-          title="What else you could do instead"
-          lead="We do not win every row. A freelancer is cheaper to start and a repost tool is faster. What changes is whose footage goes out, and what happens before it does."
-        />
-        <div className="mt-8">
-          <Choices />
-        </div>
-      </Section>
+      {/* "What else you could do instead" lived here and is gone: 16 §3 row 4
+          merges it into "We built the opposite" near the top of the page, and
+          running both left two comparison tables on one page making the same
+          argument twenty sections apart. `Choices` is still used on /compare,
+          which is where a full alternatives table belongs. */}
 
       {/* Who it is for --------------------------------------------------- */}
       {/* The one light band on the page. The handoff alternates ink and
@@ -418,10 +540,10 @@ export default function LandingPage() {
           eyebrow="Who it is for"
           title={
             <>
-              Built for people who <span className="gold-phrase">already know their subject.</span>
+              Any business, any individual, <span className="gold-phrase">any industry.</span>
             </>
           }
-          lead="You have the expertise and the recordings. What you do not have is an evening a day to cut them up."
+          lead="What changes the work is not your trade — it is whether you are a business or a person, and whether the account already exists. Those two answers set the plan, the mix of inputs and the cadence."
           headingClassName="text-site-h2 font-serif"
           /* The cards carry sample hooks now, so the section has to say so —
              non-negotiable 7. It did not need this when they were four boxes
@@ -441,7 +563,7 @@ export default function LandingPage() {
             cannot pair a clinic with a gym's hook. */}
         <ul className="m-0 mt-10 grid list-none grid-cols-1 gap-5 p-0 lg:grid-cols-2">
           {AUDIENCES.map((audience, position) => {
-            const sample = SHOWCASE_CARDS.find((card) => card.niche === audience.sampleNiche)
+            const sample = SHOWCASE_CARDS.find((card) => card.context === audience.sampleContext)
 
             return (
               <li
@@ -477,6 +599,13 @@ export default function LandingPage() {
                     {/* A goal, never a promise. Non-negotiable 7 rules out
                         saying these will arrive — only that they are what the
                         work is aimed at. */}
+                    {/* Plan and cadence, in the machine's voice, because
+                        they are the things that actually change between
+                        account types — 13 §1. The old card had only a goal,
+                        which made four industries look like four products. */}
+                    <p className="machine m-0 text-mono text-text-muted">
+                      {audience.plan} · {audience.cadence}
+                    </p>
                     <p className="m-0 mt-auto border-t border-border pt-3 text-meta text-gold-text">
                       Aimed at: {audience.goal}
                     </p>

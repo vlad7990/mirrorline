@@ -6,6 +6,27 @@
 
 ---
 
+## v4 build log — branch `v4/site-and-metrics`
+
+The nine-PR run through `docs/prompts/MASTER_PROMPT_v4.md` Steps 3–8. Newest
+last. Every one is a preview; **nothing is promoted to production**.
+
+### PR1 · foundations — `8203c49`
+
+**https://mirrorline-b4330m1pk-vn-mn-product-group.vercel.app**
+
+- The visitor's Business/Individual × New/Existing choice now lives in a URL
+  param plus localStorage, and the eleven funnel events from 14 §4 sit behind
+  a console adapter that makes no network call and sets no cookie.
+- 16 §4's nav and footer come from one table with an `isLive` flag, so routes
+  that have not landed stay unlisted rather than shipping 404s.
+- **Two untrue claims are gone:** the invented "4 places this month" in the
+  header, and "the run happens on this machine" on the upload band. Both were
+  in Step 2's list and both were still live — see D39 for why my first search
+  for them returned a false negative.
+
+---
+
 ## Preview link
 
 **https://mirrorline-7a7hye3hz-vn-mn-product-group.vercel.app** — status Ready,
