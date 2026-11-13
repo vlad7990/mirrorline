@@ -25,9 +25,9 @@
 
 import { Button } from '@mirrorline/ui'
 import { ArrowDown } from 'lucide-react'
-import Image from 'next/image'
 import * as React from 'react'
 
+import { HeroBackdrop, HeroIndex, HeroMarginNote } from './hero-parts'
 import { FEATURE_TABS } from './home-content'
 import { TypedPhrase } from './typed-phrase'
 
@@ -48,30 +48,7 @@ export function HeroCinematic({ phrases }: HeroCinematicProps) {
          D32 was written about. */
       className="band-ink relative isolate flex min-h-[86vh] flex-col justify-end overflow-clip"
     >
-      {/* The backdrop. `priority` because it is the largest paint on the page
-          and the headline sits on top of it. */}
-      <Image
-        src="/hero/studio-1920.webp"
-        alt=""
-        aria-hidden="true"
-        fill
-        priority
-        sizes="100vw"
-        className="-z-20 object-cover"
-      />
-
-      {/* Two scrims doing two different jobs. The first is a left-to-right
-          wash that keeps the headline on near-black however bright the
-          screens behind it get. The second lifts the base so the numbered
-          index reads. Without both, this layout is a contrast failure. */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 -z-10 bg-gradient-to-r from-ink-900 via-ink-900/85 to-ink-900/35"
-      />
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-gradient-to-t from-ink-900 to-transparent"
-      />
+      <HeroBackdrop />
 
       <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 px-5 pb-7 pt-28 sm:px-8 sm:pt-32">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-end">
@@ -117,16 +94,7 @@ export function HeroCinematic({ phrases }: HeroCinematicProps) {
             </Button>
           </div>
 
-          {/* The reference's vertical marginal type. Ours is the machine's
-              voice carrying a real figure from the sample run rather than
-              decoration in a language we do not speak. Hidden below lg, where
-              there is no margin to put it in. */}
-          <p
-            aria-hidden="true"
-            className="machine m-0 hidden justify-self-end text-mono text-on-ink-faint lg:block lg:[writing-mode:vertical-rl]"
-          >
-            one episode 52:14 · twelve cuts · three minutes
-          </p>
+          <HeroMarginNote>one episode 52:14 · twelve cuts · three minutes</HeroMarginNote>
         </div>
 
         {/* Non-negotiable 4, placed above the index rather than under it.
@@ -139,29 +107,10 @@ export function HeroCinematic({ phrases }: HeroCinematicProps) {
           The room behind this is an AI-generated image, not a photograph of a client.
         </p>
 
-        {/* The numbered index along the base. The reference runs 01–04 with a
-            caption each; we already have exactly four steps carrying exactly
-            those fields, so nothing here is invented to fill the shape. */}
-        <ol className="m-0 grid list-none gap-x-6 gap-y-5 border-t border-ink-line p-0 pt-6 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURE_TABS.map((tab, position) => (
-            <li
-              key={tab.id}
-              className="reveal-item flex gap-3"
-              style={{ '--index': position } as React.CSSProperties}
-            >
-              <span aria-hidden="true" className="machine text-mono text-gold">
-                {tab.number}
-              </span>
-              <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="font-heading text-meta font-semibold text-on-ink-900">
-                  {tab.title}
-                </span>
-                <span className="text-meta text-on-ink-faint">{tab.description}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
-
+        {/* The reference runs 01–04 with a caption each; we already have
+            exactly four steps carrying exactly those fields, so nothing here
+            is invented to fill the shape. */}
+        <HeroIndex items={FEATURE_TABS} />
       </div>
     </section>
   )

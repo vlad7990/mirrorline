@@ -1095,3 +1095,50 @@ it to the 4.5:1 threshold, which `gold-deep` does not clear on the snow band;
 all four cards failed. It is `gold-text` now, the token the "Aimed at:" line
 already used. Shrinking text is exactly when this happens, and the only reason
 it did not ship is that the e2e suite runs axe on every route in both themes.
+
+## 2026-11-12 · D37 · The hero's devices become a system
+
+Vlad asked whether the rest of the site was aligned to the rebuilt hero. Put
+side by side, the honest answer was *partly*: type, colour and left-set
+composition were already one system, but the hero's **atmosphere** was not.
+The landing page had a photographic backdrop, a numbered index and vertical
+margin type; `/product`, `/agents`, `/trust` and `/pricing` were flat ink with
+a screenshot. Going from home to any sub-page dropped from cinematic to
+standard — two sites wearing the same typeface.
+
+Asked how far to take it, he chose the full system rather than the backdrop
+alone. So the three devices moved into `hero-parts.tsx` and all five heroes
+now use them. `HeroCinematic` was refactored onto the shared pieces in the
+same change rather than left with its own copy, because two implementations
+of a "system" is the thing that produced this inconsistency in the first
+place.
+
+**One backdrop image, not five.** It is a *room*, not an illustration of a
+topic, so it does not need to change when the subject does — and five
+generated backdrops would be five things to label and five more chances to
+imply something untrue. `strength="deep"` exists because a sub-page puts a
+bright screenshot on top of it: the wash that reads as atmosphere behind a
+headline reads as noise behind a screenshot.
+
+**Every index is the page's own real contents.** Four feature tabs on
+/product, seven agents on /agents, seven rules on /trust, the tiers on
+/pricing. The index wraps at four, so seven items make two rows rather than
+seven cramped columns. Nothing is invented to fill the shape, and the
+`description` field is simply omitted on the long lists where seven captions
+would be a paragraph.
+
+**The index stays in the accessibility tree**, unlike the backdrop and the
+margin note. It is the page's actual contents in their actual order; hiding it
+would take a real summary away from a screen reader to protect a visual
+effect. The margin note is `aria-hidden` because it is furniture, and it
+carries a true figure rather than the reference's decorative characters.
+
+**The AI label is unconditional.** It was briefly tied to `marginNote` being
+passed, which would have meant the first page that forgot that prop silently
+lost its non-negotiable-4 label. It now renders whenever the hero does,
+because the backdrop always does.
+
+**One placement bug, caught by looking.** In the flow, the margin note landed
+below the screenshot in open space and read as a stray line. It is absolutely
+positioned against the page edge now, which is where the reference puts it and
+the only place it competes with nothing.

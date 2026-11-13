@@ -45,6 +45,8 @@ export default function ProductPage() {
         shot="studio-cuts-16x10"
         shotAlt="The upload screen after a run: twelve vertical cuts, each with its hook, length, format and compliance verdict."
         shotCaption="The studio after one upload, on sample data from a fictional demo client."
+        index={FEATURE_TABS}
+        marginNote="one episode 52:14 · twelve cuts · three minutes"
       />
 
       {/* What one episode became ---------------------------------------- */}

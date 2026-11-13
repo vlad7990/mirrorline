@@ -15,6 +15,7 @@
 import Image from 'next/image'
 import * as React from 'react'
 
+import { HeroBackdrop, HeroIndex, HeroMarginNote, type HeroIndexItem } from './hero-parts'
 import { Section } from './primitives'
 
 export interface PageHeroProps {
@@ -36,6 +37,14 @@ export interface PageHeroProps {
   shotCaption: string
   /** A CTA row, when the page has one. */
   action?: React.ReactNode
+  /**
+   * The numbered row along the hero's base — the home hero's device, carried
+   * here so all five heroes speak with one voice (D37). Each page passes its
+   * own real contents; nothing is invented to fill the shape.
+   */
+  index?: readonly HeroIndexItem[]
+  /** The vertical note in the right margin. A real figure, not decoration. */
+  marginNote?: React.ReactNode
 }
 
 export function PageHero({
@@ -46,12 +55,21 @@ export function PageHero({
   shotAlt,
   shotCaption,
   action,
+  index,
+  marginNote,
 }: PageHeroProps) {
   return (
     // Ink, and taller than the studio's rhythm: this is the top of a page on
     // a brand surface, which the handoff gives far more air than a product
     // screen would get (D25).
-    <Section size="lg" className="band-ink pt-10 sm:pt-16">
+    <Section
+      size="lg"
+      className="band-ink pt-10 sm:pt-16"
+      /* `deep`, not the landing page's scrim: a sub-page puts a bright
+         screenshot on top of this, and the standard wash that reads as
+         atmosphere behind a headline reads as noise behind a screenshot. */
+      backdrop={<HeroBackdrop strength="deep" />}
+    >
       {/* Top-aligned, not centred: a short text column centred against a
           tall figure pushes the headline into the middle of the viewport. */}
       <div className="grid items-start gap-10 lg:grid-cols-12 lg:gap-12">
@@ -95,6 +113,29 @@ export function PageHero({
           <figcaption className="mt-3 text-meta text-text-muted">{shotCaption}</figcaption>
         </figure>
       </div>
+
+      {/* Non-negotiable 4. Unconditional, because the backdrop is: a label
+          that depended on some other prop being passed would go missing the
+          first time a page forgot one. */}
+      <p className="mt-8 m-0 text-caption text-on-ink-faint">
+        The room behind this is an AI-generated image, not a photograph of a client.
+      </p>
+
+      {/* In the margin, not under the content. Placed in the flow it landed
+          below the screenshot in open space and read as a stray line; the
+          reference runs this type down the page edge, which is also the only
+          place it does not compete with anything. */}
+      {marginNote ? (
+        <div className="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 lg:block">
+          <HeroMarginNote>{marginNote}</HeroMarginNote>
+        </div>
+      ) : null}
+
+      {index && index.length > 0 ? (
+        <div className="mt-6">
+          <HeroIndex items={index} />
+        </div>
+      ) : null}
     </Section>
   )
 }

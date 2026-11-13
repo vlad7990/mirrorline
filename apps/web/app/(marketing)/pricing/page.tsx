@@ -42,6 +42,11 @@ export default function PricingPage() {
         shot="results-16x10"
         shotAlt="The results screen: views, link clicks and calls booked for the week, with the posts that earned them."
         shotCaption="The weekly report you get, on sample data from a fictional demo client."
+        index={PRICING_TIERS.map((tier, position) => ({
+          number: String(position + 1).padStart(2, '0'),
+          title: tier.name,
+        }))}
+        marginNote="introductory prices · set per engagement, in writing"
       />
 
       <Section className="band-snow" size="md" aria-labelledby="tiers-heading">

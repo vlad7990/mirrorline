@@ -97,6 +97,11 @@ export default function AgentsPage() {
         shot="agents-16x10"
         shotAlt="The agents board: each agent with its own switch, spend cap and log, and Compliance locked on."
         shotCaption="The agents board, on sample data from a fictional demo client."
+        index={PUBLIC_AGENTS.map((agent) => ({
+          number: String(agent.step).padStart(2, '0'),
+          title: agent.name,
+        }))}
+        marginNote="seven agents · one loop · one spend cap each"
       />
 
       <Section className="band-snow" aria-labelledby="agents-heading">

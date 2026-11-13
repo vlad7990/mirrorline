@@ -134,6 +134,11 @@ export default function TrustPage() {
         shot="calendar-16x10"
         shotAlt="The approvals queue: a scheduled post with its AI label locked on and the reason it cannot be removed."
         shotCaption="The approvals queue, on sample data from a fictional demo client."
+        index={RULES.map((rule, position) => ({
+          number: String(position + 1).padStart(2, '0'),
+          title: rule.title,
+        }))}
+        marginNote="seven rules · built in, not bolted on"
       />
 
       <Section className="band-snow" aria-labelledby="rules-heading">
