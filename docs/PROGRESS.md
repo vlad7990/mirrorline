@@ -6,6 +6,94 @@
 
 ---
 
+## Handoff — 13 November 2026
+
+**Branch** `v4/site-and-metrics` · **last commit** `97fb161` · clean tree,
+pushed. The `Branch: main` line above is stale; this is where the work is.
+
+**Preview:** https://mirrorline-j7chcwghk-vn-mn-product-group.vercel.app
+
+### Done
+
+- **All nine PRs of `docs/prompts/MASTER_PROMPT_v4.md` (Steps 3–8).** The 22
+  marketing routes of 16 §4, and the studio.
+- **Studio:** Results is 15 §5's seven tabs on `?tab=`; Goals and KPIs,
+  Accounts and Portfolio are new; Home, onboarding, Niche Scan (was Trends),
+  Remake and Settings updated per 16 §5.
+- **Data:** `supabase/migrations/` and `supabase/seed.sql` cover 15 §7, with a
+  test holding the seed against `sample-dashboard.ts`. **Never run against a
+  database** — see Needs Vlad A.
+- **Docs:** 04_AGENTS_SPEC updated; `docs/provenance.md`, `SERVICES_AUDIT.md`
+  and `SWEEP_REPORT.md` are new.
+- **Gates green:** lint, typecheck and licences clean; 371 unit tests, 214
+  end-to-end, 0 serious or critical axe violations at 1440 and 390 in both
+  themes. One known flaky — the theme no-flash test, a `next dev` recompile
+  artefact that passes at `--workers=1`.
+- **Two live false claims found by the sweep and fixed**: the privacy policy
+  still said "for coaches, consultants and local service businesses", and the
+  site description said "the formats going viral". Both are now held by
+  `apps/web/lib/copy/banned-phrases.test.ts` on every test run.
+
+### Open — the five follow-ups
+
+**None of the five has been started.** They were raised as findings and open
+questions at the end of the PR9 report, and the session ended before any was
+actioned.
+
+| # | Follow-up | State | Where it lives |
+|---|---|---|---|
+| 1 | Studio nav back to 8 items | **Not started.** 11 today | `apps/web/components/shell/nav-items.ts` |
+| 2 | Immediate connection alerts | **Not started** | `apps/web/lib/studio/insights.ts`, and the SQL CHECK |
+| 3 | Industry-neutral demo workspaces | **Not started** | `packages/mock/src/data.ts` |
+| 4 | `.env.example` fix | **Not started**, deliberately — Needs Vlad C | `.env.example` |
+| 5 | Remove `report-button.tsx` | **Not started**, deliberately — Needs Vlad D | `apps/web/components/results/report-button.tsx` |
+
+Detail where it is not obvious from the table:
+
+1. **Nav.** 16 §5 added three screens; DESIGN.md "Layout" fixes an eight-item
+   list. Getting back to eight needs a decision rather than an edit — most
+   likely Goals and KPIs and Accounts reached only through Results, since both
+   are already tabs there and the components are shared.
+2. **Alerts.** `ALERT_WEEKS_THRESHOLD = 2` and `isAlertWorthRaising` apply the
+   two-week rule to *every* alert, including the Instagram disconnection — so
+   an account that drops off today stays silent for a fortnight. A broken
+   connection is not a trend and should raise on day one. The fix is a kind on
+   `KpiAlert` (trend vs connection), gating only the trend kind, and narrowing
+   the `alerts.weeks_off_track >= 2` CHECK in
+   `supabase/migrations/20261113120000_metrics_and_goals.sql:179` so it applies
+   to that kind alone.
+3. **Demo workspace.** Still "Maya Torres Coaching", `niche: 'Coaching'`,
+   `ownerRole: 'Leadership coach for first-time managers'`. Legitimate as one
+   fictional client's own niche, but it is the only demo account in the repo,
+   so every screenshot and every public preview reads as a coaching product.
+   Two or three workspaces in unlike niches would carry the agnostic claim
+   16 §1 makes.
+
+Also open, from the PR9 report: Portfolio appears in the nav for a Growth-plan
+workspace (double-labelled, but arguable), and editable targets do not persist,
+which needs Needs Vlad A.
+
+**Untracked and not mine:** `docs/specs/17_MOTION_PLAN.md` sits in the working
+tree uncommitted. I have left it alone.
+
+### Needs Vlad
+
+Full detail under "Needs Vlad" below; one line each:
+
+- **A** — a Supabase project plus `SUPABASE_URL` and
+  `SUPABASE_SERVICE_ROLE_KEY`. The migrations are written and reviewed but
+  unexecuted; treat the first `db push` as a first run.
+- **B** — a Stripe **test-mode** key as `STRIPE_TEST_SECRET_KEY`. The code
+  refuses anything not starting `sk_test_`.
+- **C** — `.env.example` disagrees with the code on four variable names. Left
+  unfixed because you may already have a populated `.env.local`.
+- **D** — one-line `git rm` of the dead `report-button.tsx`.
+- **E** — the written IP assignment, still the single gate on the whole
+  GenAIUniq reuse list. `docs/provenance.md`'s register stays empty until it
+  exists.
+
+---
+
 ## v4 build log — branch `v4/site-and-metrics`
 
 The nine-PR run through `docs/prompts/MASTER_PROMPT_v4.md` Steps 3–8. Newest
