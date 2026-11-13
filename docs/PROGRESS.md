@@ -8,12 +8,14 @@
 
 ## Handoff — 13 November 2026
 
-**Branch** `v4/site-and-metrics` · **last commit** `a89e7e2` · clean tree,
+**Branch** `v4/site-and-metrics` · **last commit** `07a0e2d` · clean tree,
 pushed. The `Branch: main` line above is stale; this is where the work is.
 
-**Preview:** https://mirrorline-fd5kdhcf7-vn-mn-product-group.vercel.app —
-`target: preview`, Ready, from `a89e7e2`: all five follow-ups plus the alert
-typography fix. Nothing has been promoted to production.
+**Preview:** https://mirrorline-h5jslq4zt-vn-mn-product-group.vercel.app —
+`target: preview`, Ready, from `07a0e2d`: all five follow-ups, plus two alert
+fixes found by looking at the thing in a browser — only the measurement is
+mono, and the date is written once rather than in both the prose and the
+timing note. Nothing has been promoted to production.
 
 Checked in a browser on 13 November, not just in CI: all eleven studio routes
 and all seven Results tabs load with one `<h1>` and **zero console errors**;
