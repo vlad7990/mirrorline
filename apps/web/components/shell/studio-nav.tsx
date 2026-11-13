@@ -27,7 +27,7 @@ export function StudioNav({
     <nav aria-label="Studio" className={className}>
       <ul className="flex flex-col gap-0.5">
         {NAV_ITEMS.map((item) => {
-          const isActive = isNavItemActive(item.href, pathname)
+          const isActive = isNavItemActive(item, pathname)
           return (
             <li key={item.href}>
               <Link

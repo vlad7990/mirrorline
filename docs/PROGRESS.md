@@ -36,12 +36,12 @@ pushed. The `Branch: main` line above is stale; this is where the work is.
 
 ### Open — the five follow-ups
 
-**One of the five is done.** The rest were raised as findings and open
+**Two of the five are done.** The rest were raised as findings and open
 questions at the end of the PR9 report.
 
 | # | Follow-up | State | Where it lives |
 |---|---|---|---|
-| 1 | Studio nav back to 8 items | **Not started.** 11 today | `apps/web/components/shell/nav-items.ts` |
+| 1 | Studio nav back to 8 items | **Done** — `nav-items.ts`, plus three replacement entry points | see below |
 | 2 | Immediate connection alerts | **Done** — `insights.ts`, `alerts-board.tsx`, the `alerts` CHECK | see below |
 | 3 | Industry-neutral demo workspaces | **Not started** | `packages/mock/src/data.ts` |
 | 4 | `.env.example` fix | **Not started**, deliberately — Needs Vlad C | `.env.example` |
@@ -49,10 +49,32 @@ questions at the end of the PR9 report.
 
 Detail where it is not obvious from the table:
 
-1. **Nav.** 16 §5 added three screens; DESIGN.md "Layout" fixes an eight-item
-   list. Getting back to eight needs a decision rather than an edit — most
-   likely Goals and KPIs and Accounts reached only through Results, since both
-   are already tabs there and the components are shared.
+1. **Nav — done.** Back to DESIGN.md's eight: Home, Upload, Niche Scan,
+   Calendar, Results, Agents, Brand kit, Settings. A sidebar is not an index
+   of the routes that exist, and each of the eleven items made the other ten
+   slightly harder to find.
+
+   The three screens keep their routes, their `<h1>`s and their e2e and axe
+   coverage — only the shortcut is gone. Each is reached from where someone
+   already is when they want it: **Goals and KPIs** from the Results tab and
+   the link on Home's goal card; **Accounts** from the Results tab and a new
+   link on Connected accounts in Settings, which makes an existing one-way
+   pair bidirectional; **Portfolio** from the workspace switcher, as "All
+   brands" — it is the only cross-workspace screen in the product, and the
+   switcher is already the control for which brand you are looking at.
+
+   `NavItem` gained `alsoActiveFor`, so Results stays highlighted on Goals and
+   on Accounts. Without it those two screens left the whole sidebar dark, which
+   tells the reader they are somewhere the nav says they are not. Portfolio is
+   deliberately claimed by no item: it is reached from above the nav, so
+   lighting one up would point at the wrong control.
+
+   `nav-items.test.ts` now holds **both halves** — the count and the names, and
+   that every screen kept out of the nav still has a link to it somewhere in
+   the tree. The second is the one that bites: trimming a nav is easy, and
+   trimming it while orphaning a route leaves a screen that exists, passes its
+   own tests and cannot be opened. Verified by pointing the Portfolio link at
+   a dead route and watching it fail with "nothing links to /app/portfolio".
 2. **Alerts — done.** The two-week rule had been applied to *every* alert,
    including the Instagram disconnection, so an account that dropped off today
    stayed silent for a fortnight while nothing published.

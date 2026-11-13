@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react'
 import { workspace } from '@mirrorline/mock'
+import Link from 'next/link'
 
 import { ChevronDownIcon } from '@/components/icons'
 
@@ -111,6 +112,17 @@ export function WorkspaceSwitcher() {
             {workspace.name}
             <span className="sr-only"> (current workspace)</span>
           </button>
+          {/* Where Portfolio is reached from, now the sidebar is back to the
+              eight items DESIGN.md fixes. It belongs here rather than in the
+              nav: it is the only screen that spans workspaces, and this is
+              already the control for "which brand am I looking at". */}
+          <Link
+            href="/app/portfolio"
+            onClick={() => setIsOpen(false)}
+            className="flex min-h-touch w-full items-center rounded-md px-3 text-left text-label text-text-muted hover:bg-surface-subtle hover:text-text"
+          >
+            All brands
+          </Link>
           <button
             type="button"
             disabled
