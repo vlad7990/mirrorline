@@ -24,9 +24,15 @@ export const metadata: Metadata = {
     default: 'Mirrorline',
     template: '%s · Mirrorline',
   },
-  // The one-liner from docs/specs/01_PRODUCT_BRIEF.md.
+  // The one-liner from docs/specs/01_PRODUCT_BRIEF.md, with one phrase
+  // changed: it said "the formats going viral in its niche". True of what the
+  // Niche Scan finds, and still the wrong words in the sentence a search
+  // result shows — read quickly it is a promise about your account rather
+  // than a description of someone else's. "Growing fastest" is what we
+  // actually measure, by views per follower over 30 days. The banned-phrase
+  // test holds it.
   description:
-    "Mirrorline turns a brand's own videos, and the formats going viral in its niche, into a steady stream of original short videos, published several times a day to the brand's own accounts by a team of AI agents that learns from every post. Mirrorline is a placeholder name.",
+    "Mirrorline turns a brand's own videos, and the formats growing fastest in its niche, into a steady stream of original short videos, published several times a day to the brand's own accounts by a team of AI agents that learns from every post. Mirrorline is a placeholder name.",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

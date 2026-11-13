@@ -31,7 +31,13 @@ const SECTIONS: readonly PolicySection[] = [
     id: 'who-we-are',
     heading: 'Who we are',
     paragraphs: [
-      'Mirrorline is an AI content studio for coaches, consultants and local service businesses. “Mirrorline” is a placeholder product name while we build.',
+      // Corrected 2026-11-13 by SWEEP_REPORT.md. This read "for coaches,
+      // consultants and local service businesses" — the pre-v4 positioning,
+      // still live in a legal document after D38 removed it from every page
+      // anyone was likely to read. A privacy policy naming a narrower set of
+      // customers than the product serves is both wrong and the hardest kind
+      // of wrong to notice.
+      'Mirrorline is an AI content studio for any business or individual, in any industry, with a new or an existing account. “Mirrorline” is a placeholder product name while we build.',
       'If you want to reach a person about anything on this page, write to hello@mirrorline.example.',
     ],
   },
