@@ -91,6 +91,26 @@ dark. No token value changed; the bug was scope and so is the fix.
 - **No email is sent by anything in this build**, and the thank-you page says
   so rather than implying a delivery.
 
+### PR7 · content and legal — `208f9f1`
+
+**https://mirrorline-o4ancs62d-vn-mn-product-group.vercel.app**
+
+- The last twelve routes: `/faq`, `/about`, `/contact`, `/changelog`,
+  `/resources` + three articles, `/accessibility`, and the four `/legal/*`
+  documents. The policy drafts moved to `/legal/*` with permanent redirects.
+- **The site map now has nothing unbuilt left in it** — every `isLive` flag
+  is true, which is what the flag existed to make visible.
+- The cookie banner declines non-essential by default, and decline is the
+  first button with equal weight. There is nothing to decline yet: no
+  analytics vendor, no pixel, no third-party script.
+- The accessibility statement names what our testing does **not** cover — no
+  screen-reader user has been through this product, and saying so beats a
+  clean badge.
+
+**Still to come:** PR8 (the studio: Results as seven tabs, Goals and KPIs,
+Accounts, Portfolio, onboarding) and PR9 (Supabase migrations, the agents
+spec, the two audits, the banned-phrase CI test and the final sweep).
+
 ---
 
 ## Preview link
