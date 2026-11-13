@@ -695,6 +695,59 @@
     background-color: var(--color-background);
   }
 
+  /*
+   * Status colours have to be pinned per band too, and not doing so was a bug.
+   *
+   * D25: the public site is art-directed band by band and `.dark` does not
+   * reach it. The band utilities kept that promise for the *neutral* tokens —
+   * background, surface, border, text — and quietly broke it for the status
+   * ones, which went on resolving from whichever theme the visitor's system
+   * asked for. So in dark mode a green delta inside a `band-snow` card was a
+   * dark-theme mint (#79E2B8) on white: about 1.9:1, a WCAG AA failure that
+   * appeared only for the half of visitors whose OS prefers dark.
+   *
+   * Pinned explicitly here to the set that suits each band's own surface: the
+   * light values on snow and white, the dark ones on ink. Nothing in `:root`
+   * or `.dark` changes, so the studio is untouched.
+   *
+   * Found by axe on a KPI card in the home metrics section, 2026-11-13 (D40).
+   */
+  .band-ink,
+  .band-ink-alt {
+    --color-success: #35c68c;
+    --color-success-soft: #0c2620;
+    --color-on-success-soft: #79e2b8;
+    --color-warning: #e5ae38;
+    --color-warning-soft: #2a2210;
+    --color-on-warning-soft: #f2cc79;
+    --color-danger: #f0686b;
+    --color-danger-soft: #2d1618;
+    --color-on-danger-soft: #ffa7aa;
+    --color-info: #6b9bf2;
+    --color-info-soft: #121e31;
+    --color-on-info-soft: #a9c5fa;
+    --color-neutral-soft: #262e3a;
+    --color-on-neutral-soft: #c5cbd5;
+  }
+
+  .band-snow,
+  .band-white {
+    --color-success: #128a5e;
+    --color-success-soft: #def2e8;
+    --color-on-success-soft: #0e5940;
+    --color-warning: #b7790a;
+    --color-warning-soft: #faefd6;
+    --color-on-warning-soft: #6b4606;
+    --color-danger: #c9343c;
+    --color-danger-soft: #fbe2e3;
+    --color-on-danger-soft: #8c2126;
+    --color-info: #2563d9;
+    --color-info-soft: #e2eafa;
+    --color-on-info-soft: #1c4aa3;
+    --color-neutral-soft: #e9ecf1;
+    --color-on-neutral-soft: #3a4250;
+  }
+
   .band-ink {
     --color-background: var(--color-ink-900);
     --color-surface: var(--color-ink-700);

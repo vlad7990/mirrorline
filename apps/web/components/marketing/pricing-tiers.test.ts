@@ -49,14 +49,26 @@ describe('perDayUsd', () => {
     expect(perDayUsd(tier('scale'))).toBe(100)
   })
 
-  it('returns null for a tier whose price is a range', () => {
-    // Arrange: Studio is "$49 to $149" and is not sold yet.
+  it('divides the creator price by thirty days', () => {
+    // Arrange: Creator is $499 a month, added in v4 from 09 §11.
+    const creator = tier('creator')
+
+    // Act
+    const perDay = perDayUsd(creator)
+
+    // Assert: 499 / 30 = 16.63, rounded to whole dollars.
+    expect(perDay).toBe(17)
+  })
+
+  it('returns null for a tier that cannot be bought', () => {
+    // Arrange: Studio is $79 but is a waitlist, not a purchase.
     const studio = tier('studio')
 
     // Act
     const perDay = perDayUsd(studio)
 
-    // Assert: no single number can honestly be shown, so none is.
+    // Assert: a per-day figure invites a comparison with something you can
+    // buy today, and this cannot be bought at all. So none is shown.
     expect(perDay).toBeNull()
   })
 })
@@ -79,6 +91,35 @@ describe('PRICING_TIERS', () => {
         `$${candidate.priceUsd.toLocaleString('en-US')}`,
       )
     }
+  })
+
+  it('gives every plan a "best for" that names an account type, not a trade', () => {
+    // 09 §11 requires a "best for" on every plan, and 10 §1 forbids sorting
+    // anyone by industry. The four home cards used to be trades; this is the
+    // same rule applied where a visitor is choosing what to pay for.
+    const industryWords = /coach|consultant|clinic|dentist|gym|salon|restaurant|real estate/i
+
+    for (const candidate of PRICING_TIERS) {
+      expect(candidate.bestFor.length, `${candidate.id} has no "best for"`).toBeGreaterThan(0)
+      expect(candidate.bestFor, candidate.id).not.toMatch(industryWords)
+    }
+  })
+
+  it('keeps Studio unbuyable, because it is a waitlist', () => {
+    // 09 §11: "nothing on the site implies it can be bought today."
+    const studio = tier('studio')
+
+    expect(studio.comingLaterLabel).toBe('Waitlist')
+    expect(SELLABLE_TIERS.map((candidate) => candidate.id)).not.toContain('studio')
+  })
+
+  it('sells the four plans that are actually open', () => {
+    expect(SELLABLE_TIERS.map((candidate) => candidate.id)).toEqual([
+      'pilot',
+      'growth',
+      'scale',
+      'creator',
+    ])
   })
 
   it('prices the pilot higher per day than the month it leads into', () => {

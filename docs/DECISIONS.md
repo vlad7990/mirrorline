@@ -1330,3 +1330,51 @@ the marketing layout keeps all seven public pages prerendered; without it
 `next build` fails the route rather than warning. Verified: every marketing
 route still builds as `○ (Static)` and shared First Load JS is unchanged at
 102 kB.
+
+## 2026-11-13 · D40 · The band utilities pinned half the palette, and the other half failed AA
+
+The one edit to `theme.css` in this whole run, and it is a bug fix rather than
+a design change — the exception the master prompt leaves open.
+
+**What was wrong.** D25 says the public site is art-directed band by band and
+that `.dark` does not reach it. The `.band-*` utilities kept that promise for
+the **neutral** tokens — background, surface, surface-subtle, border, text,
+text-muted — and silently did not for the **status** tokens. Success, warning,
+danger, info and neutral-soft went on resolving from whichever theme the
+visitor's operating system asked for, inside a band whose surface had already
+been pinned to the opposite end.
+
+The visible result: a green "+18% vs last week" inside a card on the `band-snow`
+metrics section rendered in the dark theme's mint `#79E2B8` on white. About
+1.9:1, against a 4.5:1 requirement. It failed **only for visitors whose system
+prefers dark**, which is why nothing had caught it — the site has no theme
+toggle, so a developer in light mode never sees it, and the axe sweep only
+started failing when a section with a status-coloured figure first landed on a
+light band.
+
+**The fix.** Each band now pins the full status set to the values that suit its
+own surface: the light ones on snow and white, the dark ones on ink. `:root`
+and `.dark` are untouched, so the studio — which *is* theme-switchable and
+where these tokens were always correct — is unaffected.
+
+**What it is not.** No token value changed. No hue was chosen, adjusted or
+added; all twenty-eight numbers are copied from the two blocks already in the
+file. The bug was one of *scope*, and the fix is scope.
+
+### Two token mistakes of my own, both caught by axe rather than by me
+
+Worth recording together, because they are the same mistake in two directions
+and the codebase already had the answer to both.
+
+- **`gold-text` on ink.** The deep gold is the light-band token. On an ink band
+  `surface` remaps to `ink-700` and it falls under 4.5:1 at mono size.
+  `gold-bright` is ink's gold. This is D36's regression read in a mirror — that
+  one was `gold-deep` failing on snow.
+- **`text-success` as a text colour.** `--color-success` (#128A5E) is the
+  **fill**: status dots, bar fills, the things that only need 3:1. As text on
+  white it is 4.38:1 and fails. `--color-on-success-soft` is the text colour,
+  and `MetricTile` has used exactly that for months with a comment saying so.
+  I reached past the existing answer and wrote a new one that was wrong.
+
+The lesson for the next KPI surface: a status colour has two tokens, the fill
+and the on-soft text, and the band decides which pair is in scope.

@@ -25,6 +25,20 @@ last. Every one is a preview; **nothing is promoted to production**.
   in Step 2's list and both were still live — see D39 for why my first search
   for them returned a false negative.
 
+### PR2 · home sections 1–7, and no industry anywhere — `3a10928`
+
+**https://mirrorline-lnb93mpel-vn-mn-product-group.vercel.app**
+
+- Five new sections in 16 §3's order: the picker, "Sound familiar?", "What
+  changed in 2026", "We built the opposite" (the P1–P10 table) and "Any
+  niche". The hero names both ways in rather than only your own footage.
+- **Every industry card and phrase is gone.** The four trade cards are the
+  four account types from 13 §1, showcase samples are labelled by goal, and
+  an e2e test reads the rendered page and fails on any of the old wording.
+- There are two light bands now rather than one, so the alternation reads as
+  rhythm (D39). "What else you could do instead" is merged into the new
+  table, per 16 §3 row 4.
+
 ---
 
 ## Preview link
