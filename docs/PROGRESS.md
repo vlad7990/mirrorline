@@ -8,12 +8,20 @@
 
 ## Handoff — 13 November 2026
 
-**Branch** `v4/site-and-metrics` · **last commit** `2e2609d` · clean tree,
+**Branch** `v4/site-and-metrics` · **last commit** `a89e7e2` · clean tree,
 pushed. The `Branch: main` line above is stale; this is where the work is.
 
-**Preview:** https://mirrorline-nzgjbb9pp-vn-mn-product-group.vercel.app —
-`target: preview`, Ready, from `2e2609d`, so it carries all five follow-ups.
-Nothing has been promoted to production.
+**Preview:** https://mirrorline-fd5kdhcf7-vn-mn-product-group.vercel.app —
+`target: preview`, Ready, from `a89e7e2`: all five follow-ups plus the alert
+typography fix. Nothing has been promoted to production.
+
+Checked in a browser on 13 November, not just in CI: all eleven studio routes
+and all seven Results tabs load with one `<h1>` and **zero console errors**;
+the sidebar is eight items; both alert kinds render their own timing sentence;
+Portfolio shows three unlike trades; the switcher lists all three brands; and
+the two honesty rules hold in the built output — LinkedIn shows a connect
+prompt rather than zeroes, and the ledger names the sales column it cannot
+fill.
 
 ### Done
 
