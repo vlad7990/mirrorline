@@ -238,11 +238,13 @@ export const ROUTES: readonly RouteEntry[] = [
     h1: 'One video, 12 posts',
   },
   {
+    // Renamed from the Trend board in v4 (16 §5); the path and the screenshot
+    // slug stay put so the morning before/after comparison still lines up.
     path: '/app/trends',
     slug: 'app-trends',
-    name: 'Trend board',
+    name: 'Niche Scan',
     area: 'studio',
-    h1: 'Formats rising now',
+    h1: 'Niche Scan',
   },
   {
     path: `/app/remake/${REMAKE_TREND_ID}`,
@@ -259,11 +261,85 @@ export const ROUTES: readonly RouteEntry[] = [
     h1: 'Week of 9 November',
   },
   {
+    // v4: Results is the seven tabs of 15 §5, and each tab's own label is the
+    // page's single <h1>. The other six are in EXTRA_SCREENS, because they are
+    // query-string states of this route rather than routes of their own.
     path: '/app/results',
     slug: 'app-results',
     name: 'Results',
     area: 'studio',
-    h1: '21 posts, 6 calls booked',
+    h1: 'Overview',
+  },
+  /*
+   * The other six Results tabs.
+   *
+   * In ROUTES rather than in EXTRA_SCREENS on purpose. ROUTES is what the axe
+   * sweep iterates, and a panel that no test opens is a panel that is never
+   * audited — the exact failure mode a client-side tab widget would have
+   * locked in for six of the seven. Being URLs, they cost one line each.
+   */
+  {
+    path: '/app/results?tab=funnel',
+    slug: 'app-results-funnel',
+    name: 'Results · Funnel',
+    area: 'studio',
+    h1: 'Funnel',
+  },
+  {
+    path: '/app/results?tab=content',
+    slug: 'app-results-content',
+    name: 'Results · Content',
+    area: 'studio',
+    h1: 'Content',
+  },
+  {
+    path: '/app/results?tab=accounts',
+    slug: 'app-results-accounts',
+    name: 'Results · Accounts',
+    area: 'studio',
+    h1: 'Accounts',
+  },
+  {
+    path: '/app/results?tab=goals',
+    slug: 'app-results-goals',
+    name: 'Results · Goals and KPIs',
+    area: 'studio',
+    h1: 'Goals and KPIs',
+  },
+  {
+    path: '/app/results?tab=ledger',
+    slug: 'app-results-ledger',
+    name: 'Results · Ledger',
+    area: 'studio',
+    h1: 'Ledger',
+  },
+  {
+    path: '/app/results?tab=insights',
+    slug: 'app-results-insights',
+    name: 'Results · Agent insights',
+    area: 'studio',
+    h1: 'Agent insights',
+  },
+  {
+    path: '/app/goals',
+    slug: 'app-goals',
+    name: 'Goals and KPIs',
+    area: 'studio',
+    h1: 'Goals and KPIs',
+  },
+  {
+    path: '/app/accounts',
+    slug: 'app-accounts',
+    name: 'Accounts',
+    area: 'studio',
+    h1: 'Accounts',
+  },
+  {
+    path: '/app/portfolio',
+    slug: 'app-portfolio',
+    name: 'Portfolio',
+    area: 'studio',
+    h1: 'Portfolio',
   },
   {
     path: '/app/agents',

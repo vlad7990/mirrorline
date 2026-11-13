@@ -9,82 +9,15 @@
 
 import type { AgentLogEntry, Cut, ScheduledPost } from '@mirrorline/mock'
 import { agentFeed, cuts, metrics, todaySchedule, workspace } from '@mirrorline/mock'
-import type { DeltaDirection, Status } from '@mirrorline/ui'
+import type { Status } from '@mirrorline/ui'
 
-/** Monday to Sunday, the span every "this week" figure covers. */
-const DAYS_IN_WEEK = 7
-const THOUSAND = 1000
-/** Below this a count reads better in full: "214", not "0.2K". */
-const COMPACT_FROM = THOUSAND
-
-/* -------------------------------------------------------------------------- */
-/* Metric tiles                                                                */
-/* -------------------------------------------------------------------------- */
-
-export interface HomeMetric {
-  readonly id: string
-  readonly label: string
-  /** Pre-formatted for display: "48.3K". */
-  readonly value: string
-  /** Seven points, Monday first, for the tile's coral sparkline. */
-  readonly series: readonly number[]
-  /** A whole phrase, never a bare arrow. */
-  readonly delta: string
-  readonly deltaDirection: DeltaDirection
-}
-
-/** "48.3K" for big counts, the plain grouped number for small ones. */
-export function formatCount(value: number): string {
-  if (value < COMPACT_FROM) return value.toLocaleString('en-US')
-  return `${(value / THOUSAND).toFixed(1)}K`
-}
-
-/**
- * Spreads a weekly total across the seven days in the same shape as
- * `metrics.viewsByDay`. The mock carries one real series; the other tiles
- * share its curve rather than inventing four unrelated ones.
+/*
+ * The four `HOME_METRICS` tiles lived here until v4. 16 §5 replaced them with
+ * the goal bar and the three KPI cards from `components/kpi/`, which measure
+ * against a target this account agreed to rather than reporting activity. The
+ * fixtures they drew on are untouched in `@mirrorline/mock` and still feed the
+ * Results tabs; only the Home tiles are gone.
  */
-function weeklySeries(total: number): readonly number[] {
-  const base = metrics.viewsByDay
-  const sum = base.reduce((running, value) => running + value, 0)
-  if (sum <= 0) return base
-  return base.map((value) => (value / sum) * total)
-}
-
-export const HOME_METRICS: readonly HomeMetric[] = [
-  {
-    id: 'posts',
-    label: 'Posts this week',
-    value: formatCount(metrics.posts),
-    series: weeklySeries(metrics.posts),
-    delta: `On plan: ${Math.round(metrics.posts / DAYS_IN_WEEK)} a day`,
-    deltaDirection: 'up',
-  },
-  {
-    id: 'views',
-    label: 'Views',
-    value: formatCount(metrics.views),
-    series: metrics.viewsByDay,
-    delta: `${metrics.deltas.views.label} vs last week`,
-    deltaDirection: metrics.deltas.views.direction,
-  },
-  {
-    id: 'link-clicks',
-    label: 'Link clicks',
-    value: formatCount(metrics.linkClicks),
-    series: weeklySeries(metrics.linkClicks),
-    delta: `${metrics.deltas.linkClicks.label} vs last week`,
-    deltaDirection: metrics.deltas.linkClicks.direction,
-  },
-  {
-    id: 'calls',
-    label: 'Calls booked',
-    value: formatCount(metrics.callsBooked),
-    series: weeklySeries(metrics.callsBooked),
-    delta: `${metrics.deltas.callsBooked.label} vs last week`,
-    deltaDirection: metrics.deltas.callsBooked.direction,
-  },
-]
 
 /* -------------------------------------------------------------------------- */
 /* "Needs you"                                                                 */

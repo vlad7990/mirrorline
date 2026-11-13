@@ -55,12 +55,36 @@ export interface KpiCardProps {
    * silently on hydration.
    */
   readonly now: Date
-  /** Rendered on a dark band. Picks the gold that passes contrast there. */
-  readonly onInk?: boolean
+  /**
+   * What the card is sitting on, which decides the gold.
+   *
+   * Three cases, not two, and the third is the one that caused a bug. The
+   * public site's bands are fixed whatever the theme — `ink` is always dark,
+   * `snow` always light — so each takes the gold tuned for it. The studio's
+   * surface follows the theme, so it needs both and a `dark:` variant to
+   * switch between them. Collapsing `theme` into `snow` leaves gold-on-dark
+   * failing AA in the studio; collapsing it the other way puts a `dark:`
+   * variant on the marketing pages, where `.dark` is on <html> but the snow
+   * band underneath has not changed colour. axe caught the first on
+   * /app/home, and then the second on / and /metrics.
+   */
+  readonly surface?: 'ink' | 'snow' | 'theme'
   readonly className?: string
 }
 
-export function KpiCard({ kpi, goodDirection = 'up', now, onInk, className }: KpiCardProps) {
+const TARGET_CLASS: Record<'ink' | 'snow' | 'theme', string> = {
+  ink: 'text-gold-bright',
+  snow: 'text-gold-text',
+  theme: 'text-gold-text dark:text-gold-bright',
+}
+
+export function KpiCard({
+  kpi,
+  goodDirection = 'up',
+  now,
+  surface = 'theme',
+  className,
+}: KpiCardProps) {
   const { definition, value, target } = kpi
   const tooltipId = React.useId()
 
@@ -123,7 +147,7 @@ export function KpiCard({ kpi, goodDirection = 'up', now, onInk, className }: Kp
         <p
           className={cn(
             'm-0 mt-auto border-t border-border pt-2 text-caption',
-            onInk ? 'text-gold-bright' : 'text-gold-text',
+            TARGET_CLASS[surface],
           )}
         >
           {/* "Target", never "guaranteed" — 15 §1. The basis is shown because

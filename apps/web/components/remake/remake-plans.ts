@@ -283,3 +283,69 @@ export const COMPLIANCE_CHECKS: readonly { label: string; ok: boolean }[] = [
   { label: 'AI scene labelled on screen and on the platform', ok: true },
   { label: "No real person's likeness besides Maya (consent on file)", ok: true },
 ]
+
+/* -------------------------------------------------------------------------- */
+/* Originality Gate (04_AGENTS_SPEC, 16 §5)                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * What the gate did, not just whether it passed.
+ *
+ * `outcome` has a `rewritten` case and that case is the point. The gate
+ * **blocks and rewrites** — it does not warn and let the script through. A
+ * gate that can be waved past is a formality, and a formality is exactly what
+ * the predecessor project had.
+ */
+export type OriginalityOutcome = 'passed' | 'rewritten' | 'blocked'
+
+export interface OriginalityResult {
+  /** How close the draft came to the source format's wording, as a percent. */
+  readonly similarity: number
+  /** The ceiling. Above it the draft does not go forward as written. */
+  readonly limit: number
+  /** What it was compared against, named plainly. */
+  readonly comparedAgainst: string
+  readonly outcome: OriginalityOutcome
+  /** What the gate did on the way here. Null when it passed first time. */
+  readonly rewriteNote: string | null
+}
+
+export const ORIGINALITY_RESULT: OriginalityResult = {
+  similarity: 12,
+  limit: 30,
+  comparedAgainst: 'the beat structure of the source format, and your own last 90 posts',
+  outcome: 'rewritten',
+  rewriteNote:
+    'The first draft came back at 34%: two lines reused the source’s phrasing almost word for word. The gate sent it back and the Remake Producer rewrote both. This is the second draft.',
+}
+
+/* -------------------------------------------------------------------------- */
+/* The cited business fact (16 §5)                                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The one claim in the script that is about the client's business, with its
+ * source attached.
+ *
+ * Every script makes claims. Most are general enough to read as opinion; one
+ * usually is not, and that one is the sentence that could put a client in
+ * front of a regulator. Non-negotiable 7 forbids claims we cannot stand
+ * behind, which means the claim and the thing backing it travel together or
+ * the claim does not ship.
+ */
+export interface BusinessFact {
+  /** The line in the script that makes a claim. */
+  readonly claim: string
+  /** Where it came from, in the client's own material. */
+  readonly source: string
+  readonly suppliedBy: string
+  /** Human date, as the client's upload recorded it. */
+  readonly suppliedOn: string
+}
+
+export const BUSINESS_FACT: BusinessFact = {
+  claim: 'Most first-time managers get no training in their first year.',
+  source: 'Episode 47, 14:20 — your own line, in your own words, on your own show.',
+  suppliedBy: 'Maya Torres',
+  suppliedOn: '2 Nov',
+}

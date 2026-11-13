@@ -17,13 +17,15 @@ import { BrandStep } from '@/components/onboarding/brand-step'
 import { LivePreview } from '@/components/onboarding/live-preview'
 import { NicheStep } from '@/components/onboarding/niche-step'
 import {
+  DEFAULT_AUDIENCE,
   DEFAULT_COLOUR_ID,
   DEFAULT_FONT_VALUE,
-  DEFAULT_GOAL,
+  DEFAULT_GOAL_KEY,
   DEFAULT_GOAL_LINK,
   DEFAULT_NEARBY_NICHES,
   DEFAULT_NICHE,
   DEFAULT_POSTS_PER_DAY,
+  DEFAULT_STAGE,
   DEFAULT_TONE,
   LOGO_FILE_NAME,
   type ToneAxisId,
@@ -39,8 +41,13 @@ interface OnboardingDraft {
   readonly tone: ToneValues
   /** CLAUDE.md non-negotiable 1, made visible. Starts off. */
   readonly rightsConfirmed: boolean
+  /** 16 §1's 2×2: a business or an individual, new or existing. */
+  readonly audience: string
+  readonly stage: string
+  /** Free text (16 §1). Never a dropdown — see `onboarding-data.ts`. */
   readonly niche: string
   readonly nearbyNiches: readonly string[]
+  /** A `GoalKey` from 15 §2. The goal decides the KPI set, not the industry. */
   readonly goal: string
   readonly goalLink: string
   readonly postsPerDay: string
@@ -52,9 +59,11 @@ const INITIAL_DRAFT: OnboardingDraft = {
   fontValue: DEFAULT_FONT_VALUE,
   tone: DEFAULT_TONE,
   rightsConfirmed: false,
+  audience: DEFAULT_AUDIENCE,
+  stage: DEFAULT_STAGE,
   niche: DEFAULT_NICHE,
   nearbyNiches: DEFAULT_NEARBY_NICHES,
-  goal: DEFAULT_GOAL,
+  goal: DEFAULT_GOAL_KEY,
   goalLink: DEFAULT_GOAL_LINK,
   postsPerDay: DEFAULT_POSTS_PER_DAY,
 }
@@ -115,6 +124,10 @@ export default function OnboardingPage() {
 
           {step === 3 ? (
             <NicheStep
+              audience={draft.audience}
+              onAudienceChange={(audience) => update('audience', audience)}
+              stage={draft.stage}
+              onStageChange={(stage) => update('stage', stage)}
               niche={draft.niche}
               onNicheChange={(niche) => update('niche', niche)}
               nearbyNiches={draft.nearbyNiches}

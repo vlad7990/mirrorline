@@ -107,7 +107,8 @@ function Overview() {
   return (
     <div className="flex min-w-0 flex-col gap-5">
       <AlertsBoard />
-      <GoalProgress {...SAMPLE_GOAL} />
+      {/* Directly under the page's h1, so the bar's own heading is an h2. */}
+      <GoalProgress {...SAMPLE_GOAL} headingLevel={2} />
       <KpiGrid kpis={SAMPLE_KPIS} columns={4} />
 
       <Link

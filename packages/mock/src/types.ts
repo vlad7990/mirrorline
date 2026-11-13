@@ -124,6 +124,15 @@ export interface Trend {
   readonly growthLabel: string
   /** Fit for this brand, 0-100. */
   readonly fit: number
+  /**
+   * Views per follower for accounts posting this format in the scanned niche
+   * (12 §Niche Scan, 15 §6).
+   *
+   * The benchmark that makes a format comparable across accounts of different
+   * sizes: a format averaging 50,000 views on an account with 500,000
+   * followers is not working, and a raw view count cannot say so.
+   */
+  readonly viewsPerFollower: number
   readonly beats: readonly TrendBeat[]
   readonly whyItWorks: string
   readonly platform: Platform

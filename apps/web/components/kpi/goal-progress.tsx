@@ -27,6 +27,14 @@ export interface GoalProgressProps {
   /** "this quarter", "by 31 December". */
   readonly periodLabel: string
   readonly onInk?: boolean
+  /**
+   * Where this sits in the page's heading outline.
+   *
+   * Defaults to 3, which is right when the bar follows a card heading. The
+   * Results Overview puts it directly under the page's h1, and an h3 there
+   * invents a level nobody wrote — axe's `heading-order` rule caught it.
+   */
+  readonly headingLevel?: 2 | 3
   readonly className?: string
 }
 
@@ -38,19 +46,21 @@ export function GoalProgress({
   periodElapsed,
   periodLabel,
   onInk,
+  headingLevel = 3,
   className,
 }: GoalProgressProps) {
   const safeTarget = target > 0 ? target : 1
   const fraction = Math.max(0, Math.min(1, current / safeTarget))
   const percent = Math.round(fraction * 100)
   const headingId = React.useId()
+  const Heading = headingLevel === 2 ? 'h2' : 'h3'
 
   return (
     <section aria-labelledby={headingId} className={cn('flex flex-col gap-3', className)}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h3 id={headingId} className="m-0 font-heading text-subtitle text-text">
+        <Heading id={headingId} className="m-0 font-heading text-subtitle text-text">
           {outcome}
-        </h3>
+        </Heading>
         <p className="machine m-0 text-mono text-text-muted">
           <span className="text-text">{current.toLocaleString('en-US')}</span> of{' '}
           {target.toLocaleString('en-US')} {unitLabel} · {periodLabel}

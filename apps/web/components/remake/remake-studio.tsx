@@ -27,6 +27,7 @@ import {
   type ScriptLine,
 } from '@/components/remake/remake-plans'
 import { REMAKE_SECONDS, clockLabel, type RecipeBeat } from '@/components/remake/remake-recipe'
+import { CitedBusinessFact, OriginalityGate } from '@/components/remake/script-evidence'
 import { ScriptPanel } from '@/components/remake/script-panel'
 
 export interface RemakeStudioProps {
@@ -78,7 +79,7 @@ export function RemakeStudio({ trend, recipe, plan }: RemakeStudioProps) {
             href="/app/trends"
             className="text-primary underline-offset-4 hover:underline dark:text-accent"
           >
-            Back to trends
+            Back to the Niche Scan
           </Link>
         }
         title={`Remake: ${trend.format}`}
@@ -131,6 +132,15 @@ export function RemakeStudio({ trend, recipe, plan }: RemakeStudioProps) {
           lengthLabel={lengthLabel}
           handle={PREVIEW_HANDLE}
         />
+      </div>
+
+      {/* 16 §5: the gate's result and the claim's source, beside the
+          compliance checklist rather than folded into it. The checklist says
+          what was true of the final draft; these two say what the system did
+          to get there, and what the one factual line in the script rests on. */}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <OriginalityGate />
+        <CitedBusinessFact />
       </div>
 
       <CompliancePanel items={COMPLIANCE_CHECKS} status="passed" />

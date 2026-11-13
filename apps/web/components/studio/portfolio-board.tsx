@@ -86,7 +86,10 @@ function BrandCard({ brand }: { brand: PortfolioBrand }) {
         <h3 id={headingId} className="m-0 font-heading text-title text-text">
           {brand.name}
         </h3>
-        <span className="text-meta text-gold-text">{goalLabel(brand)}</span>
+        {/* Not gold. `--color-gold-text` is a public-site token fixed for a
+            light band, and the studio has a dark theme — axe caught it here
+            first. The studio's own accent pair is theme-aware. */}
+        <span className="text-meta text-on-accent-soft">{goalLabel(brand)}</span>
       </div>
 
       {hasAgreedTarget(brand) && brand.periodElapsed !== null ? (

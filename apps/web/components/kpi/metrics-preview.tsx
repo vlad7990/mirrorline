@@ -58,7 +58,9 @@ export function MetricsPreview({ onInk, full, className }: MetricsPreviewProps) 
               <KpiCard
                 kpi={kpi}
                 now={SAMPLE_NOW}
-                onInk={onInk}
+                // A marketing band is fixed whatever the theme, so the card is
+                // told which one it is on rather than left to follow `.dark`.
+                surface={onInk ? 'ink' : 'snow'}
                 goodDirection={LOWER_IS_BETTER.has(kpi.definition.key) ? 'down' : 'up'}
               />
             </li>

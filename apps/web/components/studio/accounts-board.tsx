@@ -60,9 +60,12 @@ function AccountCard({ entry }: { entry: AccountMetrics }) {
     <Card as="section" aria-labelledby={headingId} className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
-          <h3 id={headingId} className="m-0 font-heading text-title text-text">
+          {/* h2, not h3: on both screens that render this board the only
+              heading above a card is the page's h1, and axe's heading-order
+              rule is right that jumping to h3 invents a level nobody wrote. */}
+          <h2 id={headingId} className="m-0 font-heading text-title text-text">
             {account.platformLabel}
-          </h3>
+          </h2>
           <p className="m-0 text-meta text-text-muted">
             {account.handle ? (
               <span className="machine">{account.handle}</span>

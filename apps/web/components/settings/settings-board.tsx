@@ -6,8 +6,10 @@ import { AlertBar, Button, Toast } from '@mirrorline/ui'
 
 import { AppearanceCard } from './appearance-card'
 import { ConnectedAccountsCard } from './connected-accounts-card'
+import { CustomKpisCard } from './custom-kpis-card'
 import { DataRightsCard } from './data-rights-card'
 import { PlanCard } from './plan-card'
+import { RepostWatchCard } from './repost-watch-card'
 import { TeamCard } from './team-card'
 
 /**
@@ -123,6 +125,8 @@ export function SettingsBoard() {
           onConnect={handleConnect}
         />
         <PlanCard />
+        <RepostWatchCard onNotice={handleNotice} />
+        <CustomKpisCard />
         <TeamCard onNotice={handleNotice} />
         <AppearanceCard />
         <DataRightsCard onNotice={handleNotice} />

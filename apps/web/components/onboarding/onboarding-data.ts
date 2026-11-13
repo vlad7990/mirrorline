@@ -10,6 +10,16 @@
 
 import { brandKit, workspace } from '@mirrorline/mock'
 
+import {
+  ACCOUNT_STAGE_VALUES,
+  AUDIENCE_LABELS,
+  AUDIENCE_VALUES,
+  DEFAULT_CHOICE,
+  GOALS,
+  type GoalKey,
+  STAGE_LABELS,
+} from '@/lib/audience/account-type'
+
 /* -------------------------------------------------------------------------- */
 /* Colours                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -298,17 +308,49 @@ export interface ChoiceOption {
   readonly label: string
 }
 
-export const NICHE_OPTIONS: readonly ChoiceOption[] = [
-  { value: 'Coaching', label: 'Coaching' },
-  { value: 'Local service', label: 'Local service' },
-  { value: 'Product brand', label: 'Product brand' },
-]
+/*
+ * `NICHE_OPTIONS` used to live here: a three-item list of Coaching, Local
+ * service and Product brand. It is gone, and nothing replaces it.
+ *
+ * 16 §1 and 13 §1 make the industry a free-text field, asked once, and only so
+ * Trend Scout knows what to research. A dropdown is a claim that we know the
+ * set of businesses we serve, and v4's whole position is that we do not need
+ * to — which is also why there is no industry page on the site and a CI test
+ * watching for industry-exclusive wording.
+ */
 
-export const GOAL_OPTIONS: readonly ChoiceOption[] = [
-  { value: 'Book discovery calls', label: 'Book discovery calls' },
-  { value: 'Grow followers', label: 'Grow followers' },
-  { value: 'Sell a product', label: 'Sell a product' },
-]
+/** The 2×2 of 16 §1. The labels are the public site's, so the two match. */
+export const AUDIENCE_OPTIONS: readonly ChoiceOption[] = AUDIENCE_VALUES.map((value) => ({
+  value,
+  label: AUDIENCE_LABELS[value],
+}))
+
+export const STAGE_OPTIONS: readonly ChoiceOption[] = ACCOUNT_STAGE_VALUES.map((value) => ({
+  value,
+  label: STAGE_LABELS[value],
+}))
+
+/**
+ * The seven goals of 15 §2, each with the KPI it makes the headline.
+ *
+ * Taken from `lib/audience/account-type` rather than restated, because the
+ * public site's picker, the pricing page and this step have to be offering the
+ * same seven things — the goal is what decides the KPI set, and three lists
+ * that drifted would mean three different products.
+ */
+export const GOAL_OPTIONS: readonly ChoiceOption[] = GOALS.map((goal) => ({
+  value: goal.key,
+  label: `${goal.label} — ${goal.headlineKpi}`,
+}))
+
+export const DEFAULT_AUDIENCE: string = DEFAULT_CHOICE.audience
+export const DEFAULT_STAGE: string = DEFAULT_CHOICE.stage
+
+/**
+ * The demo workspace's goal is "Book discovery calls", which is the bookings
+ * goal written the way its owner says it.
+ */
+export const DEFAULT_GOAL_KEY: GoalKey = 'bookings'
 
 export const POSTS_PER_DAY_OPTIONS: readonly ChoiceOption[] = [
   { value: '1', label: '1' },

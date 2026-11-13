@@ -128,13 +128,21 @@ test('the whole demo path holds up', async ({ page }) => {
     page.getByText('3 posts are out, 3 more go today. 3 cuts need your eye.'),
   ).toBeVisible()
 
-  // `exact` matters: the learning-loop panel is named "This week's winner: …".
-  const week = page.getByRole('region', { name: 'This week', exact: true })
-  await expect(week).toContainText('Posts this week')
-  await expect(week).toContainText('21')
-  await expect(week).toContainText('48.3K')
-  await expect(week).toContainText('214')
-  await expect(week).toContainText('Calls booked')
+  // 16 §5 replaced the four activity tiles with the goal bar and the three
+  // KPI cards. The assertion follows: what Home now promises is a goal and its
+  // headline measurements, not a view count.
+  const goal = page.getByRole('region', { name: 'Your goal', exact: true })
+  await expect(goal).toContainText('Get more customers from short video')
+  await expect(goal).toContainText('52 of 120 leads')
+  await expect(goal).toContainText('Sends per 1,000 reach')
+  await expect(goal).toContainText('Net new followers')
+  // 15 §1: a target is a proposal with a stated basis, never a promise.
+  await expect(goal).toContainText('Target 10 · 14-day baseline')
+
+  // 15 §5: an alert appears only after two periods off track, and says so.
+  const alerts = page.getByRole('region', { name: 'Alerts', exact: true })
+  await expect(alerts).toContainText('Leads behind pace for two weeks')
+  await expect(alerts).toContainText('we raise this after two, not after one')
 
   // "Needs you" is the morning to-do: 2 cuts to review, 1 post to approve,
   // 1 cut blocked by Compliance.
@@ -172,10 +180,14 @@ test('the whole demo path holds up', async ({ page }) => {
   await expect(cuts.getByText('Background music from a venue; replace the audio')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Schedule 9 passed cuts' })).toBeVisible()
 
-  /* --- 7. Trend board --------------------------------------------------- */
+  /* --- 7. Niche Scan ----------------------------------------------------- */
 
-  await openFromSidebar(page, 'Trends')
-  await expect(heading(page, 'Formats rising now')).toBeVisible()
+  await openFromSidebar(page, 'Niche Scan')
+  await expect(heading(page, 'Niche Scan')).toBeVisible()
+
+  // 12 §Niche Scan: the benchmark that makes formats comparable across
+  // accounts of different sizes, beside the fit score.
+  await expect(page.getByText('views per follower in this niche').first()).toBeVisible()
 
   await expect(page.getByRole('region', { name: 'How remakes work', exact: true })).toContainText(
     'We remake the format, never the footage.',
@@ -227,15 +239,42 @@ test('the whole demo path holds up', async ({ page }) => {
   /* --- 10. Results ------------------------------------------------------ */
 
   await openFromSidebar(page, 'Results')
-  await expect(heading(page, '21 posts, 6 calls booked')).toBeVisible()
+  await expect(heading(page, 'Overview')).toBeVisible()
 
-  const funnel = page.getByRole('region', { name: 'From views to calls', exact: true })
-  for (const stage of ['Views', 'Profile visits', 'Link clicks', 'Leads', 'Calls booked']) {
+  // 15 §5: the seven tabs, as links rather than a widget, so each has a URL.
+  const resultsNav = page.getByRole('navigation', { name: 'Results sections' })
+  for (const tab of [
+    'Overview',
+    'Funnel',
+    'Content',
+    'Accounts',
+    'Goals and KPIs',
+    'Ledger',
+    'Agent insights',
+  ]) {
+    await expect(resultsNav.getByRole('link', { name: tab, exact: true })).toBeVisible()
+  }
+
+  await resultsNav.getByRole('link', { name: 'Funnel', exact: true }).click()
+  await expect(page).toHaveURL(/\/app\/results\?tab=funnel$/)
+
+  const funnel = page.getByRole('region', { name: 'Views to bookings', exact: true })
+  for (const stage of ['Views', 'Profile visits', 'Link clicks', 'Leads', 'Bookings']) {
     await expect(funnel).toContainText(stage)
   }
   await expect(funnel).toContainText('48,300')
-  // The bottom of the funnel is the number the demo is selling.
-  await expect(funnel.getByText('6', { exact: true })).toBeVisible()
+
+  // 15 §5 tab 4: an account nobody has connected shows a connect prompt, never
+  // a row of zeroes. This is the honesty rule that is easiest to break.
+  await resultsNav.getByRole('link', { name: 'Accounts', exact: true }).click()
+  await expect(page.getByText('We have no measurements for LinkedIn')).toBeVisible()
+
+  // 15 §5 tab 6: the ledger names the column it has no data for rather than
+  // filling it with zeroes.
+  await resultsNav.getByRole('link', { name: 'Ledger', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'The weekly ledger', exact: true })).toContainText(
+    'There is no sales column',
+  )
 
   /* --- 11. Agents ------------------------------------------------------- */
 

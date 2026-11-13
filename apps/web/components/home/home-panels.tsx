@@ -1,60 +1,29 @@
 /**
- * The quiet half of S2 · Home: the four metric tiles, the "Today" timeline,
- * the agent activity feed and the one ink panel on the screen.
+ * The quiet half of S2 · Home: the "Today" timeline, the agent activity feed
+ * and the one ink panel on the screen.
  *
  * None of these take input, so they stay server components and ship no
  * JavaScript of their own.
+ *
+ * The four metric tiles that used to open this file were removed in v4 under
+ * 16 §5. They reported views, clicks and calls booked — activity, in the shape
+ * every clipping tool reports it — and Home now opens with the goal bar and
+ * three KPI cards measured against targets. Two sets of headline figures on
+ * one screen is two answers to "which number matters".
  *
  * DESIGN.md "Elevation & Depth": "Dark ink panels: the strongest emphasis on
  * a light page. Use at most one or two per screen." The learning loop is this
  * screen's one.
  */
 
-import { Card, LogoMark, MetricTile, StatusChip, ViewerPanel } from '@mirrorline/ui'
+import { Card, LogoMark, StatusChip, ViewerPanel } from '@mirrorline/ui'
 import Link from 'next/link'
 
-import { MACHINE_FIGURES } from '@/components/shell/machine-voice'
-import {
-  AGENT_FEED_LINES,
-  HOME_METRICS,
-  LEARNING_LOOP,
-  TODAY_POSTS,
-  postPlatformLine,
-} from './home-data'
+import { AGENT_FEED_LINES, LEARNING_LOOP, TODAY_POSTS, postPlatformLine } from './home-data'
 
 /** The low-emphasis card link: deep coral on light, the lighter coral on dark. */
 const CARD_LINK_CLASSES =
   'text-label text-primary underline-offset-4 hover:underline dark:text-accent'
-
-/* -------------------------------------------------------------------------- */
-/* Metric tiles                                                                */
-/* -------------------------------------------------------------------------- */
-
-export function HomeMetrics() {
-  return (
-    <section
-      aria-label="This week"
-      className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4"
-    >
-      {HOME_METRICS.map((metric) => (
-        // DESIGN.md "Metric tile": "label in Geist, big number in Geist Mono".
-        // The tile draws its own figure, so the machine's voice reaches it
-        // through the `.tabular` class the library puts on that number. The
-        // label above and the delta sentence below stay in Geist: "On plan:
-        // 9 a day" is the studio talking, not a readout.
-        <MetricTile
-          key={metric.id}
-          className={MACHINE_FIGURES}
-          label={metric.label}
-          value={metric.value}
-          series={metric.series}
-          delta={metric.delta}
-          deltaDirection={metric.deltaDirection}
-        />
-      ))}
-    </section>
-  )
-}
 
 /* -------------------------------------------------------------------------- */
 /* Today                                                                       */

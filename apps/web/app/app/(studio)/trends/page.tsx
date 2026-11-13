@@ -20,17 +20,27 @@ import {
 } from '@/components/trends/trend-filters'
 
 /**
- * S4 · Trend board.
+ * S4 · Niche Scan.
+ *
+ * Renamed from "Trend board" in v4 under 16 §5. The screen never really was a
+ * trending list — Trend Scout researches the account's own niche and the ones
+ * beside it, and what comes back is a set of recipes with a fit score. Calling
+ * it Trends invited the comparison with every tool that shows you what is
+ * popular, which is the comparison P2 and P5 exist to refuse.
+ *
+ * Each card now carries the Niche Scan's two benchmarks: **views per
+ * follower**, which makes formats comparable across accounts of different
+ * sizes, and the **fit score** against this brand.
  *
  * The filters live in the query string, so the server renders the exact set
  * of cards the URL asks for and the client only writes the next URL.
  *
  * Every card is a format recipe drawn as empty frames. CLAUDE.md
- * non-negotiable 1 and 2: we never hold anyone else's footage, and a remake
+ * non-negotiables 1 and 2: we never hold anyone else's footage, and a remake
  * copies the format only.
  */
 
-export const metadata: Metadata = { title: 'Trends' }
+export const metadata: Metadata = { title: 'Niche Scan' }
 
 /**
  * SC 4.1.3: changing a filter used to swap the whole grid in silence. This one
@@ -62,8 +72,8 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
     <div className="flex flex-col gap-6">
       <PageHeader
         eyebrow="Create · Trend Scout agent · updated 10:05 am"
-        title="Formats rising now"
-        description={WINDOW_SENTENCES[filters.window]}
+        title="Niche Scan"
+        description={`Formats rising in your niche and the ones beside it. ${WINDOW_SENTENCES[filters.window]}`}
         action={<TrendFilterBar filters={filters} />}
       />
 
