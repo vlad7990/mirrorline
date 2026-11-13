@@ -173,11 +173,25 @@ create table if not exists public.alerts (
   kpi_key text not null references public.kpi_definitions (key) on delete cascade,
   status text not null check (status in ('open', 'acknowledged', 'resolved')) default 'open',
   message text not null,
-  -- 15 §5 raises an alert after two periods off track, not one. Held here as
-  -- well as in the app, so a job writing straight to the table cannot raise
-  -- one on a single bad week.
-  weeks_off_track smallint not null check (weeks_off_track >= 2),
-  created_at timestamptz not null default now()
+  -- Two kinds, with opposite timing rules. See the module comment in
+  -- apps/web/lib/studio/insights.ts; the short version is that a KPI behind
+  -- its target waits two periods because one bad week is weather, and a
+  -- stopped connection waits for nothing because posting has already stopped.
+  kind text not null check (kind in ('trend', 'connection')),
+  -- Null for a connection alert: no number of weeks is involved, and a zero
+  -- or a one sitting here is something to gate on by mistake.
+  weeks_off_track smallint,
+  -- The day the connection broke. Null for a trend alert.
+  broken_since date,
+  created_at timestamptz not null default now(),
+  -- 15 §5 raises a *trend* alert after two periods off track, not one. Held
+  -- here as well as in the app, so a metrics job writing straight to the table
+  -- cannot raise one on a single bad week — and cannot make a disconnection
+  -- wait two weeks, which is the bug this constraint replaced.
+  constraint alerts_timing_matches_kind check (
+    (kind = 'trend' and weeks_off_track >= 2 and broken_since is null)
+    or (kind = 'connection' and weeks_off_track is null and broken_since is not null)
+  )
 );
 
 -- ============================================================================

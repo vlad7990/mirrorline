@@ -3,67 +3,88 @@
  * when a KPI is off track for two weeks in a row") and tab 7 ("what worked,
  * what we'll change, and what we need from you").
  *
- * **Two weeks is the rule, not a suggestion.** One bad week is weather. An
- * alert on every dip would train the user to dismiss alerts, which costs us
- * the one week it matters. `weeksOffTrack` is on the record so the UI can say
- * which it is, and a test can hold the threshold.
+ * **There are two kinds of alert and they have opposite timing rules.** The
+ * first version of this file had one kind, and applied 15 §5's two-week rule
+ * to both — which meant an account that disconnected today stayed silent for a
+ * fortnight while nothing published. That is the single failure an alert
+ * exists to prevent.
+ *
+ * - A **trend** alert says a KPI is behind. One bad week is weather, so it
+ *   waits for two: an alert on every dip trains the user to dismiss alerts,
+ *   which costs us the week it matters.
+ * - A **connection** alert says posting has stopped. There is nothing to
+ *   average and nothing to wait and see about. It raises the day it happens.
+ *
+ * The two are a discriminated union rather than one shape with a flag, so a
+ * connection alert cannot carry a `weeksOffTrack` for somebody to gate on by
+ * accident, and a trend alert cannot be missing one. The same rule is a CHECK
+ * constraint on the `alerts` table, because a metrics job writing straight to
+ * the database must not be able to raise a trend alert on one week either.
  *
  * **The note names what we got wrong.** A weekly report that only lists wins
  * is marketing, and the client is paying for an analyst.
  */
 
-/**
- * A KPI that has missed its target two periods running.
- *
- * `attention` rather than `danger` for the KPI cases on purpose: a KPI behind
- * its target six weeks into a quarter is information, not an incident, and red
- * is reserved for things that are actually broken — a disconnected account, a
- * blocked post.
- */
-export type KpiAlertTone = 'attention' | 'danger'
-
-export interface KpiAlert {
+interface AlertCommon {
   readonly id: string
   /** Matches a `KpiDefinition.key`, so the alert can link to its card. */
   readonly kpiKey: string
   readonly title: string
   readonly message: string
+}
+
+/** A KPI behind its target. Waits for two periods. */
+export interface TrendAlert extends AlertCommon {
+  readonly kind: 'trend'
   /** 15 §5: an alert needs two in a row. Below that there is no alert. */
   readonly weeksOffTrack: number
-  readonly tone: KpiAlertTone
 }
+
+/** Posting has stopped. Raises immediately. */
+export interface ConnectionAlert extends AlertCommon {
+  readonly kind: 'connection'
+  /** Display date the connection broke, e.g. "11 November". Never parsed. */
+  readonly since: string
+}
+
+export type KpiAlert = TrendAlert | ConnectionAlert
 
 /** 15 §5. Below this a KPI is having a week, not a problem. */
 export const ALERT_WEEKS_THRESHOLD = 2
 
 export const SAMPLE_ALERTS: readonly KpiAlert[] = [
   {
+    kind: 'connection',
     id: 'alert-reconnect-instagram',
     kpiKey: 'posts_published',
     title: 'Instagram needs reconnecting',
     message:
       'Instagram disconnected us on 11 November. Nothing has gone out there since, and we will not post anywhere on your behalf until you reconnect it.',
-    weeksOffTrack: 2,
-    tone: 'danger',
+    since: '11 November',
   },
   {
+    kind: 'trend',
     id: 'alert-leads-behind',
     kpiKey: 'leads',
     title: 'Leads behind pace for two weeks',
     message:
       'Nine leads this week against a target of ten, after eight against ten last week. The Analyst is moving two posts a week to the format with the highest sends, and will report next Monday.',
     weeksOffTrack: 2,
-    tone: 'attention',
   },
 ]
 
 /**
- * True when a KPI has been off track long enough to be worth saying.
+ * True when an alert has earned the user's attention.
  *
  * A function rather than a pre-filtered constant, so Home, the Overview tab
  * and the test all apply the same rule to whatever list they hold.
  */
 export function isAlertWorthRaising(alert: KpiAlert): boolean {
+  // A broken connection is not a trend. Nothing is being averaged over weeks
+  // and there is nothing to wait and see about: posting has already stopped,
+  // and every further day is one the client pays for and gets nothing from.
+  if (alert.kind === 'connection') return true
+
   return alert.weeksOffTrack >= ALERT_WEEKS_THRESHOLD
 }
 

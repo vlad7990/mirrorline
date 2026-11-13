@@ -139,10 +139,14 @@ test('the whole demo path holds up', async ({ page }) => {
   // 15 §1: a target is a proposal with a stated basis, never a promise.
   await expect(goal).toContainText('Target 10 · 14-day baseline')
 
-  // 15 §5: an alert appears only after two periods off track, and says so.
+  // 15 §5: a *trend* alert appears only after two periods off track, and says
+  // so. A disconnection does not wait — nothing is publishing, so there is
+  // nothing to wait and see about, and the two sentences differ on the page.
   const alerts = page.getByRole('region', { name: 'Alerts', exact: true })
   await expect(alerts).toContainText('Leads behind pace for two weeks')
   await expect(alerts).toContainText('we raise this after two, not after one')
+  await expect(alerts).toContainText('Instagram needs reconnecting')
+  await expect(alerts).toContainText('We raise this the same day')
 
   // "Needs you" is the morning to-do: 2 cuts to review, 1 post to approve,
   // 1 cut blocked by Compliance.

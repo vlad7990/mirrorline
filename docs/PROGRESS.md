@@ -36,14 +36,13 @@ pushed. The `Branch: main` line above is stale; this is where the work is.
 
 ### Open — the five follow-ups
 
-**None of the five has been started.** They were raised as findings and open
-questions at the end of the PR9 report, and the session ended before any was
-actioned.
+**One of the five is done.** The rest were raised as findings and open
+questions at the end of the PR9 report.
 
 | # | Follow-up | State | Where it lives |
 |---|---|---|---|
 | 1 | Studio nav back to 8 items | **Not started.** 11 today | `apps/web/components/shell/nav-items.ts` |
-| 2 | Immediate connection alerts | **Not started** | `apps/web/lib/studio/insights.ts`, and the SQL CHECK |
+| 2 | Immediate connection alerts | **Done** — `insights.ts`, `alerts-board.tsx`, the `alerts` CHECK | see below |
 | 3 | Industry-neutral demo workspaces | **Not started** | `packages/mock/src/data.ts` |
 | 4 | `.env.example` fix | **Not started**, deliberately — Needs Vlad C | `.env.example` |
 | 5 | Remove `report-button.tsx` | **Not started**, deliberately — Needs Vlad D | `apps/web/components/results/report-button.tsx` |
@@ -54,14 +53,32 @@ Detail where it is not obvious from the table:
    list. Getting back to eight needs a decision rather than an edit — most
    likely Goals and KPIs and Accounts reached only through Results, since both
    are already tabs there and the components are shared.
-2. **Alerts.** `ALERT_WEEKS_THRESHOLD = 2` and `isAlertWorthRaising` apply the
-   two-week rule to *every* alert, including the Instagram disconnection — so
-   an account that drops off today stays silent for a fortnight. A broken
-   connection is not a trend and should raise on day one. The fix is a kind on
-   `KpiAlert` (trend vs connection), gating only the trend kind, and narrowing
-   the `alerts.weeks_off_track >= 2` CHECK in
-   `supabase/migrations/20261113120000_metrics_and_goals.sql:179` so it applies
-   to that kind alone.
+2. **Alerts — done.** The two-week rule had been applied to *every* alert,
+   including the Instagram disconnection, so an account that dropped off today
+   stayed silent for a fortnight while nothing published.
+
+   `KpiAlert` is now a discriminated union: a `TrendAlert` carries
+   `weeksOffTrack` and waits for two periods; a `ConnectionAlert` carries the
+   date it broke and raises the same day. A union rather than a flag, so a
+   connection alert cannot carry a week count for someone to gate on by
+   accident, and a trend alert cannot be missing one. `tone` was dropped — it
+   was fully derivable from the kind, and two sources of truth for one
+   decision is how they disagree later.
+
+   The footnote under each alert differs by kind now. The old single line read
+   "2 weeks running — we raise this after two, not after one" under the
+   disconnection too, which was false twice over.
+
+   `alerts.weeks_off_track >= 2` became the table-level
+   `alerts_timing_matches_kind` CHECK, so a metrics job writing straight to
+   the database cannot raise a trend alert on one week, or make a
+   disconnection wait for two. Edited the existing migration in place rather
+   than adding a second: per `supabase/README.md` it has never been applied
+   anywhere, so there is no deployed constraint to patch.
+
+   Covered three ways: two unit tests on the rule (verified to fail when the
+   fix is reverted), one asserting the SQL matches the app, and an end-to-end
+   assertion that both sentences appear on `/app/home`.
 3. **Demo workspace.** Still "Maya Torres Coaching", `niche: 'Coaching'`,
    `ownerRole: 'Leadership coach for first-time managers'`. Legitimate as one
    fictional client's own niche, but it is the only demo account in the repo,

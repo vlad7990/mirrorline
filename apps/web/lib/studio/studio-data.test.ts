@@ -7,6 +7,10 @@
  * this", and each is one careless default away from becoming a zero.
  */
 
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import { describe, expect, test } from 'vitest'
 
 import { KPI_DEFINITIONS } from '@/components/kpi/sample-dashboard'
@@ -15,9 +19,10 @@ import { ACCOUNT_METRICS, CONNECTED_ACCOUNT_METRICS, WORKSPACE_LEADS } from './a
 import { SAMPLE_CASCADE, SAMPLE_CUSTOM_KPIS, type KeyResult, keyResultPace } from './cascade'
 import {
   ALERT_WEEKS_THRESHOLD,
+  type ConnectionAlert,
   RAISED_ALERTS,
-  SAMPLE_ALERTS,
   SAMPLE_FORMAT_RANKING,
+  type TrendAlert,
   isAlertWorthRaising,
 } from './insights'
 import { PORTFOLIO_TOTALS, SAMPLE_PORTFOLIO, hasAgreedTarget } from './portfolio'
@@ -29,6 +34,8 @@ import {
 } from './results-tabs'
 
 const KPI_KEYS = new Set(KPI_DEFINITIONS.map((definition) => definition.key))
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
 
 function keyResult(overrides: Partial<KeyResult>): KeyResult {
   return {
@@ -132,19 +139,65 @@ describe('per-account metrics', () => {
 })
 
 describe('alerts', () => {
-  test('raises an alert only after two periods off track', () => {
-    const first = SAMPLE_ALERTS[0]
-    expect(first).toBeDefined()
-    const oneWeek = { ...first!, weeksOffTrack: 1 }
+  const trend: TrendAlert = {
+    kind: 'trend',
+    id: 'alert-test-trend',
+    kpiKey: 'leads',
+    title: 'Leads behind',
+    message: 'Behind target.',
+    weeksOffTrack: 1,
+  }
 
-    expect(isAlertWorthRaising(oneWeek)).toBe(false)
-    expect(isAlertWorthRaising({ ...oneWeek, weeksOffTrack: ALERT_WEEKS_THRESHOLD })).toBe(true)
+  const connection: ConnectionAlert = {
+    kind: 'connection',
+    id: 'alert-test-connection',
+    kpiKey: 'posts_published',
+    title: 'Instagram needs reconnecting',
+    message: 'Nothing has published since.',
+    since: '11 November',
+  }
+
+  test('raises a trend alert only after two periods off track', () => {
+    expect(isAlertWorthRaising(trend)).toBe(false)
+    expect(isAlertWorthRaising({ ...trend, weeksOffTrack: ALERT_WEEKS_THRESHOLD })).toBe(true)
+  })
+
+  test('raises a connection alert the day it happens', () => {
+    // The bug this replaced: the two-week rule was applied to every alert, so
+    // an account that disconnected today stayed silent for a fortnight while
+    // nothing published. A connection alert has no week count to wait on.
+    expect(isAlertWorthRaising(connection)).toBe(true)
+  })
+
+  test('the disconnection in the sample data is raised, not held back', () => {
+    const raised = RAISED_ALERTS.find((alert) => alert.kind === 'connection')
+
+    expect(raised).toBeDefined()
+    expect(raised?.id).toBe('alert-reconnect-instagram')
   })
 
   test('every raised alert names a KPI that exists', () => {
     for (const alert of RAISED_ALERTS) {
       expect(KPI_KEYS.has(alert.kpiKey)).toBe(true)
     }
+  })
+
+  test('the alerts table enforces the same timing rule as the app', () => {
+    // Two copies of a rule is a drift waiting to happen, and this one would
+    // drift silently: a metrics job writing straight to the database bypasses
+    // `isAlertWorthRaising` entirely.
+    const sql = readFileSync(
+      path.join(REPO_ROOT, 'supabase/migrations/20261113120000_metrics_and_goals.sql'),
+      'utf8',
+    )
+
+    expect(sql).toMatch(/constraint alerts_timing_matches_kind check/)
+    // A trend alert needs its two weeks and no break date; a connection alert
+    // needs the break date and no week count.
+    expect(sql).toMatch(/kind = 'trend' and weeks_off_track >= 2 and broken_since is null/)
+    expect(sql).toMatch(
+      /kind = 'connection' and weeks_off_track is null and broken_since is not null/,
+    )
   })
 })
 
