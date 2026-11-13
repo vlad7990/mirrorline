@@ -1142,3 +1142,101 @@ because the backdrop always does.
 below the screenshot in open space and read as a stray line. It is absolutely
 positioned against the page edge now, which is where the reference puts it and
 the only place it competes with nothing.
+
+## 2026-11-13 · D38 · The specs contradict each other, and the newer ones win
+
+Step 0 of `MASTER_PROMPT_v4.md` asks for every conflict between specs to be
+logged. There are six, they are real contradictions rather than ambiguities,
+and they all point the same way: the v4 specs (`11`–`16`) describe a product
+that `01`–`08` and CLAUDE.md's opening paragraph do not.
+
+A new **"Sources of truth for content, structure and scope"** block in
+CLAUDE.md fixes the order — `09 → 16 → 15 → 11 → 13 → 14 → 12 → 10` — and says
+in the same breath that the **design is locked and no spec in that list
+overrides it**. The existing design source-of-truth list is untouched and still
+governs everything visual.
+
+**1. Who we serve. The big one.** CLAUDE.md said "an AI content studio for
+coaches, consultants and local service businesses"; `01 §Who it is for` names
+coaches as "launch niche 1" and local services as "launch niche 2"; DESIGN.md's
+Overview repeats the same phrase. `11 §5`, `13` and `16 §1` all say everyone,
+any industry, new or existing account, segmented by account type and goal only.
+**16/13/11 win.** CLAUDE.md's paragraph is rewritten in place with a note
+saying what it used to say — a factual correction, not a design change.
+
+DESIGN.md's Overview carries the same stale sentence. It will get the same
+one-sentence factual correction and **nothing else**: no token, component,
+colour or type value in that file is touched. Correcting a statement of who the
+product is for is not redesigning it, and leaving a locked file factually wrong
+is worse than editing one line of its prose.
+
+**2. Colour and type.** `02_BRAND_AND_VOICE.md` still specifies coral `#FF5A36`
+and Inter Tight / Inter. The built product is gold (`#7A5C0F` primary,
+`#C8A24A` accent) and Geist / Geist Serif / Geist Mono, via D25 and D26.
+**DESIGN.md wins.** `02` is stale on colour and type and still correct on
+voice, which is the half of it that is actually used.
+
+Worth noting because it will mislead someone: DESIGN.md's own prose still says
+"accent coral" in the Shapes and Components sections, and the dark-theme line
+still lists `#FF7A5C`, while its front-matter tokens are gold. That is an
+internal inconsistency in a locked file. It is recorded here and **not fixed**,
+because the tokens are what ship and editing the prose is not worth touching
+the design lock mid-build. Flagged for Vlad.
+
+**3. Prices.** `01` lists Pilot $750, Growth $1,500, Scale $3,000 and a later
+"Studio $49–$149", with no Creator tier at all. v4 adds **Creator $499** and
+fixes **Studio at $79**, waitlisted until month 2. **v4 wins**, and
+`09_SERVICES.md` becomes the one place a price is written down. Any other file
+quoting a price is a copy to be checked against it.
+
+**4. The home page's section order.** `14 §2` lists twelve sections; `16 §3`
+lists nineteen. `14`'s own closing note defers to `16`. **16 wins**, and the
+nineteen-section order is the build order.
+
+**5. Trend board vs Niche Scan.** `03 §S4` and the built studio screen call it
+the trend board. `12 §1` and `16 §5` replace it with the Niche Scan — recipes,
+views per follower, why each is growing, and a fit score, **links only**.
+**16 wins**; the route keeps its path and the screen changes underneath it.
+
+**6. The studio's tiers vs the KPI set.** `15` says every account gets goals,
+KPIs and the seven-tab Results dashboard, while `01`'s success metrics are a
+short flat list. **15 wins**, and "every account" is literal: the KPI system is
+not a Scale-plan feature. Only the **portfolio view** is plan-gated.
+
+### Three of Step 2's five allowed layout fixes collide with the last two days
+
+Recorded now rather than discovered mid-build. None is actioned; all three are
+Vlad's call.
+
+- **"Shorten the 3,183px loop section."** That section became D35's *pinned*
+  seven-agent sequence yesterday. `SCROLL_PER_AGENT` is 320px and there are
+  seven agents, so 2,240px of that height is the pin spacer and the rest is the
+  section. The height **is** the mechanic: shortening it means fewer pixels per
+  agent, or fewer agents on the stage. It cannot be shortened and left intact.
+- **"Remove the lone light band."** The only `band-snow` on the home page is
+  the audience section D36 rebuilt yesterday, and DESIGN.md's public-site
+  section calls the ink / ink-alt / snow / white alternation deliberate art
+  direction rather than an accident. Removing the one light band makes the page
+  uniformly dark, which is a design change, not a layout fix.
+- **"Use the hero heading style for all section headings."** The hero is Geist
+  Serif display with a gold gradient on **one accent phrase per headline, never
+  two** (DESIGN.md, public site). Applied literally to all fourteen section
+  headings, that rule breaks fourteen times. The defensible reading is one
+  *scale and alignment* on every section, not the gradient treatment.
+
+The other two — aligning every section to the hero's left edge, and one spacing
+scale — carry no conflict and are already most of the way there through
+`Section` and `SectionHeading`.
+
+**Already done, and verified rather than assumed.** Step 2 also asks for the
+untrue "run happens on this machine" line and the fake "4 places" limit to be
+removed. Neither string exists anywhere in `apps/` or `packages/`. The
+banned-phrase CI test from Step 7 is what keeps it that way.
+
+**One more, in Step 3 rather than Step 2.** The home hero is asked to carry a
+Business / Individual × New / Existing picker. D34 deliberately moved every
+interactive control out of the hero — its single action is an anchor to the
+upload band below. A four-way picker in the hero reopens D34. The default,
+unless Vlad says otherwise, is to put the picker in the band directly below the
+hero, which keeps D34 and still sets the choice before any of the page's
+examples are read.

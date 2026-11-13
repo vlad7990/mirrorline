@@ -18,7 +18,15 @@ import { THEME_STORAGE_KEY, THEMES, expectResolvedTheme } from './helpers/theme'
 
 onlyProject('screenshots', 'The sweep sets its own viewports; one project is enough.')
 
-const OUTPUT_DIRECTORY = path.resolve(__dirname, '..', 'docs', 'screens-built')
+/**
+ * Defaults to the rolling reference set. `SCREENSHOT_OUT_DIR` redirects the
+ * sweep elsewhere — used to capture a dated "before" baseline (for example
+ * `docs/screens-built/before-v4`) without overwriting the current references,
+ * which are what the next run gets compared against.
+ */
+const OUTPUT_DIRECTORY = process.env.SCREENSHOT_OUT_DIR
+  ? path.resolve(process.env.SCREENSHOT_OUT_DIR)
+  : path.resolve(__dirname, '..', 'docs', 'screens-built')
 
 interface Viewport {
   readonly width: number
