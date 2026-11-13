@@ -126,8 +126,30 @@ dark. No token value changed; the bug was scope and so is the fix.
   names the sales column it has no data for instead of filling it with zeroes.
   axe also caught the KPI card's gold failing AA on the studio's dark surface.
 
-**Still to come:** PR9 (Supabase migrations, the agents spec, the two audits,
-the banned-phrase CI test and the final sweep).
+### PR9 · data, docs and audits — `a1c9397`
+
+**https://mirrorline-j7chcwghk-vn-mn-product-group.vercel.app**
+
+- The 15 §7 schema, the twelve-KPI seed transcribed from
+  `sample-dashboard.ts`, and a test that fails if the two drift. Two honesty
+  rules are in the schema rather than above it: `metric_snapshots.value` is
+  NOT NULL so a missing measurement is a missing row rather than something a
+  later `coalesce` turns into a zero, and `alerts.weeks_off_track >= 2` so a
+  job cannot raise an alert on one bad week. RLS on everywhere, no policies.
+- 04_AGENTS_SPEC gains the metric each agent owns, the Niche Scan's allowed
+  and banned sources, and the Originality Gate as blocks-and-rewrites with no
+  override. `docs/provenance.md` is the empty register 07 asks for, plus what
+  stands in for each reuse-list item today. `SERVICES_AUDIT.md` and
+  `SWEEP_REPORT.md` show their commands so they can be rerun, not believed.
+- **The sweep found two live claims and both are fixed.** The privacy policy
+  still said the product was "for coaches, consultants and local service
+  businesses" — D38 corrected that everywhere anyone rereads, and a legal page
+  is where a superseded claim survives. And the site description, which is
+  what a search result shows, said "the formats going viral". Both are now
+  covered by `banned-phrases.test.ts`, which sweeps every file that can put
+  words on a screen, on every test run.
+
+**The nine-PR run through `docs/prompts/MASTER_PROMPT_v4.md` is complete.**
 
 ---
 
@@ -311,6 +333,39 @@ nothing is hardcoded, so the demo story stays consistent across screens.
 ---
 
 ## Needs Vlad
+
+### New after PR8 and PR9 (13 November)
+
+A. **A Supabase project, and two keys in `.env.local`:** `SUPABASE_URL` and
+   `SUPABASE_SERVICE_ROLE_KEY`. `supabase/migrations/` and `supabase/seed.sql`
+   are written and reviewed but **have never been run against a database**,
+   because no project exists to run them against. Treat the first `db push` as
+   a first run. Nothing else is blocked by this: every studio screen reads
+   sample data, and the lead form falls back to `.data/niche-scans.json`.
+
+B. **A Stripe test-mode key as `STRIPE_TEST_SECRET_KEY`.** Not
+   `STRIPE_SECRET_KEY` — see C — and not a live key: `lib/billing/checkout.ts`
+   rejects anything that does not begin `sk_test_`, and a unit test holds that.
+
+C. **`.env.example` disagrees with the code on four variable names**
+   (`SERVICES_AUDIT.md` finding 1). It offers `STRIPE_SECRET_KEY`,
+   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `N8N_BASE_URL`
+   and `N8N_API_KEY`; the code reads `STRIPE_TEST_SECRET_KEY`, `SUPABASE_URL`,
+   `SUPABASE_SERVICE_ROLE_KEY` and `N8N_WEBHOOK_URL`. Someone following the
+   file gets a silent no-op. **Left unfixed on purpose** — you may already
+   have a populated `.env.local`, and renaming a variable under you is the
+   wrong kind of surprise. One word from you and it is a two-minute change.
+
+D. **`git rm apps/web/components/results/report-button.tsx`** when you are
+   happy to lose it. It is dead — the Ledger tab has a real CSV download and a
+   real print-to-PDF now — and it is left in place only because the working
+   rules say never to delete a file I did not create (`SWEEP_REPORT.md` §4).
+
+E. **The written IP assignment** remains the single gate on the whole
+   GenAIUniq reuse list. `docs/provenance.md`'s register is empty and stays
+   empty until it exists.
+
+### From earlier runs
 
 0. ~~**Higgsfield login, to unblock the cut wall.**~~ **Done 2026-11-12.** Vlad
    ran the login; the cut wall has real footage and the twice-raised design
