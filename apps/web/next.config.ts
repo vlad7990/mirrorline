@@ -34,7 +34,16 @@ const nextConfig: NextConfig = {
      * the first week's timeline — so the redirect is gone rather than
      * shadowing the page that now answers to that name.
      */
-    return [];
+    /*
+     * The policy documents moved under /legal (16 §4) and the old paths
+     * keep working. Permanent, because they were linked from the footer for
+     * weeks and someone may have one bookmarked — and a policy document is
+     * exactly the kind of link people keep.
+     */
+    return [
+      { source: '/privacy', destination: '/legal/privacy', permanent: true },
+      { source: '/terms', destination: '/legal/terms', permanent: true },
+    ];
   },
 };
 

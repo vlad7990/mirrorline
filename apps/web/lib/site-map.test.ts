@@ -33,6 +33,19 @@ const BUILT_ROUTES = new Set([
   '/individuals',
   '/niche-scan',
   '/niche-scan/sample',
+  // PR7
+  '/faq',
+  '/about',
+  '/contact',
+  '/resources',
+  '/changelog',
+  '/accessibility',
+  '/legal/privacy',
+  '/legal/terms',
+  '/legal/ai-use',
+  '/legal/acceptable-use',
+  '/legal/cancellation-refunds',
+  '/legal/cookies',
 ])
 
 describe('site map', () => {
@@ -84,9 +97,18 @@ describe('site map', () => {
     }
   })
 
-  test('the draft legal links are live, so the footer is never empty of policy', () => {
-    expect(DRAFT_LEGAL_LINKS.every((link) => link.isLive)).toBe(true)
-    expect(DRAFT_LEGAL_LINKS.map((link) => link.href)).toEqual(['/privacy', '/terms'])
+  test('the draft stand-ins are retired now that /legal/* is canonical', () => {
+    // They existed only while the Legal column was empty. The real documents
+    // live under /legal and the old paths 308 to them.
+    expect(DRAFT_LEGAL_LINKS).toEqual([])
+  })
+
+  test('every route in the map is built, so nothing is advertised early', () => {
+    // The whole point of `isLive`: by the end of the run there is nothing
+    // left unbuilt, and if a future PR adds a route it starts false again.
+    for (const link of allSiteLinks()) {
+      expect(BUILT_ROUTES.has(link.href), `${link.href} is listed but has no page`).toBe(true)
+    }
   })
 
   test('no href is duplicated within a single footer column', () => {

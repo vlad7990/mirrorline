@@ -10,7 +10,7 @@
 import { LogoWordmark } from '@mirrorline/ui'
 import Link from 'next/link'
 
-import { DRAFT_LEGAL_LINKS, FOOTER_COLUMNS, liveLinks } from '@/lib/site-map'
+import { FOOTER_COLUMNS, liveLinks } from '@/lib/site-map'
 
 /**
  * 16 §4's footer, minus routes that have not landed.
@@ -21,8 +21,7 @@ import { DRAFT_LEGAL_LINKS, FOOTER_COLUMNS, liveLinks } from '@/lib/site-map'
  */
 const COLUMNS = FOOTER_COLUMNS.map((column) => ({
   ...column,
-  heading: column.heading === 'Legal' ? 'Documents (drafts)' : column.heading,
-  links: column.heading === 'Legal' ? DRAFT_LEGAL_LINKS : liveLinks(column.links),
+  links: liveLinks(column.links),
 })).filter((column) => column.links.length > 0)
 
 export function SiteFooter() {

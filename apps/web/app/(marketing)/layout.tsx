@@ -7,6 +7,7 @@
 
 import * as React from 'react'
 
+import { CookieBanner } from '@/components/marketing/cookie-banner'
 import { SiteFooter } from '@/components/marketing/site-footer'
 // From site-chrome, NOT from site-header: that module is `'use client'`, and
 // a constant imported from one into a server component comes back as a
@@ -42,6 +43,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             {children}
           </main>
           <SiteFooter />
+          {/* Last in the tree, and fixed to the bottom: it must not be the
+              first thing a keyboard user tabs into on every page. */}
+          <CookieBanner />
         </div>
       </AccountChoiceProvider>
     </React.Suspense>

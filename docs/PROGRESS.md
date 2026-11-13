@@ -75,6 +75,22 @@ dark. No token value changed; the bug was scope and so is the fix.
 - Nav and footer now list five more routes. The e2e sweep covers them all, so
   the suite is 131 checks rather than 111.
 
+### PR6 · the funnel — `5bd7844`
+
+**https://mirrorline-24xdjn72f-vn-mn-product-group.vercel.app**
+
+- **`/niche-scan`** (free-text niche, never a dropdown), **`/niche-scan/sample`**
+  (what the report looks like, every figure invented and labelled), and
+  **`/admin/funnel`** (internal, noindex, the eleven events in funnel order).
+- **Supabase and Stripe are both adapters and both stubbed.** Leads go to
+  Supabase when keys exist and to a git-ignored JSON file otherwise; the
+  checkout mode is `unavailable` without a key and **refuses an `sk_live_`
+  key outright** rather than silently using it.
+- `/pricing` shows "best for" per plan and one action each: Pilot and Creator
+  check out, Growth and Scale are a call, Studio is a waitlist.
+- **No email is sent by anything in this build**, and the thank-you page says
+  so rather than implying a delivery.
+
 ---
 
 ## Preview link

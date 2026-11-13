@@ -37,7 +37,7 @@ export const NAV_LINKS: readonly SiteLink[] = [
   { href: '/metrics', label: 'Metrics', isLive: true },
   { href: '/pricing', label: 'Pricing', isLive: true },
   { href: '/compare', label: 'Compare', isLive: true },
-  { href: '/resources', label: 'Resources', isLive: false },
+  { href: '/resources', label: 'Resources', isLive: true },
 ]
 
 /** The lead magnet. One button, the same words, everywhere (14 §3). */
@@ -68,12 +68,12 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
   {
     heading: 'Company',
     links: [
-      { href: '/about', label: 'About', isLive: false },
-      { href: '/contact', label: 'Contact', isLive: false },
+      { href: '/about', label: 'About', isLive: true },
+      { href: '/contact', label: 'Contact', isLive: true },
       { href: '/trust', label: 'Our rules', isLive: true },
-      { href: '/resources', label: 'Resources', isLive: false },
-      { href: '/changelog', label: 'Changelog', isLive: false },
-      { href: '/faq', label: 'FAQ', isLive: false },
+      { href: '/resources', label: 'Resources', isLive: true },
+      { href: '/changelog', label: 'Changelog', isLive: true },
+      { href: '/faq', label: 'FAQ', isLive: true },
     ],
   },
   {
@@ -87,13 +87,13 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
   {
     heading: 'Legal',
     links: [
-      { href: '/legal/privacy', label: 'Privacy notice', isLive: false },
-      { href: '/legal/terms', label: 'Terms', isLive: false },
-      { href: '/legal/ai-use', label: 'How we use AI', isLive: false },
-      { href: '/legal/acceptable-use', label: 'Acceptable use', isLive: false },
-      { href: '/legal/cancellation-refunds', label: 'Cancellation and refunds', isLive: false },
-      { href: '/legal/cookies', label: 'Cookies', isLive: false },
-      { href: '/accessibility', label: 'Accessibility', isLive: false },
+      { href: '/legal/privacy', label: 'Privacy notice', isLive: true },
+      { href: '/legal/terms', label: 'Terms', isLive: true },
+      { href: '/legal/ai-use', label: 'How we use AI', isLive: true },
+      { href: '/legal/acceptable-use', label: 'Acceptable use', isLive: true },
+      { href: '/legal/cancellation-refunds', label: 'Cancellation and refunds', isLive: true },
+      { href: '/legal/cookies', label: 'Cookies', isLive: true },
+      { href: '/accessibility', label: 'Accessibility', isLive: true },
     ],
   },
 ]
@@ -104,10 +104,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
  * Separate from the Legal column because the wording differs: these say
  * "(draft)" out loud, which the reviewed versions will not need to.
  */
-export const DRAFT_LEGAL_LINKS: readonly SiteLink[] = [
-  { href: '/privacy', label: 'Privacy notice (draft)', isLive: true },
-  { href: '/terms', label: 'Terms (draft)', isLive: true },
-]
+export const DRAFT_LEGAL_LINKS: readonly SiteLink[] = []
 
 /** Drops anything not yet built. The one filter both renderers use. */
 export function liveLinks(links: readonly SiteLink[]): readonly SiteLink[] {
