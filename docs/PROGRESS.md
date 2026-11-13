@@ -8,10 +8,12 @@
 
 ## Handoff — 13 November 2026
 
-**Branch** `v4/site-and-metrics` · **last commit** `97fb161` · clean tree,
+**Branch** `v4/site-and-metrics` · **last commit** `2e2609d` · clean tree,
 pushed. The `Branch: main` line above is stale; this is where the work is.
 
-**Preview:** https://mirrorline-j7chcwghk-vn-mn-product-group.vercel.app
+**Preview:** https://mirrorline-nzgjbb9pp-vn-mn-product-group.vercel.app —
+`target: preview`, Ready, from `2e2609d`, so it carries all five follow-ups.
+Nothing has been promoted to production.
 
 ### Done
 
