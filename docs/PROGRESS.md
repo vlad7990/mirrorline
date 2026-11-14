@@ -8,15 +8,25 @@
 
 ## Handoff — 13 November 2026 (evening: motion v2 begins)
 
-**Branch** `v4/site-and-metrics` · **last commit** `354c4f5` · clean tree,
+**Branch** `v4/site-and-metrics` · **last commit** `4b3cbbd` · clean tree,
 pushed. The `Branch: main` line above is stale; this is where the work is.
 
-**Preview:** https://mirrorline-f4uozlf9o-vn-mn-product-group.vercel.app —
+**Preview:** https://mirrorline-q5trj0gam-vn-mn-product-group.vercel.app —
 Ready, `target: null` (a preview; nothing has been promoted to production),
-built from the PR A tree. Share link (expires 15 Nov, 13:03):
-`?_vercel_share=Q0bocY8ATgGpac4zOWeZ1IzxAJa5Xndj`.
+built from the PR B2 tree. Share link (expires 15 Nov, 13:26):
+`?_vercel_share=0VZlbcR5Huedgum7p1wAGBjXSS5LBLEv`.
 
-What to look at for **PR A**, which is mostly invisible by design: the footer
+What to look at for **PR B2**: the "How the loop runs" section on `/`, and
+click all four tabs — they should now show four different things rather than
+the same six rectangles. Then the same section at 390px, where the three
+frames become a side-swipe. And the footer, which no longer has a theme
+switch. Verified on this deployment: all four panels load their frames (4, 3,
+3 and 4, none broken), every panel carries "AI-generated sample", the footer
+has zero theme radios, and the console is clean.
+
+The PR A preview was https://mirrorline-f4uozlf9o-vn-mn-product-group.vercel.app
+(share `?_vercel_share=Q0bocY8ATgGpac4zOWeZ1IzxAJa5Xndj`, expires 15 Nov
+13:03). What to look at there, which is mostly invisible by design: the footer
 legal name at the bottom of any public page, and then `view-source:` on `/` —
 the point of the change is that the copy is *in* the HTML. Verified on this
 deployment: `/` 507,017 bytes with one `<main>`, one `<footer>`, one `<h1>`
