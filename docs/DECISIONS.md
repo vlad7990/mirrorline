@@ -2278,3 +2278,153 @@ row rather than only that it arrived.
    widest surface, which is a worse trade than a hidden duplicate. The tests
    scope to the drawer at 390, and at 1440 there is only one copy. Logged
    under "Watch".
+
+## 2026-11-14 · D49 · The inner pages get a kit, eight pictures of their own, and a last paragraph that is not the same on every page
+
+Vlad reordered the queue: PR F1–F5 run **before** PR C, D and E. This is F1,
+the shared kit, and it carries the three decisions the handoff said F1 would
+have to make rather than letting F2 make them by accident.
+
+### 19_INNER_PAGES.md gets a v2, because v1 was not a checklist
+
+The spec's page table is one line per page. "A tabbed feature tour" does not
+say how many tabs, and "a reel strip" does not say whether a page is finished
+without one — so four pull requests would each have interpreted it slightly
+differently and the last one would have been judged against the first one's
+habits. v2 is the same content as a per-page list of ★ sections, and a page is
+not done until every ★ on it exists.
+
+Writing it surfaced the thing reordering actually costs. 19 §Shared rules
+leans on PR E's hover-loop reels, PR D's YouTube add-on card and PR C's FAQ
+co-pilot link. The reels turned out not to be a dependency at all — the strip
+is F1's own component — but the other two are, and v2 **leaves them out**
+rather than stubbing them. A card for an add-on whose API audit has not
+started would be an invented product, which is the one thing non-negotiable 7
+is most explicit about.
+
+**The scope is nine pages, not sixteen.** Vlad's order names /product,
+/how-it-works, /pricing, /compare, /metrics, /niche-scan, /resources plus its
+article template, /sign-in and /sign-up. The other eleven — /agents, /trust,
+/businesses, /individuals, /niche-scan/sample, /about, /contact, /faq,
+/changelog, /legal/\*, /accessibility — keep the old kit and are written down
+as F6. That will be visible as a seam between a rebuilt page and an old one,
+and naming it is better than widening the scope nobody asked to widen.
+
+### The asset budget, which is the decision the handoff flagged
+
+There were 37 Higgsfield credits. Nano Banana Pro at 16:9 costs 2, Nano Banana
+2 costs 1.5, and Kling 3.0 Turbo is 7.5 a clip (D29). Eight page hero images
+cost 16 of them — seven pages plus one shared by /sign-in and /sign-up — and
+nine are reserved for the article covers /resources needs in F5. Nineteen are
+left, which is the retry margin and not a surplus.
+
+**The budget decided a design question, and the answer is better than the one
+money would have bought.** 19 asks the hero inset to show "a looping sample".
+Nine generated loops would have been 67.5 credits. So the loop is a CSS
+cross-fade through three of the twelve stills already in `public/samples/`:
+it costs nothing, decodes nothing, ships no `<video>`, and every frame in it
+is a real generated frame that is already labelled. One page is exempt —
+/product's inset is the one-episode story, so it gets the real `cut-01` loop,
+and it is the only page where one presenter in one room is the honest picture
+rather than a range claimed with a single face (D45).
+
+**The first image was rejected and it is worth saying why.** The prompt asked
+for a near-black room and got back a hooded figure at a dark desk lit by three
+monitors. Technically it was the best of the eight. For a company whose entire
+story is the legal turnaround of a project that ran fake accounts and evaded
+detection, a picture that reads as a hacker is the worst possible register,
+and no amount of copy underneath would have outrun it. Two credits, spent on
+finding that out. The replacement — and the register every other image was
+generated to — is warm, open, lit, and shows ordinary people doing ordinary
+work: charcoal, oak and amber, 35mm, no legible text, no logos, no signage.
+The people vary by age, gender and ethnicity on purpose, exactly as the twelve
+sample frames do.
+
+### One picture per page, which reverses an argument we made six days ago
+
+`hero-parts.tsx` says a hero backdrop is "a *room*, not an illustration of a
+topic, so it does not need to change when the subject does", and gives five
+pages one studio shot. That was right for what it described: the image sat far
+behind a bright screenshot at a deep scrim, it was atmosphere, and five of
+them would have been five things to label for no gain.
+
+19 v2 asks for something else — a full-bleed image the headline sits directly
+on. At that size one repeated room stops reading as a house style and starts
+reading as a template, so each page gets its own and the component labels
+unconditionally. The older `page-hero.tsx` is not deleted: it is still correct
+for the eleven pages F6 has not reached.
+
+**The vertical margin note does not come across.** 19 says to remove vertical
+labels that sit over images, and `HeroMarginNote` is rotated type in the right
+margin — which on a full-bleed image is no longer a margin. D44 already pulled
+the version drawn over the screenshot on six pages; this finishes it rather
+than finding somewhere new to put it.
+
+### Why `ReelStrip` is a new component and not another `VideoThumb` call
+
+`VideoThumb` falls back to one of four flat demo colours when it is handed no
+`media`. That is the honest default on the home page — a frame only looks like
+a reel when there is really a reel behind it — and the wrong default on a page
+where every frame has a file. 19 v2 bans flat colour tiles outright, so the
+strip takes `SampleFrame`s, which are by construction things with a file on
+disk. It cannot render an empty tile; there is no code path to it.
+
+It is also not the marquee. `showcase-marquee.tsx` runs on an infinite clock
+and belongs to the home page's "different trades, the same week" claim. A
+strip is bounded, sits inside a section, and answers a pointer — the
+`.reel-push` hover, which is a slow scale rather than playback because the
+budget says these frames stay stills.
+
+**Two frames, and neither invents anything.** The browser chrome carries an
+in-app path (`/app/calendar`) and no host, because "Mirrorline" is a
+placeholder name and a URL bar reading `mirrorline.com` would be a domain
+claim this site does not make. The phone has no maker's silhouette and no
+logo, for the reason non-negotiable 3 keeps the platform names as words.
+
+### The closing block differs per page now, and a test is what keeps it that way
+
+`site-cta.tsx` put "Record once. Show up everywhere." at the foot of every
+public page. One component instead of five copies fixed the markup and left
+the real duplication alone: a reader who has just finished the pricing table
+and one who has just finished the comparison are in different places, and
+saying the same thing to both wastes the one spot on the page where they have
+already chosen to keep reading. Seven pages, seven closings.
+
+**The offer itself is appended from one place and cannot vary.** Each page's
+lead runs *into* the pilot terms rather than restating them, so a page is free
+to differ in how it arrives at two weeks and $750 and structurally unable to
+differ in what they are. A page restating the terms more attractively for its
+own audience is exactly what non-negotiable 7 exists to stop, and this shape
+means no page can.
+
+The split that made this possible was forced by a test failure, and it turned
+out to be the better design. `tsconfig.base.json` sets `jsx: "preserve"` and
+Vitest has no React plugin, so a `.tsx` module cannot be imported by a spec at
+all — the first version put the copy in JSX and the suite could not read it.
+Moving the words to `page-cta-content.ts` follows the convention
+`home-content.ts` and `pricing-tiers.ts` already set, and it is what let the
+assertion exist: no two pages close with the same headline, and none of them
+is the block they replaced.
+
+### What is asserted rather than promised
+
+Fourteen new unit tests. Every sample frame and every hero image exists on
+disk — the promise `reel-assets.ts` already makes about the cut wall, for the
+same reason: only the filesystem can keep it, and a renamed asset would
+otherwise ship as a broken image and pass every other expectation. No two
+pages share a hero image. No two sections of one page can draw the same
+frames, because `allocateFrames` hands out non-overlapping windows and throws
+rather than wrapping when a page asks for more than the twelve that exist.
+
+`e2e/screenshots.spec.ts` gains a `SCREENSHOT_ONLY` slug filter beside the
+existing `SCREENSHOT_OUT_DIR`. Nine of twenty screens change across four pull
+requests and each owes a before and an after; sweeping all twenty each time
+would write four-fifths of the files to prove nothing happened in them. An
+unknown slug throws, because a silent empty selection looks exactly like a
+passing run. The 36 before-shots are in
+`docs/screens-built/inner-pages/before/`.
+
+**The kit ships unused, and that is the one thing worth watching.** Nothing
+imports `PageHeroImage`, `BrowserFrame`, `PhoneFrame` or `ReelStrip` yet, so
+lint, typecheck and build passing proves they compile and not that they
+render. F2 is the first page to use them and is where that gets found out.

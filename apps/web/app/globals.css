@@ -59,3 +59,95 @@
     pointer-events: none;
   }
 }
+
+/*
+ * The inner-page kit (19_INNER_PAGES v2).
+ *
+ * Two utilities, both motion, both app-level rather than design-system level:
+ * theme.css is the design system and is locked, and neither of these is a
+ * token or a shared primitive — they are how two components in
+ * `components/marketing/kit/` move.
+ *
+ * Both follow the house rule from theme.css: the still state is the default,
+ * and movement lives inside `prefers-reduced-motion: no-preference`. A reader
+ * who asks for stillness gets a working page with none of it, rather than a
+ * page that needs its own reduced-motion branch written for it.
+ */
+
+/* ---------------------------------------------------------------------------
+   The hero inset's looping card.
+
+   19 v2 fixed the budget: there are not enough credits for nine generated
+   loops (Kling is 7.5 a clip against the 37 we had), so the "looping sample"
+   in a page hero is a cross-fade through three stills we already shipped. It
+   costs nothing, decodes nothing, and every frame in it is a real generated
+   frame that is already labelled.
+
+   The default state shows the first frame and hides the rest, so with motion
+   off the card is a photograph rather than an empty box. That is the whole
+   reduced-motion story: no second rule, nothing to keep in sync.
+   --------------------------------------------------------------------------- */
+.inset-cycle-frame {
+  opacity: 0;
+}
+
+.inset-cycle-frame:first-child {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .inset-cycle-frame {
+    /* A negative delay starts the animation partway through its own cycle,
+       which is what spaces three frames evenly across one 12s loop without
+       three different keyframe sets. --index is set per child by the
+       component, exactly as `.stagger` and `.reveal-item` want it. */
+    animation: mirrorline-inset-cycle 12s linear infinite;
+    animation-delay: calc(var(--index, 0) * -4s);
+  }
+}
+
+/* Each frame holds for a quarter of the loop and spends 8% fading at each
+   end. The fades deliberately overlap the neighbour's — frame 2 is already
+   rising at 33% while frame 1 is still full — because a gap between them
+   shows the box behind, and a card that blinks to empty reads as broken. */
+@keyframes mirrorline-inset-cycle {
+  0% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  33% {
+    opacity: 1;
+  }
+  41% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The reel strip's hover push.
+
+   19 §Shared rules asks for "the hover-loop reels from PR E". The frames in
+   `public/samples/` are stills, not loops, and the credit budget says they
+   stay stills — so hover gets the slow push D45 put on the marquee instead of
+   playback it cannot do. It is the same intent (the strip answers a pointer)
+   at none of the cost, and it never implies footage that is not there.
+
+   Keyed to `:focus-within` as well as `:hover`, because a strip whose frames
+   are links is reachable by keyboard and a keyboard user should see the same
+   thing a mouse user does.
+   --------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  .reel-push img {
+    transition: transform var(--dur-reveal) var(--ease-out);
+  }
+
+  .reel-push:hover img,
+  .reel-push:focus-within img {
+    transform: scale(1.06);
+  }
+}
