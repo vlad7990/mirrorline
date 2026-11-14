@@ -507,6 +507,52 @@
   }
 
   /* ---------------------------------------------------------------------
+     The marker that slides between nav items (17 §2).
+
+     `SlidingIndicator` measures the active item and sets the two custom
+     properties; everything else is here. It sits *behind* the links, so the
+     active link's own background has to come off — see `studio-nav.tsx`.
+
+     The studio is a tool, not a page, so this is the dropdown duration rather
+     than a reveal: long enough to see where the marker went, short enough
+     that it has arrived before the eye follows it.
+     --------------------------------------------------------------------- */
+  .nav-indicator {
+    position: absolute;
+    z-index: 0;
+    border-radius: var(--radius-md);
+    background-color: var(--color-accent-soft);
+    pointer-events: none;
+    transition:
+      translate var(--duration-dropdown) var(--ease-out),
+      opacity var(--duration-tooltip) var(--ease-out);
+  }
+
+  .nav-indicator[data-axis='y'] {
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: var(--indicator-size, 0);
+    translate: 0 var(--indicator-offset, 0);
+  }
+
+  .nav-indicator[data-axis='x'] {
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: var(--indicator-size, 0);
+    translate: var(--indicator-offset, 0) 0;
+  }
+
+  /* A reader who asked for stillness gets the marker, not its travel: it is
+     where the selection is, which is information, so it never goes away. */
+  @media (prefers-reduced-motion: reduce) {
+    .nav-indicator {
+      transition: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------------
      The argument sections (17 §1 M4, M5, M6) and the metrics preview (M9).
 
      All four are CSS. None of them has ordered stages, so none of them needs

@@ -16,12 +16,18 @@
 import { cn } from '@mirrorline/ui'
 import Link from 'next/link'
 
+import { SlidingIndicator } from '@/components/shell/sliding-indicator'
 import { RESULTS_TABS, type ResultsTabSlug, resultsTabHref } from '@/lib/studio/results-tabs'
 
 export function ResultsNav({ current }: { current: ResultsTabSlug }) {
   return (
     <nav aria-label="Results sections" className="scroll-x -mx-[18px] px-[18px] sm:mx-0 sm:px-0">
-      <ul className="m-0 flex list-none gap-1 p-0">
+      <ul className="relative m-0 flex list-none gap-1 p-0">
+        {/* 17 §2. The strip stays a server component — arriving at your
+            numbers still costs no JavaScript — and only the marker is a
+            client island, because the tabs are different widths so the
+            position has to be measured rather than counted. */}
+        <SlidingIndicator axis="x" activeKey={current} className="nav-indicator" />
         {RESULTS_TABS.map((tab) => {
           const isCurrent = tab.slug === current
           return (
@@ -30,9 +36,12 @@ export function ResultsNav({ current }: { current: ResultsTabSlug }) {
                 href={resultsTabHref(tab.slug)}
                 aria-current={isCurrent ? 'page' : undefined}
                 className={cn(
-                  'press flex min-h-touch items-center whitespace-nowrap rounded-md px-3 text-label',
+                  // `relative`, so the link paints above the marker behind it.
+                  'press relative flex min-h-touch items-center whitespace-nowrap rounded-md px-3 text-label',
                   isCurrent
-                    ? 'bg-accent-soft font-semibold text-on-accent-soft'
+                    ? // The fill comes from the marker now; the current tab
+                      // contributes only its text treatment.
+                      'font-semibold text-on-accent-soft'
                     : 'font-medium text-text-muted hover:bg-surface-subtle hover:text-text',
                 )}
               >

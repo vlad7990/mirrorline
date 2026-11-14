@@ -776,6 +776,89 @@ test('under reduced motion the argument sections are at their final state', asyn
   expect(['none', 'matrix(0, 0, 0, 1, 0, 0)']).toContain(strike)
 })
 
+/* -------------------------------------------------------------------------- */
+/* Motion v2 — 17 §2, the studio                                               */
+/* -------------------------------------------------------------------------- */
+
+test('the nav markers sit exactly on the active item, and follow it', async ({ page }) => {
+  await page.goto('/app/results')
+
+  const read = () =>
+    page.evaluate(() => {
+      const of = (navLabel: string, axis: 'x' | 'y') => {
+        const nav = document.querySelector(`nav[aria-label="${navLabel}"]`)
+        const marker = nav?.querySelector<HTMLElement>('.nav-indicator')
+        const active = nav?.querySelector<HTMLElement>('[aria-current="page"]')
+        if (!marker || !active) return null
+        return {
+          offset: marker.style.getPropertyValue('--indicator-offset'),
+          size: marker.style.getPropertyValue('--indicator-size'),
+          actualOffset: `${axis === 'y' ? active.offsetTop : active.offsetLeft}px`,
+          actualSize: `${axis === 'y' ? active.offsetHeight : active.offsetWidth}px`,
+          hidden: marker.getAttribute('aria-hidden'),
+        }
+      }
+      return { tabs: of('Results sections', 'x'), sidebar: of('Studio', 'y') }
+    })
+
+  const before = await read()
+  // Measured, not counted: the tabs are all different widths, so an
+  // index-times-a-width marker lands on the wrong one.
+  expect(before.tabs?.offset).toBe(before.tabs?.actualOffset)
+  expect(before.tabs?.size).toBe(before.tabs?.actualSize)
+  expect(before.sidebar?.offset).toBe(before.sidebar?.actualOffset)
+
+  // It is decoration; `aria-current` is what carries the selection.
+  expect(before.tabs?.hidden).toBe('true')
+  expect(before.sidebar?.hidden).toBe('true')
+
+  await page.getByRole('link', { name: 'Agent insights' }).click()
+  await expect(page).toHaveURL(/tab=insights/)
+
+  const after = await read()
+  expect(after.tabs?.offset).toBe(after.tabs?.actualOffset)
+  expect(after.tabs?.size).toBe(after.tabs?.actualSize)
+  // It really moved, rather than being re-rendered in place.
+  expect(after.tabs?.offset).not.toBe(before.tabs?.offset)
+})
+
+test('the active nav item no longer paints its own fill', async ({ page }) => {
+  await page.goto('/app/results')
+
+  // The marker is the fill now. If the link kept `bg-accent-soft` as well, the
+  // old block would still be sitting under the one that slides — two fills,
+  // one of which never moves.
+  const backgrounds = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('nav [aria-current="page"]')).map(
+      (node) => getComputedStyle(node).backgroundColor,
+    ),
+  )
+
+  expect(backgrounds.length).toBeGreaterThan(0)
+  for (const background of backgrounds) {
+    expect(background).toBe('rgba(0, 0, 0, 0)')
+  }
+})
+
+test('reduced motion keeps the marker and drops only its travel', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/app/results')
+
+  // Two of them, and that is correct: `StudioNav` renders in the desktop
+  // sidebar and again in the mobile drawer, so the active state is worked out
+  // in one place for both. CSS decides which is on screen.
+  const markers = page.locator('nav[aria-label="Studio"] .nav-indicator')
+  // Still drawn: where the selection is, is information.
+  await expect(markers).toHaveCount(2)
+
+  const durations = await markers.evaluateAll((nodes) =>
+    nodes.map((node) => getComputedStyle(node).transitionDuration),
+  )
+  for (const duration of durations) {
+    expect(toMs(duration)).toBeLessThanOrEqual(1)
+  }
+})
+
 test('the CTA arrow answers the keyboard as well as the pointer', async ({ page }) => {
   await page.goto(FAQ_PAGE)
 
