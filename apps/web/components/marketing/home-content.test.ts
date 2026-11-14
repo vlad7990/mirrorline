@@ -14,7 +14,7 @@ import path from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { AUDIENCES, SHOWCASE_CARDS } from './home-content'
+import { AUDIENCES, FEATURE_TABS, type LoopReel, SHOWCASE_CARDS } from './home-content'
 
 /**
  * Trades the site must never sort people into. Four of these were card titles
@@ -81,6 +81,84 @@ describe('SHOWCASE_CARDS frames', () => {
     // Below about ten cards the doubled track is narrower than a desktop
     // viewport, and the seam the duplication exists to hide becomes a gap.
     expect(SHOWCASE_CARDS.length).toBeGreaterThanOrEqual(10)
+  })
+})
+
+describe('FEATURE_TABS stages', () => {
+  const publicDir = path.join(__dirname, '..', '..', 'public')
+
+  /** Every reel a tab renders, whatever shape its stage is. */
+  function reelsOf(tab: (typeof FEATURE_TABS)[number]): readonly LoopReel[] {
+    const { stage } = tab
+    switch (stage.kind) {
+      case 'multiply':
+        return stage.cuts
+      case 'remake':
+        return stage.takes
+      case 'publish':
+        return stage.posts
+      case 'learn':
+        return stage.rows
+    }
+  }
+
+  it('gives each of the four tabs a stage of its own shape', () => {
+    // The whole point of the rebuild. Four tabs that render the same thing
+    // are four tabs saying the loop has one job, and that is how this
+    // section looked before: the same six cuts, four times over.
+    const kinds = FEATURE_TABS.map((tab) => tab.stage.kind)
+    expect(new Set(kinds).size, kinds.join(', ')).toBe(FEATURE_TABS.length)
+  })
+
+  it('points every reel at a frame that is really on disk', () => {
+    for (const tab of FEATURE_TABS) {
+      for (const reel of reelsOf(tab)) {
+        expect(reel.src, tab.title).toMatch(/^\/(samples|loop)\/[\w-]+\.webp$/)
+        expect(
+          existsSync(path.join(publicDir, reel.src)),
+          `${tab.title}: ${reel.src} is listed but missing`,
+        ).toBe(true)
+      }
+      if (tab.stage.kind === 'multiply') {
+        expect(
+          existsSync(path.join(publicDir, tab.stage.sourceSrc)),
+          `${tab.title}: ${tab.stage.sourceSrc} is listed but missing`,
+        ).toBe(true)
+      }
+    }
+  })
+
+  it('never repeats a frame inside one tab', () => {
+    // Three frames side by side, so a duplicate reads as a mistake rather
+    // than as a set — and on Remake it would destroy the argument, which is
+    // that one format carries across three unrelated kinds of work.
+    for (const tab of FEATURE_TABS) {
+      const used = reelsOf(tab).map((reel) => reel.src)
+      expect(new Set(used).size, `${tab.title}: ${used.join(', ')}`).toBe(used.length)
+    }
+  })
+
+  it('does not reuse the podcast cut wall anywhere', () => {
+    // `/reels/` is twelve near-identical frames of one person at one
+    // microphone. Reaching for it here is what made every tab look the same,
+    // and it also implies the input has to be a studio recording.
+    for (const tab of FEATURE_TABS) {
+      for (const reel of reelsOf(tab)) {
+        expect(reel.src.startsWith('/reels/'), `${tab.title}: ${reel.src}`).toBe(false)
+      }
+    }
+  })
+
+  it('ranks the Learn rows by the number it claims to rank them by', () => {
+    const learn = FEATURE_TABS.find((tab) => tab.stage.kind === 'learn')?.stage
+    expect(learn?.kind).toBe('learn')
+    if (learn?.kind !== 'learn') return
+
+    const sends = learn.rows.map((row) => row.sendsPerThousand)
+    // A list headed "sends per 1,000 reach" that is not in that order is a
+    // chart that lies, and the bar widths are drawn from the first row.
+    expect([...sends].sort((a, b) => b - a)).toEqual(sends)
+    expect(Math.min(...sends)).toBeGreaterThan(0)
   })
 })
 

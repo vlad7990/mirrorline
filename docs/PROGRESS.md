@@ -33,6 +33,57 @@ section's episode frame and week strip; `/pricing` for the label that is no
 longer over the screenshot and for the gold dashboard; `/app/results` for the
 KPI ticks; `/niche-scan` for the submit button.
 
+### PR B2 · four tabs that show four jobs, and a switch the public site loses (14 Nov) — read D47
+
+**The loop section was one tab rendered four times.** Multiply, Remake,
+Publish and Learn all drew the same six `cuts` from `@mirrorline/mock` — the
+same hooks, same order, six flat coloured rectangles, no imagery at all — on
+the one section a reader studies to work out what we do. The hooks were also
+management-coaching copy ("The meeting that cost me my best engineer"), which
+is the audience-naming D38 retired everywhere else.
+
+Each tab now has the shape of its own job: Multiply is one 48:12 recording
+with three of its cuts tagged by timecode; Remake is one format rebuilt by a
+bakery, a bike shop and a flower studio side by side; Publish is a Tuesday
+landing in three phone frames captioned Instagram, TikTok and YouTube Shorts;
+Learn is last week ranked by sends per 1,000 reach. Every frame carries
+`AI-generated sample`.
+
+**Four new frames**, in `public/loop/` (152KB total): a 16:9 dog-training
+class and three 9:16 cuts generated from it as an image reference, so it is
+the same trainer, dog and hall in all four. A phone at the back of a village
+hall is the argument — the input is whatever you already record, not a studio
+session. Everything else reuses D45's twelve marquee frames. We did **not**
+reuse `public/reels/`: it is twelve near-identical frames of one person at
+one microphone, which is how the section got repetitive in the first place.
+
+**Three frames do not fit across a phone.** At 390px a `grid-cols-3` gave
+92px frames — narrower than the hook burned on them — and Publish overflowed
+by 31px. Below `sm` the row is now a snap scroller: 138px frames, zero
+overflow at 390/834/1440, and the page still does not scroll sideways.
+
+**The theme switch is gone from the marketing footer**, which corrects D45.
+Measured from this repo's own reference screenshots: nineteen public pages
+are bit-identical between light and dark, `/` differs by 0.1, and the few
+scoring 4–9 only move because they embed a studio screenshot. Every studio
+screen differs by 134–219. The control worked and changed nothing visible,
+which is worse than not having one. It stays in the studio shell, the drawer
+and Settings. **The studio audit found nothing to fix** — `app-upload` scores
+lowest at 133.9 only because the cut thumbnails keep the fixed demo palette
+in both themes, which is the viewer mat behaving correctly.
+
+**Gates:** lint, typecheck, 415 unit tests (5 new on the stages), build,
+licence-check, and the full e2e suite at 258 passed.
+
+#### Watch — new
+
+5. **The studio's cut wall still carries the coaching hooks** this PR removed
+   from the marketing page. They come from `cuts` in `@mirrorline/mock`, not
+   from the home copy, so `/app/upload` and `/app/calendar` still read "The
+   meeting that cost me my best engineer". Out of scope here — studio fixture
+   data, not the public site — but it is the same D38 problem and it is
+   visible in the demo path a buyer is walked through.
+
 ### PR A · the e2e "race" was the dev server (14 Nov) — read D46
 
 **The handoff's diagnosis was wrong and the fix is somewhere else entirely.**

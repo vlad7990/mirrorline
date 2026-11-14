@@ -15,6 +15,74 @@
 /* Feature tabs                                                                */
 /* -------------------------------------------------------------------------- */
 
+/** A 9:16 still with the hook that is burned onto it. */
+export interface LoopReel {
+  readonly src: string
+  /** The hook's opening, in plain weight. */
+  readonly lead: string
+  /** The phrase that takes the sand highlight. */
+  readonly highlight: string
+  readonly lengthLabel: string
+}
+
+/**
+ * What each tab shows beside its copy, and why the four differ.
+ *
+ * All four used to render the same six `cuts` from `@mirrorline/mock`: the
+ * same hooks, in the same order, on four tabs whose whole purpose is to say
+ * that these are four different jobs. It made the section an illustration of
+ * nothing — and the hooks themselves ("The meeting that cost me my best
+ * engineer") were management-coaching copy, which is the audience-naming D38
+ * retired everywhere else on the page.
+ *
+ * So each tab now gets the shape of its own job. Multiply is one recording
+ * and the cuts taken out of it; Remake is one format rebuilt by three
+ * unrelated trades; Publish is posts landing on the three platforms; Learn is
+ * the same posts ranked by what they earned. Someone who only looks at the
+ * pictures should still be able to tell the four apart.
+ */
+export type FeatureStage =
+  | {
+      /** One long recording, and three of the cuts taken out of it. */
+      readonly kind: 'multiply'
+      readonly sourceSrc: string
+      /** What the recording was: "A dog-training class, filmed on a phone". */
+      readonly sourceLabel: string
+      readonly sourceLength: string
+      /** How many cuts came out of it in total, of which we show three. */
+      readonly cutTotal: number
+      /** Where in the recording each cut came from: "06:12". */
+      readonly cuts: readonly (LoopReel & { readonly fromTimecode: string })[]
+    }
+  | {
+      /** One rising format, rebuilt by three unrelated accounts. */
+      readonly kind: 'remake'
+      readonly formatName: string
+      readonly formatNote: string
+      /**
+       * `madeFor` names a kind of work, and it is the one place on this page
+       * that does. It is not a vertical we sell to — it is the evidence for
+       * the sentence beside it, that the same structure carries anywhere. 16
+       * §1 forbids industry pages and industry navigation; it does not forbid
+       * showing range.
+       */
+      readonly takes: readonly (LoopReel & { readonly madeFor: string })[]
+    }
+  | {
+      /** The same week of posts, landing on the three platforms. */
+      readonly kind: 'publish'
+      readonly posts: readonly (LoopReel & {
+        readonly platform: string
+        readonly slot: string
+      })[]
+    }
+  | {
+      /** Last week's posts, ranked by the one number that moves the plan. */
+      readonly kind: 'learn'
+      readonly metricLabel: string
+      readonly rows: readonly (LoopReel & { readonly sendsPerThousand: number })[]
+    }
+
 export interface FeatureTab {
   readonly id: string
   /** "01"–"04". The handoff numbers them. */
@@ -27,6 +95,7 @@ export interface FeatureTab {
   readonly body: string
   /** One figure, in the machine's voice, under the body. */
   readonly stat: string
+  readonly stage: FeatureStage
 }
 
 export const FEATURE_TABS: readonly FeatureTab[] = [
@@ -38,7 +107,41 @@ export const FEATURE_TABS: readonly FeatureTab[] = [
     headline: 'One recording,',
     headlineAccent: 'a week of posts.',
     body: 'The Multiplier finds the moments that stand on their own, cuts them to 9:16, writes the hook and burns in captions in your brand style.',
-    stat: 'A 52:14 episode · 12 cuts · 3 min',
+    stat: 'A 48:12 class · 12 cuts · 3 min',
+    stage: {
+      kind: 'multiply',
+      sourceSrc: '/loop/talk-wide.webp',
+      // Deliberately not a podcast. The /reels/ set is twelve near-identical
+      // frames of one person at one microphone, and leaning on it again here
+      // would say the input has to be a studio recording. It does not: this
+      // is a phone on a tripod at the back of a hall.
+      sourceLabel: 'A dog-training class, filmed on a phone at the back of the hall',
+      sourceLength: '48:12',
+      cutTotal: 12,
+      cuts: [
+        {
+          src: '/loop/talk-cut-01.webp',
+          lead: 'The recall mistake',
+          highlight: 'almost everyone makes',
+          lengthLabel: '0:31',
+          fromTimecode: '06:12',
+        },
+        {
+          src: '/loop/talk-cut-02.webp',
+          lead: 'Loose lead,',
+          highlight: 'in three steps',
+          lengthLabel: '0:44',
+          fromTimecode: '21:40',
+        },
+        {
+          src: '/loop/talk-cut-03.webp',
+          lead: 'Why your dog ignores you',
+          highlight: 'in the park',
+          lengthLabel: '0:28',
+          fromTimecode: '39:05',
+        },
+      ],
+    },
   },
   {
     id: 'remake',
@@ -49,6 +152,34 @@ export const FEATURE_TABS: readonly FeatureTab[] = [
     headlineAccent: 'never the footage.',
     body: 'Trend Scout finds what is rising in your niche. The Remake Producer rebuilds its structure as a new script, shot with your material and your voice.',
     stat: '2 remakes a week · within 48 hours',
+    stage: {
+      kind: 'remake',
+      formatName: '“3 things I’d never do”',
+      formatNote: 'One rising structure, rebuilt three times. No shared footage, no shared script.',
+      takes: [
+        {
+          src: '/samples/sample-01.webp',
+          madeFor: 'A bakery',
+          lead: '3 things I’d never do',
+          highlight: 'to a sourdough starter',
+          lengthLabel: '0:27',
+        },
+        {
+          src: '/samples/sample-11.webp',
+          madeFor: 'A bike shop',
+          lead: '3 things I’d never do',
+          highlight: 'to a carbon frame',
+          lengthLabel: '0:33',
+        },
+        {
+          src: '/samples/sample-06.webp',
+          madeFor: 'A flower studio',
+          lead: '3 things I’d never put',
+          highlight: 'in a bridal bouquet',
+          lengthLabel: '0:29',
+        },
+      ],
+    },
   },
   {
     id: 'publish',
@@ -59,6 +190,39 @@ export const FEATURE_TABS: readonly FeatureTab[] = [
     headlineAccent: 'through the front door.',
     body: 'Several posts a day on Instagram, TikTok and YouTube Shorts, through the official APIs, to accounts you connect and can disconnect without asking us. Approve each post, or let them go after 24 hours.',
     stat: 'Growth plan · 21 posts a week',
+    stage: {
+      kind: 'publish',
+      // Platform names only. A logo would be someone else's mark on our page
+      // implying a partnership we do not have, and non-negotiable 3 is the
+      // reason the names are here at all: these are the three we post to
+      // through official APIs.
+      posts: [
+        {
+          src: '/samples/sample-09.webp',
+          platform: 'Instagram',
+          slot: 'Tue 08:10',
+          lead: 'The one step',
+          highlight: 'people skip at home',
+          lengthLabel: '0:22',
+        },
+        {
+          src: '/samples/sample-10.webp',
+          platform: 'TikTok',
+          slot: 'Tue 12:30',
+          lead: 'Sand to 180,',
+          highlight: 'then stop',
+          lengthLabel: '0:19',
+        },
+        {
+          src: '/samples/sample-12.webp',
+          platform: 'YouTube Shorts',
+          slot: 'Tue 17:45',
+          lead: 'What to buy',
+          highlight: 'in the wrong season',
+          lengthLabel: '0:35',
+        },
+      ],
+    },
   },
   {
     id: 'learn',
@@ -69,6 +233,44 @@ export const FEATURE_TABS: readonly FeatureTab[] = [
     headlineAccent: 'decides what is next.',
     body: 'The Performance Analyst reads what happened — views, profile visits, link clicks — and the loop makes more of what worked, on the platform it worked on.',
     stat: 'Reported weekly, through to booked calls',
+    stage: {
+      kind: 'learn',
+      // Sends per 1,000 reach rather than views: a view is what the platform
+      // showed, a send is what a person chose to pass on. It is the signal
+      // that survives a feed change, and it is the one the next week's plan
+      // is actually built from.
+      metricLabel: 'Sends per 1,000 reach',
+      rows: [
+        {
+          src: '/samples/sample-03.webp',
+          lead: 'The stretch',
+          highlight: 'that is doing nothing',
+          lengthLabel: '0:26',
+          sendsPerThousand: 18.4,
+        },
+        {
+          src: '/samples/sample-08.webp',
+          lead: 'Ask this',
+          highlight: 'before you buy the tool',
+          lengthLabel: '0:21',
+          sendsPerThousand: 12.1,
+        },
+        {
+          src: '/samples/sample-05.webp',
+          lead: 'What goes in',
+          highlight: 'before the lid',
+          lengthLabel: '0:18',
+          sendsPerThousand: 7.9,
+        },
+        {
+          src: '/samples/sample-02.webp',
+          lead: 'The noise',
+          highlight: 'worth stopping for',
+          lengthLabel: '0:24',
+          sendsPerThousand: 4.2,
+        },
+      ],
+    },
   },
 ]
 

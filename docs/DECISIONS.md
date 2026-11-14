@@ -2056,3 +2056,117 @@ arrival did not happen rather than blaming the screen.
 company name under a copyright line is a claim. Vlad has given the entity, so
 the claim is one we can stand behind and the placeholder became the wrong
 thing to ship. "Mirrorline" above it is still a placeholder product name.
+
+## 2026-11-14 · D47 · Each loop tab shows its own job, and the public site loses a switch that did nothing
+
+### The four tabs were one tab, rendered four times
+
+"How the loop runs" has four tabs — Multiply, Remake, Publish, Learn — whose
+entire purpose is to say that the loop is four different jobs. All four
+rendered `cuts.slice(0, 6)` from `@mirrorline/mock`: the same six hooks, in
+the same order, as six flat coloured rectangles with no imagery at all. The
+section illustrated nothing, and clicking a tab changed the prose and nothing
+else.
+
+Two separate faults sat underneath that, and both are worth naming because
+each would have survived a fix to the other:
+
+1. **The hooks were management-coaching copy.** "The meeting that cost me my
+   best engineer", "New managers: stop saying 'let me know if you need
+   anything'". That is the audience-naming D38 retired everywhere else on the
+   page — on the one section a reader studies to work out what the product
+   does.
+2. **The one real cut wall we have is twelve frames of the same person at the
+   same microphone.** `public/reels/` is a podcast studio, twelve times over.
+   Reaching for it here would have swapped six flat rectangles for six
+   near-identical photographs, and it carries a claim we do not want to make:
+   that the input has to be a studio recording.
+
+So each tab now gets the shape of its own job, and a reader who only looks at
+the pictures can tell the four apart:
+
+| Tab | What it shows |
+|---|---|
+| Multiply | One 48:12 recording above, three of its cuts below, each tagged with the timecode it came from |
+| Remake | One rising format — "3 things I'd never do" — rebuilt by a bakery, a bike shop and a flower studio, side by side |
+| Publish | The same Tuesday landing in three phone frames, captioned Instagram, TikTok and YouTube Shorts |
+| Learn | Last week's posts ranked by sends per 1,000 reach, the bars drawn against the top row |
+
+**The Multiply recording is a dog-training class, and that is the argument.**
+Four new frames were generated for it — one 16:9 wide and three 9:16 cuts,
+the cuts made with the wide frame as an image reference so it is the same
+trainer, the same collie and the same hall in all four. A phone on a tripod
+at the back of a village hall is a long recording that nobody would call
+content production, which is precisely the point: the input is whatever you
+already record. Everything else reuses the twelve marquee frames from D45.
+
+**Every frame carries `AI-generated sample`**, the same words the marquee
+uses, because non-negotiable 4 is a rule about surfaces and a sample reel on
+the landing page is exactly the surface a reader would otherwise take for
+client work.
+
+**`madeFor` under the Remake frames names a kind of work, and it is the only
+place on the page that does.** 16 §1 forbids industry pages, industry
+navigation and industry filters. It does not forbid showing range — and
+"bakery / bike shop / flower studio" *is* the evidence for the sentence
+beside it, that one structure carries anywhere. Three unlabelled photographs
+would have been three photographs.
+
+**Three frames do not fit across a phone.** Measured at 390px: a
+`grid-cols-3` put each frame at 92px, narrower than the hook burned onto it,
+and the Publish hooks overflowed their frames by 31px. Shrinking the type
+would have made the one thing the frames exist to show unreadable. Below
+`sm` the row is a snap scroller at about two-and-a-bit frames to the screen —
+138px each, no overflow — which keeps the frames legible *and* keeps the
+side-by-side reading the panels depend on. A stacked column would have
+destroyed Remake's whole argument. The scroller owns its own
+`overflow-x-auto`, so the page still does not move sideways at any width.
+
+### The public site loses its theme switch, which is a correction to D45
+
+D45 put the light/dark/system control in the marketing footer, reasoning that
+a reader who prefers one had no way to say so on the pages they see first.
+True, and beside the point: **the public site is a fixed ink-and-gold art
+direction** (D25), painted with the `band-*` utilities and the `on-ink`
+tokens, none of which answer to `.dark`.
+
+Measured rather than argued, from the reference screenshots this repo already
+ships — mean per-pixel difference between each page's light and dark capture
+at 1440px:
+
+```
+  0.0   about, faq, compare, contact, resources, pricing-legal pages …  (19 pages)
+  0.1   index
+  4.6   how-it-works, metrics
+  5.7   agents, product
+  7.6   trust
+  9.1   pricing
+133.9   app-upload
+178.3   app-calendar
+…
+218.7   app-results-ledger
+```
+
+Nineteen public pages are **bit-identical** between the two themes. The
+handful scoring 4–9 only move because they embed a screenshot of the studio.
+Every studio screen moves by 134–219.
+
+The control worked perfectly — it flipped `.dark`, set `color-scheme`,
+persisted the choice, checked the radio. And nothing on screen moved. That is
+worse than an absent control: it reads as broken, and it quietly teaches that
+our switches are decorative. It is removed from the marketing footer and
+stays in the studio shell, the mobile drawer and Settings.
+
+**The studio audit it came with found nothing to fix.** Every studio screen
+responds to the switch. The lowest score, `app-upload` at 133.9, was checked
+by eye rather than trusted: the chrome, sidebar, cards, inputs and chips all
+flip, and the figure is lower only because the cut thumbnails stay on the
+fixed demo palette in both themes — which is DESIGN.md's "viewer mat" doing
+what it is supposed to do, so that a reel looks the same to the client
+whichever theme they work in.
+
+**One thing the audit turned up and did not fix:** the studio's own cut wall
+still carries the management-coaching hooks this entry removes from the
+marketing page, because they come from `cuts` in `@mirrorline/mock` rather
+than from the home copy. Out of scope here — it is studio fixture data, not
+the public site — and logged in PROGRESS.md under "Watch".

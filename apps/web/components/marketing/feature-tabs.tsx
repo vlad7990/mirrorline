@@ -20,17 +20,14 @@
  * `prefers-reduced-motion`, where the gold track does not animate either.
  */
 
-import { cuts } from '@mirrorline/mock'
-import { VideoThumb, cn } from '@mirrorline/ui'
+import { cn } from '@mirrorline/ui'
 import * as React from 'react'
 
+import { FeatureStagePanel } from './feature-stages'
 import { FEATURE_TABS } from './home-content'
 
 /** The handoff's dwell time before advancing. */
 const ADVANCE_MS = 6500
-
-/** Six cuts is the widest row that still reads at 9:16 on a laptop. */
-const STAGE_CUTS = 6
 
 export function FeatureTabs() {
   const [active, setActive] = React.useState(0)
@@ -159,20 +156,9 @@ export function FeatureTabs() {
           </p>
         </div>
 
-        {/* The same cut frames the rest of the site uses. They belong to the
-            demo client, and the section heading says so. */}
-        <ul className="m-0 grid list-none grid-cols-3 gap-2.5 p-0">
-          {cuts.slice(0, STAGE_CUTS).map((cut, index) => (
-            <li key={cut.id} className="min-w-0">
-              <VideoThumb
-                caption={cut.hook}
-                highlight={cut.highlightPhrase}
-                index={index}
-                length={cut.lengthLabel}
-              />
-            </li>
-          ))}
-        </ul>
+        {/* Each tab shows its own job rather than the same six cuts four
+            times over — see `feature-stages.tsx` for what changed and why. */}
+        <FeatureStagePanel stage={current.stage} />
       </div>
     </div>
   )

@@ -28,7 +28,6 @@ import { ChevronDown } from 'lucide-react'
 import Link from 'next/link'
 import * as React from 'react'
 
-import { ThemeSwitch } from '@/components/shell/theme-switch'
 import { FOOTER_COLUMNS, NICHE_SCAN, liveLinks, type FooterColumn } from '@/lib/site-map'
 
 /**
@@ -158,19 +157,25 @@ export function SiteFooter() {
             © {COPYRIGHT_YEAR} {COMPANY_LEGAL_NAME}
           </p>
 
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between lg:justify-end lg:gap-8">
-            <ul className="m-0 flex list-none flex-col gap-1 p-0 text-caption text-text-muted lg:max-w-[68ch] lg:text-right">
-              {NOTES.map((note, position) => (
-                // A static list, so the index is the only stable key there is
-                // — and it is a real one here: nothing reorders or filters.
-                <li key={position}>{note}</li>
-              ))}
-            </ul>
-            {/* Light / dark / system. It was only ever in the studio shell,
-                which left a reader who prefers one of them no way to say so
-                on the pages they see first. */}
-            <ThemeSwitch className="m-0 w-[132px] shrink-0 border-0 p-0" />
-          </div>
+          {/* **No theme switch here, and that is a correction.** D45 added
+              one on the reasoning that a reader who prefers light or dark had
+              no way to say so on the pages they see first. True, and beside
+              the point: the public site is a fixed ink-and-gold art direction
+              (D25), painted with the `band-*` utilities and the `on-ink`
+              tokens, none of which answer to `.dark`. So the control worked —
+              it flipped the class, set `color-scheme`, persisted the choice —
+              and *nothing on screen moved*. A control that does nothing is
+              worse than an absent one: it reads as broken, and it quietly
+              teaches that our switches are decorative. It stays in the studio
+              shell and in Settings, where every surface is built from
+              theme-aware tokens and the change is obvious. D47. */}
+          <ul className="m-0 flex list-none flex-col gap-1 p-0 text-caption text-text-muted lg:max-w-[68ch] lg:text-right">
+            {NOTES.map((note, position) => (
+              // A static list, so the index is the only stable key there is
+              // — and it is a real one here: nothing reorders or filters.
+              <li key={position}>{note}</li>
+            ))}
+          </ul>
         </div>
       </div>
     </footer>
