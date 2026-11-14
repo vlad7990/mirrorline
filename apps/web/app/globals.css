@@ -21,3 +21,41 @@
 /* No @theme inline font override here any more. theme.css owns the families
    and already points --font-heading / --font-body / --font-mono at the Geist
    variables that layout.tsx puts on <html>, with literal fallbacks. */
+
+/*
+ * The footer's link groups: collapsed on a phone, plain lists above it.
+ *
+ * `<details>` is the whole mechanism, so the footer ships no JavaScript. What
+ * is left is teaching it to stop being a disclosure widget at `md`, and that
+ * takes two rules rather than one because browsers do not agree on how a
+ * closed `<details>` hides its content:
+ *
+ *   - Current engines use a `::details-content` pseudo-element carrying
+ *     `content-visibility: hidden` (Chrome 131+, Safari 18.4+, Firefox 139+).
+ *   - Older ones apply the UA rule
+ *     `details:not([open]) > *:not(summary) { display: none }`.
+ *
+ * Overriding both covers every engine in use. The summary stays visible from
+ * `md` up — it is the column heading — but stops being a control: the chevron
+ * is hidden by a utility class and the pointer events go with it, so a click
+ * lands on a heading and does nothing rather than folding a column away on a
+ * desktop.
+ */
+.footer-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+@media (min-width: 48rem) {
+  .footer-group::details-content {
+    content-visibility: visible;
+    block-size: auto;
+  }
+
+  .footer-group > :not(summary) {
+    display: block;
+  }
+
+  .footer-group > summary {
+    pointer-events: none;
+  }
+}

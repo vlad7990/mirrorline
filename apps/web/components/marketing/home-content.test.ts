@@ -9,6 +9,9 @@
  * ship.
  */
 
+import { existsSync } from 'node:fs'
+import path from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
 import { AUDIENCES, SHOWCASE_CARDS } from './home-content'
@@ -45,6 +48,39 @@ describe('AUDIENCES sample hooks', () => {
     for (const audience of AUDIENCES) {
       expect(audience.goal).not.toMatch(/guarantee|guaranteed|will get|promise/i)
     }
+  })
+})
+
+describe('SHOWCASE_CARDS frames', () => {
+  const publicDir = path.join(__dirname, '..', '..', 'public')
+
+  it('points every card at a frame that is really on disk', () => {
+    // The same promise `reel-assets.test.ts` keeps for the cut wall: an entry
+    // must not outlive its asset. A renamed file would otherwise ship as a
+    // broken image in the marquee and pass every other test here.
+    for (const card of SHOWCASE_CARDS) {
+      expect(card.frameSrc, card.context).toMatch(/^\/samples\/[\w-]+\.(webp|avif|jpg)$/)
+      expect(
+        existsSync(path.join(publicDir, card.frameSrc)),
+        `${card.context}: ${card.frameSrc} is listed but missing`,
+      ).toBe(true)
+    }
+  })
+
+  it('shows a different account in every frame', () => {
+    // The point of the set. Two cards on one frame would say the opposite of
+    // what the section heading claims, and a drifting rail is exactly where a
+    // repeat is noticed.
+    const frames = SHOWCASE_CARDS.map((card) => card.frameSrc)
+
+    expect(new Set(frames).size).toBe(frames.length)
+  })
+
+  it('carries enough frames to fill both rails', () => {
+    // Each rail renders the whole set twice and translates by half its width.
+    // Below about ten cards the doubled track is narrower than a desktop
+    // viewport, and the seam the duplication exists to hide becomes a gap.
+    expect(SHOWCASE_CARDS.length).toBeGreaterThanOrEqual(10)
   })
 })
 

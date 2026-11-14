@@ -1745,13 +1745,44 @@
     animation-duration: var(--marquee-duration, 60s);
   }
 
+  /*
+   * The slow push on a still frame. 40 seconds and 6% is deliberately below
+   * the threshold at which it reads as an animation: what it buys is that a
+   * photograph in a 9:16 frame stops looking like a screenshot and starts
+   * looking like a held shot, which is the claim the frame is making.
+   *
+   * `alternate` rather than looping from zero, because a hard cut back to 1
+   * at the end of every cycle is the one thing here that would draw the eye.
+   * Only ever applied to frames that are otherwise still — the marquee tiles
+   * are already crossing the screen and do not get it.
+   */
+  @keyframes mirrorline-ken-burns {
+    from {
+      transform: scale(1);
+    }
+    to {
+      transform: scale(1.06);
+    }
+  }
+
+  .ken-burns {
+    animation: mirrorline-ken-burns 40s ease-in-out infinite alternate;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-caret,
     .animate-dot-pulse,
     .animate-track-fill,
     .animate-marquee-left,
-    .animate-marquee-right {
+    .animate-marquee-right,
+    .ken-burns {
       animation: none;
+    }
+
+    /* Back to the frame as shot. Without this the still keeps whatever scale
+       the animation left on it, which is a crop nobody chose. */
+    .ken-burns {
+      transform: none;
     }
 
     /* With the drift stopped the rails still hold more than fits, so they

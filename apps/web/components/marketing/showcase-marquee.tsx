@@ -19,9 +19,16 @@
  * These are **fictional businesses**, not customers and not customer work.
  * The section heading carries that sentence; non-negotiable 7 is not
  * satisfied by it being true only in this comment.
+ *
+ * Each card carries a generated 9:16 still of a different fictional account
+ * (D45). The tiles were flat brand colours until then, which left the
+ * heading — "Different trades, the same week of work" — illustrated by twelve
+ * rectangles that have no trade. Every frame is AI-generated and says so on
+ * its face, because non-negotiable 4 is a rule about every surface and not
+ * only about the studio.
  */
 
-import { THUMBNAIL_COLORS, cn } from '@mirrorline/ui'
+import { AiLabel, ReelStill, THUMBNAIL_COLORS, cn } from '@mirrorline/ui'
 import * as React from 'react'
 
 import { SHOWCASE_CARDS, type ShowcaseCard } from './home-content'
@@ -90,10 +97,25 @@ function Rail({ cards, direction, durationSeconds, label }: RailProps) {
               className="w-[210px] shrink-0"
             >
               <article
-                className="flex aspect-[9/16] flex-col justify-between rounded-thumb p-3.5"
+                className="relative flex aspect-[9/16] flex-col justify-between overflow-hidden rounded-thumb p-3.5"
+                /* The demo colour stays behind the frame: it is what shows
+                   while the still is still loading, so a tile is never
+                   briefly a white hole in a dark band. */
                 style={{ backgroundColor: THUMBNAIL_COLORS[index % THUMBNAIL_COLORS.length] }}
               >
-                <header className="flex items-start justify-between gap-2">
+                <ReelStill src={card.frameSrc} />
+
+                {/* The same scrim VideoThumb lays over footage, for the same
+                    reason: white 700 is legible over a fixed brand colour by
+                    measurement, and over an arbitrary photograph it is not.
+                    Bottom-weighted, so it darkens the caption without
+                    flattening the frame above it. */}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 bg-gradient-to-t from-viewer/85 via-viewer/25 to-transparent"
+                />
+
+                <header className="relative flex items-start justify-between gap-2">
                   <span className="rounded-full bg-on-primary/90 px-2 py-0.5 text-caption font-semibold text-ink">
                     {card.context}
                   </span>
@@ -102,15 +124,26 @@ function Rail({ cards, direction, durationSeconds, label }: RailProps) {
                   </span>
                 </header>
 
-                {/* The burned-in caption, set exactly as VideoThumb sets it:
-                    the client speaking to their audience, so sans and not
-                    mono, with the key phrase on its sand highlight. */}
-                <p className="m-0 font-heading text-overlay-caption text-on-primary">
-                  {card.lead}{' '}
-                  <mark className="rounded-sm bg-demo-sand px-1 text-demo-teal">
-                    {card.highlight}
-                  </mark>
-                </p>
+                {/* `relative` on both of these is load-bearing rather than
+                    decoration: a statically positioned element paints below a
+                    positioned sibling in the same stacking context, so without
+                    it the scrim would cover the badges and the caption. */}
+                <div className="relative flex flex-col items-start gap-2">
+                  {/* Its own row, not the badge corner. "AI-generated sample"
+                      does not fit beside a goal tag at 210px, and a label that
+                      is cropped is not a label. */}
+                  <AiLabel>AI-generated sample</AiLabel>
+
+                  {/* The burned-in caption, set exactly as VideoThumb sets it:
+                      the client speaking to their audience, so sans and not
+                      mono, with the key phrase on its sand highlight. */}
+                  <p className="m-0 font-heading text-overlay-caption text-on-primary">
+                    {card.lead}{' '}
+                    <mark className="rounded-sm bg-demo-sand px-1 text-demo-teal">
+                      {card.highlight}
+                    </mark>
+                  </p>
+                </div>
               </article>
             </li>
           )

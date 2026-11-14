@@ -1766,3 +1766,102 @@ however carefully it is phrased, which is the narrowing D38 corrected
 everywhere else. It is now "Different trades, the same week of work", which
 is what the marquee underneath actually shows. The account-picker lead is
 Vlad's wording: "We never make you pick from an industry list."
+
+## 2026-11-14 · D45 · Twelve unlike accounts on the home page, and a footer half the height
+
+### The frames
+
+D44 renamed the showcase "Different trades, the same week of work" and left
+it illustrated by eight coloured rectangles. A rectangle has no trade. The
+heading was therefore a claim the section did not make — the same failure
+mode as the industry cards D38 removed, only inverted: there we said too
+much, here we said nothing and hoped the sentence carried it.
+
+Twelve 9:16 stills now carry it, generated with Nano Banana Pro: a bakery, a
+car bay, a yoga studio, an empty property, an unboxing, a florist, a solo
+creator at a desk, a hardware-shop owner filming himself for the first time,
+a café, a workbench, a bike repair stand and a plant nursery. Six are faces,
+three are hands, three are places, and they span age, gender and ethnicity on
+purpose. None is a likeness of a real person; none is a health claim or a
+before-and-after. **The frames vary by trade and the labels stay goals** —
+that distinction is the whole of 16 §1, and it is what lets the section show
+the work fits anyone without sorting anyone into a vertical.
+
+They appear in exactly two places. The marquee gets all twelve. The four
+account-type cards under "Any business, any individual, any industry" get one
+each, paired rather than assigned at random: the business growing an account
+it has is a counter trade, the business starting one is a place with nobody
+in it yet, the individual with an audience is at a desk, and the individual
+starting from zero is holding a phone at arm's length. They used to repeat
+the same podcast still four times, which says one kind of person, not four.
+
+**The podcast frames stay in the Output section and nowhere else.** That
+section is one episode belonging to one fictional client, so a single
+presenter in a single room is the honest thing there and the wrong thing
+anywhere a range is being claimed.
+
+**"Accounts you own, through the front door" gets no frames.** Those are six
+rule cards, and a rule is not illustrated by a photograph of somebody. They
+already carry a Ban/Check icon per row, which is the icon that section needs.
+
+**Every frame is labelled, on its own face.** The marquee tiles read
+"AI-generated sample"; the account cards carry the standard "AI scene" badge,
+which is all that fits at 124px, and their section lead says the longer
+sentence in words. Non-negotiable 4 is a rule about every surface, not only
+about the studio.
+
+**Replace these once the engine runs.** They are generated stills standing in
+for footage we cannot produce yet. When our own video pipeline is making real
+output, these twelve should become short muted loops it produced — the same
+swap D28 anticipated for the cut wall, and the reason `ReelStill` and
+`ReelMedia` have been two components from the start.
+
+Two hooks changed with the frames. "You're not tired / You're
+over-responsible" and "Burnout isn't / a workload problem" are coaching copy,
+which is the audience-naming D38 retired; over a baker and a hardware-shop
+owner they would have read as a mismatch rather than as range.
+
+**The Ken Burns drift is on four frames, not sixteen.** The account cards are
+still, so a 40-second 6% push makes them read as held shots rather than as
+screenshots. The marquee tiles are already crossing the screen, and a second
+motion on something already moving reads as drift. Off entirely under
+`prefers-reduced-motion`, and the class resets the transform there rather
+than only stopping the animation — otherwise the still keeps whatever crop
+the animation left on it.
+
+### The footer
+
+It ran to about 950px: a brand block and three link columns stacked above a
+four-line block of notes, with a 44px row for every link. Under every page on
+the site, that is most of a laptop screen of chrome.
+
+It is 523px at 1440px now, and the changes are three. The brand block joins
+the link columns in one five-column row instead of sitting above them. Link
+rows drop from 44px to 36px — still well clear of WCAG 2.2's 24px target
+minimum, which is the floor that mattered here. The notes move into the
+bottom bar beside the copyright, at caption size, where they are still
+unmissable and no longer a band of their own.
+
+Two things arrived with it. The copyright line is **"© 2026 [COMPANY LEGAL
+NAME]"**, placeholder and all, for the same reason the product name is a
+visible placeholder: a real-looking company name under a copyright line is a
+claim, and we do not have one to make. And the theme switch is now in the
+footer of every marketing page — it was only ever in the studio shell, which
+left a reader who prefers light or dark no way to say so on the pages they
+see first.
+
+**The groups are `<details>`, so the footer still ships no JavaScript of its
+own.** A phone gets four collapsed groups; from `md` up, CSS forces the
+content open and takes the toggle away, leaving a plain heading over a list.
+That takes two rules rather than one, because engines disagree about how a
+closed `<details>` hides its content — current ones use `::details-content`
+with `content-visibility: hidden`, older ones the UA `display: none` rule —
+and overriding both covers everything in use.
+
+The tablet layout cost 300px before it was measured. Spanning the brand block
+across all three columns pushed the four link groups into two rows of three
+below it, and the footer came out taller than the one it replaced. As a cell
+in the same grid it shares row one with Product and Company, and only Account
+and Legal fall to row two: 974px → 800px. A tablet is a portrait screen and
+two rows of links is what "three columns" means there; this is the floor
+without going to four.

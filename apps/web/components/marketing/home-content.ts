@@ -92,6 +92,19 @@ export interface ShowcaseCard {
   /** The phrase that takes the sand highlight. */
   readonly highlight: string
   readonly lengthLabel: string
+  /**
+   * The generated 9:16 still this hook is burned onto, under `public/samples/`.
+   *
+   * Required, not optional: a hook with no frame would render as a flat colour
+   * beside eleven photographs, which reads as a broken image rather than as a
+   * deliberate choice. A test pins every one of these to a file on disk and to
+   * no other card, so a rename cannot leave a hole in the rail and two cards
+   * cannot quietly share a frame.
+   *
+   * Every file is AI-generated, so every surface that renders one carries the
+   * label — non-negotiable 4.
+   */
+  readonly frameSrc: string
 }
 
 /**
@@ -104,55 +117,112 @@ export interface ShowcaseCard {
  * The hooks deliberately span different kinds of work without naming any
  * trade, per 13's "examples rotate through different kinds of business and
  * individual" and the rule that none is featured above another.
+ *
+ * **Twelve frames, twelve unlike accounts** (D45). The set used to be eight
+ * hooks on four rotating brand colours, which made the heading — "Different
+ * trades, the same week of work" — a sentence the section did not illustrate:
+ * a coloured rectangle has no trade. Each card now carries a generated 9:16
+ * still of a different fictional account, and the twelve deliberately span
+ * faces, hands and places, and a range of ages, genders and ethnicities. None
+ * is a likeness of a real person and none is a health claim or a before-and-
+ * after. The *frames* vary by trade; the *labels* stay goals, which is the
+ * distinction 16 §1 turns on — we show that the work fits anyone without
+ * sorting anyone into a vertical.
+ *
+ * Two hooks changed with them. "You're not tired / You're over-responsible"
+ * and "Burnout isn't / a workload problem" both read as coaching copy, which
+ * is the audience-naming D38 retired everywhere else on the page; over a
+ * baker and a hardware-shop owner they would have read as a mismatch rather
+ * than as range.
  */
 export const SHOWCASE_CARDS: readonly ShowcaseCard[] = [
   {
+    // Short on purpose. This hook and the "Launching an account" one below
+    // are the two the account-type cards reuse, and those frames are 124px
+    // wide — a caption that runs to four lines there covers the photograph it
+    // is burned onto.
     context: 'Leads',
-    lead: 'You’re not tired.',
-    highlight: 'You’re over-responsible.',
+    lead: 'What they ask',
+    highlight: 'before they buy',
     lengthLabel: '0:24',
+    frameSrc: '/samples/sample-01.webp',
   },
   {
     context: 'Bookings',
     lead: '3 signs the thing you booked',
     highlight: 'isn’t the thing you needed',
     lengthLabel: '0:31',
+    frameSrc: '/samples/sample-02.webp',
   },
   {
     context: 'Sales',
     lead: 'The pricing mistake',
     highlight: 'that costs you customers',
     lengthLabel: '0:42',
+    frameSrc: '/samples/sample-05.webp',
   },
   {
     context: 'Community',
     lead: 'Do this before',
     highlight: 'you start, every time',
     lengthLabel: '0:19',
+    frameSrc: '/samples/sample-03.webp',
   },
   {
     context: 'Audience growth',
     lead: 'Why your best people',
     highlight: 'go quiet',
     lengthLabel: '0:36',
+    frameSrc: '/samples/sample-07.webp',
   },
   {
     context: 'Awareness',
     lead: 'What to ask',
     highlight: 'before you commit',
     lengthLabel: '0:28',
+    frameSrc: '/samples/sample-04.webp',
   },
   {
     context: 'Launching an account',
-    lead: 'Burnout isn’t',
-    highlight: 'a workload problem',
+    lead: 'Day one,',
+    highlight: 'no audience yet',
     lengthLabel: '0:22',
+    frameSrc: '/samples/sample-08.webp',
   },
   {
     context: 'Returning customers',
     lead: 'Ask for this',
     highlight: 'on your next visit',
     lengthLabel: '0:21',
+    frameSrc: '/samples/sample-09.webp',
+  },
+  {
+    context: 'Walk-ins',
+    lead: 'Two minutes,',
+    highlight: 'one thing you can copy',
+    lengthLabel: '0:26',
+    frameSrc: '/samples/sample-06.webp',
+  },
+  {
+    context: 'Repeat work',
+    lead: 'The five-minute check',
+    highlight: 'most people skip',
+    lengthLabel: '0:33',
+    frameSrc: '/samples/sample-11.webp',
+  },
+  {
+    context: 'Enquiries',
+    lead: 'What it costs,',
+    highlight: 'and why',
+    lengthLabel: '0:29',
+    frameSrc: '/samples/sample-10.webp',
+  },
+  {
+    context: 'Waitlist sign-ups',
+    lead: 'Start it now,',
+    highlight: 'not in spring',
+    lengthLabel: '0:18',
+    frameSrc: '/samples/sample-12.webp',
   },
 ]
 

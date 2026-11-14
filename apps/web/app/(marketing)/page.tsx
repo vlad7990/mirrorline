@@ -15,7 +15,7 @@
 
 import { cutSummary, cuts, funnel, metrics, sourceVideo } from '@mirrorline/mock'
 import { SiteCta } from '@/components/marketing/site-cta'
-import { Button, Card, FunnelBar, VideoThumb } from '@mirrorline/ui'
+import { Button, Card, FunnelBar, ReelStill, VideoThumb } from '@mirrorline/ui'
 import { ArrowRight } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
@@ -357,8 +357,10 @@ export default function LandingPage() {
             </h2>
           </SplitReveal>
           <p className="m-0 mt-3 max-w-[62ch] text-body text-on-ink-muted">
-            Sample hooks for fictional businesses, to show the shape of the work. Yours would be
-            cut from your own recordings. These are not customers and not customer results.
+            Sample hooks for twelve fictional businesses, to show the shape of the work. Every
+            frame is AI-generated and labelled on its face — nobody here is a real person and no
+            business here exists. Yours would be cut from your own recordings. These are not
+            customers and not customer results.
           </p>
         </div>
         <ShowcaseMarquee />
@@ -596,7 +598,7 @@ export default function LandingPage() {
               Any business, any individual, <span className="gold-phrase">any industry.</span>
             </>
           }
-          lead="What changes the work is not your trade — it is whether you are a business or a person, and whether the account already exists. Those two answers set the plan, the mix of inputs and the cadence."
+          lead="What changes the work is not your trade — it is whether you are a business or a person, and whether the account already exists. Those two answers set the plan, the mix of inputs and the cadence. The frame on each card is an AI-generated sample from a fictional account, labelled as one."
           headingClassName="text-site-h2 font-serif"
           /* The cards carry sample hooks, so the section has to say so —
              non-negotiable 7. */
@@ -620,17 +622,33 @@ export default function LandingPage() {
                 style={{ '--index': position % 2 } as React.CSSProperties}
               >
                 <Card className="flex h-full gap-5">
-                  {/* A burned-in hook on a brand colour, not a generated
-                      still: every still we have is one fictional person, and
-                      putting the same face on all four would say something
-                      untrue about who these cards are for. */}
+                  {/* A different fictional account on every card (D45).
+                      These were four flat colours, and before that the same
+                      podcast still four times over — which said the opposite
+                      of what the heading says, because one presenter repeated
+                      four times is one kind of person, not four.
+
+                      The pairing is deliberate rather than incidental: the
+                      business growing an account it has is a counter trade,
+                      the business starting one is a place with nobody in it
+                      yet, the individual with an audience is at a desk, and
+                      the individual starting from zero is holding a phone at
+                      arm's length. */}
                   {sample ? (
                     <div className="w-[104px] shrink-0 sm:w-[124px]">
                       <VideoThumb
+                        aiScene
                         caption={`${sample.lead} ${sample.highlight}`}
                         highlight={sample.highlight}
                         index={position}
                         length={sample.lengthLabel}
+                        /* The one place the Ken Burns drift is used. These
+                           four frames are still, where the marquee's twelve
+                           are already crossing the screen — adding a second
+                           motion to something already moving reads as drift
+                           rather than as life. Off under reduced motion; the
+                           class carries that in theme.css. */
+                        media={<ReelStill className="ken-burns" src={sample.frameSrc} />}
                       />
                     </div>
                   ) : null}
