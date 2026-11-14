@@ -133,10 +133,38 @@ test('every numbered section rail renders its counter', async ({ page }) => {
   // pinned here would be the hand-maintained number all over again.
   expect(count).toBeGreaterThan(5)
 
-  // The index is generated content, and its *computed* `content` is the
-  // unresolved `counter(...)` expression — so the number cannot be read back
-  // as a string. What can be checked is that it produced glyphs: a counter
-  // that failed to resolve lays out as an empty box.
+  // The number itself cannot be read back: the index is generated content and
+  // its *computed* `content` is the unresolved `counter(...)` expression.
+  //
+  // So the test asserts the condition that makes the numbering correct rather
+  // than the glyphs. The first version of this test checked only that the
+  // glyphs had non-zero width, and it passed while all fourteen rails rendered
+  // "01" — each `.section-rail` was minting its own counter, because
+  // css-lists-3 creates an out-of-scope counter *on the incrementing element*,
+  // and "01" is exactly as wide as "02". Comparing the two spans as images was
+  // tried next and is worse than useless: an element screenshot is cropped out
+  // of the page, so two spans at different subpixel offsets differ whatever
+  // they say.
+  //
+  // One reset, on an ancestor of every rail, is the whole of the fix.
+  const scope = await page.evaluate(() => {
+    const resetters = Array.from(document.querySelectorAll('*')).filter((node) =>
+      getComputedStyle(node).counterReset.includes('mirrorline-section'),
+    )
+    const railNodes = Array.from(document.querySelectorAll('.section-rail'))
+    return {
+      resetters: resetters.map((node) => node.tagName),
+      coversEveryRail: railNodes.every((rail) =>
+        resetters.some((resetter) => resetter.contains(rail)),
+      ),
+    }
+  })
+
+  // Exactly one: a second reset part-way down the page would restart the
+  // numbering at that point, which is the same bug wearing a different hat.
+  expect(scope.resetters).toEqual(['BODY'])
+  expect(scope.coversEveryRail).toBe(true)
+
   const widths = await rails
     .locator('.section-rail-index')
     .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().width))

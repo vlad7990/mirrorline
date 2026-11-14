@@ -102,11 +102,15 @@ export interface SectionHeadingProps {
   /**
    * Draws the eyebrow as a numbered rail — "01 ——— WHAT WE DO" (17 §1 M2).
    *
-   * The index is a CSS counter, not a number passed in: nineteen hand-written
-   * indices on the home page would be nineteen chances to renumber wrongly the
+   * The index is a CSS counter, not a number passed in: fourteen hand-written
+   * indices on the home page would be fourteen chances to renumber wrongly the
    * first time a section moves. It counts rails in document order, so a
    * section with no eyebrow is not numbered — which is right, because there
    * would be nothing for the number to label.
+   *
+   * The counter is created by `counter-reset` on `body` in theme.css. That is
+   * not decoration: without it every rail creates its own counter and the page
+   * reads "01" fourteen times.
    */
   rail?: boolean
 }

@@ -322,6 +322,16 @@
   }
 
   body {
+    /* Creates the numbered-section-rail counter once, in one scope. Without
+       it each `.section-rail` creates its own and every rail reads "01" — see
+       the note on `.section-rail` in the utilities layer. */
+    /* Creates the numbered-section-rail counter once, in one scope. Without
+       it each `.section-rail` creates its own and every rail reads "01" — see
+       the note on `.section-rail` in the utilities layer. */
+    /* Creates the numbered-section-rail counter once, in one scope. Without
+       it each `.section-rail` creates its own and every rail reads "01" — see
+       the note on `.section-rail` in the utilities layer. */
+    counter-reset: mirrorline-section;
     background-color: var(--color-background);
     color: var(--color-text);
     font-family: var(--font-body);
@@ -446,8 +456,14 @@
      read a bare "01" ahead of every heading in some browsers and not in
      others. A hidden span answers the same in all of them.
 
-     No `counter-reset` is needed: a counter that nothing resets is implicitly
-     reset on the root element, and each page is its own document.
+     **The reset on `body` is load-bearing, and I had it wrong first time.**
+     The comment here used to say no reset was needed because an unreset
+     counter is implicitly reset on the root. That is CSS 2.1; css-lists-3
+     changed it, and browsers follow the newer rule: a `counter-increment` for
+     a counter that is not already in scope creates the counter **on that
+     element**. So every rail minted its own private counter, incremented it to
+     one, and rendered "01" — fourteen times. Caught by reading the page in a
+     browser; the first version of the test could not see it.
      --------------------------------------------------------------------- */
   .section-rail {
     counter-increment: mirrorline-section;
