@@ -8,25 +8,26 @@
 
 ## Handoff — 13 November 2026 (evening: motion v2 begins)
 
-**Branch** `v4/site-and-metrics` · **last commit** `dd7b57d` · clean tree,
+**Branch** `v4/site-and-metrics` · **last commit** `41064cf` · clean tree,
 pushed. The `Branch: main` line above is stale; this is where the work is.
 
-**Preview:** https://mirrorline-i07eet04e-vn-mn-product-group.vercel.app —
-`target: preview`, Ready, built from the PR3 tree. Nothing has been promoted to
+**Preview:** https://mirrorline-17ggil3d0-vn-mn-product-group.vercel.app —
+`target: preview`, Ready, built from the PR4 tree. Nothing has been promoted to
 production. Share link (expires 15 Nov):
-`?_vercel_share=dKTGhokJMLQQUlhasX7sZFbYvvo5qOfg`.
+`?_vercel_share=XwLPHs6SdQdGX3kWlm2ivmvwGYTw9HLv`.
 
-**Recordings:** `docs/screens-built/motion-v2/` — eight clips, desktop (1440)
+**Recordings:** `docs/screens-built/motion-v2/` — ten clips, desktop (1440)
 and mobile (390): `home-rails-and-reveals-*.webm` (14.6s),
 `hero-depth-and-headline-*.webm` (13.4s), `output-multiply-sequence-*.webm`
-(15.8s) and `account-picker-pill-*.webm` (11.5s). Regenerate with
+(15.8s), `argument-and-metrics-*.webm` (12.5s) and
+`account-picker-pill-*.webm` (11.5s). Regenerate with
 `MOTION_RECORD=1 pnpm exec playwright test e2e/recordings.spec.ts
 --project=chromium --project=mobile`. The spec skips without that variable, so
 it never slows `pnpm test:e2e`.
 
 ### Where motion v2 is
 
-Four of seven are in. The order is Vlad's, from the evening brief.
+Five of seven are in. The order is Vlad's, from the evening brief.
 
 | PR | What | State |
 |---|---|---|
@@ -34,8 +35,8 @@ Four of seven are in. The order is Vlad's, from the evening brief.
 | **1** | Motion tokens · numbered rails · button and selector micro-interactions | **Done** — `e4097b8`, fixed by `54244dd` |
 | **2** | Output section as the pinned "multiply" sequence, 3-layer parallax | **Done** — `8c8b02e` (D42) |
 | **3** | Hero depth parallax, floating cut cards, inset preview, SplitText headline | **Done** — `dd7b57d` |
-| 4 | Stacked 2026 cards, scroll-lit rows, recipe assembly, metrics count/draw | **Next** |
-| 5 | Studio micro-interactions (no GSAP) | Not started |
+| **4** | Stacked 2026 cards, scroll-lit rows, recipe assembly, metrics count/draw | **Done** — `41064cf` |
+| 5 | Studio micro-interactions (no GSAP) | **Next** |
 | 6 | One trial band of oversized words, page transitions | Not started |
 
 **The five follow-ups were already done** before this session — nav at eight
@@ -103,6 +104,44 @@ showcase heading uses and is `aria-prohibited-attr` on the plain `<span>` the
 hero splits. Lines now use `aria: 'none'` and need no label — a line is
 already a readable run of text. This one CI *did* catch, because the axe sweep
 covers `/`; the two below it did not.
+
+### PR4, and two things that are your call
+
+Four effects, all CSS: the 2026 cards stack, the contrast rows light as they
+pass the middle, the recipe's beats assemble and its fit score counts, and the
+metrics band's goal bar fills, sparklines draw and funnel bars grow.
+
+**The scroll-lit rows bend the spec, deliberately.** 17 §1 M5 asks for the
+"What you got" column to *dim*. `mirrorline-scroll-lit` already carries the
+warning learned from an axe failure: a view-timeline animation holds its start
+state, so a row parked mid-range sits at that contrast for as long as the
+reader leaves it there, and text below 4.5:1 is a bug however briefly it is
+passing through. So the contrast is made by **lighting the answer and striking
+the complaint**, and neither column ever goes dimmer than the muted token. The
+strike is a drawn pseudo-element, never an `<s>` — the old way is not deleted,
+it is what you used to get.
+
+**The stacked 2026 cards are the weakest of the four, and easy to drop.** It is
+a device built for large image cards (Arigo's "Latest work") applied to cards
+that are four lines of text, so the effect is subtle even now it works. It took
+three attempts — 34vh of travel left two dark voids the height of a laptop
+screen; removing the list's panel left the cards as paragraphs floating on the
+band; they now carry their own border and an opaque background and read as a
+deck. **Reverting to the three-column grid is deleting one media query** if you
+would rather have the grid back.
+
+**Two shared components stayed opt-in.** `GoalProgress` and `KpiCard` are also
+on four studio screens, so `animateFill` and `animateSeries` default to false
+and only the marketing preview passes them — whether a dashboard someone works
+in all day should redraw itself on every scroll is PR5's question, and a
+default-on prop would have answered it by accident. A test asserts `/app/home`
+has neither.
+
+`FunnelBar` is in `packages/ui`, which CLAUDE.md keeps closed to anything but
+bug fixes, so theme.css reaches its fills by structure rather than by adding a
+prop there. That coupling is tested rather than trusted: if the component's
+markup moves, the suite fails instead of the bars quietly never animating
+again.
 
 ### Opening it in a browser found a bug CI could not
 

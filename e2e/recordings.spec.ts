@@ -119,6 +119,24 @@ test.describe('motion-v2 recordings', () => {
     await save(page, testInfo, 'output-multiply-sequence')
   })
 
+  test('the argument sections and the metrics preview', async ({ page }, testInfo) => {
+    await page.goto('/')
+
+    // Start at the 2026 cards and run through the contrast rows, the recipe
+    // and the metrics band — the four effects of PR4 in the order a reader
+    // meets them.
+    const stack = page.locator('.stack-cards')
+    await stack.scrollIntoViewIfNeeded()
+    await page.waitForTimeout(700)
+
+    for (let index = 0; index < 26; index += 1) {
+      await page.mouse.wheel(0, 150)
+      await page.waitForTimeout(450)
+    }
+
+    await save(page, testInfo, 'argument-and-metrics')
+  })
+
   test('the account picker, switching', async ({ page }, testInfo) => {
     await page.goto('/')
 
