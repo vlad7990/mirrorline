@@ -507,6 +507,210 @@
   }
 
   /* ---------------------------------------------------------------------
+     The argument sections (17 §1 M4, M5, M6) and the metrics preview (M9).
+
+     All four are CSS. None of them has ordered stages, so none of them needs
+     GSAP — and three of the four are below the fold on the page whose mobile
+     Lighthouse score is an acceptance criterion.
+     --------------------------------------------------------------------- */
+
+  /* M4 · The three 2026 rule cards stack as you scroll (Arigo "Latest work").
+
+     Sticky, at an increasing offset, so each card parks a little below the
+     one before it and the deck reads as a deck. The travel comes from the
+     space *between* the cards, not from making the cards taller: a card that
+     has to be 44vh to produce scroll is a card with a lot of empty bottom.
+
+     The default is the three-column grid it has always been. This only applies
+     where there is room for it and where motion is wanted, so a narrow screen,
+     reduced motion and a browser without view timelines all keep the grid. */
+  .stack-cards > li {
+    --stack-offset: 1.25rem;
+  }
+
+  /* M5 · The before → after rows light as they pass the middle of the screen.
+
+     **Neither column dims below `--color-text-muted`, and that is deliberate.**
+     17 §1 M5 asks for the "What you got" column to dim; `mirrorline-scroll-lit`
+     already carries the warning, learned from an axe failure: a view-timeline
+     animation holds its start state, so a row parked at the start sits at that
+     contrast for as long as the reader leaves it there. Text below 4.5:1 is a
+     bug however briefly it is passing through.
+
+     So the contrast between the two columns is made by *lighting* the answer
+     rather than by darkening the complaint, and the complaint is struck
+     through instead. Both ends stay readable; the row still reads as
+     before-and-after. */
+  .lit-row {
+    view-timeline-name: --lit-row;
+    view-timeline-axis: block;
+  }
+
+  /* The strike line. A drawn pseudo-element rather than `text-decoration`,
+     and never an `<s>`: the old way is not *deleted*, it is what you used to
+     get, and marking it up as removed would say something the page does not
+     mean. Decorative, so it is invisible to assistive technology either way. */
+  .lit-before {
+    position: relative;
+  }
+
+  .lit-before::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 1px;
+    background-color: currentColor;
+    opacity: 0.5;
+    transform: scaleX(0);
+    transform-origin: left center;
+  }
+
+  /* M9 · A bar that grows from its left edge.
+     `transform`, never `width`: a width animation lays out on every frame. The
+     inline width stays the real value and the scale reveals it. */
+  .bar-grow {
+    transform-origin: left center;
+  }
+
+  /* M9 · The funnel's bars grow one after another.
+
+     Reached by selector rather than by a prop, because `FunnelBar` lives in
+     `packages/ui`, which CLAUDE.md keeps closed to anything but bug fixes. Its
+     fill is the only `<span>` inside the `aria-hidden` track span, so this is
+     specific without being clever about class names that may change.
+
+     The coupling is real, so it is tested rather than trusted: if that markup
+     moves, `e2e/motion.spec.ts` fails instead of the bars quietly stopping. */
+  .funnel-grow span[aria-hidden='true'] > span {
+    transform-origin: left center;
+  }
+
+  /* M9 · A sparkline that draws itself.
+     17 §1 M9 names `stroke-dashoffset`, and this uses `clip-path` instead —
+     the same spec's performance budget allows only transform, opacity, filter
+     and clip-path, because the others cannot be composited. A left-to-right
+     clip is the same picture and keeps the budget the spec itself sets. */
+  .draw-line {
+    clip-path: inset(0 0 0 0);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      @media (width >= 64rem) {
+        /* Doubled class to out-specify the single Tailwind utility on the
+           element, without `!important`. In the grid the list paints the
+           hairlines *between* the cards — a 1px gap over its own background.
+           Stacked, the cards leave real space between them and that
+           background becomes a large empty panel with a border round it,
+           which is what the first attempt shipped. The cards carry their own
+           corners, so the list needs neither. */
+        .stack-cards.stack-cards {
+          display: flex;
+          flex-direction: column;
+          gap: 0;
+          background-color: transparent;
+          border-color: transparent;
+        }
+
+        .stack-cards > li {
+          position: sticky;
+          /* Below the sticky header, then one step per card. */
+          top: calc(9rem + var(--index) * var(--stack-offset));
+          /* The cards are `bg-ink-800` on an ink-800 band: in the grid their
+             edges come from the 1px gaps over the list's own background, and
+             stacked there is no such gap. Without an edge of their own they
+             read as three paragraphs floating on the band, which is what the
+             second attempt shipped. A card has to look like a card before it
+             can look like a card on top of another one. */
+          border: 1px solid var(--color-ink-line);
+          /* And it has to be opaque, or the card underneath shows through the
+             one covering it. */
+          background-color: var(--color-ink-800);
+          /* The travel, and it is deliberately short. This space is *empty*
+             while the next card crosses it, and these cards are four lines
+             tall — the first attempt used 34vh and left two dark voids the
+             height of a laptop screen. Enough to feel the card arrive and
+             cover the one before it; not enough to look unfinished. */
+          margin-bottom: 10vh;
+        }
+
+        .stack-cards > li:last-child {
+          margin-bottom: 0;
+        }
+      }
+
+      .lit-before::after {
+        animation: mirrorline-strike linear both;
+        animation-timeline: --lit-row;
+        animation-range: cover 35% cover 65%;
+      }
+
+      .lit-after {
+        animation: mirrorline-lit linear both;
+        animation-timeline: --lit-row;
+        animation-range: cover 35% cover 65%;
+      }
+
+      .bar-grow,
+      .funnel-grow span[aria-hidden='true'] > span {
+        animation: mirrorline-bar-grow linear both;
+        animation-timeline: view();
+        /* Finished by the time the figure beside it is readable. */
+        animation-range: entry 30% cover 40%;
+      }
+
+      .draw-line {
+        animation: mirrorline-draw linear both;
+        animation-timeline: view();
+        animation-range: entry 30% cover 45%;
+      }
+    }
+  }
+
+  @keyframes mirrorline-strike {
+    from {
+      transform: scaleX(0);
+    }
+
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  /* Muted to full. The start is the readable muted token, not a faded one. */
+  @keyframes mirrorline-lit {
+    from {
+      color: var(--color-text-muted);
+    }
+
+    to {
+      color: var(--color-text);
+    }
+  }
+
+  @keyframes mirrorline-bar-grow {
+    from {
+      transform: scaleX(0);
+    }
+
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes mirrorline-draw {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  /* ---------------------------------------------------------------------
      The hero's depth (17 §1 M1).
 
      Three layers at the plan's three depths — the room behind (0.15), the

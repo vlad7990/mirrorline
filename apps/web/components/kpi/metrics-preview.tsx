@@ -45,7 +45,9 @@ export function MetricsPreview({ onInk, full, className }: MetricsPreviewProps) 
   return (
     <div className={cn('flex flex-col gap-6', className)}>
       <Card className="flex flex-col gap-6">
-        <GoalProgress {...SAMPLE_GOAL} onInk={onInk} />
+        {/* 17 §1 M9. The marketing preview fills its bar on arrival; the four
+            studio copies of `GoalProgress` do not, by default. */}
+        <GoalProgress {...SAMPLE_GOAL} onInk={onInk} animateFill />
 
         <ul
           className={cn(
@@ -62,6 +64,7 @@ export function MetricsPreview({ onInk, full, className }: MetricsPreviewProps) 
                 // told which one it is on rather than left to follow `.dark`.
                 surface={onInk ? 'ink' : 'snow'}
                 goodDirection={LOWER_IS_BETTER.has(kpi.definition.key) ? 'down' : 'up'}
+                animateSeries
               />
             </li>
           ))}
@@ -71,7 +74,10 @@ export function MetricsPreview({ onInk, full, className }: MetricsPreviewProps) 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card className="flex flex-col gap-4">
           <h3 className="m-0 font-heading text-subtitle text-text">Views to bookings</h3>
-          <FunnelBar steps={[...SAMPLE_FUNNEL]} />
+          {/* 17 §1 M9: the bars grow one after another as the card arrives.
+              `funnel-grow` reaches the fills by selector — see theme.css for
+              why, and `motion.spec.ts` for the test that keeps it honest. */}
+          <FunnelBar steps={[...SAMPLE_FUNNEL]} className="funnel-grow" />
           <p className="m-0 text-caption text-text-muted">
             One shared scale across every row, so the drop between stages is the real drop.
           </p>

@@ -630,6 +630,152 @@ test('the week strip never contradicts the verdicts on the frames', async ({ pag
   expect(strip).toContain(`${CUT_COUNT - passedOnFrames} held`)
 })
 
+/* -------------------------------------------------------------------------- */
+/* Motion v2 — 17 §1 M4, M5, M6, M9                                            */
+/* -------------------------------------------------------------------------- */
+
+test('the funnel bars really are reached by the selector that animates them', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  // `FunnelBar` lives in packages/ui, which CLAUDE.md keeps closed to anything
+  // but bug fixes, so theme.css reaches its fills structurally:
+  // `.funnel-grow span[aria-hidden='true'] > span`. That is a coupling to
+  // markup this repo does not own, so it is tested rather than trusted — if
+  // the component's structure moves, this fails instead of the bars quietly
+  // never animating again.
+  const funnel = page.locator('.funnel-grow')
+  await funnel.scrollIntoViewIfNeeded()
+  await expect(funnel).toHaveCount(1)
+
+  const fills = await funnel.evaluate((node) =>
+    Array.from(node.querySelectorAll("span[aria-hidden='true'] > span")).map((fill) => ({
+      animationName: getComputedStyle(fill).animationName,
+      origin: getComputedStyle(fill).transformOrigin,
+    })),
+  )
+
+  expect(fills.length).toBeGreaterThan(2)
+  for (const fill of fills) {
+    expect(fill.animationName).toBe('mirrorline-bar-grow')
+    expect(fill.origin.startsWith('0px')).toBe(true)
+  }
+})
+
+test('the goal bar and sparklines move on the marketing preview only', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  const bar = page.locator('.bar-grow').first()
+  await bar.scrollIntoViewIfNeeded()
+
+  const state = await bar.evaluate((node) => ({
+    animationName: getComputedStyle(node).animationName,
+    // The inline width stays the real figure; the scale reveals it. Animating
+    // `width` instead would lay out on every frame.
+    width: node.style.width,
+  }))
+
+  expect(state.animationName).toBe('mirrorline-bar-grow')
+  expect(state.width).toMatch(/^\d+%$/)
+
+  const sparks = await page
+    .locator('.draw-line')
+    .evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).animationName))
+  expect(sparks.length).toBeGreaterThan(0)
+  for (const name of sparks) {
+    expect(name).toBe('mirrorline-draw')
+  }
+})
+
+test('the studio keeps its bars and sparklines still', async ({ page }) => {
+  // The opt-in half of the two props above. PR4 is the marketing preview;
+  // whether a dashboard someone works in all day should redraw itself on every
+  // scroll is PR5's question, and a default-on prop would have answered it
+  // silently across four studio screens.
+  await page.goto('/app/home')
+
+  expect(await page.locator('.bar-grow').count()).toBe(0)
+  expect(await page.locator('.draw-line').count()).toBe(0)
+})
+
+test('neither contrast column is ever dimmer than the muted token', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  const row = page.locator('.lit-row').first()
+  await row.scrollIntoViewIfNeeded()
+
+  // 17 §1 M5 asks for the "What you got" column to dim. `mirrorline-scroll-lit`
+  // carries the warning from the axe failure that taught it: a view-timeline
+  // animation holds its start state, so a row parked mid-range sits at that
+  // contrast for as long as the reader leaves it there. So the contrast is
+  // made by lighting the answer and striking the complaint, never by pushing
+  // text below AA.
+  const keyframes = await page.evaluate(() => {
+    const found: string[] = []
+    const walk = (list: CSSRuleList) => {
+      for (const rule of Array.from(list)) {
+        if (rule instanceof CSSKeyframesRule && rule.name === 'mirrorline-lit') {
+          found.push(...Array.from(rule.cssRules).map((frame) => frame.cssText))
+        }
+        const grouping = rule as CSSGroupingRule
+        if (grouping.cssRules) walk(grouping.cssRules)
+      }
+    }
+    for (const sheet of Array.from(document.styleSheets)) {
+      try {
+        walk(sheet.cssRules)
+      } catch {
+        // no cross-origin sheets to read
+      }
+    }
+    return found
+  })
+
+  expect(keyframes.length).toBeGreaterThan(0)
+  // It starts at the muted token and ends at the full one. Neither end is a
+  // faded colour, and nothing here animates `opacity` on real text.
+  expect(keyframes.join(' ')).toContain('--color-text-muted')
+  expect(keyframes.join(' ')).not.toContain('opacity')
+
+  // The strike line is decoration on a pseudo-element, never an <s>.
+  expect(await page.locator('.lit-row s').count()).toBe(0)
+  await expect(row.locator('.lit-before').first()).toBeVisible()
+})
+
+test('under reduced motion the argument sections are at their final state', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto(FAQ_PAGE)
+
+  const stacked = page.locator('.stack-cards')
+  await stacked.scrollIntoViewIfNeeded()
+
+  // The deck is the grid again: sticky only applies inside the no-preference
+  // block, so the three cards sit side by side exactly as they always have.
+  const positions = await stacked.evaluate((node) =>
+    Array.from(node.children).map((child) => getComputedStyle(child).position),
+  )
+  expect(positions.length).toBe(3)
+  for (const position of positions) {
+    expect(position).not.toBe('sticky')
+  }
+
+  const row = page.locator('.lit-row').first()
+  await row.scrollIntoViewIfNeeded()
+  const lit = await row.locator('.lit-after').first().evaluate((node) => ({
+    animationName: getComputedStyle(node).animationName,
+    color: getComputedStyle(node).color,
+  }))
+  // No animation at all, so the answer column is simply at its full colour.
+  expect(lit.animationName).toBe('none')
+
+  const strike = await row
+    .locator('.lit-before')
+    .first()
+    .evaluate((node) => getComputedStyle(node, '::after').transform)
+  // The strike never drew, so the complaint is plain text — which is the
+  // final state a reader who asked for stillness should get.
+  expect(['none', 'matrix(0, 0, 0, 1, 0, 0)']).toContain(strike)
+})
+
 test('the CTA arrow answers the keyboard as well as the pointer', async ({ page }) => {
   await page.goto(FAQ_PAGE)
 

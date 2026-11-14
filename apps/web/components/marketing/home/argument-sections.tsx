@@ -2,15 +2,21 @@
  * The four static sections that carry the argument: what changed, what we
  * built instead, how we handle any niche, and the two ways in.
  *
- * Server components, every one. None has state, and keeping them off the
- * client is what lets the home page stay prerendered — the page's only client
- * islands are the picker, the problem cards and the upload control.
+ * Server components, every one, with a single exception: the recipe card's
+ * fit score is a `CountUp`, which is a client island (17 §1 M6). It renders
+ * its final value on the server and only animates once it is in view, so the
+ * figure is in the prerendered HTML and the card around it stays static.
+ *
+ * Nothing else here has state, and keeping it off the client is what lets the
+ * home page stay prerendered — the page's other client islands are the picker,
+ * the problem cards, the upload control and the Output sequence.
  */
 
 import { Card, cn } from '@mirrorline/ui'
 import { ArrowRight, Check } from 'lucide-react'
 import * as React from 'react'
 
+import { CountUp } from '../count-up'
 import { SampleDataLabel } from '../primitives'
 
 import {
@@ -27,11 +33,20 @@ import {
 
 export function ChangedIn2026() {
   return (
-    <ol className="m-0 grid list-none grid-cols-1 gap-px overflow-hidden rounded-lg border border-ink-line bg-ink-line p-0 md:grid-cols-3">
+    /* `stack-cards` makes this the stacked deck of 17 §1 M4 on wide screens,
+       where there is room for it and motion is wanted. Everywhere else —
+       narrow, reduced motion, no view timelines — the three-column grid is
+       exactly what it has always been, which is why those grid classes stay
+       on the element rather than being swapped out.
+
+       `overflow-hidden` had to go with it: it clips a sticky child to the
+       list's own box, so the cards would stop sticking the moment the list
+       scrolled past. The rounded corner moves onto the cards. */
+    <ol className="stack-cards m-0 grid list-none grid-cols-1 gap-px rounded-lg border border-ink-line bg-ink-line p-0 md:grid-cols-3">
       {CHANGE_FACTS.map((fact, position) => (
         <li
           key={fact.id}
-          className="reveal-item flex flex-col gap-2 bg-ink-800 p-6"
+          className="reveal-item flex flex-col gap-2 rounded-lg bg-ink-800 p-6"
           style={{ '--index': position } as React.CSSProperties}
         >
           <span className="machine text-mono text-gold-bright">{`0${position + 1}`}</span>
@@ -79,16 +94,21 @@ export function ContrastTable() {
             </tr>
           </thead>
           <tbody>
+            {/* 17 §1 M5. The row names its own view timeline and its two
+                answer cells read from it, so each row lights as *it* reaches
+                the middle of the screen rather than when the table does. */}
             {CONTRAST_ROWS.map((row) => (
-              <tr key={row.category} className="border-b border-border last:border-b-0">
+              <tr key={row.category} className="lit-row border-b border-border last:border-b-0">
                 <th scope="row" className="p-4 align-top">
                   <span className="block font-heading text-subtitle text-text">{row.category}</span>
                   <span className="machine mt-1 block text-mono text-gold-text">
                     {row.problems.join(' · ')}
                   </span>
                 </th>
-                <td className="p-4 align-top text-meta text-text-muted">{row.before}</td>
-                <td className="p-4 align-top text-meta text-text">{row.mirrorline}</td>
+                <td className="p-4 align-top text-meta text-text-muted">
+                  <span className="lit-before">{row.before}</span>
+                </td>
+                <td className="lit-after p-4 align-top text-meta text-text">{row.mirrorline}</td>
               </tr>
             ))}
           </tbody>
@@ -98,7 +118,7 @@ export function ContrastTable() {
       {/* Narrow: one card per approach. */}
       <ul className="m-0 flex list-none flex-col gap-4 p-0 md:hidden">
         {CONTRAST_ROWS.map((row) => (
-          <li key={row.category}>
+          <li key={row.category} className="lit-row">
             <Card className="flex flex-col gap-3">
               <div className="flex items-baseline justify-between gap-3">
                 <h3 className="m-0 font-heading text-subtitle text-text">{row.category}</h3>
@@ -108,9 +128,9 @@ export function ContrastTable() {
               </div>
               <p className="m-0 text-meta text-text-muted">
                 <span className="font-semibold">Before: </span>
-                {row.before}
+                <span className="lit-before">{row.before}</span>
               </p>
-              <p className="m-0 border-t border-border pt-3 text-meta text-text">
+              <p className="lit-after m-0 border-t border-border pt-3 text-meta text-text">
                 <span className="font-semibold">With us: </span>
                 {row.mirrorline}
               </p>
@@ -175,7 +195,13 @@ function SampleRecipeCard() {
       <dl className="m-0 grid grid-cols-3 gap-3 rounded-md bg-surface-subtle p-3">
         <div className="flex flex-col gap-0.5">
           <dt className="text-caption text-text-muted">Fit</dt>
-          <dd className="machine m-0 text-mono text-text">{SAMPLE_RECIPE.fitScore}/100</dd>
+          {/* 17 §1 M6: the score counts up as the card arrives. `CountUp`
+              renders the final value on the server and animates only once it
+              is in view, so the figure is in the HTML either way — this is a
+              number a reader may quote, not an effect. */}
+          <dd className="machine m-0 text-mono text-text">
+            <CountUp value={SAMPLE_RECIPE.fitScore} suffix="/100" />
+          </dd>
         </div>
         <div className="flex flex-col gap-0.5">
           <dt className="text-caption text-text-muted">Views / follower</dt>
@@ -192,8 +218,16 @@ function SampleRecipeCard() {
         {/* An abstract storyboard, never a frame of anyone's video. DESIGN.md:
             "Don't show a trend as someone else's video." */}
         <ol className="m-0 flex list-none flex-col gap-1.5 p-0">
+          {/* The beats arrive one at a time as the card comes into view
+              (17 §1 M6, "assembles"). `reveal-item` is the existing staggered
+              reveal — movement only, no fade, so every beat is readable at
+              both ends of it. */}
           {SAMPLE_RECIPE.beats.map((beat, position) => (
-            <li key={beat} className="flex items-center gap-3">
+            <li
+              key={beat}
+              className="reveal-item flex items-center gap-3"
+              style={{ '--index': position } as React.CSSProperties}
+            >
               <span className="machine w-5 shrink-0 text-mono text-text-muted">{position + 1}</span>
               <span className="h-6 w-1 shrink-0 rounded-full bg-accent" />
               <span className="min-w-0 text-meta text-text">{beat}</span>

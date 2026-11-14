@@ -56,6 +56,19 @@ export interface KpiCardProps {
    */
   readonly now: Date
   /**
+   * Draw the trend line as the card scrolls into view (17 §1 M9).
+   *
+   * Opt-in and default off, for the same reason `GoalProgress.animateFill` is:
+   * the studio's KPI grid renders this component too, and PR4 is the marketing
+   * preview. Whether a dashboard someone works in all day should redraw its
+   * sparklines is PR5's question, not something to answer by accident.
+   *
+   * Only the measured series takes it. The dashed projection line below does
+   * not: drawing a forecast on arrival gives it the same confident arrival as
+   * a measurement, and the dashes exist precisely to say it is not one.
+   */
+  readonly animateSeries?: boolean
+  /**
    * What the card is sitting on, which decides the gold.
    *
    * Three cases, not two, and the third is the one that caused a bug. The
@@ -83,6 +96,7 @@ export function KpiCard({
   goodDirection = 'up',
   now,
   surface = 'theme',
+  animateSeries = false,
   className,
 }: KpiCardProps) {
   const { definition, value, target } = kpi
@@ -118,7 +132,9 @@ export function KpiCard({
           <span className="machine text-metric text-text">
             {formatKpiValue(value.value, definition.unit)}
           </span>
-          {value.series && value.series.length > 1 ? <Sparkline values={value.series} /> : null}
+          {value.series && value.series.length > 1 ? (
+            <Sparkline values={value.series} className={animateSeries ? 'draw-line' : undefined} />
+          ) : null}
           {value.change === undefined ? null : (
             <span
               className={cn(

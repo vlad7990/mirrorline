@@ -35,6 +35,15 @@ export interface GoalProgressProps {
    * invents a level nobody wrote — axe's `heading-order` rule caught it.
    */
   readonly headingLevel?: 2 | 3
+  /**
+   * Fill the bar as it scrolls into view (17 §1 M9).
+   *
+   * Opt-in, and default off, because this component is also on four studio
+   * screens. PR4 is the marketing metrics preview; whether the studio's bars
+   * should move is PR5's question, and turning them on here would answer it
+   * by accident.
+   */
+  readonly animateFill?: boolean
   readonly className?: string
 }
 
@@ -47,6 +56,7 @@ export function GoalProgress({
   periodLabel,
   onInk,
   headingLevel = 3,
+  animateFill = false,
   className,
 }: GoalProgressProps) {
   const safeTarget = target > 0 ? target : 1
@@ -76,8 +86,15 @@ export function GoalProgress({
         aria-label={`${percent}% of the ${target.toLocaleString('en-US')} ${unitLabel} target, ${periodLabel}`}
         className="h-1.5 w-full overflow-hidden rounded-full bg-surface-subtle"
       >
+        {/* `bar-grow` scales from the left and leaves the inline width as the
+            real value, so the figure is correct in the HTML and nothing
+            animates `width` — which would lay out on every frame. */}
         <div
-          className={cn('h-full rounded-full', onInk ? 'bg-gold-bright' : 'bg-accent')}
+          className={cn(
+            'h-full rounded-full',
+            animateFill && 'bar-grow',
+            onInk ? 'bg-gold-bright' : 'bg-accent',
+          )}
           style={{ width: `${percent}%` }}
         />
       </div>
