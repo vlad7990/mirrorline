@@ -8,13 +8,14 @@
 
 ## Handoff — 13 November 2026 (evening: motion v2 begins)
 
-**Branch** `v4/site-and-metrics` · **last commit** `41064cf` · clean tree,
+**Branch** `v4/site-and-metrics` · **last commit** `4eb8502` · clean tree,
 pushed. The `Branch: main` line above is stale; this is where the work is.
 
-**Preview:** https://mirrorline-17ggil3d0-vn-mn-product-group.vercel.app —
-`target: preview`, Ready, built from the PR4 tree. Nothing has been promoted to
-production. Share link (expires 15 Nov):
-`?_vercel_share=XwLPHs6SdQdGX3kWlm2ivmvwGYTw9HLv`.
+**Preview:** https://mirrorline-5prowzixn-vn-mn-product-group.vercel.app —
+`target: preview`, Ready, built from the PR5-part-1 tree. Nothing has been
+promoted to production. Share link (expires 15 Nov):
+`?_vercel_share=s5hIZkHMgiKxbKJlmreiyYlM6byifY8H`. The studio is behind the
+same link — `/app/results` is the screen PR5 changed.
 
 **Recordings:** `docs/screens-built/motion-v2/` — ten clips, desktop (1440)
 and mobile (390): `home-rails-and-reveals-*.webm` (14.6s),
@@ -36,7 +37,7 @@ Five of seven are in. The order is Vlad's, from the evening brief.
 | **2** | Output section as the pinned "multiply" sequence, 3-layer parallax | **Done** — `8c8b02e` (D42) |
 | **3** | Hero depth parallax, floating cut cards, inset preview, SplitText headline | **Done** — `dd7b57d` |
 | **4** | Stacked 2026 cards, scroll-lit rows, recipe assembly, metrics count/draw | **Done** — `41064cf` |
-| 5 | Studio micro-interactions (no GSAP) | **Next** |
+| 5 | Studio micro-interactions (no GSAP) | **Part 1 done** — `4eb8502`. Four items left, see below |
 | 6 | One trial band of oversized words, page transitions | Not started |
 
 **The five follow-ups were already done** before this session — nav at eight
@@ -104,6 +105,49 @@ showcase heading uses and is `aria-prohibited-attr` on the plain `<span>` the
 hero splits. Lines now use `aria: 'none'` and need no label — a line is
 already a readable run of text. This one CI *did* catch, because the axe sweep
 covers `/`; the two below it did not.
+
+### PR5 is half done, and the other half needs decisions
+
+**Done (`4eb8502`): the sliding markers.** One client component serves both
+strips, measuring the active element rather than counting indices — the
+Results tabs are all different widths, so a counted marker lands on the wrong
+one. Verified on the preview: 0px/91px on Overview, 556px/127px on Agent
+insights, which are those tabs' real boxes.
+
+`studio-nav.tsx` carried a decision that had to be read first: *"the arrival of
+the screen itself stays instant… a transition on it would read as lag rather
+than as feedback"*, because people move between studio screens dozens of times
+a day. **That rule is kept exactly.** What changed is the claim that pressing
+was therefore the only motion the nav could have — the marker slides, but
+nothing waits on it. The link is styled active the instant the route changes;
+the marker is `aria-hidden` decoration catching up.
+
+**Still to do, and two of them are not motion work at all:**
+
+1. **KPI ticks on tab switch** — straightforward. `CountUp` already exists and
+   already counts on entry; the Results tabs are route navigations, so each
+   tab's numbers tick on arrival. Mostly wiring.
+2. **Form success** — button morphs to a spinner, then a drawn checkmark.
+   Self-contained. Note 17 §2 names "Niche Scan, contact", which are the
+   *marketing* forms; the studio's submitting form is Settings.
+3. **Mobile swipe-to-approve** — ⚠️ **this is a new interaction, not motion on
+   an existing one.** There is no touch gesture handling in the calendar
+   today. Approve exists as a button (`calendar-view.tsx:159`), so the button
+   fallback the spec requires is already there, but the swipe itself has to be
+   built.
+4. **Calendar drag** — ⚠️ **the same, and larger.** 17 §2 says "drag shows a
+   ghost card and the drop slot highlights", which describes decorating a
+   drag-and-drop that **does not exist**: there is not one `draggable`,
+   `onDrop` or pointer handler in `components/calendar/`. Building it means
+   drag-to-reschedule *plus* a keyboard equivalent — WCAG 2.5.7 requires any
+   dragging action to have a single-pointer alternative — and that is a
+   feature, not a motion pass. **It needs your call**: build it properly as
+   its own piece of work, or drop it from the motion plan.
+
+**Also worth knowing: `motion` is not installed.** D19 cleared it and 17 names
+it for layout and spring effects, but nothing has needed it yet — the sliding
+markers, the account pill and every reveal are CSS. Worth keeping that way
+unless something genuinely needs spring physics.
 
 ### PR4, and two things that are your call
 
