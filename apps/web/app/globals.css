@@ -151,3 +151,44 @@
     transform: scale(1.06);
   }
 }
+
+/* ---------------------------------------------------------------------------
+   A meter that fills to its figure as it comes into view.
+
+   /product's Originality Gate demo (19 v2) shows a similarity reading against
+   a limit, and a bar that is simply *there* reads as a static infographic. It
+   should arrive at its number the way the CountUp figures beside it do.
+
+   The width is the still state and the animation only grows *into* it, which
+   matters for the same reason `mirrorline-reveal` carries its warning: a
+   view-timeline animation holds its start state, so a bar parked at the start
+   of its range would sit at zero for as long as it stayed there — reading as
+   0% similarity, which is a different and much more flattering claim than the
+   true one. With motion off, or with no `animation-timeline` support, the bar
+   is full-width-to-its-figure from the first paint.
+   --------------------------------------------------------------------------- */
+.meter-fill {
+  width: var(--fill);
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .meter-fill {
+      animation: mirrorline-meter-fill linear both;
+      animation-timeline: view();
+      /* Ends early, like the reveals: the fill is for arriving. A bar still
+         creeping while the reader is on the next paragraph is a progress bar
+         for nothing. */
+      animation-range: entry 10% cover 40%;
+    }
+  }
+}
+
+@keyframes mirrorline-meter-fill {
+  from {
+    width: 0;
+  }
+  to {
+    width: var(--fill);
+  }
+}

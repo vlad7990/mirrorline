@@ -82,6 +82,19 @@ export function PageHeroImage({
                  It is the LCP element on every page that uses this, and two
                  priority images is two images racing for the same slot. */
               sizes="100vw"
+              /* Below the default 75, and the scrims are why it is safe.
+                 Two of them sit on top of this image — a left-to-right ink
+                 wash and a bottom-up fade — so what reaches the eye is a
+                 darkened, low-contrast ground for white type, which is the
+                 least demanding thing a photograph can be asked to do.
+
+                 It is also the measurement that moved: this is the LCP
+                 element on every page using this component, and on a
+                 throttled mobile connection it queues behind ~184 KB of
+                 webfonts. Fewer bytes in the one request the page is waiting
+                 on is worth more here than detail nobody can see through a
+                 scrim. */
+              quality={60}
               className="object-cover"
             />
           </div>

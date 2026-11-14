@@ -2428,3 +2428,204 @@ passing run. The 36 before-shots are in
 imports `PageHeroImage`, `BrowserFrame`, `PhoneFrame` or `ReelStrip` yet, so
 lint, typecheck and build passing proves they compile and not that they
 render. F2 is the first page to use them and is where that gets found out.
+
+## 2026-11-14 · D50 · /product loses its best-looking section, /how-it-works gets three different visuals, and the camera was lying twice
+
+PR F2, the first two pages on the F1 kit. Both were on the 19 audit's list for
+the same reason — "mainly numbered text lists" — and they needed opposite
+fixes, which is why they are one pull request rather than two of the same.
+
+### /product is shorter, and the thing it lost was the thing that looked best
+
+The page had a wall of twelve cut thumbnails under "One episode, twelve
+cuts". It was the most striking block on the page and it was two things at
+once: a `VideoThumb` grid with no `media`, so twelve **flat demo colours**,
+which 19 v2 bans outright; and a second, worse copy of the home page's pinned
+Output sequence, which has the same twelve cuts with real footage behind them.
+
+Passing `cutMedia` would have fixed the first problem and deepened the second.
+The page's own file header already says the agents are not re-explained here
+because "repeating them would make two pages that are each slightly wrong",
+and that argument does not stop being true when the repeated thing is
+prettier. So the wall is gone and the numbers it carried — one 52:14 episode,
+twelve cuts, nine passed, two to look at, one blocked — survive as a mono
+readout under the tour, which was the load-bearing half.
+
+**What replaced it is a tour of six real screens.** Upload → Niche Scan →
+Remake → Calendar → Results → Agents, each in a browser frame. Two of the six
+screenshots did not exist and were captured for this: `trends-16x10` and
+`remake-16x10`, same method as the four already there — 1440×900, both
+themes, animations off, the current gold studio.
+
+**Only the open tab is mounted, and that is the image budget deciding the
+markup.** Each stop costs two files, a light one and a dark one, and six
+mounted stops would be twelve images for one section — the entire per-page
+allowance before the hero, the strip or anything else had been counted. Radix
+unmounts closed panels by default, so the right move was to leave
+`forceMount` alone. The cost is a beat of empty frame the first time a reader
+opens a stop; the alternative was loading twelve screenshots nobody asked to
+see on a page that has to hold Lighthouse mobile at 90.
+
+**The similarity meter is scaled to the limit, not to 100.** The Originality
+Gate demo reads 12% against a 30% limit. On a 0–100 track that renders as a
+sliver, which says "almost nothing" when what the number means is "well under
+the line" — a different and more flattering claim than the true one. The limit
+is the scale, and the track is labelled with where the gate blocks.
+
+**The strip's hooks are paired to its frames by hand.** Eight frames and eight
+hooks mapped by index would eventually put a sourdough starter over a bike
+repair stand. D45 removed two hooks for exactly that mismatch; the only way
+not to have it is for somebody to read both lists.
+
+### /how-it-works gets three visuals, and deliberately not three of the same
+
+Five text-only sections in a row was the whole complaint. The content was
+already right — three phases, named agents, a first week with dates rather
+than promises — so nothing was rewritten and three different *kinds* of
+evidence were added:
+
+- **Scan** gets a recipe card, because what comes back from a scan *is* a card.
+- **Make** gets two phone frames, because the phase's entire point is that
+  "what you send" and "what we make" are two different objects.
+- **Post & prove** gets the real calendar screenshot and the week's six
+  figures counting up, because that phase ends in a dashboard.
+
+Three of the same device would have been decoration. The visual also swaps
+sides on the middle phase, which is what stops three sections reading as one
+long table.
+
+**`WEEK_ONE` keeps its real day numbering, against 19's own table.** The spec
+asks for a "Mon–Sun" strip. The honest schedule does not fit seven named days:
+it runs to day 18, because the baseline takes a fortnight and targets wait for
+it. Renaming days 1–18 as Monday to Sunday would have made the spec's shape
+true at the cost of the content it describes.
+
+### The camera was lying, twice, and both would have shipped as evidence
+
+Neither of these was a bug in a page. Both were bugs in the thing that takes
+the before-and-after screenshots, and both produced reference PNGs that were
+confidently wrong — which is worse than a missing file, because a missing file
+announces itself.
+
+**Lazily-loaded images never loaded at all.** `fullPage` stretches the
+capture; it does not scroll the page. The viewport never moves, so a
+`loading="lazy"` image below the fold never intersects, never requests, and
+appears in the PNG as an empty frame. /how-it-works' calendar screenshot and
+both phone frames came out blank, and the first read of that screenshot was
+"the images are broken". They were not: `naturalWidth` was 0 because the
+browser had not been given a reason to care. The sweep now walks the page a
+viewport at a time and waits for every visible image to report `complete`.
+
+**The counting figures were caught mid-count.** `animations: 'disabled'`
+freezes CSS animations and has nothing to say about JavaScript, and
+`useCountUp` interpolates on `requestAnimationFrame`. The scroll-through added
+above starts every counter on the page, so the capture landed wherever they
+happened to be: the reference image read "12 posts · 27061 views" for a
+fixture that says 21 and 48300. The sweep now waits out the count.
+
+The wait is a duration rather than a poll-until-stable, and that is forced:
+the obvious stable check — wait until the page's text stops changing — never
+settles on the home page, whose hero line cycles on purpose (D25).
+
+### Lighthouse took the hero video away, and it was right to
+
+/product came in at **57** against the 90 this page is held to. The cause was
+one line: the hero inset's `ReelMedia`. A 107 KB mp4, software-decoded on a
+throttled mobile CPU, is a **1,098 ms long task** — it delayed the largest
+paint by 4.6 s and accounted for essentially all of the page's 1,070 ms of
+blocking time. Nothing else on the page cost more than 100 ms.
+
+D49 had argued /product should be the one page with a real loop, because its
+subject *is* the single episode. The argument was sound and the measurement
+beat it. The inset now cross-fades **three stills from that same episode** —
+cuts 1, 2 and 3, so the room, the light and the sweater do not change between
+them (D28). It still shows one recording becoming several posts, which is the
+claim the exception existed to protect; it just does it with the same device
+every other page uses, at no download and no main-thread cost. **D49's "one
+exception, on one page" no longer stands, and 19 v2 is amended to match.**
+
+Two smaller changes came out of the same measurement:
+
+- **The hero image drops to `quality={60}`.** It is the LCP element on every
+  page using the component and it queues behind ~184 KB of webfonts on a
+  throttled connection. It also sits under two scrims — a left-to-right ink
+  wash and a bottom-up fade — so what reaches the eye is a darkened ground for
+  white type, which is the least demanding thing a photograph can be asked to
+  do. Fewer bytes in the request the page is waiting on beats detail nobody
+  can see through a scrim.
+- **The inset's first frame stops being `eager`.** The original reasoning —
+  "it is what shows before any animation runs, so deferring it leaves a hole"
+  — was wrong at both widths. On a phone the card is usually below the fold,
+  so eager meant fetching an off-screen image in direct competition with the
+  hero. On a desktop it is in view, and a lazy image in view is fetched
+  immediately anyway, so nothing was being bought.
+
+**Measured three times per page, because one run cannot decide a pass/fail
+gate.** An early single run read 91 for /how-it-works and a later one 87, with
+changes in between that could only have helped — the machine was simply busier
+the second time. The medians: **/product 90, /how-it-works 91, /pricing 92.**
+/product sits exactly on the line, which is worth knowing before F3 touches
+/pricing and F4 adds an interactive picker to /metrics.
+
+### Two of my own bugs, both found by gates rather than by looking
+
+**A contrast failure in the tour's tab numbers.** `opacity-70` on the mono
+number inside each trigger put it under 4.5:1 in both themes — axe called it
+serious, six times. Dimming a token that has already been chosen for contrast
+is how an accessible palette gets spent; the number is smaller than the label,
+and that is enough hierarchy for a tab.
+
+**A band utility that broke two token sets.** I put `band-snow` on
+/how-it-works' even phases because the extra separation read better. A band
+utility *pins* the palette (D40), so `text-gold-bright` on the step numbers
+and `text-success` on the recipe card kept their ink-band values on a light
+ground and came in under 4.5:1 — two more serious violations, on a page that
+had none before I touched it. The even phases go back to no band utility,
+where those tokens follow the theme and are correct in both. The separation
+was not worth it.
+
+### The image wait hung the sweep, and found something about the home page
+
+The first version of the "wait for every visible image" check was unbounded,
+and it blocked for the full 300 s test timeout — on the **home page**, not on
+either page this PR touches. Its parallax backdrop asks the image optimiser
+for `w=3840` re-encodes of 640px-wide reel frames, and those requests are
+still in flight long after everything else has settled.
+
+That is a real finding and it belongs to the home page rather than to the
+camera, so it is logged rather than fixed here (PR E or F6). The wait is now
+bounded at 20 s and does not fail the sweep: it records which images were
+still loading as a test annotation and photographs the page anyway. A sweep
+that cannot finish produces no evidence at all, which is worse than one that
+records what it saw.
+
+**Seventeen reference PNGs outside this PR's pages changed, and that is the
+fix working.** `index--1440--light` went from 3.4 MB to 7.1 MB — the old
+reference was missing most of the home page's imagery, because none of it had
+ever been scrolled into view. Those references are more truthful now than they
+were before, which is the whole point of the change.
+
+### One flake, and this PR probably made it likelier
+
+`motion.spec.ts › the selection pill follows the chosen account option` failed
+once in the full run: it clicked the second option and read the pill still at
+index 0. It passes 3 of 3 in isolation, so it is a timing flake rather than a
+regression — nothing in this PR touches `/faq` or the `.choice-*` CSS.
+
+Worth recording anyway, because the cause is probably mine. The screenshot
+sweep now scrolls every page and waits out every counter, which took it from
+seconds to **9.5 minutes** and loads the machine far harder while the rest of
+the suite runs beside it. D46 is the record of how much this suite's timing
+depends on what else is running. If this flake becomes regular, the sweep
+moving to its own run rather than sharing `pnpm test:e2e` is the first thing
+to try.
+
+### Not fixed, and visible in this PR
+
+**The studio's own cut thumbnails are flat colour tiles**, and the /product
+tour's first screenshot shows a row of them. 19 v2's ban is a rule about the
+marketing pages and the screenshot is a faithful picture of the app, so
+nothing here is dishonest — but it is the first place that gap is visible to
+somebody who is not looking for it. Fixing it means changing studio
+components, which would also invalidate the six screenshots this PR just
+took, so it is a PR of its own rather than a quiet widening of this one.

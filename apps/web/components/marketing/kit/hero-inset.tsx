@@ -50,11 +50,15 @@ export interface InsetCycleProps {
  * 152–176px, so `sizes` is what stops the browser fetching the full-width
  * file for it — the saving that rule exists for.
  *
- * Only the first frame is `priority`-adjacent in spirit: it is what shows
- * before any animation runs, so it loads eagerly, while frames two and three
- * are not visible for four seconds and have no business competing with the
- * hero image for bandwidth. Neither is `priority` proper — 19 v2 allows the
- * page exactly one of those and the hero has it.
+ * **All three are lazy, including the first.** It was `eager`, on the
+ * reasoning that the first frame is what shows before any animation runs and
+ * deferring it would leave a hole at the top of the page. That was wrong in
+ * both directions. On a phone the card sits below the headline and usually
+ * below the fold, so eager meant fetching an off-screen image in direct
+ * competition with the hero — the one request the page's largest paint is
+ * actually waiting on. On a desktop the card is in view, and a lazy image in
+ * view is fetched immediately anyway, so nothing was being bought. Lazy is
+ * strictly better at both widths.
  */
 export function InsetCycle({ frames }: InsetCycleProps) {
   return (
@@ -66,7 +70,7 @@ export function InsetCycle({ frames }: InsetCycleProps) {
           alt=""
           aria-hidden="true"
           fill
-          loading={index === 0 ? 'eager' : 'lazy'}
+          loading="lazy"
           sizes="176px"
           className="inset-cycle-frame object-cover"
           style={{ '--index': index } as React.CSSProperties}

@@ -1,29 +1,56 @@
 /**
- * /how-it-works — Scan → Make → Post & prove, step by step, with the first
- * week's timeline (16 §4).
+ * /how-it-works — Scan → Make → Post & prove, with something to look at in
+ * every phase.
  *
- * The path sat in the footer for weeks with a 308 to `/agents` behind it,
- * because the site map named a page nobody had built. This is that page.
+ * Rebuilt for 19_INNER_PAGES v2 (D49). The content was already right: three
+ * phases, named agents, and a first week with dates on it rather than numbers
+ * we cannot promise. What was wrong was that all of it was prose — five
+ * text-only sections in a row, which is the specific thing 19 bans and the
+ * reason the page read as documentation.
  *
- * `/agents` answers "who does the work"; this one answers "what happens, and
- * when". The week-one timeline is the part a buyer actually wants: 14 §1's
- * fifth beat is "that's simple", and a plan with dates on it is the only
- * version of simple that survives contact with a sceptic.
+ * So each phase now gets its own kind of visual, and they are deliberately
+ * three different kinds: a recipe card for Scan, because what comes back from
+ * the scan *is* a card; two phone frames for Make, because the whole point of
+ * that phase is "what you send" and "what we make" being two different
+ * things; and the real calendar screenshot with the week's figures for Post &
+ * prove, because that phase ends in a dashboard. Three of the same device
+ * would have been decoration; three different ones are each the phase's own
+ * evidence.
+ *
+ * `WEEK_ONE` keeps its real day numbering. 19's table asks for a "Mon–Sun"
+ * strip, and the honest version of this schedule does not fit seven named
+ * days — it runs to day 18, because the baseline takes a fortnight and
+ * targets wait for it. Renaming days 1–18 as Monday to Sunday would have been
+ * making the spec's shape true at the cost of the content.
  */
 
+import { metrics, trends } from '@mirrorline/mock'
 import { Card } from '@mirrorline/ui'
 import type { Metadata } from 'next'
 import * as React from 'react'
 
-import { PageHero } from '@/components/marketing/page-hero'
+import { CountUp } from '@/components/marketing/count-up'
+import { BrowserFrame, PhoneFrame } from '@/components/marketing/kit/frames'
+import { HeroInset, InsetCycle } from '@/components/marketing/kit/hero-inset'
+import { PAGE_CTAS, PageCta } from '@/components/marketing/kit/page-cta'
+import { PageHeroImage } from '@/components/marketing/kit/page-hero-image'
+import { PAGE_HERO_IMAGES, allocateFrames } from '@/components/marketing/kit/page-media'
 import { Section, SectionHeading } from '@/components/marketing/primitives'
-import { SiteCta } from '@/components/marketing/site-cta'
 
 export const metadata: Metadata = {
   title: 'How it works',
   description:
     'Scan your niche, make original videos from your footage or from formats that are growing, then post daily to your own accounts and report what it produced. Here is the first week, day by day.',
 }
+
+/**
+ * Three for the hero's cycle, two for the Make phase's pair.
+ *
+ * Offset 4 so this page does not open with the same frame /product opens
+ * with. Without it every page would start at the baker and the site would
+ * look like one page repeated (see `allocateFrames`).
+ */
+const [INSET_FRAMES = [], MAKE_FRAMES = []] = allocateFrames([3, 2], 4)
 
 interface Phase {
   readonly id: string
@@ -139,10 +166,147 @@ const WEEK_ONE: readonly TimelineDay[] = [
   },
 ]
 
+/* -------------------------------------------------------------------------- */
+/* The three phase visuals                                                     */
+/* -------------------------------------------------------------------------- */
+
+/** Scan: one of the recipes that comes back, as the scan itself renders it. */
+function ScanVisual() {
+  const recipe = trends[0]
+  if (recipe === undefined) return null
+
+  return (
+    <Card className="flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <span className="eyebrow">One recipe, of five to ten</span>
+          <h3 className="m-0 font-heading text-subtitle text-text">{recipe.format}</h3>
+        </div>
+        <span className="machine shrink-0 text-mono text-success">{recipe.growthLabel}</span>
+      </div>
+
+      <ol className="m-0 flex list-none flex-col gap-2 p-0">
+        {recipe.beats.map((beat) => (
+          <li
+            key={beat.order}
+            className="flex items-baseline gap-3 border-b border-border pb-2 last:border-b-0 last:pb-0"
+          >
+            <span className="machine shrink-0 text-mono text-text-muted">
+              {String(beat.order).padStart(2, '0')}
+            </span>
+            <span className="text-meta text-text">{beat.label}</span>
+          </li>
+        ))}
+      </ol>
+
+      <p className="m-0 text-meta text-text-muted">{recipe.whyItWorks}</p>
+      <p className="m-0 border-t border-border pt-3 text-caption text-text-muted">
+        <span className="machine">{recipe.viewsPerFollower}×</span> views per follower in this
+        niche · sample data from a fictional demo account
+      </p>
+    </Card>
+  )
+}
+
+/** Make: what you send on the left, what comes back on the right. */
+function MakeVisual() {
+  const [sent, made] = MAKE_FRAMES
+
+  return (
+    <div className="grid grid-cols-2 gap-4 sm:gap-6">
+      {sent ? (
+        <PhoneFrame caption="What you send: your own footage, filmed on a phone.">
+          {/* eslint-disable-next-line @next/next/no-img-element -- the same
+              reasoning `ReelStill` carries: a 9:16 still already sized for a
+              ~180px frame has nothing for the optimiser to resize, and this
+              one is decorative with the caption doing the telling. */}
+          <img
+            src={sent.src}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        </PhoneFrame>
+      ) : null}
+      {made ? (
+        <PhoneFrame caption="What comes back: a cut with its hook, in your brand style.">
+          {/* eslint-disable-next-line @next/next/no-img-element -- as above. */}
+          <img
+            src={made.src}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        </PhoneFrame>
+      ) : null}
+    </div>
+  )
+}
+
+interface WeekFigure {
+  readonly label: string
+  readonly value: number
+}
+
+/**
+ * One week of the demo account, as the ledger reports it.
+ *
+ * Posts first and bookings last, which is the order the ledger runs in: the
+ * thing we control, through to the thing the client cares about. Every figure
+ * is from the same fixture the studio's Results screen renders.
+ */
+const WEEK_FIGURES: readonly WeekFigure[] = [
+  { label: 'posts', value: metrics.posts },
+  { label: 'views', value: metrics.views },
+  { label: 'profile visits', value: metrics.profileVisits },
+  { label: 'link clicks', value: metrics.linkClicks },
+  { label: 'leads', value: metrics.leads },
+  { label: 'calls booked', value: metrics.callsBooked },
+]
+
+/** Post & prove: the week on the calendar, and what that week reported. */
+function PostVisual() {
+  return (
+    <div className="flex flex-col gap-6">
+      <BrowserFrame
+        shot="calendar-16x10"
+        path="/app/calendar"
+        alt="The posting week: three platform rows of scheduled posts, each one awaiting approval."
+        sizes="(min-width: 1024px) 460px, 100vw"
+        caption="The week before anyone approves it. Sample data from a fictional demo account."
+      />
+      <ul className="m-0 grid list-none grid-cols-3 gap-x-4 gap-y-5 p-0">
+        {WEEK_FIGURES.map((figure, position) => (
+          <li
+            key={figure.label}
+            className="reveal-item flex flex-col gap-0.5"
+            style={{ '--index': position % 3 } as React.CSSProperties}
+          >
+            <span className="machine text-metric text-text">
+              <CountUp value={figure.value} />
+            </span>
+            <span className="text-caption text-text-muted">{figure.label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+const PHASE_VISUALS: Record<string, React.ReactNode> = {
+  scan: <ScanVisual />,
+  make: <MakeVisual />,
+  post: <PostVisual />,
+}
+
 export default function HowItWorksPage() {
   return (
     <>
-      <PageHero
+      <PageHeroImage
         eyebrow="How it works"
         title={
           <>
@@ -150,61 +314,85 @@ export default function HowItWorksPage() {
           </>
         }
         lead="Three phases, seven agents, and about fifteen minutes a week from you. Below is what happens in each phase, and then the first week with dates on it."
-        shot="studio-cuts-16x10"
-        shotAlt="The studio showing one long video cut into twelve short vertical posts, each with its hook and compliance result."
-        shotCaption="Sample data from a fictional demo account."
+        image={PAGE_HERO_IMAGES['how-it-works']}
         index={PHASES.map((phase) => ({
           number: phase.number,
           title: phase.title,
           description: phase.agents,
         }))}
-        marginNote="three phases · about 15 minutes a week from you"
+        inset={
+          <HeroInset caption="Three accounts, one week of work each.">
+            <InsetCycle frames={INSET_FRAMES} />
+          </HeroInset>
+        }
       />
 
       {/* The three phases ------------------------------------------------- */}
       {PHASES.map((phase, position) => (
         <Section
           key={phase.id}
+          /* No band utility on the even phases, and that is deliberate rather
+             than an omission. Putting `band-snow` here read better and failed
+             axe twice: a band utility *pins* the palette (D40), so
+             `text-gold-bright` on the step numbers and `text-success` on the
+             recipe card kept their ink-band values on a light ground and came
+             in under 4.5:1. Outside a band those tokens follow the theme and
+             are correct in both. The separation the band was buying is not
+             worth two serious contrast violations. */
           className={position % 2 === 1 ? 'band-ink-alt' : undefined}
           aria-labelledby={`${phase.id}-heading`}
         >
           <SectionHeading
             id={`${phase.id}-heading`}
             eyebrow={`Phase ${phase.number}`}
+            rail
             title={phase.title}
             lead={phase.lead}
-            headingClassName="text-site-h2 font-serif"
+            headingClassName="text-site-h2"
           />
-          <ol className="m-0 mt-10 flex list-none flex-col gap-0 p-0">
-            {phase.steps.map((step, stepPosition) => (
-              <li
-                key={step}
-                className="reveal-item flex gap-4 border-b border-border py-4 first:pt-0 last:border-b-0 last:pb-0"
-                style={{ '--index': stepPosition } as React.CSSProperties}
-              >
-                <span className="machine shrink-0 text-mono text-gold-bright">
-                  {String(stepPosition + 1).padStart(2, '0')}
-                </span>
-                <p className="m-0 max-w-[72ch] text-body text-text-muted">{step}</p>
-              </li>
-            ))}
-          </ol>
-          <p className="machine mt-6 mb-0 text-mono text-text-muted">Agents: {phase.agents}</p>
+
+          {/* The steps and the visual side by side, and the visual leads on
+              the middle phase. Alternating which side it sits on is what
+              stops three phases in a row reading as one long table. */}
+          <div className="mt-10 grid gap-10 lg:grid-cols-12 lg:items-start">
+            <div className={position === 1 ? 'lg:order-2 lg:col-span-7' : 'lg:col-span-7'}>
+              <ol className="m-0 flex list-none flex-col gap-0 p-0">
+                {phase.steps.map((step, stepPosition) => (
+                  <li
+                    key={step}
+                    className="reveal-item flex gap-4 border-b border-border py-4 first:pt-0 last:border-b-0 last:pb-0"
+                    style={{ '--index': stepPosition } as React.CSSProperties}
+                  >
+                    <span className="machine shrink-0 text-mono text-gold-bright">
+                      {String(stepPosition + 1).padStart(2, '0')}
+                    </span>
+                    <p className="m-0 max-w-[72ch] text-body text-text-muted">{step}</p>
+                  </li>
+                ))}
+              </ol>
+              <p className="machine mb-0 mt-6 text-mono text-text-muted">Agents: {phase.agents}</p>
+            </div>
+
+            <div className={position === 1 ? 'lg:order-1 lg:col-span-5' : 'lg:col-span-5'}>
+              {PHASE_VISUALS[phase.id]}
+            </div>
+          </div>
         </Section>
       ))}
 
       {/* Week one --------------------------------------------------------- */}
-      <Section className="band-snow" aria-labelledby="timeline-heading">
+      <Section className="band-white" aria-labelledby="timeline-heading">
         <SectionHeading
           id="timeline-heading"
           eyebrow="The first week"
+          rail
           title={
             <>
               What happens, <span className="gold-phrase">and when.</span>
             </>
           }
           lead="Every row is something we do on a date, not a number we expect you to hit. Results depend on an audience we have not met yet; the schedule does not."
-          headingClassName="text-site-h2 font-serif"
+          headingClassName="text-site-h2"
         />
         <ol className="m-0 mt-10 flex list-none flex-col gap-0 p-0">
           {WEEK_ONE.map((day, position) => (
@@ -230,7 +418,7 @@ export default function HowItWorksPage() {
         </Card>
       </Section>
 
-      <SiteCta next={{ href: '/metrics', label: 'Metrics' }} />
+      <PageCta cta={PAGE_CTAS['how-it-works']} />
     </>
   )
 }

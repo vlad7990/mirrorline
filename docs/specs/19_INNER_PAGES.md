@@ -104,10 +104,16 @@ existing 9:16 sample stills**, not a video. It costs nothing, decodes nothing,
 and every frame in it is a real generated frame that is already labelled —
 which is a better answer than a video would have been even with the credits.
 
-**One exception, on one page.** `/product`'s hero inset is the one-episode
-story — one upload becoming cuts — so it gets the existing `cut-01` loop.
-That is the only page where the podcast presenter is the right picture rather
-than a range being claimed with one face (D45).
+**There is no exception, and there was going to be one.** `/product`'s hero
+inset was to carry the real `cut-01` loop, because that page's subject *is*
+the one-episode story. Lighthouse removed it: a 107 KB mp4 software-decoded on
+a throttled mobile CPU is a 1,098 ms long task, which put the page at **57**
+against the 90 it is held to (D50). Its inset now cross-fades three stills
+from that same episode — cuts 1, 2 and 3, one room, one light, one sweater
+(D28) — which makes the same point at no cost.
+
+**So the rule is simply: no `<video>` in a page hero.** Any page later tempted
+to add one should read D50 first.
 
 ## The image budget, also fixed up front
 
@@ -130,7 +136,7 @@ while being three of the most image-heavy pages described. Per inner page:
 
 ### ★ /product (F2)
 
-1. ★ Page hero — own AI image, labelled, depth parallax, inset = the `cut-01` loop.
+1. ★ Page hero — own AI image, labelled, depth parallax, inset = cross-fade of cuts 1–3 of one episode (see §asset budget: this was a real loop until Lighthouse was run on it).
 2. ★ Tabbed feature tour, six tabs in product order: Upload → Niche Scan → Remake → Calendar → Results → Agents. Each tab shows a **current gold-studio screenshot inside a browser frame** and three lines of copy.
 3. ★ Reel strip of varied outputs — eight frames, real samples, labelled.
 4. ★ Originality Gate mini-demo: source beside remake, with a similarity meter that animates to its figure and states the threshold.
