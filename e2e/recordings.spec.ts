@@ -154,4 +154,44 @@ test.describe('motion-v2 recordings', () => {
 
     await save(page, testInfo, 'account-picker-pill')
   })
+
+  test('the KPI figures ticking, and the submit button drawing its check', async ({
+    page,
+  }, testInfo) => {
+    // Nothing is stored: the POST is intercepted. The delay is what makes the
+    // spinner long enough to see at ordinary playback speed.
+    await page.route('**/api/niche-scan', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 2_200))
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true }),
+      })
+    })
+
+    // Part one: arriving on a Results tab ticks that tab's numbers. Two
+    // navigations, because the point is that it happens on *arrival* — one
+    // page load would not show that.
+    await page.goto('/app/results')
+    await page.waitForTimeout(2_600)
+    await page.goto('/app/results?tab=accounts')
+    await page.waitForTimeout(2_600)
+
+    // Part two: the submit button.
+    await page.goto('/niche-scan')
+    await page.locator('#scan-niche').fill('A two-person bookkeeping practice for tradespeople')
+    await page.locator('#scan-email').fill('someone@example.com')
+
+    const submit = page.locator('.morph-submit')
+    await submit.scrollIntoViewIfNeeded()
+    await page.waitForTimeout(900)
+    await submit.click()
+    // Through sending, the drawn mark, and the thank-you replacing the form.
+    await expect(page.getByRole('heading', { name: 'That is with us.' })).toBeVisible({
+      timeout: 15_000,
+    })
+    await page.waitForTimeout(1_200)
+
+    await save(page, testInfo, 'studio-ticks-and-form')
+  })
 })

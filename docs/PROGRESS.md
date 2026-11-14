@@ -8,27 +8,29 @@
 
 ## Handoff — 13 November 2026 (evening: motion v2 begins)
 
-**Branch** `v4/site-and-metrics` · **last commit** `4eb8502` · clean tree,
+**Branch** `v4/site-and-metrics` · **last commit** `4d0f78c` · clean tree,
 pushed. The `Branch: main` line above is stale; this is where the work is.
 
-**Preview:** https://mirrorline-5prowzixn-vn-mn-product-group.vercel.app —
-`target: preview`, Ready, built from the PR5-part-1 tree. Nothing has been
+**Preview:** https://mirrorline-g9gr8l18r-vn-mn-product-group.vercel.app —
+`target: preview`, Ready, built from the finished PR5 tree. Nothing has been
 promoted to production. Share link (expires 15 Nov):
-`?_vercel_share=s5hIZkHMgiKxbKJlmreiyYlM6byifY8H`. The studio is behind the
-same link — `/app/results` is the screen PR5 changed.
+`?_vercel_share=i8w8RvV5fTaiChEzFNYuQoayb7SEkzl0`. The studio is behind the
+same link — `/app/results` and `/niche-scan` are the two screens PR5
+changed.
 
-**Recordings:** `docs/screens-built/motion-v2/` — ten clips, desktop (1440)
-and mobile (390): `home-rails-and-reveals-*.webm` (14.6s),
+**Recordings:** `docs/screens-built/motion-v2/` — twelve clips, desktop
+(1440) and mobile (390): `home-rails-and-reveals-*.webm` (14.6s),
 `hero-depth-and-headline-*.webm` (13.4s), `output-multiply-sequence-*.webm`
-(15.8s), `argument-and-metrics-*.webm` (12.5s) and
-`account-picker-pill-*.webm` (11.5s). Regenerate with
+(15.8s), `argument-and-metrics-*.webm` (12.5s),
+`account-picker-pill-*.webm` (11.5s) and `studio-ticks-and-form-*.webm`
+(~14s). Regenerate with
 `MOTION_RECORD=1 pnpm exec playwright test e2e/recordings.spec.ts
 --project=chromium --project=mobile`. The spec skips without that variable, so
 it never slows `pnpm test:e2e`.
 
 ### Where motion v2 is
 
-Five of seven are in. The order is Vlad's, from the evening brief.
+Six of seven are in. The order is Vlad's, from the evening brief.
 
 | PR | What | State |
 |---|---|---|
@@ -37,8 +39,8 @@ Five of seven are in. The order is Vlad's, from the evening brief.
 | **2** | Output section as the pinned "multiply" sequence, 3-layer parallax | **Done** — `8c8b02e` (D42) |
 | **3** | Hero depth parallax, floating cut cards, inset preview, SplitText headline | **Done** — `dd7b57d` |
 | **4** | Stacked 2026 cards, scroll-lit rows, recipe assembly, metrics count/draw | **Done** — `41064cf` |
-| 5 | Studio micro-interactions (no GSAP) | **Part 1 done** — `4eb8502`. Four items left, see below |
-| 6 | One trial band of oversized words, page transitions | Not started |
+| **5** | Studio micro-interactions (no GSAP) | **Done** — `4eb8502` (markers), `4d0f78c` (ticks, form). Two items **declined pending your call**, see below |
+| 6 | One trial band of oversized words, page transitions | In progress |
 
 **The five follow-ups were already done** before this session — nav at eight
 items, immediate connection alerts, three unlike trades in Portfolio,
@@ -106,7 +108,7 @@ hero splits. Lines now use `aria: 'none'` and need no label — a line is
 already a readable run of text. This one CI *did* catch, because the axe sweep
 covers `/`; the two below it did not.
 
-### PR5 is half done, and the other half needs decisions
+### PR5, and the two items of it that are still your call
 
 **Done (`4eb8502`): the sliding markers.** One client component serves both
 strips, measuring the active element rather than counting indices — the
@@ -122,20 +124,55 @@ was therefore the only motion the nav could have — the marker slides, but
 nothing waits on it. The link is styled active the instant the route changes;
 the marker is `aria-hidden` decoration catching up.
 
-**Still to do, and two of them are not motion work at all:**
+**Done (`4d0f78c`): the ticks and the form.**
 
-1. **KPI ticks on tab switch** — straightforward. `CountUp` already exists and
-   already counts on entry; the Results tabs are route navigations, so each
-   tab's numbers tick on arrival. Mostly wiring.
-2. **Form success** — button morphs to a spinner, then a drawn checkmark.
-   Self-contained. Note 17 §2 names "Niche Scan, contact", which are the
-   *marketing* forms; the studio's submitting form is Settings.
-3. **Mobile swipe-to-approve** — ⚠️ **this is a new interaction, not motion on
+**The KPI ticks answered a question PR4 left open on purpose.** `CountUp`'s
+mechanics moved to `lib/motion/use-count-up.ts` and `KpiFigure` runs the
+running value through `formatKpiValue`, so a percentage counts as a
+percentage and a currency as a currency rather than as a bare number with a
+suffix stuck on the end. Where it is *on* is the decision: the seven Results
+tabs are seven routes, and arriving on one says "these are this tab's
+figures". `/app/home` is where you land and stay, and a number that
+re-counts every time you come back to it is a fidget rather than feedback —
+so it does not, and neither does `/app/accounts`, which shares its board
+with the Results tab that does. A test holds both halves.
+
+Off also means off: without the prop the figure stays a server-rendered
+`<span>` with no client component behind it, so six studio surfaces gain no
+hydration from this.
+
+**The count is never the accessible value.** The running digits are
+`aria-hidden` and the real figure sits beside them in an `sr-only` span. A
+screen reader reading at 120ms gets 318, not 144. 15 §8 is about not stating
+numbers nobody measured, and a half-counted figure is one of those — it is
+an artefact of the animation, not a reading.
+
+**The form button** collapses to a circle, spins, then draws a check with
+`clip-path` — `.draw-line`'s reasoning again: the same wipe, and the one of
+the two that composites. It composes onto `Button` rather than teaching
+`packages/ui` three phases, which CLAUDE.md does not allow. The collapse
+animates `max-width`, which is a **scoped exception** to 17's
+transform-only budget and is written up in the component: that budget
+protects scroll-driven animation, and this is one element, once, for 420ms,
+after someone pressed a button. The in-budget alternative needs JavaScript
+measuring the button on every resize to know which `scaleX` lands on 48px.
+
+**And the preview found a fifth browser-only bug — by measurement, not by
+eye.** Wrapping the gold Niche Scan button in the new component dropped its
+`size`, taking it from DESIGN.md's 48px primary height to 44. Nothing failed:
+every test passed, axe passed, and it looked fine. It showed up because the
+collapsed shape came back 48×44 — a stadium, not a circle — in a geometry
+read taken on the preview. `size` is now explicit, and the reason is in both
+the component and theme.css.
+
+**Still open, and both are your call rather than work left over:**
+
+1. **Mobile swipe-to-approve** — ⚠️ **this is a new interaction, not motion on
    an existing one.** There is no touch gesture handling in the calendar
    today. Approve exists as a button (`calendar-view.tsx:159`), so the button
    fallback the spec requires is already there, but the swipe itself has to be
    built.
-4. **Calendar drag** — ⚠️ **the same, and larger.** 17 §2 says "drag shows a
+2. **Calendar drag** — ⚠️ **the same, and larger.** 17 §2 says "drag shows a
    ghost card and the drop slot highlights", which describes decorating a
    drag-and-drop that **does not exist**: there is not one `draggable`,
    `onDrop` or pointer handler in `components/calendar/`. Building it means
