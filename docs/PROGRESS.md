@@ -8,21 +8,30 @@
 
 ## Handoff — 13 November 2026 (evening: motion v2 begins)
 
-**Branch** `v4/site-and-metrics` · **last commit** `aa35524` · clean tree,
+**Branch** `v4/site-and-metrics` · **last commit** `354c4f5` · clean tree,
 pushed. The `Branch: main` line above is stale; this is where the work is.
 
-**Preview:** https://mirrorline-jbkzvdgz0-vn-mn-product-group.vercel.app —
-`target: preview`, Ready, built from the PR B tree. Nothing has been promoted
-to production. Share link (expires 15 Nov):
-`?_vercel_share=gZp0FyvtICPD9mq60uF6XG10fd2HjrzS`. What to look at: `/` for
-the twelve sample reels in the marquee and one per account-type card, and for
-the footer at the bottom of it; the footer again at 834px and 390px, where it
-goes to three columns and then to collapsible groups; the theme switch in its
-bottom bar; `/` for the shorter page, the 2026 cards back as a grid, the
-PROVEN band, and the Output section's episode frame and week strip;
-`/pricing` for the label that is no longer over the screenshot and for the
-gold dashboard; `/app/results` for the KPI ticks; `/niche-scan` for the
-submit button.
+**Preview:** https://mirrorline-f4uozlf9o-vn-mn-product-group.vercel.app —
+Ready, `target: null` (a preview; nothing has been promoted to production),
+built from the PR A tree. Share link (expires 15 Nov, 13:03):
+`?_vercel_share=Q0bocY8ATgGpac4zOWeZ1IzxAJa5Xndj`.
+
+What to look at for **PR A**, which is mostly invisible by design: the footer
+legal name at the bottom of any public page, and then `view-source:` on `/` —
+the point of the change is that the copy is *in* the HTML. Verified on this
+deployment: `/` 507,017 bytes with one `<main>`, one `<footer>`, one `<h1>`
+and the legal name all server-rendered; `/pricing` 107,439; `/trust` 85,945.
+`/?who=individual&account=new` opens with "An individual" and "Starting a new
+account" both checked, so URL precedence survived the refactor. Clicking
+Pricing then Compare lands on Compare.
+
+Still worth looking at from **PR B**: `/` for the twelve sample reels in the
+marquee and one per account-type card; the footer at 834px and 390px, where
+it goes to three columns and then to collapsible groups; the theme switch in
+its bottom bar; the 2026 cards as a grid, the PROVEN band, and the Output
+section's episode frame and week strip; `/pricing` for the label that is no
+longer over the screenshot and for the gold dashboard; `/app/results` for the
+KPI ticks; `/niche-scan` for the submit button.
 
 ### PR A · the e2e "race" was the dev server (14 Nov) — read D46
 
@@ -81,15 +90,30 @@ reference PNGs in `docs/screens-built/` are regenerated in this PR.
 1. **React #418 on the preview, still unreproduced.** Seen once, on the
    one-time `?_vercel_share=` redirect navigation. The same production build
    is clean locally with and without a stored theme preference, and fresh
-   preview loads are clean. Not explained, not dismissed — if it reappears,
-   the theme script in the root layout is the first place to look, because it
-   is the one thing that writes to `<html>` before React sees it.
-2. **`docs/screens-built/app-results--*.png` churns on every run.** That
+   preview loads are clean. Checked again on the PR A deployment — including
+   the share-link redirect hop, which is where it appeared — and the console
+   is clean: 0 errors on `/`, on `/?who=individual&account=new`, and across a
+   `/` → `/pricing` → `/compare` client navigation. That is reassuring but
+   not a diagnosis, and PR A changed the hydration shape of every marketing
+   page, so it is worth one more look if it ever returns. The theme script in
+   the root layout is the first place to go: it is the one thing that writes
+   to `<html>` before React sees it.
+2. **Two GSAP warnings after navigating away from the home page**, on
+   `/compare`: `GSAP target [data-cut-frame] not found` and the same for
+   `[data-cut-frame] [data-status-chip]`. Those are the Output sequence's
+   targets and they only exist on `/`, so a timeline is being built against
+   nothing after a client navigation — a dead animation rather than a broken
+   one, which is why it is a warning. **Pre-existing, not from PR A:** the PR
+   B preview produces the identical two warnings on the identical
+   navigation, which is how it was told apart rather than assumed. It points
+   at a missing cleanup or a registration that should be scoped to the home
+   route.
+3. **`docs/screens-built/app-results--*.png` churns on every run.** That
    screen's KPI figures tick on arrival (17 §2), so a screenshot catches them
    mid-count and the reference is nondeterministic by construction. Harmless
    today, but it means those four PNGs are never a reliable diff. Freezing
    them would need the screenshot pass to disable that one animation.
-3. **`app/app/onboarding/layout.tsx` still wraps its whole shell in
+4. **`app/app/onboarding/layout.tsx` still wraps its whole shell in
    `<Suspense>`**, so `/app/onboarding` has the same empty-HTML shape the
    marketing layout just lost. Left alone deliberately, and it is a much
    smaller problem: the route is behind sign-in so no crawler or link
