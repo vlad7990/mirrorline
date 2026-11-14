@@ -8,15 +8,16 @@
 
 ## Handoff — 13 November 2026 (evening: motion v2 begins)
 
-**Branch** `v4/site-and-metrics` · **last commit** `4d0f78c` · clean tree,
+**Branch** `v4/site-and-metrics` · **last commit** `2d352e0` · clean tree,
 pushed. The `Branch: main` line above is stale; this is where the work is.
 
-**Preview:** https://mirrorline-g9gr8l18r-vn-mn-product-group.vercel.app —
-`target: preview`, Ready, built from the finished PR5 tree. Nothing has been
+**Preview:** https://mirrorline-qkh70b323-vn-mn-product-group.vercel.app —
+`target: preview`, Ready, built from the finished PR6 tree. Nothing has been
 promoted to production. Share link (expires 15 Nov):
-`?_vercel_share=i8w8RvV5fTaiChEzFNYuQoayb7SEkzl0`. The studio is behind the
-same link — `/app/results` and `/niche-scan` are the two screens PR5
-changed.
+`?_vercel_share=B1KRX9JtfhFCMmwFCNhGMucXFMZXdkhx`. What to look at: `/` for
+the PROVEN band (scroll to "Nothing reaches your calendar unchecked") and
+for the transition between any two header links; `/app/results` for the KPI
+ticks; `/niche-scan` for the submit button.
 
 **Recordings:** `docs/screens-built/motion-v2/` — fourteen clips, desktop
 (1440) and mobile (390): `home-rails-and-reveals-*.webm` (14.6s),
