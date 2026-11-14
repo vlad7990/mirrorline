@@ -6,22 +6,31 @@
 
 ---
 
-## Handoff — 14 November 2026 (PR A, PR B2 and PR7 shipped; PR C is next)
+## Handoff — 14 November 2026, evening (PR F1, F2 and F3 shipped; F4 is next)
 
-**Branch** `v4/site-and-metrics` · **last feature commit** `27653c9` (PR7),
-with this handoff committed on top · clean tree, pushed. The `Branch: main`
-line above is stale; this is where the work is.
+**Branch** `v4/site-and-metrics` · **last feature commit** `27b4893` (PR F3),
+with this handoff committed on top · clean tree. The `Branch: main` line above
+is stale; this is where the work is.
 
-**Where to start reading:** "The queue, in order" immediately below gives the
-agreed sequence and what is done. Then D46, D47 and D48 in
-`docs/DECISIONS.md` for the three PRs of 14 November. Two open problems are
-worth knowing before touching the studio — the React #418 repro and the
-duplicated post panel — both under "Watch" in the PR7 section.
+**Where to start reading:** `docs/specs/19_INNER_PAGES.md` **v2** — the second
+half of that file is the ★ checklist every inner page is built against, and it
+is the thing to read before writing any more of them. Then D49, D50 and D51 in
+`docs/DECISIONS.md` for the three PRs of this evening. The queue table below
+has been reordered to match what Vlad asked for on 14 November: **F runs
+before C, D and E.**
 
-**Preview:** https://mirrorline-p6ohijce0-vn-mn-product-group.vercel.app —
-Ready, `target: null` (a preview; nothing has been promoted to production),
-built from the PR7 tree. Share link (expires 15 Nov, 19:35):
-`?_vercel_share=82Cyb9rEGdkEZPWziNww4BVYimiZuxpW`.
+**Preview:** https://mirrorline-1t2kss173-vn-mn-product-group.vercel.app —
+built from the F3 tree (`27b4893`). It returns 302 behind Vercel's deployment
+protection, exactly as previous previews have; open it signed in to the team,
+or mint a share link from the dashboard. Nothing is promoted to production.
+
+What to look at: **/product** (six-screen tour, reel strip, Originality Gate
+demo with the meter scaled to its 30% limit), **/how-it-works** (a different
+visual per phase), **/pricing** (card grid, and the month preview under the
+plan chips — the dots are drawn from each plan's own post count) and
+**/compare** (four category columns, then the three-question helper at the
+bottom: answer "None, and I do not plan to record" and it refuses to sell you
+anything).
 
 What to look at for **PR7**: `/app/calendar`. Drag a chip sideways onto
 another day in the same platform row — the ghost follows the pointer, the
@@ -66,15 +75,63 @@ KPI ticks; `/niche-scan` for the submit button.
 Do not reorder. Each one is preview only, gates green, this handoff updated
 before moving on.
 
+**Reordered on 14 November, evening.** Vlad moved the inner pages ahead of the
+Co-pilot: "inner pages come before the Co-pilot". What that cost is written up
+in 19 v2 — PR D's YouTube add-on card and PR C's FAQ co-pilot link are simply
+left out rather than stubbed.
+
 | # | PR | State |
 |---|---|---|
 | 1 | **PR A** · the e2e flake and the blank marketing HTML | done, `354c4f5` |
 | 2 | **PR B2** · four loop tabs, theme switch off the public site | done, `4b3cbbd` |
 | 3 | **PR7** · calendar drag-to-reschedule | done, see below |
-| 4 | **PR C** · Co-pilot (write `docs/specs/18_COPILOT.md` first) | next |
-| 5 | **PR D** · Long-form YouTube add-on | queued |
-| 6 | **PR E** · remaining motion, site and studio | queued |
-| 7 | **PR F1–F5** · inner pages, to `docs/specs/19_INNER_PAGES.md` | queued |
+| 4 | **PR F1** · the shared inner-page kit + 19 v2 | done, `6c87511` |
+| 5 | **PR F2** · /product and /how-it-works | done, `d9cb358` |
+| 6 | **PR F3** · /pricing and /compare | done, `27b4893` |
+| 7 | **PR F4** · /metrics and /niche-scan | **next** |
+| 8 | **PR F5** · /resources + article template, /sign-in, /sign-up | queued |
+| 9 | **small PR** · React #418 at `/app/calendar` 390px | queued, after F5 |
+| 10 | **PR C** · Co-pilot (`docs/specs/18_COPILOT.md` is already written) | queued |
+| 11 | **PR D** · Long-form YouTube add-on | queued |
+| 12 | **PR E** · remaining motion, site and studio | queued |
+| — | **PR F6** · the eleven inner pages F1–F5 do not cover | not scheduled |
+
+#### Picking up F4 — read this before starting
+
+Everything F4 needs already exists; the work is assembly. The ★ list is in
+19 v2 under "/metrics" and "/niche-scan".
+
+**The goal picker is the one with a design decision already made**, and it is
+worth not re-deciding: *what changes with the goal is which KPIs lead, not
+what the numbers say.* One fictional account is being previewed, so generating
+seven sets of figures would be seven fictional accounts pretending to be one.
+Build a `GOAL_VIEWS` record keyed by the seven `GOALS[].key` values
+(`lib/audience/account-type.ts`), each naming four KPI keys out of the eight
+in `SAMPLE_KPIS` (`components/kpi/sample-dashboard.ts`), a `targetBasis` line
+and which funnel step the goal is judged at. Every set must keep `bookings`
+(not-connected) and `cost_per_lead` (projected) — 15 §8, and a test should
+assert it, the way F3's helper asserts its own honesty.
+
+**The Suspense trap is real and already avoided twice.** The picker holds its
+own state and must not touch `useSearchParams`; D46 is the record of the whole
+marketing tree becoming a Suspense fallback and shipping empty HTML.
+`plan-picker.tsx` is the worked example to copy.
+
+**Re-check Lighthouse on all three held pages after F4**, not just /metrics.
+/product sits exactly on 90.
+
+#### What F1–F3 actually shipped
+
+- **F1** `6c87511` — the kit in `components/marketing/kit/`: `PageHeroImage`,
+  `HeroInset`/`InsetCycle`, `BrowserFrame`/`PhoneFrame`, `ReelStrip`,
+  `FaqSection`, `PageCta`. Eight AI hero images (1600×900 WebP, 488 KB for all
+  eight). 19 v2 written, including the asset and image budgets.
+- **F2** `d9cb358` — /product and /how-it-works.
+- **F3** `27b4893` — /pricing and /compare, including the decision helper that
+  recommends against us in fifteen of its eighteen answer combinations.
+
+Before/after screenshots for all six pages at 1440 and 390, both themes, are
+in `docs/screens-built/inner-pages/{before,after}/`.
 
 #### PR F1–F5 · bring every inner page up to the home page
 
@@ -921,6 +978,38 @@ which needs Needs Vlad A.
 
 **Untracked and not mine:** `docs/specs/17_MOTION_PLAN.md` sits in the working
 tree uncommitted. I have left it alone.
+
+### Open after F1–F3 — three things nobody has fixed
+
+None of these blocks F4. All three are visible, so they are written down
+rather than left to be rediscovered.
+
+1. **The home page asks the image optimiser for `w=3840` re-encodes of
+   640px-wide reel frames.** Its parallax backdrop
+   (`components/marketing/reel-backdrop.tsx`) requests sizes far beyond the
+   source, and those requests are still in flight long after the rest of the
+   page has settled — it is what hung the screenshot sweep until the wait was
+   bounded (D50). A real performance bug on the one page we have never
+   Lighthouse-tested. **PR E or F6.**
+2. **The studio's own cut thumbnails are flat colour tiles**, and /product's
+   feature tour now shows a row of them in its first screenshot. 19 v2's ban
+   covers the marketing pages and the screenshot is a faithful picture of the
+   app, so nothing is dishonest — but it is the first place that gap is
+   visible to someone not looking for it. Fixing it means touching studio
+   components and re-taking six screenshots, so it is its own PR.
+3. **`motion.spec.ts › the selection pill follows the chosen account option`
+   flakes under load.** Passes 3 of 3 in isolation. It began appearing when
+   the screenshot sweep went from seconds to 9.5 minutes and started loading
+   the machine alongside the rest of the suite. If it becomes regular, moving
+   the sweep out of `pnpm test:e2e` into its own run is the first thing to
+   try. D50 and D51 both record sightings.
+
+**One lesson from F3 worth carrying forward:** two tests failed together in
+the same run and both looked like the known flake. Re-running each in
+isolation three times separated them — the pill passed 3/3, and
+`navigation-race.spec.ts` failed 3/3 because it held its own stale copy of a
+headline I had renamed. A consistent failure can wear a flake's clothes; the
+three-run check is cheap and it is what caught it.
 
 ### Needs Vlad
 
