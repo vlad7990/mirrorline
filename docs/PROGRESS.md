@@ -8,31 +8,32 @@
 
 ## Handoff — 13 November 2026 (evening: motion v2 begins)
 
-**Branch** `v4/site-and-metrics` · **last commit** `54244dd` · clean tree,
+**Branch** `v4/site-and-metrics` · **last commit** `8c8b02e` · clean tree,
 pushed. The `Branch: main` line above is stale; this is where the work is.
 
-**Preview:** https://mirrorline-3ppp16mv1-vn-mn-product-group.vercel.app —
-`target: preview`, Ready, from `54244dd`. Nothing has been promoted to
-production. Share link (expires 14 Nov):
-`?_vercel_share=O5OHbDCBTVI0rZhcrPCOVSxokWacW4ui`.
+**Preview:** https://mirrorline-oafzvb3cy-vn-mn-product-group.vercel.app —
+`target: preview`, Ready, built from the PR2 tree. Nothing has been promoted to
+production. Share link (expires 15 Nov):
+`?_vercel_share=dho5vJ4uBilzgedrXi4YxX2r3HeDk4hQ`.
 
-**Recordings:** `docs/screens-built/motion-v2/` — four clips, desktop (1440)
-and mobile (390): `home-rails-and-reveals-*.webm` (14.4s) and
-`account-picker-pill-*.webm` (11.6s). Regenerate with
+**Recordings:** `docs/screens-built/motion-v2/` — six clips, desktop (1440) and
+mobile (390): `home-rails-and-reveals-*.webm` (14.4s),
+`output-multiply-sequence-*.webm` (15.8s) and `account-picker-pill-*.webm`
+(11.6s). Regenerate with
 `MOTION_RECORD=1 pnpm exec playwright test e2e/recordings.spec.ts
 --project=chromium --project=mobile`. The spec skips without that variable, so
 it never slows `pnpm test:e2e`.
 
 ### Where motion v2 is
 
-Two of seven are in. The order is Vlad's, from the evening brief.
+Three of seven are in. The order is Vlad's, from the evening brief.
 
 | PR | What | State |
 |---|---|---|
 | **Licence** | D41 · GSAP scoped to marketing, and enforced | **Done** — `518477b` |
 | **1** | Motion tokens · numbered rails · button and selector micro-interactions | **Done** — `e4097b8`, fixed by `54244dd` |
-| 2 | Output section as the pinned "multiply" sequence, 3-layer parallax | **Next** |
-| 3 | Hero depth parallax, floating cut cards, inset preview, SplitText headline | Not started |
+| **2** | Output section as the pinned "multiply" sequence, 3-layer parallax | **Done** — `8c8b02e` (D42) |
+| 3 | Hero depth parallax, floating cut cards, inset preview, SplitText headline | **Next** |
 | 4 | Stacked 2026 cards, scroll-lit rows, recipe assembly, metrics count/draw | Not started |
 | 5 | Studio micro-interactions (no GSAP) | Not started |
 | 6 | One trial band of oversized words, page transitions | Not started |
@@ -57,6 +58,29 @@ gate name both files and exit 1.
 Spec 17's Rules section said "No GSAP" and is amended in place, the way D33
 amended non-negotiable 10.
 
+### PR2, and the one thing in it that is Vlad's call
+
+The Output section is now a pinned 250vh scene: the playhead crosses a 52:14
+bar and lights twelve moments, each lifts into a 9:16 frame, the deck fans and
+settles into the grid, a scan sweeps and the verdicts arrive, and the week
+strip reads "9 passed · 3 held". Three layers at 0.15 / 0.35 / 0.6, ±4° pointer
+tilt on desktop. Full reasoning in **D42**.
+
+**It does not pin on a phone, and that is a deliberate half-refusal of the
+spec.** 17 §3 asks for a shortened 150vh mobile pin. D35 had already ruled out
+pinning short touch screens — it eats the viewport and fights the scroll, the
+objection that kept ScrollSmoother out in D32 — and nothing about this section
+changes that argument. The other half of the spec's mobile answer, the
+horizontal snap row, is taken in full. **If you want the mobile pin anyway it
+is one media query** — say so and it goes in.
+
+The grid is not a copy of the wall, it *is* the wall: `OutputSequence` animates
+`CutWall`'s real tiles, so the twelve compliance verdicts and AI labels have
+one source rather than two. `@gsap/react` is on the allow-list but stays
+uninstalled — `useGSAP` needs a module-scope `gsap` import, which would put
+~70 KB in the home page's first load against a 30 KB budget. `gsap.context()`
+gives the same cleanup contract; `/` went 192 KB → 194 KB.
+
 ### Opening it in a browser found a bug CI could not
 
 The home rails rendered **"01" fourteen times**. A `counter-increment` with no
@@ -74,6 +98,19 @@ spans at different subpixel offsets differ whatever digits they carry, and it
 passes either way. It now asserts the condition that makes the numbering
 correct — exactly one element resets the counter, it is `BODY`, and it contains
 every rail — and that was verified by removing the reset and watching it fail.
+
+**It happened again in PR2, twice.** The episode player sat at `z-index: 1`
+behind the wall's opaque panel, so the opening stage of the sequence — the
+player, the bar, the playhead, the twelve markers — was painted behind it and
+could never be seen. Every test passed, because every test was about the
+finished state and the finished state was right. The second: the frames' tween
+starts at timeline position 2 and a `fromTo` applies its `from` only when it
+begins, so stage one was the episode laid over a grid that was already fully
+drawn — giving away the trick the section exists to perform.
+
+The lesson worth carrying into PR3: **assertions about end states cannot see a
+sequence that is wrong in the middle.** The new stacking test asserts order
+rather than pixels and was verified by restoring the bug.
 
 **Two pre-existing console errors on `/`, and they are not from this work:** a
 `favicon.ico` 404, and React #418, a hydration mismatch on `<html>` — almost

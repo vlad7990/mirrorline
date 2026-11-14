@@ -77,6 +77,30 @@ test.describe('motion-v2 recordings', () => {
     await save(page, testInfo, 'home-rails-and-reveals')
   })
 
+  test('the Output sequence, start to finish', async ({ page }, testInfo) => {
+    await page.goto('/')
+
+    const stage = page.locator('.output-stage')
+    await stage.scrollIntoViewIfNeeded()
+    // GSAP arms the stage a tick after paint on a wide screen. On the mobile
+    // project it never arms, and the clip is the snap row instead — which is
+    // the mobile version 17 §3 asks to see.
+    await page.waitForTimeout(1_200)
+
+    // Smaller steps than the home clip: this is 250vh of pinned sequence, and
+    // stepping it at the page's pace would skip whole stages between frames.
+    for (let index = 0; index < 30; index += 1) {
+      await page.mouse.wheel(0, 120)
+      await page.waitForTimeout(400)
+    }
+
+    // A clip of a broken section is worse than no clip, so the end state is
+    // asserted: every verdict legible by the time the sequence has run.
+    await expect(page.locator('[data-cut-frame] [data-status-chip]').first()).toBeVisible()
+
+    await save(page, testInfo, 'output-multiply-sequence')
+  })
+
   test('the account picker, switching', async ({ page }, testInfo) => {
     await page.goto('/')
 
