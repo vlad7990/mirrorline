@@ -114,3 +114,38 @@ test('every studio route offers the mobile menu trigger', async ({ page }) => {
     ).toBeVisible()
   }
 })
+
+test('the Output sequence does not pin on a phone, and its cuts snap sideways', async ({
+  page,
+}) => {
+  await page.goto('/')
+
+  const row = page.locator('.output-snap-row')
+  await row.scrollIntoViewIfNeeded()
+
+  // 17 §3 asks for a shortened pin on mobile. D42 declines that half: D35 had
+  // already ruled out pinning on short touch screens, because it eats the
+  // viewport and fights the scroll — the objection that kept ScrollSmoother
+  // out. The horizontal snap row is the half that was taken.
+  await expect(page.locator('.output-stage')).not.toHaveAttribute('data-sequence', 'on')
+
+  const strip = await row.evaluate((node) => ({
+    overflowX: getComputedStyle(node).overflowX,
+    snap: getComputedStyle(node).scrollSnapType,
+    scrollsSideways: node.scrollWidth > node.clientWidth,
+  }))
+
+  expect(strip.overflowX).toBe('auto')
+  expect(strip.snap).toBe('x mandatory')
+  // Twelve frames at 62% of the viewport have to overflow, or this is a snap
+  // container with nothing to snap to.
+  expect(strip.scrollsSideways).toBe(true)
+
+  // The verdicts are legible without scrolling anything: no sequence runs
+  // here, so the wall is already in its finished state.
+  await expect(page.locator('[data-cut-frame] [data-status-chip]').first()).toBeVisible()
+
+  // The row scrolls; the page must not. That is the trap in putting an
+  // overflowing grid on a phone, and the whole reason this file exists.
+  await expectNoHorizontalScroll(page)
+})

@@ -263,6 +263,144 @@ test('reduced motion keeps the pill and drops only its travel', async ({ page })
   expect(toMs(duration)).toBeLessThanOrEqual(1)
 })
 
+/* -------------------------------------------------------------------------- */
+/* Motion v2 — 17 §3, the Output sequence                                      */
+/* -------------------------------------------------------------------------- */
+
+/** The wall is the fallback *and* the final state, so it is always all twelve. */
+const CUT_COUNT = 12
+
+const DECORATIVE_LAYERS = [
+  '.output-episode',
+  '.output-layer-back',
+  '.output-front',
+  '.output-scan',
+] as const
+
+test('under reduced motion the Output section is the finished wall', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto(FAQ_PAGE)
+
+  const stage = page.locator('.output-stage')
+  await stage.scrollIntoViewIfNeeded()
+
+  // The sequence never arms itself, so there is nothing to wind back.
+  await expect(stage).not.toHaveAttribute('data-sequence', 'on')
+
+  const frames = page.locator('[data-cut-frame]')
+  await expect(frames).toHaveCount(CUT_COUNT)
+
+  // Every frame at its resting place and every verdict legible. This is the
+  // "final state" 17 §5 asks for: not a collapsed animation, but the section
+  // as though the sequence had already run.
+  const states = await frames.evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const computed = getComputedStyle(node)
+      const chip = node.querySelector('[data-status-chip]')
+      return {
+        transform: computed.transform,
+        opacity: computed.opacity,
+        animationName: computed.animationName,
+        chipOpacity: chip ? getComputedStyle(chip).opacity : null,
+      }
+    }),
+  )
+
+  for (const state of states) {
+    expect(['none', 'matrix(1, 0, 0, 1, 0, 0)']).toContain(state.transform)
+    expect(state.opacity).toBe('1')
+    // `.reveal-item` is dropped when the sequence owns the frame, so no
+    // view-timeline animation is left holding it at a start state either.
+    expect(state.animationName).toBe('none')
+    expect(state.chipOpacity).toBe('1')
+  }
+})
+
+test('the sequence adds nothing to the flow, so it cannot shift the layout', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto(FAQ_PAGE)
+
+  const stage = page.locator('.output-stage')
+  await stage.scrollIntoViewIfNeeded()
+
+  // Decoration is `display: none` until the sequence runs, and that is what
+  // keeps CLS at zero: no episode player, playhead or week strip ever occupies
+  // space that would later be taken back.
+  for (const selector of DECORATIVE_LAYERS) {
+    const layer = stage.locator(selector)
+    await expect(layer).toHaveCount(1)
+    await expect(layer).toBeHidden()
+  }
+})
+
+test('every decorative layer is hidden from assistive technology', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  const stage = page.locator('.output-stage')
+  await stage.scrollIntoViewIfNeeded()
+
+  // The sequence illustrates facts already in the DOM — the episode's length
+  // in the panel readout, the verdicts on the frames. A screen reader that
+  // heard the illustration as well would hear each of them twice.
+  for (const selector of DECORATIVE_LAYERS) {
+    await expect(stage.locator(selector)).toHaveAttribute('aria-hidden', 'true')
+  }
+})
+
+test('the episode is painted over the wall, not behind it', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  const stage = page.locator('.output-stage')
+  await stage.scrollIntoViewIfNeeded()
+  // GSAP is loaded inside the effect, so the stage arms a tick after paint.
+  await expect(stage).toHaveAttribute('data-sequence', 'on')
+
+  // The bug this exists for: the episode, the timeline and the playhead were
+  // at z-index 1 against the wall's 2, and the wall is an opaque panel — so
+  // the opening stage of the sequence was painted behind it and could not be
+  // seen at all. Every other test passed, because every other test was about
+  // the finished state and the finished state was correct.
+  const order = await stage.evaluate((node) => {
+    const zOf = (selector: string) => {
+      const element = node.querySelector(selector)
+      return element ? Number.parseInt(getComputedStyle(element).zIndex, 10) : Number.NaN
+    }
+    return {
+      back: zOf('.output-layer-back'),
+      wall: zOf('.output-wall'),
+      episode: zOf('.output-episode'),
+      scan: zOf('.output-scan'),
+      front: zOf('.output-front'),
+    }
+  })
+
+  expect(order.back).toBeLessThan(order.wall)
+  expect(order.episode).toBeGreaterThan(order.wall)
+  expect(order.scan).toBeGreaterThan(order.episode)
+  expect(order.front).toBeGreaterThan(order.scan)
+})
+
+test('the week strip never contradicts the verdicts on the frames', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  const stage = page.locator('.output-stage')
+  await stage.scrollIntoViewIfNeeded()
+
+  // The strip is decoration, but decoration that states a number is still
+  // making a claim. It reads from `cutSummary`; the chips read from each cut's
+  // own compliance. Nothing stops those two drifting apart except this.
+  const strip = await stage.locator('[data-week-strip] .machine').textContent()
+  const passedOnFrames = await page
+    .locator('[data-cut-frame] [data-status-chip]')
+    .evaluateAll(
+      (nodes) =>
+        nodes.filter((node) => (node.textContent ?? '').toLowerCase().includes('passed')).length,
+    )
+
+  expect(strip).toContain(`${passedOnFrames} passed`)
+  expect(strip).toContain(`${CUT_COUNT - passedOnFrames} held`)
+})
+
 test('the CTA arrow answers the keyboard as well as the pointer', async ({ page }) => {
   await page.goto(FAQ_PAGE)
 

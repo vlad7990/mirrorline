@@ -1469,3 +1469,76 @@ timeline with ordered steps, shared-element flight between two layouts.
 
 `vitest.config.ts` gains `scripts/**/*.test.mjs`. The repo gates are plain ESM
 run by bare `node`, so their tests could not previously run at all.
+
+## 2026-11-13 · D42 · The Output sequence animates the real wall, and does not pin on a phone
+
+17 §3 rebuilds "One episode, twelve cuts" as a pinned scene: an episode comes
+apart into twelve cuts, they pass the gate, and the passed ones land on a week.
+Four decisions inside it are worth the record.
+
+**The grid is not a copy of the wall — it *is* the wall.** `OutputSequence`
+wraps `CutWall` and animates its real `<li>`s. The alternative — a decorative
+replica playing the sequence while the accessible grid sits somewhere else — is
+how this kind of section usually gets built, and it is two sources of truth for
+one set of twelve verdicts. D35 settled the principle for the agent loop ("the
+fallback is the whole list, not a fragment") and it applies harder here,
+because these frames carry the compliance verdicts and AI labels that
+non-negotiables 4 and 6 require to be right.
+
+The cost is one real coupling: `.reveal-item` has to come off the tiles when
+the sequence owns them. Both animate `transform` — one on a view timeline, one
+on a scrubbed ScrollTrigger — and two things animating one property fight on
+every frame. `CutWall` takes a `sequenced` prop and *drops* the class rather
+than trying to out-specify it, because a scroll-driven animation cannot be
+beaten by specificity.
+
+**Everything the sequence adds is `display: none` until it runs.** The episode
+player, timeline, playhead, scan line and week strip exist only once
+`data-sequence="on"` is set, which happens after GSAP has loaded, on a wide
+screen, with reduced motion off. That one rule buys three required properties:
+CLS is zero, because nothing decorative ever enters the flow; the
+reduced-motion fallback is the *final* state rather than a frozen first frame;
+and a browser that cannot load GSAP shows the finished wall instead of
+scaffolding waiting for a script that never arrives.
+
+**`gsap.context()`, not `useGSAP`.** `useGSAP` imports `gsap` at module scope,
+which would put roughly 70 KB gzipped into the home page's first load — against
+spec 17's 30 KB budget, on the page whose mobile Lighthouse score is an
+acceptance criterion. Imported inside the effect, GSAP costs nothing until the
+reader reaches the section: `/` went 192 KB → 194 KB first load.
+`gsap.context()` is what `useGSAP` wraps, so the cleanup contract is identical
+— it is written out instead of imported. `@gsap/react` stays on the licence
+allow-list (D41) and stays uninstalled: a hook cannot be imported dynamically,
+so the two requirements cannot both be satisfied.
+
+**It does not pin on a phone, and that is a deliberate half-refusal of the
+spec.** 17 §3 asks for a shortened mobile pin of about 150vh. D35 had already
+ruled out pinning on short touch screens — it eats the viewport and fights the
+scroll, which was the objection that kept ScrollSmoother out in D32 — and
+nothing about this section changes that argument. The other half of the spec's
+mobile answer is taken in full: twelve frames become a horizontal snap row, one
+gesture per cut, instead of six rows nobody reaches the end of. **Vlad's call
+if he wants the pin anyway**; it is one media query.
+
+### The bug, and the test that could not see it
+
+The episode player was at `z-index: 1` against the wall's `2`, and the wall is
+an opaque panel. So the opening stage — the 16:9 player, the 52:14 bar, the
+playhead, the twelve markers — was painted *behind* it and could not be seen at
+all. Every test passed, because every test was about the finished state, and
+the finished state was correct.
+
+Found by scrolling the preview. The fix is a stacking order, and the test added
+with it asserts that order rather than pixels: back < wall < episode < scan <
+front. Verified by putting the `1` back and watching it fail with
+`Expected: > 2, Received: 1`.
+
+A second one came out of the same look. The frames' `fromTo` starts at timeline
+position 2, and a `fromTo` applies its `from` only when it begins — so the
+opening stage was the episode laid over a grid that was already fully drawn,
+which gives away the trick the whole section exists to perform. An explicit
+`set` at position 0 fixes it.
+
+Both were invisible to CI and obvious in a browser, which is now twice in two
+PRs. The pattern worth naming: assertions about end states cannot see a
+sequence that is wrong in the middle.

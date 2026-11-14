@@ -23,7 +23,7 @@ import * as React from 'react'
 
 import { LOOP_CLOSING_LINE } from '@/components/marketing/agents'
 import { AgentLoop } from '@/components/marketing/agent-loop'
-import { CutWall } from '@/components/marketing/cut-wall'
+import { OutputSequence } from '@/components/marketing/output-sequence'
 import { ReelBackdrop } from '@/components/marketing/reel-backdrop'
 import { Faq } from '@/components/marketing/faq'
 import { FAQ_ITEMS } from '@/components/marketing/faq-content'
@@ -322,7 +322,7 @@ export default function LandingPage() {
           aside={<SampleDataLabel />}
         />
         <div className="mt-8">
-          <CutWall />
+          <OutputSequence />
         </div>
         <p className="mt-4 mb-0 max-w-[68ch] text-meta text-text-muted">
           Sample data. These frames belong to Maya Torres Coaching, a fictional demo client: a

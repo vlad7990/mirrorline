@@ -507,6 +507,197 @@
   }
 
   /* ---------------------------------------------------------------------
+     The Output sequence: "one episode, twelve cuts" as a pinned scene
+     (17 §3, D42).
+
+     **Every decorative layer is `display: none` until the sequence actually
+     runs.** `OutputSequence` sets `data-sequence="on"` only once GSAP has
+     loaded, on a wide screen, with reduced motion off. Three things follow,
+     and all three are requirements rather than conveniences:
+
+       - **CLS is zero by construction.** Nothing the sequence adds ever
+         enters the flow, so there is no layout for it to shift.
+       - **The reduced-motion fallback is the final state**, not a frozen
+         first frame. With no sequence there is no episode player, no playhead
+         and no scan line — there is the finished wall with its verdicts, the
+         same one this section has always shown.
+       - **A browser that cannot load GSAP shows the wall**, not scaffolding
+         waiting for a script that never arrives.
+     --------------------------------------------------------------------- */
+  .output-stage {
+    position: relative;
+    /* The tilt needs depth to turn in, or ±4° is a shear rather than a
+       rotation. Only meaningful while the tilt query matches. */
+    perspective: 1200px;
+    transform-style: preserve-3d;
+  }
+
+  .output-layer-back,
+  .output-episode,
+  .output-front,
+  .output-scan {
+    display: none;
+  }
+
+  .output-stage[data-sequence='on'] .output-layer-back,
+  .output-stage[data-sequence='on'] .output-episode,
+  .output-stage[data-sequence='on'] .output-front,
+  .output-stage[data-sequence='on'] .output-scan {
+    display: block;
+  }
+
+  /* Back layer (0.15): the episode behind its own cuts. A wash rather than an
+     image, so the frames in front keep every bit of their contrast. */
+  .output-layer-back {
+    position: absolute;
+    inset: -10% -5%;
+    z-index: 0;
+    border-radius: var(--radius-xl);
+    background:
+      radial-gradient(circle at 50% 30%, rgb(245 184 61 / 0.1) 0%, transparent 60%),
+      var(--color-ink-900);
+    filter: blur(18px);
+    pointer-events: none;
+  }
+
+  /* **Above the wall, not behind it.** The first version put this at
+     `z-index: 1` against the wall's 2, and the wall is an opaque panel — so
+     the episode, the timeline and the playhead were painted behind it and the
+     opening stage of the sequence could never be seen at all. Found by
+     scrolling the preview, not by a test: every assertion was about the
+     finished state, and the finished state was right.
+
+     Centred rather than pinned to the top for the same reason: the episode is
+     what the stage *is* until the cuts leave it. */
+  .output-episode {
+    position: absolute;
+    inset-inline: 8%;
+    top: 50%;
+    translate: 0 -50%;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  /* 16:9, the episode's own shape. */
+  .output-episode-frame {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 16 / 9;
+    max-height: 32vh;
+    margin-inline: auto;
+    width: 100%;
+    border: 1px solid var(--color-ink-line-strong);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-ink-800);
+    color: var(--color-on-ink-muted);
+  }
+
+  /* The bar the twelve moments are found on. */
+  .output-timeline {
+    position: relative;
+    height: 10px;
+    margin-top: 0.75rem;
+    border-radius: 999px;
+    background-color: var(--color-ink-800);
+    overflow: hidden;
+  }
+
+  .output-marker {
+    position: absolute;
+    top: 50%;
+    width: 2px;
+    height: 10px;
+    translate: -50% -50%;
+    background-color: var(--color-gold-bright);
+  }
+
+  .output-playhead {
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    width: 2px;
+    background-color: var(--color-on-ink-900);
+  }
+
+  .output-wall {
+    position: relative;
+    z-index: 2;
+  }
+
+  /* The gate's scan. A band rather than a hairline: a 1px line crossing a grid
+     at scroll speed strobes, and a band reads as a pass over the work. */
+  .output-scan {
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 28%;
+    z-index: 4;
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgb(245 184 61 / 0.14) 50%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+
+  /* Front layer (0.6): the week, carrying the two figures the gate section
+     states in prose. It is `aria-hidden` — the figures are read from the chips
+     on the frames. This is the picture of them, never the source. */
+  .output-front {
+    position: absolute;
+    inset-inline: 0;
+    bottom: -2.5rem;
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  .output-week {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem 1rem;
+    margin-inline: auto;
+    width: fit-content;
+    max-width: 100%;
+    padding: 0.625rem 1.25rem;
+    border: 1px solid var(--color-ink-line-strong);
+    border-radius: 999px;
+    background-color: var(--color-ink-800);
+    color: var(--color-on-ink-muted);
+  }
+
+  /* 17 §3's mobile fallback: one horizontal snap row rather than six rows of a
+     grid nobody reaches the end of. It stops at the breakpoint where the pin
+     takes over, so the two are never both in force. */
+  .output-snap-row {
+    grid-auto-columns: 62%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 0.75rem;
+  }
+
+  .output-snap-row > li {
+    scroll-snap-align: start;
+  }
+
+  @media (width >= 40rem) {
+    .output-snap-row {
+      grid-auto-columns: 38%;
+    }
+  }
+
+  @media (width >= 64rem) {
+    .output-snap-row {
+      grid-auto-columns: auto;
+      overflow-x: visible;
+      scroll-snap-type: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------------
      The arrow on a call to action slides and rotates on hover
      (17 §2, MOTION_STUDY item 5).
 

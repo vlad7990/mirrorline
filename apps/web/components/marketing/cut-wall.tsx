@@ -14,7 +14,7 @@
  */
 
 import { cuts, sourceVideo, todaySchedule, weekPosts, type Cut } from '@mirrorline/mock'
-import { StatusChip, VideoThumb, ViewerPanel } from '@mirrorline/ui'
+import { cn, StatusChip, VideoThumb, ViewerPanel } from '@mirrorline/ui'
 import * as React from 'react'
 
 import { cutMedia, hasGeneratedMedia } from './cut-media'
@@ -65,9 +65,19 @@ interface CutFrameProps {
   readonly cut: Cut
   /** Position in the wall. Drives the demo thumbnail colour and the stagger. */
   readonly position: number
+  /**
+   * Whether `OutputSequence` is driving this frame's transform.
+   *
+   * When it is, `.reveal-item` has to come off. It is a view-timeline
+   * animation on `transform`, and two things animating one property fight: the
+   * tile would be pulled between its own scroll reveal and its place in the
+   * sequence on every frame. The class is dropped rather than overridden,
+   * because a scroll-driven animation cannot be beaten by specificity.
+   */
+  readonly sequenced?: boolean
 }
 
-function CutFrame({ cut, position }: CutFrameProps) {
+function CutFrame({ cut, position, sequenced = false }: CutFrameProps) {
   return (
     <li
       /* `reveal-item`, not `log-in stagger`. `.log-in` runs on mount, and
@@ -76,7 +86,8 @@ function CutFrame({ cut, position }: CutFrameProps) {
          arrival at all. A view timeline ties it to the scroll instead, and
          the index wraps at the column count so each row arrives in sequence
          rather than as a block. */
-      className="reveal-item flex min-w-0 flex-col gap-2"
+      data-cut-frame
+      className={cn('flex min-w-0 flex-col gap-2', !sequenced && 'reveal-item')}
       style={{ '--index': position % STAGGER_CEILING } as React.CSSProperties}
     >
       <VideoThumb
@@ -91,7 +102,11 @@ function CutFrame({ cut, position }: CutFrameProps) {
       <p className="m-0 text-meta text-on-viewer">
         {cut.format} <span className="machine">{cut.lengthLabel}</span>
       </p>
-      <StatusChip status={COMPLIANCE_STATUS[cut.compliance]} className="self-start" />
+      {/* The gate's verdict, and the only place it is stated. The sequence
+          fades these in as its scan line passes; it never restates them. */}
+      <span data-status-chip className="self-start">
+        <StatusChip status={COMPLIANCE_STATUS[cut.compliance]} />
+      </span>
     </li>
   )
 }
@@ -103,7 +118,19 @@ function CutFrame({ cut, position }: CutFrameProps) {
  * wraps it is already a landmark labelled by the page's own heading, and a
  * second landmark with the same name is one landmark too many.
  */
-export function CutWall() {
+export interface CutWallProps {
+  /**
+   * Rendered inside `OutputSequence`, which drives the frames itself.
+   *
+   * Two things change, and both are about not fighting the sequence: the
+   * per-tile scroll reveal comes off (see `CutFrameProps.sequenced`), and
+   * below the pin's breakpoint the grid becomes the horizontal snap row 17 §3
+   * asks for on mobile. Default `false`, so the plain wall is unchanged.
+   */
+  readonly sequenced?: boolean
+}
+
+export function CutWall({ sequenced = false }: CutWallProps) {
   return (
     <ViewerPanel
       readout={
@@ -113,9 +140,20 @@ export function CutWall() {
         </>
       }
     >
-      <ol className="grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3 lg:grid-cols-6">
+      <ol
+        className={cn(
+          'list-none p-0',
+          sequenced
+            ? // 17 §3's mobile fallback. A twelve-frame grid on a phone is six
+              // rows of thumbnails nobody scrolls to the end of; a snap row is
+              // one gesture per cut. `output-snap-row` turns itself off at the
+              // breakpoint where the pin takes over.
+              'output-snap-row grid grid-flow-col gap-3 lg:grid-flow-row lg:grid-cols-6'
+            : 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6',
+        )}
+      >
         {cuts.map((cut, position) => (
-          <CutFrame key={cut.id} cut={cut} position={position} />
+          <CutFrame key={cut.id} cut={cut} position={position} sequenced={sequenced} />
         ))}
       </ol>
     </ViewerPanel>
