@@ -226,6 +226,46 @@
      animation-delay: calc(var(--index) * var(--stagger-step)) */
   --stagger-step: 60ms;
 
+  /* Motion v2 — docs/specs/17_MOTION_PLAN.md's token table, minus the half of
+     it that was already here.
+
+     Three of its six already existed under the house names and are
+     deliberately *not* duplicated: its `--dur-micro` (160ms) is
+     `--duration-tooltip`, its press duration is `--duration-press`, and its
+     `--stagger` (60ms) is `--stagger-step`. Two tokens holding one value under
+     two names is how a scale stops agreeing with itself.
+
+     `--ease-out-expo` is a sharper sibling of `--ease-out`, not a replacement.
+     0.16 against 0.23 on the first control point is the difference between a
+     reveal that *arrives* and one that settles: `--ease-out` stays the default
+     for a control answering a click, and this is for scroll reveals and card
+     entrances, where the element has travelled further and wants to stop
+     harder. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
+
+  /* Scroll choreography, and named `--dur-*` rather than `--duration-*` for a
+     reason the test suite will enforce either way: the `--duration-*` scale is
+     the *UI* scale, and `__tests__/tokens.test.ts` holds it to nothing over
+     300ms with every enter paired to a faster exit. A 600ms section reveal is
+     neither — it answers a scroll, not a click, and it has no exit. Putting it
+     in that namespace would mean weakening two live invariants to fit one
+     value that does not belong to them.
+
+     These are CSS-only: nothing in TypeScript reads them, so they are not
+     mirrored into tokens.ts (see the motion note there). */
+  --dur-reveal: 600ms;
+
+  /* Parallax depth: translate factor relative to scroll. The front layer moves
+     most, so the stack reads as depth rather than as three things sliding. */
+  --parallax-back: 0.15;
+  --parallax-mid: 0.35;
+  --parallax-front: 0.6;
+
+  /* The gold in a numbered section rail. The band utilities pin it per band
+     (see `.band-ink`); this is the fallback for a rail outside any band. */
+  --rail-fill: var(--color-gold);
+
   /* Entering is ease-out by default, at dropdown speed. */
   --default-transition-timing-function: var(--ease-out);
   --default-transition-duration: var(--duration-dropdown);
@@ -350,6 +390,15 @@
       --ease-out: linear;
       --ease-in-out: linear;
       --ease-drawer: linear;
+      /* Motion v2. The reveal duration collapses with the rest; the parallax
+         depths go to 0 so anything reading them as a translate factor stops
+         flat rather than needing its own reduced-motion branch. */
+      --dur-reveal: 0.01ms;
+      --ease-out-expo: linear;
+      --ease-in-out-quint: linear;
+      --parallax-back: 0;
+      --parallax-mid: 0;
+      --parallax-front: 0;
     }
 
     *,
@@ -380,6 +429,166 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--color-text-muted);
+  }
+
+  /* ---------------------------------------------------------------------
+     The numbered section rail: "01 ——— WHAT WE DO" (17 §1 M2, Arigo).
+
+     **The number is a CSS counter, not a prop.** The home page has nineteen
+     sections, and nineteen hand-written indices are nineteen chances to
+     renumber wrongly the first time one moves. The number also carries no
+     information the eyebrow does not — it is a device for showing the reader
+     where they are in a list — so deriving it is both safer and truer.
+
+     **It is still a real `aria-hidden` span, not `::before` on the label.**
+     Generated content is exposed to assistive tech by some engines and not
+     others, so putting the counter on the label's own pseudo-element would
+     read a bare "01" ahead of every heading in some browsers and not in
+     others. A hidden span answers the same in all of them.
+
+     No `counter-reset` is needed: a counter that nothing resets is implicitly
+     reset on the root element, and each page is its own document.
+     --------------------------------------------------------------------- */
+  .section-rail {
+    counter-increment: mirrorline-section;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .section-rail-index {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-caption);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+  }
+
+  .section-rail-index::before {
+    content: counter(mirrorline-section, decimal-leading-zero);
+  }
+
+  /* The track is the full width and always drawn; the gold is a child that
+     scales from the left. Animating a width would lay out every frame. */
+  .section-rail-line {
+    position: relative;
+    height: 1px;
+    width: clamp(1.75rem, 5vw, 4rem);
+    flex: none;
+    background-color: var(--color-border-strong);
+  }
+
+  /* Default is the *finished* state, so a browser without view timelines — and
+     a reader who asked for reduced motion — gets a full gold rail rather than
+     an empty one. The animation below only takes it away and gives it back. */
+  .section-rail-line::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: var(--rail-fill);
+    transform-origin: left center;
+  }
+
+  /* ---------------------------------------------------------------------
+     The arrow on a call to action slides and rotates on hover
+     (17 §2, MOTION_STUDY item 5).
+
+     Hover *and* focus-visible: a keyboard user gets the same answer, and
+     without the second selector this is a mouse-only affordance.
+
+     Gated on a fine pointer for the same reason `.press` is — on touch there
+     is no hover state, and the rule would either never fire or stick after a
+     tap. The rest state is untouched, so the look is exactly as it was and
+     only the response is new.
+     --------------------------------------------------------------------- */
+  @media (hover: hover) and (pointer: fine) {
+    .arrow-cta svg:last-child {
+      transition:
+        transform var(--duration-tooltip) var(--ease-out-expo),
+        rotate var(--duration-tooltip) var(--ease-out-expo);
+    }
+
+    .arrow-cta:hover svg:last-child,
+    .arrow-cta:focus-visible svg:last-child {
+      transform: translateX(3px);
+      rotate: -45deg;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .arrow-cta:hover svg:last-child,
+      .arrow-cta:focus-visible svg:last-child {
+        transform: none;
+        rotate: none;
+      }
+    }
+  }
+
+  /* ---------------------------------------------------------------------
+     The selection pill that slides between two options (17 §2).
+
+     One pill is positioned behind the group and moved, rather than each
+     option painting its own background: a background that appears on one
+     button and disappears from another cannot animate between them, because
+     they are different elements. This is the CSS half of `layoutId`.
+
+     The track is a flex line with a gap, so each of n options is
+     `(100% - (n - 1) * gap) / n` along the axis; the pill is exactly that, and
+     one step is `100% + gap` of *its own* width, which lands on the next
+     option. `--choice-count` is read from the options rather than assumed to
+     be two: the two groups here are both binary, and hard-coding `/ 2` would
+     mean a third option silently rendering a pill of the wrong size against
+     the right label.
+
+     It stacks vertically below `sm`, where the group does, so the step is on
+     the other axis. Reduced motion keeps the pill and drops the travel: the
+     selected option still reads as selected, it just arrives at once.
+     --------------------------------------------------------------------- */
+  .choice-track {
+    position: relative;
+    --choice-gap: 0.5rem;
+    --choice-count: 2;
+  }
+
+  .choice-pill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: calc(
+      (100% - (var(--choice-count) - 1) * var(--choice-gap)) / var(--choice-count)
+    );
+    width: 100%;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-gold);
+    background-color: var(--color-gold-wash);
+    translate: 0 calc(var(--choice-index) * (100% + var(--choice-gap)));
+    pointer-events: none;
+  }
+
+  /* The travel is gated on hydration, and that is not belt-and-braces.
+     The server renders the default choice, and the client may restore a
+     different one from storage — so on a restored visit the pill's first act
+     would be to slide from the default to the real answer, which reads as the
+     page changing its mind. Untransitioned until the client has settled, it is
+     simply in the right place. */
+  .choice-track[data-hydrated='true'] .choice-pill {
+    transition: translate var(--duration-dropdown) var(--ease-out-expo);
+  }
+
+  @media (width >= 40rem) {
+    .choice-pill {
+      height: 100%;
+      width: calc(
+        (100% - (var(--choice-count) - 1) * var(--choice-gap)) / var(--choice-count)
+      );
+      translate: calc(var(--choice-index) * (100% + var(--choice-gap))) 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .choice-track[data-hydrated='true'] .choice-pill {
+      transition: none;
+    }
   }
 
   /* Wide content scrolls inside its card, never breaking the page.
@@ -748,6 +957,11 @@
     --color-on-neutral-soft: #3a4250;
   }
 
+  /* `--rail-fill` is pinned per band for the reason D40 wrote up: the band
+     utilities remap the neutrals and the status colours, and gold was in
+     neither group. Ink takes the bright gold and the light bands take the deep
+     one, because one value cannot be seen on both. It is a 1px decorative
+     rule, so this is about being visible at all rather than about AA. */
   .band-ink {
     --color-background: var(--color-ink-900);
     --color-surface: var(--color-ink-700);
@@ -756,6 +970,7 @@
     --color-border-strong: var(--color-ink-line-strong);
     --color-text: var(--color-on-ink-900);
     --color-text-muted: var(--color-on-ink-muted);
+    --rail-fill: var(--color-gold-bright);
   }
 
   .band-ink-alt {
@@ -766,6 +981,7 @@
     --color-border-strong: var(--color-ink-line-strong);
     --color-text: var(--color-on-ink-900);
     --color-text-muted: var(--color-on-ink-muted);
+    --rail-fill: var(--color-gold-bright);
   }
 
   .band-snow {
@@ -776,6 +992,7 @@
     --color-border-strong: var(--color-snow-line-strong);
     --color-text: var(--color-on-snow);
     --color-text-muted: var(--color-on-snow-muted);
+    --rail-fill: var(--color-gold-deep);
   }
 
   .band-white {
@@ -786,6 +1003,7 @@
     --color-border-strong: var(--color-snow-line-strong);
     --color-text: var(--color-on-snow);
     --color-text-muted: var(--color-on-snow-muted);
+    --rail-fill: var(--color-gold-deep);
   }
 
   /* ---------------------------------------------------------------------
@@ -917,6 +1135,23 @@
         animation-timeline: view();
         animation-range: cover 0% cover 100%;
       }
+
+      /* The gold fills the section rail as the section crosses the screen
+         (17 §1 M2).
+
+         The timeline is the *rail's* own passage, not the section's: a rail
+         sits at the top of its band, so by the time the band has finished
+         crossing the viewport the rail left the screen long ago, and a line
+         keyed to the band would finish filling after nobody could see it.
+
+         It ends at `cover 55%` for the same reason the reveal ends early —
+         the fill is for arriving, and a line still creeping while the reader
+         is three paragraphs in reads as a progress bar for nothing. */
+      .section-rail-line::after {
+        animation: mirrorline-rail-fill linear both;
+        animation-timeline: view();
+        animation-range: entry 20% cover 55%;
+      }
     }
   }
 
@@ -948,6 +1183,19 @@
 
     to {
       transform: translateY(0);
+    }
+  }
+
+  /* Left to right, and transform-only so it composites. `scaleX(0)` on a 1px
+     child of a drawn track leaves the track visible throughout, so the rail is
+     never missing — it is unfilled, then filled. */
+  @keyframes mirrorline-rail-fill {
+    from {
+      transform: scaleX(0);
+    }
+
+    to {
+      transform: scaleX(1);
     }
   }
 

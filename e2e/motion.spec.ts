@@ -118,3 +118,148 @@ test('the press affordance is wired to the duration token, not a literal', async
   // DESIGN.md "Motion — Press": 140ms. A literal here drifts from the token.
   expect(toMs(duration)).toBeCloseTo(140, -1)
 })
+
+/* -------------------------------------------------------------------------- */
+/* Motion v2 — 17 §1 M2 and §2                                                */
+/* -------------------------------------------------------------------------- */
+
+test('every numbered section rail renders its counter', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  const rails = page.locator('.section-rail')
+  const count = await rails.count()
+  // "More than a few" rather than exactly fourteen: the point of a counter is
+  // that sections can be added or moved without renumbering, and a total
+  // pinned here would be the hand-maintained number all over again.
+  expect(count).toBeGreaterThan(5)
+
+  // The index is generated content, and its *computed* `content` is the
+  // unresolved `counter(...)` expression — so the number cannot be read back
+  // as a string. What can be checked is that it produced glyphs: a counter
+  // that failed to resolve lays out as an empty box.
+  const widths = await rails
+    .locator('.section-rail-index')
+    .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().width))
+
+  expect(widths).toHaveLength(count)
+  for (const width of widths) {
+    expect(width).toBeGreaterThan(0)
+  }
+})
+
+test('the rail gold is a scroll-driven fill, and the track is always drawn', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  const fill = await page
+    .locator('.section-rail-line')
+    .first()
+    .evaluate((element) => {
+      const line = getComputedStyle(element)
+      const gold = getComputedStyle(element, '::after')
+      return {
+        trackColor: line.backgroundColor,
+        animationName: gold.animationName,
+        transformOrigin: gold.transformOrigin,
+      }
+    })
+
+  expect(fill.animationName).toBe('mirrorline-rail-fill')
+  // The track is painted on the element itself, so an unfilled rail is still a
+  // rail rather than a gap in the layout.
+  expect(fill.trackColor).not.toBe('rgba(0, 0, 0, 0)')
+  // It has to grow from the left, or the gold arrives from the wrong end.
+  expect(fill.transformOrigin.startsWith('0px')).toBe(true)
+})
+
+test('under reduced motion every rail is already filled', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto(FAQ_PAGE)
+
+  // The *final* state, not a collapsed animation. The fill lives inside a
+  // `prefers-reduced-motion: no-preference` block, so under reduce there is no
+  // animation at all and the element's own rule — full gold — is what shows.
+  const states = await page.locator('.section-rail-line').evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const gold = getComputedStyle(node, '::after')
+      return { animationName: gold.animationName, transform: gold.transform }
+    }),
+  )
+
+  expect(states.length).toBeGreaterThan(5)
+  for (const state of states) {
+    expect(state.animationName).toBe('none')
+    // `none` or an identity matrix: either way it is sitting at scaleX(1).
+    expect(['none', 'matrix(1, 0, 0, 1, 0, 0)']).toContain(state.transform)
+  }
+})
+
+test('the selection pill follows the chosen account option', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  const track = page.locator('.choice-track').first()
+  await track.scrollIntoViewIfNeeded()
+  // The pill only transitions once the client has settled on the stored
+  // choice. Before that it is positioned without travel, by design.
+  await expect(track).toHaveAttribute('data-hydrated', 'true')
+
+  const pill = track.locator('.choice-pill')
+  const options = track.getByRole('radio')
+
+  const pillIndex = () =>
+    pill.evaluate((element) =>
+      getComputedStyle(element).getPropertyValue('--choice-index').trim(),
+    )
+
+  await options.nth(0).click()
+  expect(await pillIndex()).toBe('0')
+
+  await options.nth(1).click()
+  expect(await pillIndex()).toBe('1')
+
+  // The selection is never conveyed by the moving pill alone.
+  await expect(options.nth(1)).toHaveAttribute('aria-checked', 'true')
+  await expect(pill).toHaveAttribute('aria-hidden', 'true')
+})
+
+test('reduced motion keeps the pill and drops only its travel', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto(FAQ_PAGE)
+
+  const track = page.locator('.choice-track').first()
+  await track.scrollIntoViewIfNeeded()
+  const pill = track.locator('.choice-pill')
+
+  // Still drawn: the selected option has to still read as selected.
+  await expect(pill).toBeVisible()
+  const duration = await pill.evaluate((element) => getComputedStyle(element).transitionDuration)
+  expect(toMs(duration)).toBeLessThanOrEqual(1)
+})
+
+test('the CTA arrow answers the keyboard as well as the pointer', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  const selectors = await page.evaluate(() => {
+    const found: string[] = []
+    const walk = (list: CSSRuleList) => {
+      for (const rule of Array.from(list)) {
+        if (rule instanceof CSSStyleRule && rule.selectorText.includes('arrow-cta')) {
+          found.push(rule.selectorText)
+        }
+        const grouping = rule as CSSGroupingRule
+        if (grouping.cssRules) walk(grouping.cssRules)
+      }
+    }
+    for (const sheet of Array.from(document.styleSheets)) {
+      try {
+        walk(sheet.cssRules)
+      } catch {
+        // A cross-origin sheet cannot be read, and we have none to read.
+      }
+    }
+    return found
+  })
+
+  expect(selectors.some((selector) => selector.includes(':hover'))).toBe(true)
+  // Without this the whole affordance is mouse-only.
+  expect(selectors.some((selector) => selector.includes(':focus-visible'))).toBe(true)
+})

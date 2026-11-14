@@ -56,7 +56,7 @@ export function SiteCta({ next }: SiteCtaProps) {
         {next ? (
           <Link
             href={next.href}
-            className="inline-flex items-center gap-2 text-label font-medium text-on-ink-muted underline-offset-4 transition-colors hover:text-gold-bright hover:underline"
+            className="arrow-cta inline-flex items-center gap-2 text-label font-medium text-on-ink-muted underline-offset-4 transition-colors hover:text-gold-bright hover:underline"
           >
             Next: {next.label}
             <ArrowRight aria-hidden="true" className="size-4" strokeWidth={2} />

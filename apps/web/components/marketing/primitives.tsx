@@ -99,6 +99,16 @@ export interface SectionHeadingProps {
    * knows about.
    */
   headingClassName?: string
+  /**
+   * Draws the eyebrow as a numbered rail — "01 ——— WHAT WE DO" (17 §1 M2).
+   *
+   * The index is a CSS counter, not a number passed in: nineteen hand-written
+   * indices on the home page would be nineteen chances to renumber wrongly the
+   * first time a section moves. It counts rails in document order, so a
+   * section with no eyebrow is not numbered — which is right, because there
+   * would be nothing for the number to label.
+   */
+  rail?: boolean
 }
 
 export function SectionHeading({
@@ -110,13 +120,25 @@ export function SectionHeading({
   id,
   className,
   headingClassName,
+  rail = false,
 }: SectionHeadingProps) {
   const Heading = level === 2 ? 'h2' : 'h3'
 
   return (
     <div className={cn('flex flex-wrap items-end justify-between gap-4', className)}>
       <div className="flex min-w-0 max-w-[62ch] flex-col gap-2">
-        {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}
+        {eyebrow && rail ? (
+          // The number and the line are decoration: the eyebrow already says
+          // what the section is, and "01" read out before every heading is
+          // noise. The label itself stays a plain, announced span.
+          <span className="section-rail">
+            <span aria-hidden="true" className="section-rail-index" />
+            <span aria-hidden="true" className="section-rail-line" />
+            <span className="eyebrow">{eyebrow}</span>
+          </span>
+        ) : eyebrow ? (
+          <span className="eyebrow">{eyebrow}</span>
+        ) : null}
         {/* A section head on a public page is a brand surface, so it takes
             the fluid scale rather than the studio's fixed one. A nested h3
             stays on the product scale: it is a label inside a section, not

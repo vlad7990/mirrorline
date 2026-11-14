@@ -154,6 +154,7 @@ export default function LandingPage() {
       >
         <SectionHeading
           id="choose-heading"
+          rail
           eyebrow="Start here"
           title={
             <>
@@ -177,6 +178,7 @@ export default function LandingPage() {
       <Section aria-labelledby="problems-heading">
         <SectionHeading
           id="problems-heading"
+          rail
           eyebrow="Sound familiar?"
           title={
             <>
@@ -195,6 +197,7 @@ export default function LandingPage() {
       <Section className="band-ink-alt" size="md" aria-labelledby="changed-heading">
         <SectionHeading
           id="changed-heading"
+          rail
           eyebrow="What changed in 2026"
           title={
             <>
@@ -216,6 +219,7 @@ export default function LandingPage() {
       <Section className="band-snow" aria-labelledby="opposite-heading">
         <SectionHeading
           id="opposite-heading"
+          rail
           eyebrow="We built the opposite"
           title={
             <>
@@ -234,6 +238,7 @@ export default function LandingPage() {
       <Section aria-labelledby="niche-heading">
         <SectionHeading
           id="niche-heading"
+          rail
           eyebrow="Any niche"
           title={
             <>
@@ -259,6 +264,7 @@ export default function LandingPage() {
       >
         <SectionHeading
           id="start-heading"
+          rail
           eyebrow="Two ways in"
           title={
             <>
@@ -285,6 +291,7 @@ export default function LandingPage() {
       <Section className="band-ink-alt" aria-labelledby="steps-heading">
         <SectionHeading
           id="steps-heading"
+          rail
           eyebrow="How the loop runs"
           title={
             <>
@@ -308,6 +315,7 @@ export default function LandingPage() {
       <Section aria-labelledby="proof-heading" backdrop={<ReelBackdrop />}>
         <SectionHeading
           id="proof-heading"
+          rail
           eyebrow="The output"
           title="One episode, twelve cuts"
           lead={`A ${sourceVideo.durationLabel} talk became ${cuts.length} short videos, each with its own moment, hook, length and format. None of them is the same clip with a new title, and the ones that did not pass say so on the frame.`}
@@ -366,11 +374,12 @@ export default function LandingPage() {
       <Section tone="subtle" aria-labelledby="loop-heading">
         <SectionHeading
           id="loop-heading"
+          rail
           eyebrow="The studio"
           title="Seven agents, one loop"
           lead="Each agent has one job, its own spend cap and its own log. A format found on Monday becomes your videos, posted all week, and the results shape the next week."
           aside={
-            <Button asChild variant="secondary" className="press">
+            <Button asChild variant="secondary" className="press arrow-cta">
               <Link href="/agents">
                 How it works
                 <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.8} />
@@ -428,6 +437,7 @@ export default function LandingPage() {
       <Section className="band-snow" aria-labelledby="metrics-heading">
         <SectionHeading
           id="metrics-heading"
+          rail
           eyebrow="Metrics"
           title={
             <>
@@ -479,6 +489,7 @@ export default function LandingPage() {
       <Section aria-labelledby="numbers-heading">
         <SectionHeading
           id="numbers-heading"
+          rail
           eyebrow="A demo week"
           title={
             <>
@@ -519,6 +530,7 @@ export default function LandingPage() {
       <Section className="band-snow" aria-labelledby="audiences-heading">
         <SectionHeading
           id="audiences-heading"
+          rail
           eyebrow="Who it is for"
           title={
             <>
@@ -597,6 +609,7 @@ export default function LandingPage() {
       <Section tone="subtle" aria-labelledby="farm-heading">
         <SectionHeading
           id="farm-heading"
+          rail
           eyebrow="Not a farm"
           title={
             <>
@@ -613,6 +626,7 @@ export default function LandingPage() {
       <Section size="md" aria-labelledby="billing-heading">
         <SectionHeading
           id="billing-heading"
+          rail
           eyebrow="Plain billing"
           title={
             <>
@@ -632,7 +646,7 @@ export default function LandingPage() {
           title="Start with a pilot, then pick a month"
           lead="Flat prices, set per engagement in writing before any work starts. No setup fee, no annual lock-in, and you can stop after the pilot."
           aside={
-            <Button asChild variant="secondary" className="press">
+            <Button asChild variant="secondary" className="press arrow-cta">
               <Link href="/pricing">
                 See what each tier includes
                 <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.8} />

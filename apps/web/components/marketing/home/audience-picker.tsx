@@ -36,6 +36,11 @@ interface ChoiceGroupProps<Value extends string> {
   readonly labels: Readonly<Record<Value, string>>
   readonly selected: Value
   readonly onSelect: (value: Value) => void
+  /**
+   * Whether the client has settled on the stored choice. Used only to let the
+   * pill start transitioning — see `.choice-track` in theme.css.
+   */
+  readonly isHydrated: boolean
 }
 
 /** Which way an arrow key moves, or 0 if the key is not one we handle. */
@@ -51,8 +56,10 @@ function ChoiceGroup<Value extends string>({
   labels,
   selected,
   onSelect,
+  isHydrated,
 }: ChoiceGroupProps<Value>) {
   const groupId = React.useId()
+  const selectedIndex = Math.max(0, values.indexOf(selected))
 
   /**
    * Arrow keys move the selection, which is what `radiogroup` promises and
@@ -78,8 +85,32 @@ function ChoiceGroup<Value extends string>({
         role="radiogroup"
         aria-labelledby={groupId}
         onKeyDown={onKeyDown}
-        className="flex flex-col gap-2 sm:flex-row"
+        data-hydrated={isHydrated}
+        className="choice-track flex flex-col gap-2 sm:flex-row"
       >
+        {/*
+          The selection, as one element that moves (17 §2).
+
+          It used to be each button painting its own gold, and a background
+          that appears on one element and disappears from another cannot
+          animate between them — there is nothing continuous to animate. One
+          pill behind the group can, and this is the CSS half of `layoutId`.
+
+          It is decoration, and `aria-hidden`: the buttons still carry
+          `aria-checked`, so nothing about the selection is conveyed by the
+          pill alone. The index is the only thing JavaScript contributes; the
+          arithmetic that turns it into a position is in theme.css.
+        */}
+        <span
+          aria-hidden="true"
+          className="choice-pill"
+          style={
+            {
+              '--choice-index': selectedIndex,
+              '--choice-count': values.length,
+            } as React.CSSProperties
+          }
+        />
         {values.map((value) => {
           const isSelected = value === selected
           return (
@@ -93,9 +124,15 @@ function ChoiceGroup<Value extends string>({
               tabIndex={isSelected ? 0 : -1}
               onClick={() => onSelect(value)}
               className={cn(
-                'press min-h-11 flex-1 rounded-lg border px-4 py-3 text-left text-label font-medium transition-colors',
+                // `relative` so the buttons paint above the pill. Without it
+                // the pill is the only positioned element in the group and
+                // covers the labels it is meant to sit behind.
+                'press relative min-h-11 flex-1 rounded-lg border px-4 py-3 text-left text-label font-medium transition-colors',
                 isSelected
-                  ? 'border-gold bg-gold-wash text-ink-900'
+                  // The pill draws the gold border and wash underneath, so the
+                  // selected button contributes only its text colour. Same
+                  // pixels as before, drawn by something that can move.
+                  ? 'border-transparent bg-transparent text-ink-900'
                   : 'border-ink-line bg-ink-800 text-on-ink-muted hover:border-ink-line-strong hover:text-on-ink-900',
               )}
             >
@@ -109,7 +146,7 @@ function ChoiceGroup<Value extends string>({
 }
 
 export function AudiencePicker() {
-  const { choice, setAudience, setStage } = useAccountChoice()
+  const { choice, setAudience, setStage, isHydrated } = useAccountChoice()
 
   const onAudience = (audience: Audience) => {
     setAudience(audience)
@@ -129,6 +166,7 @@ export function AudiencePicker() {
         labels={AUDIENCE_LABELS}
         selected={choice.audience}
         onSelect={onAudience}
+        isHydrated={isHydrated}
       />
       <ChoiceGroup
         legend="Your account"
@@ -136,6 +174,7 @@ export function AudiencePicker() {
         labels={STAGE_LABELS}
         selected={choice.stage}
         onSelect={onStage}
+        isHydrated={isHydrated}
       />
     </div>
   )

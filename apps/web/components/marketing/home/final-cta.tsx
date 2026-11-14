@@ -74,7 +74,7 @@ export function FinalCta() {
       </div>
 
       <div className="flex shrink-0 flex-col gap-3 sm:flex-row md:flex-col lg:flex-row">
-        <Button asChild size="lg" variant="gold" className="press">
+        <Button asChild size="lg" variant="gold" className="press arrow-cta">
           <Link
             href={NICHE_SCAN.isLive ? withChoiceParams(NICHE_SCAN.href, choice) : '#choose'}
             onClick={() => track('niche_scan_started', { from: 'home-final-cta' })}

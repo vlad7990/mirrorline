@@ -352,6 +352,25 @@ export const DURATION = {
 /** The delay step for a staggered list. `animation-delay: calc(var(--index) * 60ms)`. */
 export const STAGGER_STEP = '60ms'
 
+/**
+ * Scroll choreography lives in theme.css only, and on purpose.
+ *
+ * The motion v2 plan (docs/specs/17_MOTION_PLAN.md) adds `--ease-out-expo`,
+ * `--ease-in-out-quint`, `--dur-reveal` and `--parallax-back|mid|front`. They
+ * are not mirrored here because nothing in TypeScript reads them: they are
+ * consumed by `animation-timeline` rules and scroll-driven keyframes, which
+ * are CSS the whole way down. Declaring constants to match would add a second
+ * place to update and no caller.
+ *
+ * The two scales are also governed differently, which is the sharper reason.
+ * `DURATION` above is the **UI** scale, and `__tests__/tokens.test.ts` holds it
+ * to nothing over 300ms with every enter paired to a faster exit. A 600ms
+ * section reveal answers a scroll rather than a click and has no exit, so it is
+ * `--dur-reveal` rather than `--duration-reveal`: outside this namespace, and
+ * outside two invariants that would otherwise have had to be weakened to admit
+ * one value that does not belong to them.
+ */
+
 export type ColorToken = keyof typeof LIGHT_COLORS
 export type RadiusToken = keyof typeof RADIUS
 export type SpacingToken = keyof typeof SPACING
