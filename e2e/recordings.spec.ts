@@ -66,7 +66,10 @@ test.describe('motion-v2 recordings', () => {
 
     // One assertion, so a clip of a broken page fails instead of shipping.
     // The rails are what this PR added and they are on every section.
-    expect(await page.locator('.section-rail').count()).toBeGreaterThan(5)
+    // A condition rather than a `count()` reading, for the reason spelled out
+    // in motion.spec.ts: this page is behind a `<Suspense fallback={null}>`
+    // and is briefly empty after `load`.
+    await expect(page.locator('.section-rail').nth(5)).toBeAttached()
 
     const step = await page.evaluate(() => Math.round(window.innerHeight * 0.55))
     for (let index = 0; index < SCROLL_STEPS; index += 1) {

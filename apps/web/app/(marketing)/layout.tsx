@@ -22,39 +22,43 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
     // The site is ink by default and lights up band by band (D25). Setting it
     // here rather than per page means a short page's empty space below the
     // fold is still the site's colour and not the studio's.
-    // `useSearchParams` makes every component under the provider opt out of
-    // static rendering unless it sits inside a Suspense boundary. One boundary
-    // here keeps the whole marketing tree statically prerenderable; without it
-    // `next build` fails the page outright rather than warning.
-    <React.Suspense fallback={null}>
-      <AccountChoiceProvider>
-        <div className="band-ink flex min-h-dvh flex-col">
-          {/* The header is `fixed`, so it is out of flow and the page has to
-              reserve its height. Its announcement strip is the one from D25,
-              with the invented capacity figure removed (D39). */}
-          <SiteHeader />
-          {/* tabIndex -1: Safari scrolls to a skip-link target without moving
-              focus, so the next Tab would start again from the top of the page. */}
-          <main
-            id="main"
-            tabIndex={-1}
-            className="flex-1"
-            style={{ paddingTop: `${HEADER_HEIGHT_PX}px` }}
-          >
-            {children}
-          </main>
-          <SiteFooter />
-          {/* Last in the tree, and fixed to the bottom: it must not be the
-              first thing a keyboard user tabs into on every page. */}
-          <CookieBanner />
-          {/* 17 §1 M11. Renders nothing — it is one delegated click
-              listener — and it is mounted here rather than in the root
-              layout so a studio navigation can never reach it.
-              `studio-nav.tsx` keeps the arrival of those screens instant on
-              purpose. */}
-          <ViewTransitions />
-        </div>
-      </AccountChoiceProvider>
-    </React.Suspense>
+    //
+    // **There is no Suspense boundary here any more, and that is the point.**
+    // There used to be one wrapping all of this, because `useSearchParams`
+    // opts its subtree out of static rendering without one. It did keep the
+    // build passing — and it also meant the prerendered HTML of every public
+    // page *was its fallback*: `curl /` returned no `<main>`, no header, no
+    // footer and none of the copy, and the client rendered the lot after
+    // hydration. The boundary now sits around the one component that reads
+    // the query string, inside `AccountChoiceProvider`, so everything below
+    // is static HTML again. D46; do not move it back up here.
+    <AccountChoiceProvider>
+      <div className="band-ink flex min-h-dvh flex-col">
+        {/* The header is `fixed`, so it is out of flow and the page has to
+            reserve its height. Its announcement strip is the one from D25,
+            with the invented capacity figure removed (D39). */}
+        <SiteHeader />
+        {/* tabIndex -1: Safari scrolls to a skip-link target without moving
+            focus, so the next Tab would start again from the top of the page. */}
+        <main
+          id="main"
+          tabIndex={-1}
+          className="flex-1"
+          style={{ paddingTop: `${HEADER_HEIGHT_PX}px` }}
+        >
+          {children}
+        </main>
+        <SiteFooter />
+        {/* Last in the tree, and fixed to the bottom: it must not be the
+            first thing a keyboard user tabs into on every page. */}
+        <CookieBanner />
+        {/* 17 §1 M11. Renders nothing — it is one delegated click
+            listener — and it is mounted here rather than in the root
+            layout so a studio navigation can never reach it.
+            `studio-nav.tsx` keeps the arrival of those screens instant on
+            purpose. */}
+        <ViewTransitions />
+      </div>
+    </AccountChoiceProvider>
   )
 }

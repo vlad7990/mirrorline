@@ -27,8 +27,20 @@ function studioNav(page: Page) {
   return page.getByRole('navigation', { name: 'Studio' })
 }
 
+/**
+ * Click a sidebar item and return once that screen is the one we are on.
+ *
+ * The click used to be the whole of this, and the caller's next assertion
+ * raced the navigation: when it lost, the failure read "heading not visible",
+ * which points at the screen rather than at the arrival. `aria-current` is the
+ * app's own statement about where the reader is — the same attribute the
+ * sliding marker measures from — so waiting for it is waiting for the
+ * navigation to have committed, with no timeout raised and no retry added.
+ */
 async function openFromSidebar(page: Page, label: string): Promise<void> {
-  await studioNav(page).getByRole('link', { name: label, exact: true }).click()
+  const item = studioNav(page).getByRole('link', { name: label, exact: true })
+  await item.click()
+  await expect(item).toHaveAttribute('aria-current', 'page')
 }
 
 function heading(page: Page, name: string) {

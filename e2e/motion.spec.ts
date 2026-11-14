@@ -127,11 +127,21 @@ test('every numbered section rail renders its counter', async ({ page }) => {
   await page.goto(FAQ_PAGE)
 
   const rails = page.locator('.section-rail')
-  const count = await rails.count()
   // "More than a few" rather than exactly fourteen: the point of a counter is
   // that sections can be added or moved without renumbering, and a total
   // pinned here would be the hand-maintained number all over again.
-  expect(count).toBeGreaterThan(5)
+  //
+  // `nth(5)` rather than `count()` because this has to be a *condition*, not a
+  // reading. The marketing layout wraps its whole tree in
+  // `<Suspense fallback={null}>`, so there is a window after `load` in which
+  // this page has no `<main>` at all — `count()` sampled it once, got 0, and
+  // failed a correct page. Waiting for the sixth rail to attach asserts the
+  // same ">5" and cannot sample too early.
+  await expect(rails.nth(5)).toBeAttached()
+
+  // Safe to read now that the tree is attached, and the widths check below
+  // needs the total.
+  const count = await rails.count()
 
   // The number itself cannot be read back: the index is generated content and
   // its *computed* `content` is the unresolved `counter(...)` expression.
@@ -202,6 +212,14 @@ test('the rail gold is a scroll-driven fill, and the track is always drawn', asy
 test('under reduced motion every rail is already filled', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto(FAQ_PAGE)
+
+  // `evaluateAll` does not wait for anything — it returns `[]` when the
+  // selector matches nothing, and `[].length > 5` is a failure that blames
+  // the rails for a page that had not rendered yet. This marketing route
+  // ships no `<main>` at all in its HTML (the layout's
+  // `<Suspense fallback={null}>`), so the whole tree arrives on hydration and
+  // every unguarded read of it is a race. One condition closes it.
+  await expect(page.locator('.section-rail-line').nth(5)).toBeAttached()
 
   // The *final* state, not a collapsed animation. The fill lives inside a
   // `prefers-reduced-motion: no-preference` block, so under reduce there is no
@@ -315,6 +333,11 @@ test('the split never labels an element that may not carry a label', async ({ pa
 
 test('the hero headline rises without fading, because it is the LCP', async ({ page }) => {
   await page.goto(FAQ_PAGE)
+
+  // Anchored, because the loop below asserts nothing at all on an empty
+  // array: without the heading on screen this test passed by finding no text
+  // to check, which is the worst way for a test to be green.
+  await expect(page.locator('#hero-heading')).toBeVisible()
 
   // Text held at `opacity: 0` has not been painted, so a fade on the hero
   // headline moves Largest Contentful Paint by the whole duration of the
@@ -704,6 +727,12 @@ test('the studio keeps its bars and sparklines still', async ({ page }) => {
   // silently across four studio screens.
   await page.goto('/app/home')
 
+  // An absence proves nothing until the screen is actually there. Without
+  // this anchor both assertions below pass on an empty document, which is
+  // exactly what a slow first compile serves — a test that reports "no bars"
+  // because it found no page.
+  await expect(page.getByRole('heading', { level: 1, name: 'Good morning, Maya' })).toBeVisible()
+
   expect(await page.locator('.bar-grow').count()).toBe(0)
   expect(await page.locator('.draw-line').count()).toBe(0)
 })
@@ -867,12 +896,16 @@ test('reduced motion keeps the marker and drops only its travel', async ({ page 
 
 test('the Results tabs count their figures and `/app/home` does not', async ({ page }) => {
   await page.goto('/app/results')
+  await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible()
   expect(await page.locator('.count-figure').count()).toBeGreaterThan(0)
 
   // The other half of the prop, and the answer to the question PR4 left open:
   // a tab switch is an arrival worth confirming, the screen you land on and
   // stay on is not.
   await page.goto('/app/home')
+  // Same anchor as above, for the opposite reason: "no counting figures" is
+  // true of a correct home page and of no page at all.
+  await expect(page.getByRole('heading', { level: 1, name: 'Good morning, Maya' })).toBeVisible()
   expect(await page.locator('.count-figure').count()).toBe(0)
 })
 
@@ -1020,14 +1053,17 @@ test('under reduced motion the mark is already drawn, and the form still settles
 test('the 2026 cards are a grid, and nothing is left of the deck', async ({ page }) => {
   await page.goto(FAQ_PAGE)
 
+  // The grid is established first, so the absence below is an absence from a
+  // page that exists. Checked the other way round, "no deck" was also true of
+  // a page that had not rendered.
+  const cards = page.locator('#changed-heading').locator('xpath=../../..').locator('ol > li')
+  await expect(cards).toHaveCount(3)
+
   // D44. Asserted rather than assumed, because a reverted effect leaves two
   // things behind that both look harmless: a class on an element and a block
   // of CSS nothing matches. Either one invites the next person to "finish"
   // the half of it they found.
   expect(await page.locator('.stack-cards').count()).toBe(0)
-
-  const cards = page.locator('#changed-heading').locator('xpath=../../..').locator('ol > li')
-  await expect(cards).toHaveCount(3)
 
   const positions = await cards.evaluateAll((nodes) =>
     nodes.map((node) => getComputedStyle(node).position),

@@ -42,13 +42,16 @@ import { FOOTER_COLUMNS, NICHE_SCAN, liveLinks, type FooterColumn } from '@/lib/
 const COPYRIGHT_YEAR = 2026
 
 /**
- * The legal entity's name, which does not exist yet.
+ * The legal entity's name.
  *
- * Left as a visible placeholder on purpose, exactly as the product name is.
- * A real-looking company name under a copyright line is a claim, and
- * non-negotiable 7 does not allow one we cannot stand behind.
+ * This was a visible `[COMPANY LEGAL NAME]` placeholder, on the reasoning that
+ * a real-looking company name under a copyright line is a claim and
+ * non-negotiable 7 does not allow one we cannot stand behind. Vlad has now
+ * given the entity, so the claim is one we can stand behind and the
+ * placeholder is the thing it would be wrong to ship. "Mirrorline" above it
+ * stays a placeholder product name until that is settled.
  */
-const COMPANY_LEGAL_NAME = '[COMPANY LEGAL NAME]'
+const COMPANY_LEGAL_NAME = 'VN & MN Product Group Inc'
 
 /**
  * 16 §4's footer, minus routes that have not landed.

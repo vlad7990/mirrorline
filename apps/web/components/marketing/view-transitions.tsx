@@ -47,6 +47,30 @@
  * pathname actually changing *and* by a hard timeout, whichever comes first.
  * A transition that gives up early is a cross-fade nobody notices; one that
  * never gives up is a broken site.
+ *
+ * **A transition waits for its own navigation, and that took two goes to get
+ * right.** The first version kept one resolver in a ref and fired it on any
+ * pathname change, which is correct exactly as long as there is never more
+ * than one navigation in the air. Two defects came out of that, and both of
+ * them read to a reader as "it went to the wrong page":
+ *
+ * 1. *Someone else's navigation released the transition.* Click Pricing, then
+ *    Compare 70ms later. The second click overwrites the resolver, so when
+ *    Pricing commits it resolves the *Compare* transition — which photographs
+ *    Pricing as its "new" state and animates that in. Compare then arrives
+ *    with no transition at all. The router was never confused; the animation
+ *    was, and it showed the reader a page they had already clicked past.
+ * 2. *A transition waited for a navigation that had already landed.* The
+ *    capture is deferred to the browser's next rendering opportunity, so on a
+ *    prefetched route React can commit the new tree before the callback runs.
+ *    The pathname change arrives with nothing registered, the callback then
+ *    registers a wait for a pathname that is already current, and the screen
+ *    holds a picture of the old page for the full timeout — a second of
+ *    nothing happening, which is what makes a person click again.
+ *
+ * So a transition now records *which* pathname it is waiting for, releases
+ * immediately if that pathname is already committed, and is superseded — not
+ * orphaned — when a later click starts another one.
  */
 
 import { usePathname } from 'next/navigation'
@@ -63,16 +87,36 @@ function isPublicPath(pathname: string): boolean {
   return !pathname.startsWith('/app')
 }
 
+/** A transition holding the screen until one particular pathname commits. */
+interface PendingTransition {
+  /** The pathname of the link that started it. Nothing else releases it. */
+  readonly target: string
+  /** Resolves the callback's promise. Safe to call more than once. */
+  readonly release: () => void
+}
+
 export function ViewTransitions() {
   const pathname = usePathname()
-  const settle = React.useRef<(() => void) | null>(null)
+  const pending = React.useRef<PendingTransition | null>(null)
+  // The pathname React has actually committed, readable from inside the
+  // transition callback — which runs outside of render and so cannot read the
+  // `pathname` of the closure that is current by then.
+  const committed = React.useRef(pathname)
 
   // The new snapshot is taken when the callback's promise resolves, so it has
   // to resolve *after* the new route has rendered — not when `push` returns,
   // which is immediately, and would photograph the old page twice.
   React.useEffect(() => {
-    settle.current?.()
-    settle.current = null
+    committed.current = pathname
+
+    const inFlight = pending.current
+    // Only the navigation this transition was started for may release it. Any
+    // other one arriving first is a second click overtaking the first, and
+    // resolving here would photograph the page the reader has clicked past.
+    if (!inFlight || inFlight.target !== pathname) return
+
+    pending.current = null
+    inFlight.release()
   }, [pathname])
 
   React.useEffect(() => {
@@ -105,19 +149,43 @@ export function ViewTransitions() {
       if (next.pathname === window.location.pathname) return
       if (!isPublicPath(next.pathname)) return
 
+      // Not `target`: that name is already the clicked element above, and the
+      // two being one letter apart is how the wrong one gets compared.
+      const targetPath = next.pathname
+
       document.startViewTransition(
         () =>
           new Promise<void>((resolve) => {
+            // Superseding is done here rather than in the click handler, and
+            // that distinction is the whole of it. The browser defers this
+            // callback to its next rendering opportunity, so two clicks in
+            // one task both return from `startViewTransition` before either
+            // callback has run: a handler that released `pending` would find
+            // nothing there, and this line would then overwrite the first
+            // transition's registration and orphan it. Releasing at the
+            // moment of registration is the only point that sees the real
+            // order.
+            pending.current?.release()
+
+            // A prefetched route can commit before the browser gets round to
+            // calling this. Waiting for a pathname that is already current
+            // freezes the screen for the whole timeout, so check first.
+            if (committed.current === targetPath) {
+              pending.current = null
+              resolve()
+              return
+            }
+
             let done = false
-            const finish = () => {
+            const release = () => {
               if (done) return
               done = true
               window.clearTimeout(timer)
               resolve()
             }
 
-            const timer = window.setTimeout(finish, SETTLE_TIMEOUT_MS)
-            settle.current = finish
+            const timer = window.setTimeout(release, SETTLE_TIMEOUT_MS)
+            pending.current = { target: targetPath, release }
           }),
       )
     }

@@ -24,6 +24,108 @@ PROVEN band, and the Output section's episode frame and week strip;
 gold dashboard; `/app/results` for the KPI ticks; `/niche-scan` for the
 submit button.
 
+### PR A · the e2e "race" was the dev server (14 Nov) — read D46
+
+**The handoff's diagnosis was wrong and the fix is somewhere else entirely.**
+Ruled out by reading the code, before writing anything: `ViewTransitions` is
+mounted by the marketing layout only, so there is no transition on a studio
+screen to lose a race to; and `.nav-indicator` is `pointer-events: none`
+behind `position: relative` links, so it cannot take a click. Measured, not
+assumed: a Calendar → Results sidebar click lands in 176–239ms over six runs,
+and the URL and the `<h1>` change in the *same sample* every time.
+
+**It was `next dev`.** Seven Playwright workers against a server that
+compiles each route on first request. One deliberate cold run: **179 failed,
+77 passed, 10.2 minutes**, with axe reporting `<html>` carrying no `lang` and
+no `<title>` — a server answering with nothing, not a slow page. Warm, the
+same suite was 1 failed / 253 passed in 1.1 minutes. `playwright.config.ts`
+now builds once and runs `next start`, and no longer reuses whatever happens
+to be on port 3000. `E2E_DEV=1` keeps the old dev server for the
+edit-and-rerun loop.
+
+**Two real bugs in `view-transitions.tsx`, and the brief's own test found
+them.** Navigation was never at risk — the new `navigation-race.spec.ts`
+clicks two nav items 70ms apart, in the studio and on the site, and the
+second always wins, so nobody has been left on the wrong page. But one
+resolver in a ref, fired on any pathname change, meant (1) a second click's
+transition got released by the *first* click's navigation, photographing a
+page the reader had already clicked past, and (2) a transition could wait for
+a pathname that had already committed and hold a frozen picture for the full
+1000ms. A transition now records which pathname it waits for and is
+superseded at registration rather than orphaned. Proof: unfixed, the orphaned
+transition's promise resolves at **1022–1024ms** — the stall timeout; fixed,
+28–152ms.
+
+**Six tests were reading the DOM once, with no retry**, and that is the real
+flake. Two of them were worse than flaky — `.toBe(0)` absence checks and a
+`for` loop over an empty array pass perfectly on a page that never rendered,
+so they have been reporting success for finding nothing. All six are now
+conditions or anchored on an h1 first.
+
+**`demo-path.spec.ts` is hardened as a condition, not a number:** no retry
+added, no timeout raised. `openFromSidebar` waits for the clicked item's own
+`aria-current="page"`.
+
+**Proof — five consecutive full runs, each with nothing on port 3000 first,
+so every run tests a server it built itself:** `258 passed` five times,
+77–82s each, all exit 0. The same suite was 179 failed / 10.2 minutes on a
+cold dev server when this started. Reproduce with `pnpm test:e2e`; add
+`E2E_DEV=1` only for the edit loop.
+
+**Also:** the copyright line is now "© 2026 VN & MN Product Group Inc". That
+changes the footer on every marketing page, which is why 106 of the 280
+reference PNGs in `docs/screens-built/` are regenerated in this PR.
+
+#### Watch
+
+1. **React #418 on the preview, still unreproduced.** Seen once, on the
+   one-time `?_vercel_share=` redirect navigation. The same production build
+   is clean locally with and without a stored theme preference, and fresh
+   preview loads are clean. Not explained, not dismissed — if it reappears,
+   the theme script in the root layout is the first place to look, because it
+   is the one thing that writes to `<html>` before React sees it.
+2. **`docs/screens-built/app-results--*.png` churns on every run.** That
+   screen's KPI figures tick on arrival (17 §2), so a screenshot catches them
+   mid-count and the reference is nondeterministic by construction. Harmless
+   today, but it means those four PNGs are never a reliable diff. Freezing
+   them would need the screenshot pass to disable that one animation.
+3. **`app/app/onboarding/layout.tsx` still wraps its whole shell in
+   `<Suspense>`**, so `/app/onboarding` has the same empty-HTML shape the
+   marketing layout just lost. Left alone deliberately, and it is a much
+   smaller problem: the route is behind sign-in so no crawler or link
+   preview sees it, and `?step=` is structural to what the shell renders
+   rather than a preference layered over a default — pushing that boundary
+   down means reworking `OnboardingShell` and `step-context`, not moving one
+   hook. Worth doing when onboarding is next opened up, not before.
+
+#### The biggest thing PR A turned up: the marketing pages were shipping no HTML
+
+`app/(marketing)/layout.tsx` wrapped the entire tree — header, `<main>`,
+footer — in `<Suspense fallback={null}>`, so that `useSearchParams` in
+`AccountChoiceProvider` would not opt the routes out of static rendering. It
+did that, and the consequence had gone unnoticed: the prerendered HTML *was*
+the fallback. Every public page arrived with no copy, no headings and no
+footer, and the client rendered the lot after hydration — a blank first
+paint, and what every link-preview and non-JS scraper saw. It is also why
+every unguarded DOM read in the suite was a race rather than merely slow.
+
+I had this written up as a "Needs Vlad" item for its own PR; Vlad asked for
+it in PR A. The boundary now wraps only the component that reads the query
+string: `AccountChoiceProvider` no longer calls `useSearchParams`, and a
+`null`-rendering `SearchParamsReader` inside its own `<Suspense>` reports the
+two params up. Measured on the production build:
+
+| | `/` bytes | `<main>` | `/pricing` bytes |
+|---|---|---|---|
+| Before | 253,196 | **0** | 59,001 |
+| After | 494,629 | 1 | 103,659 |
+
+`<footer>`, the `<h1>` and the legal name are all in the server HTML now, and
+`next build` still marks every marketing route `○ (Static)`. One behaviour
+changes: a shared `?who=individual` link shows the default for one effect
+tick before the URL applies — the same deal storage has always had, and the
+trade for the page existing in the HTML. D46 has the detail.
+
 ### PR B · twelve sample reels, and a footer half the height (14 Nov, `e4b7bdf` + `aa35524`) — read D45
 
 | # | Item | Outcome |
@@ -76,23 +178,24 @@ the page. One class on the label; correct in the studio too.
 12 unique files, 0 broken; the footer's theme switch really flips `.dark`,
 sets `color-scheme`, persists the preference and checks the radio.
 
-**Two things left open, both honestly:**
+**Two things left open, both honestly** — item 1 is now closed by PR A below,
+and the diagnosis in it turned out to be wrong. It is left here as written so
+the correction stays legible:
 
-1. **`demo-path.spec.ts:38` fails under full-suite load**, at
+1. ~~**`demo-path.spec.ts:38` fails under full-suite load**, at
    `openFromSidebar('Results')` — the click lands during a studio page
    transition and the assertion for the `Overview` h1 finds Calendar still on
-   screen. It passed 3/3 in isolation and on `--repeat-each=3`, and failed in
-   three of four full runs. **Nothing in this PR touches the studio** beyond
-   one class on `ThemeSwitch`'s label, and it failed the same way before that
-   commit existed. The suspect is PR5's sliding nav marker or PR6's View
-   Transitions; the extra image load may be what pushes a latent race over
-   the edge under six parallel workers. It wants a look before PR7 ships
-   calendar interactions on the same screens.
+   screen. The suspect is PR5's sliding nav marker or PR6's View
+   Transitions.~~ **Wrong on the cause.** There is no transition on a studio
+   screen to land during — `ViewTransitions` is mounted by the marketing
+   layout only — and the marker is `pointer-events: none`. It was the dev
+   server. See PR A and D46.
 2. **One React #418 hydration error** seen once on the preview, on the
    one-time `?_vercel_share=` redirect navigation. It does not reproduce: the
    same production build is clean locally with and without a stored theme
    preference, and three fresh loads of the preview are clean. Recorded
-   rather than explained away.
+   rather than explained away. Still unreproduced after PR A — carried under
+   **"Watch"** below.
 
 **Recordings:** `docs/screens-built/motion-v2/` — fourteen clips, desktop
 (1440) and mobile (390): `home-rails-and-reveals-*.webm` (14.6s),

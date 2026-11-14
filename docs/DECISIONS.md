@@ -1865,3 +1865,194 @@ in the same grid it shares row one with Product and Company, and only Account
 and Legal fall to row two: 974px → 800px. A tablet is a portrait screen and
 two rows of links is what "three columns" means there; this is the floor
 without going to four.
+
+## 2026-11-14 · D46 · The demo-path "race" was the dev server, the marketing pages were shipping no HTML, and two real transition bugs turned up next to both
+
+**The diagnosis in the last handoff was wrong, and it is worth saying so
+plainly.** PROGRESS.md recorded `demo-path.spec.ts:38` failing at
+`openFromSidebar('Results')` and named two suspects: PR5's sliding nav marker
+and PR6's View Transitions. Neither can do it, and both were ruled out by
+reading the code before any fix was written:
+
+- `ViewTransitions` is mounted by the **marketing** layout and nothing else.
+  A studio navigation never reaches it, and `isPublicPath` would refuse one
+  if it did. There is no transition on `/app/*` to lose a race to.
+- `.nav-indicator` is `pointer-events: none` with `z-index: 0`, behind links
+  that are `position: relative`. It cannot take a click, and it is
+  `aria-hidden` decoration that measures a change which has already
+  happened.
+
+Measured rather than assumed: a sidebar click from Calendar to Results lands
+in 176–239ms across six runs, and `window.location.pathname` and the `<h1>`
+change in the **same sample** every time. There is no window in which the URL
+says Results and the screen says Calendar.
+
+**The real cause is `next dev`.** Playwright runs seven workers on this
+machine and `playwright.config.ts` pointed `webServer` at the dev server,
+which compiles a route the first time it is asked for. Seven browsers meeting
+a cold dev server, each wanting a different uncompiled screen, is the whole
+bug. Proof, from one deliberate run with the server killed first: **179
+failed, 77 passed, 10.2 minutes** — and the failures were not subtle
+timeouts. axe reported `<html>` with no `lang` attribute and no `<title>`,
+which is not a slow page, it is a server answering with nothing. The same
+suite against a warm server: **1 failed, 253 passed, 1.1 minutes**. That is
+the entire difference between "flaky in the full run, fine on its own" —
+whether some earlier test had already paid for the compile.
+
+So the suite now runs against a production build: `next build` once, then
+`next start`, and `reuseExistingServer` is off unless `E2E_DEV=1` is set for
+the edit-and-rerun loop. Reusing whatever happened to be on port 3000 was
+itself part of the problem — a run could silently change what it was testing.
+**And it exposed something bigger, which is deliberately not fixed here.**
+`app/(marketing)/layout.tsx` wraps its whole tree — header, `<main>`, footer
+— in `<Suspense fallback={null}>` so that `useSearchParams` in
+`AccountChoiceProvider` does not opt the routes out of static rendering. The
+boundary does that, and it also means the prerendered HTML **is the
+fallback**. A probe caught it first in dev — at `readyState: "complete"`,
+`document.querySelector('main')` was `null`, the body 250KB instead of 494KB,
+content arriving 70–240ms later. Then the production build was checked
+directly, because "it is only dev" was the comfortable assumption and it was
+wrong:
+
+```
+curl localhost:3000/         → 253,196 bytes, "<main" count: 0
+curl localhost:3000/pricing  →  59,001 bytes, "<main" count: 0
+```
+
+Every marketing page shipped with no copy, no headings and no footer; the
+client built all of it after hydration. Google runs JavaScript so this was
+not certainly an SEO failure, but it was a blank first paint, it was what
+every link-preview scraper saw, and it is why every unguarded DOM read in the
+suite was a race rather than merely slow.
+
+**Fixed, on Vlad's instruction, in this PR.** It was going to be logged under
+"Needs Vlad" as its own change; he asked for it here instead. The boundary is
+pushed down to the one component that actually reads the query string:
+`AccountChoiceProvider` no longer calls `useSearchParams` itself, and a
+`null`-rendering `SearchParamsReader` inside its own `<Suspense>` reads the
+two params and reports them upward. The marketing layout wraps nothing in
+Suspense any more. `commit` reads `window.location.search` rather than a
+subscribed copy — it runs from a click, so the live URL is both available and
+current, and starting from it still preserves any other param such as
+`?plan=growth`.
+
+Measured on the production build, before and after:
+
+| | `/` bytes | `<main>` | `/pricing` bytes |
+|---|---|---|---|
+| Before | 253,196 | **0** | 59,001 |
+| After | 494,629 | 1 | 103,659 |
+
+`<footer>`, the `<h1>` and the new legal name are all in the server HTML now,
+and `next build` still marks every marketing route `○ (Static)`.
+
+**One behaviour genuinely changes, and it is the right trade.** Someone
+arriving on a shared `?who=individual` link sees the default choice for one
+effect tick before the URL is applied, where previously the client's first
+render already had it. Storage has always worked exactly that way — the
+provider's own header comment says the first render is always the default —
+and the alternative is a page that does not exist in the HTML. Precedence is
+untouched: URL, then storage, then the default, and
+`home-sections.spec.ts`'s "a URL parameter beats whatever was stored before"
+holds because its assertions retry.
+
+**That is what actually broke `motion.spec.ts`,** which failed in the warm run
+while demo-path passed: `expect(await rails.count()).toBeGreaterThan(5)` is a
+single reading, taken once, with no retry, and it sampled an empty document
+and got 0. It is now `await expect(rails.nth(5)).toBeAttached()` — the same
+assertion as a condition. `recordings.spec.ts` had the same line and got the
+same treatment.
+
+**The dangerous version of that bug is the one that passes.** `expect(await
+page.locator('.bar-grow').count()).toBe(0)` on `/app/home` is true of a
+correct page *and* of a page that has not rendered, so for some unknown
+number of runs it has been reporting "no bars" because it found no screen.
+The hero test was worse: `for (const opacity of opacities)` over an array
+that `evaluateAll` returns empty asserts *nothing at all*, and green. Six
+one-shot reads in `motion.spec.ts` were unanchored and all six are now either
+a condition or preceded by one; in the 2026-cards test the grid assertion and
+the absence check simply swapped order, which is the whole fix. The reads
+that were already anchored by a neighbouring `toHaveCount` or a
+`scrollIntoViewIfNeeded` were left alone — the distinction worth keeping in
+mind is that `locator.evaluate()` waits for its element and
+`locator.evaluateAll()` does not.
+
+**Two real bugs in `view-transitions.tsx`, found by writing the test the brief
+asked for.** Navigation itself was never at risk —
+`navigation-race.spec.ts` clicks two nav items 70ms apart, in the studio and
+on the site, and the second one wins every time, so no user has ever been left
+on the wrong page by either mechanism. But the component kept **one** resolver
+in a ref and fired it on **any** pathname change, and that is only correct
+while there is never more than one navigation in the air:
+
+1. *Someone else's navigation released the transition.* Click Pricing, then
+   Compare 70ms later: the second click overwrites the resolver, so when
+   Pricing commits it resolves the **Compare** transition, which photographs
+   Pricing as its "new" state and animates that in. Compare then arrives with
+   no transition at all. The reader sees a page they had already clicked past
+   — which is exactly what "it went to the wrong page" looks like, without
+   the router ever being wrong.
+2. *A transition waited for a navigation that had already landed.* The
+   browser defers the capture to its next rendering opportunity, so a
+   prefetched route can commit before the callback runs. The pathname change
+   then arrives with nothing registered, the callback registers a wait for a
+   pathname that is already current, and the screen holds a picture of the old
+   page for the full 1s timeout. A second of nothing happening is what makes
+   a person click again.
+
+A transition now records **which** pathname it is waiting for, releases
+immediately if that pathname is already committed, and is superseded rather
+than orphaned when a later click starts another one.
+
+**Where the superseding happens took a second attempt, and the first one was
+wrong in a way only a test could show.** Releasing the pending transition in
+the *click handler* looks right and does nothing: the browser defers the
+update callback to its next rendering opportunity, so two clicks in one task
+both return from `startViewTransition` before either callback has run, the
+handler finds nothing pending, and the second callback then overwrites the
+first registration exactly as before. The release has to happen at the moment
+of **registration**, inside the callback, because that is the only point that
+sees the real order.
+
+**Measured, both ways.** Against the unfixed component the orphaned
+transition's update promise resolves at **1022–1024ms** across three runs —
+the 1000ms stall guard, not a navigation. With the fix, 28–152ms, and
+`navigation-race.spec.ts` passes 20/20 on `--repeat-each=5`.
+
+**The proof asked for: five consecutive full runs, each starting with nothing
+on port 3000 so the server is always one this suite built.**
+
+```
+run 1: exit=0  79s  258 passed
+run 2: exit=0  82s  258 passed
+run 3: exit=0  78s  258 passed
+run 4: exit=0  78s  258 passed
+run 5: exit=0  77s  258 passed
+```
+
+Against 179 failures in 10.2 minutes on a cold dev server, which is where
+this started.
+
+**Two things the tests do *not* prove, said plainly.** The realistic
+fast-click test — two clicks 70ms apart — passes against the broken component
+too, because it never actually interleaves: Pricing commits about 150ms after
+its click and Playwright's actionability checks push the second click past
+that. It is a real-user guarantee about the router, not a test of the
+transition bookkeeping; the interleaving case needs both clicks dispatched
+from inside the page in one task, which is what the spec does and says. And
+the single-click test guards the second bug rather than reproducing it —
+forcing a commit ahead of the browser's capture is not something a test can
+arrange from outside.
+
+**`demo-path.spec.ts` is hardened as a condition, not a number.** No retry
+was added and no timeout was raised. `openFromSidebar` now waits for the
+clicked item's own `aria-current="page"` — the app's statement about where the
+reader is, and the same attribute the sliding marker measures from — so the
+caller's next assertion cannot race the navigation, and a failure says the
+arrival did not happen rather than blaming the screen.
+
+**The copyright line now reads "© 2026 VN & MN Product Group Inc".** D45 left
+`[COMPANY LEGAL NAME]` as a deliberate placeholder because a real-looking
+company name under a copyright line is a claim. Vlad has given the entity, so
+the claim is one we can stand behind and the placeholder became the wrong
+thing to ship. "Mirrorline" above it is still a placeholder product name.
