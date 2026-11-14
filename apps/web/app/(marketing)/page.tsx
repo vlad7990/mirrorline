@@ -162,7 +162,7 @@ export default function LandingPage() {
               Two questions, <span className="gold-phrase">no industry list.</span>
             </>
           }
-          lead="We never ask what trade you are in. Our agents research your niche themselves — these two answers are only so the rest of this page shows you the right examples."
+          lead="We never make you pick from an industry list. Our agents research your niche themselves — these two answers are only so the rest of this page shows you the right examples."
           headingClassName="text-site-h2 font-serif"
         />
         <div className="reveal mt-8 flex flex-col gap-4">
@@ -288,25 +288,10 @@ export default function LandingPage() {
         </div>
       </Section>
 
-      {/* 7. How the loop runs -------------------------------------------- */}
-      <Section className="band-ink-alt" aria-labelledby="steps-heading">
-        <SectionHeading
-          id="steps-heading"
-          rail
-          eyebrow="How the loop runs"
-          title={
-            <>
-              Four jobs, <span className="gold-phrase">one loop.</span>
-            </>
-          }
-          lead="Each one hands to the next, and the last one decides what the first does on Monday."
-          headingClassName="text-site-h2 font-serif"
-          aside={<SampleDataLabel />}
-        />
-        <div className="mt-10">
-          <FeatureTabs />
-        </div>
-      </Section>
+      {/* 7 is gone: "Four jobs, one loop" is now inside section 9, where the
+          seven agents are. Two sections twenty lines apart both headed "one
+          loop", one naming four jobs and the other seven agents, asked the
+          reader to work out whether those were the same loop. They are. */}
 
       {/* The output, as proof ------------------------------------------- */}
       {/* The one band that may carry a generated backdrop: it already states
@@ -318,7 +303,12 @@ export default function LandingPage() {
           id="proof-heading"
           rail
           eyebrow="The output"
-          title="One episode, twelve cuts"
+          title={
+            <>
+              One episode, <span className="gold-phrase">twelve cuts.</span>
+            </>
+          }
+          headingClassName="text-site-h2 font-serif"
           lead={`A ${sourceVideo.durationLabel} talk became ${cuts.length} short videos, each with its own moment, hook, length and format. None of them is the same clip with a new title, and the ones that did not pass say so on the frame.`}
           aside={<SampleDataLabel />}
         />
@@ -353,8 +343,17 @@ export default function LandingPage() {
               do: the sentence is split into its words and they arrive in
               order. Everything else here is scroll-driven CSS (D32). */}
           <SplitReveal>
-            <h2 id="showcase-heading" className="m-0 max-w-[20ch] text-site-h2 text-on-ink-900">
-              Made for people who <span className="gold-phrase">sell what they know.</span>
+            {/* "Made for people who sell what they know" named an audience,
+                and naming one is the thing 16 §1 rules out — it reads as
+                coaches and consultants however carefully it is phrased, which
+                is exactly the narrowing D38 corrected everywhere else. What
+                the marquee below actually shows is one shape of work applied
+                to unlike trades, so the heading says that instead. */}
+            <h2
+              id="showcase-heading"
+              className="m-0 max-w-[20ch] font-serif text-site-h2 text-on-ink-900"
+            >
+              Different trades, <span className="gold-phrase">the same week of work.</span>
             </h2>
           </SplitReveal>
           <p className="m-0 mt-3 max-w-[62ch] text-body text-on-ink-muted">
@@ -377,7 +376,12 @@ export default function LandingPage() {
           id="loop-heading"
           rail
           eyebrow="The studio"
-          title="Seven agents, one loop"
+          title={
+            <>
+              Seven agents, <span className="gold-phrase">one loop.</span>
+            </>
+          }
+          headingClassName="text-site-h2 font-serif"
           lead="Each agent has one job, its own spend cap and its own log. A format found on Monday becomes your videos, posted all week, and the results shape the next week."
           aside={
             <Button asChild variant="secondary" className="press arrow-cta">
@@ -406,6 +410,36 @@ export default function LandingPage() {
           <ComingSoonLabel />
           <p className="m-0 max-w-[68ch] text-body text-text-muted">{LOOP_CLOSING_LINE}</p>
         </div>
+
+        {/* Was section 7, "How the loop runs". An h3, because it is a second
+            view of the loop this section already named rather than a new
+            subject: seven agents is who does the work, four jobs is what the
+            work is.
+
+            The band is why it moved here rather than the other way round.
+            `FeatureTabs` paints its tab strip in `text-gold-bright` and
+            `text-on-ink-faint` and its panel on an ink gradient — all of it
+            built for a dark band. This section is `tone="subtle"` under the
+            page's `band-ink`, so it is dark too. Moving the agent ladder up
+            into section 7's band instead would have been the same merge with
+            the colour risk pointing the other way. */}
+        <div className="mt-14 border-t border-border pt-10">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="flex min-w-0 max-w-[62ch] flex-col gap-2">
+              <span className="eyebrow">How the loop runs</span>
+              <h3 className="m-0 text-balance font-serif text-site-h2 text-text">
+                Four jobs, <span className="gold-phrase">one loop.</span>
+              </h3>
+              <p className="m-0 max-w-[62ch] text-body text-text-muted">
+                Each one hands to the next, and the last one decides what the first does on Monday.
+              </p>
+            </div>
+            <SampleDataLabel />
+          </div>
+          <div className="mt-10">
+            <FeatureTabs />
+          </div>
+        </div>
       </Section>
 
       {/* 10. Nothing reaches your calendar unchecked ---------------------
@@ -414,7 +448,12 @@ export default function LandingPage() {
       <Section aria-labelledby="gate-heading" backdrop={<BackgroundWord>Proven</BackgroundWord>}>
         <SectionHeading
           id="gate-heading"
-          title="Nothing reaches your calendar unchecked"
+          title={
+            <>
+              Nothing reaches your calendar <span className="gold-phrase">unchecked.</span>
+            </>
+          }
+          headingClassName="text-site-h2 font-serif"
           lead="Every cut goes through the Compliance agent before it can be scheduled. It compares the wording with its source, checks the rights, the consent records and the AI labels, then writes down what it did and what it cost."
           aside={<SampleDataLabel />}
         />
@@ -456,13 +495,65 @@ export default function LandingPage() {
           Every KPI shows its definition, its source and how fresh it is. A source you have not
           connected says so, with a button — it never shows a zero.
         </p>
+
+        {/* Was section 13, "A demo week". It belongs here: the dashboard
+            above is what the loop reports, and these three figures are one
+            week of it. Read apart, the demo week looked like a second,
+            unrelated claim. */}
+        <div className="mt-14 border-t border-border pt-10">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="flex min-w-0 max-w-[62ch] flex-col gap-2">
+              <span className="eyebrow">A demo week</span>
+              <h3 className="m-0 text-balance font-serif text-site-h2 text-text">
+                One demo week, <span className="gold-phrase">in numbers.</span>
+              </h3>
+              <p className="m-0 max-w-[62ch] text-body text-text-muted">
+                Figures from the fictional demo client, so you can see what the loop reports. Your
+                numbers will differ, and we report them as they are.
+              </p>
+            </div>
+            <SampleDataLabel />
+          </div>
+          <ul className="m-0 mt-10 grid list-none grid-cols-1 gap-5 p-0 lg:grid-cols-3">
+            {PROOF_CARDS.map((proof) => (
+              <li key={proof.label}>
+                <Card className="flex h-full flex-col gap-3">
+                  <p className="m-0">
+                    {/* `gold-text`, not `gold-bright`, and that is the D40
+                        trap: this band is `band-snow`, and the band
+                        utilities remap surface, border and text but not the
+                        gold. The figure was `gold-bright` while it sat on an
+                        ink band; carrying that class across to a light one
+                        would have put it below 4.5:1. */}
+                    <CountUp
+                      value={proof.value}
+                      decimals={proof.decimals}
+                      suffix={proof.suffix}
+                      className="machine text-site-h2 text-gold-text"
+                    />
+                  </p>
+                  <h4 className="m-0 font-heading text-title text-text">{proof.label}</h4>
+                  <p className="m-0 text-meta text-text-muted">{proof.story}</p>
+                  <p className="m-0 mt-auto border-t border-border pt-3 text-caption text-text-muted">
+                    {proof.agents}
+                  </p>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </div>
       </Section>
 
       {/* 12. From views to calls ---------------------------------------- */}
       <Section aria-labelledby="funnel-heading">
         <SectionHeading
           id="funnel-heading"
-          title="From views to calls"
+          title={
+            <>
+              From views <span className="gold-phrase">to calls.</span>
+            </>
+          }
+          headingClassName="text-site-h2 font-serif"
           lead="The weekly report does not stop at views. It follows the same week all the way to the thing you actually sell, including the weeks that go badly."
           aside={<SampleDataLabel />}
         />
@@ -488,43 +579,8 @@ export default function LandingPage() {
         </Card>
       </Section>
 
-      {/* 13. A demo week ------------------------------------------------- */}
-      <Section aria-labelledby="numbers-heading">
-        <SectionHeading
-          id="numbers-heading"
-          rail
-          eyebrow="A demo week"
-          title={
-            <>
-              One demo week, <span className="gold-phrase">in numbers.</span>
-            </>
-          }
-          lead="Figures from the fictional demo client, so you can see what the loop reports. Your numbers will differ, and we report them as they are."
-          headingClassName="text-site-h2 font-serif"
-          aside={<SampleDataLabel />}
-        />
-        <ul className="m-0 mt-10 grid list-none grid-cols-1 gap-5 p-0 lg:grid-cols-3">
-          {PROOF_CARDS.map((proof) => (
-            <li key={proof.label}>
-              <Card className="flex h-full flex-col gap-3">
-                <p className="m-0">
-                  <CountUp
-                    value={proof.value}
-                    decimals={proof.decimals}
-                    suffix={proof.suffix}
-                    className="machine text-site-h2 text-gold-bright"
-                  />
-                </p>
-                <h3 className="m-0 font-heading text-title text-text">{proof.label}</h3>
-                <p className="m-0 text-meta text-text-muted">{proof.story}</p>
-                <p className="m-0 mt-auto border-t border-border pt-3 text-caption text-text-muted">
-                  {proof.agents}
-                </p>
-              </Card>
-            </li>
-          ))}
-        </ul>
-      </Section>
+      {/* 13 is gone: "A demo week" is now inside section 11, under the
+          dashboard it is a week of. */}
 
       {/* 14. Who it is for -----------------------------------------------
           A light band, and one of three now rather than the lone one it used
@@ -623,30 +679,35 @@ export default function LandingPage() {
           headingClassName="text-site-h2 font-serif"
         />
         <NotAFarm className="mt-10" />
-      </Section>
 
-      {/* 16. Your files, your accounts, plain billing --------------------- */}
-      <Section size="md" aria-labelledby="billing-heading">
-        <SectionHeading
-          id="billing-heading"
-          rail
-          eyebrow="Plain billing"
-          title={
-            <>
+        {/* Was section 16. Both halves answer the same question — what we
+            will not do with your account, and what we will not do with your
+            money — and they were two sections saying "ownership" in a row. */}
+        <div className="mt-14 border-t border-border pt-10">
+          <div className="flex min-w-0 max-w-[62ch] flex-col gap-2">
+            <span className="eyebrow">Plain billing</span>
+            <h3 className="m-0 text-balance font-serif text-site-h2 text-text">
               Your files, your accounts, <span className="gold-phrase">no credits.</span>
-            </>
-          }
-          lead="The direct answer to the complaint we read most often about this category. It is a feature, so it is on the page rather than in the terms."
-          headingClassName="text-site-h2 font-serif"
-        />
-        <PlainBilling className="mt-10" />
+            </h3>
+            <p className="m-0 max-w-[62ch] text-body text-text-muted">
+              The direct answer to the complaint we read most often about this category. It is a
+              feature, so it is on the page rather than in the terms.
+            </p>
+          </div>
+          <PlainBilling className="mt-10" />
+        </div>
       </Section>
 
       {/* 17. Pricing ----------------------------------------------------- */}
       <Section tone="subtle" size="md" aria-labelledby="pricing-heading">
         <SectionHeading
           id="pricing-heading"
-          title="Start with a pilot, then pick a month"
+          title={
+            <>
+              Start with a pilot, <span className="gold-phrase">then pick a month.</span>
+            </>
+          }
+          headingClassName="text-site-h2 font-serif"
           lead="Flat prices, set per engagement in writing before any work starts. No setup fee, no annual lock-in, and you can stop after the pilot."
           aside={
             <Button asChild variant="secondary" className="press arrow-cta">
@@ -686,7 +747,12 @@ export default function LandingPage() {
       <Section aria-labelledby="faq-heading">
         <SectionHeading
           id="faq-heading"
-          title="The six we are asked most"
+          title={
+            <>
+              The six <span className="gold-phrase">we are asked most.</span>
+            </>
+          }
+          headingClassName="text-site-h2 font-serif"
           lead="Short answers, including the ones where the honest answer is that we cannot promise."
         />
         <div className="mt-8">
@@ -696,9 +762,12 @@ export default function LandingPage() {
 
       {/* 19. Final CTA --------------------------------------------------- */}
       <Section size="md" aria-labelledby="final-cta-heading">
-        <h2 id="final-cta-heading" className="sr-only">
-          Get started
-        </h2>
+        {/* The sr-only "Get started" h2 that used to sit here is gone. It
+            existed to name the landmark, but `FinalCta` renders its own
+            visible h2 — so the section had two, one of which nobody could
+            see and which was the one the landmark was named after. The card's
+            heading now carries the id and names the section itself, which is
+            both one heading fewer and the heading a reader actually meets. */}
         <FinalCta />
       </Section>
 

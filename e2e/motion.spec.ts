@@ -499,6 +499,9 @@ test('the hero labels its generated frames where a reader will meet them', async
 /** The wall is the fallback *and* the final state, so it is always all twelve. */
 const CUT_COUNT = 12
 
+/** Seven days at three a day — the cadence the gate section states in prose. */
+const WEEK_SLOTS = 21
+
 const DECORATIVE_LAYERS = [
   '.output-episode',
   '.output-layer-back',
@@ -618,7 +621,7 @@ test('the week strip never contradicts the verdicts on the frames', async ({ pag
   // The strip is decoration, but decoration that states a number is still
   // making a claim. It reads from `cutSummary`; the chips read from each cut's
   // own compliance. Nothing stops those two drifting apart except this.
-  const strip = await stage.locator('[data-week-strip] .machine').textContent()
+  const strip = await stage.locator('[data-week-strip] .output-week-note').innerText()
   const passedOnFrames = await page
     .locator('[data-cut-frame] [data-status-chip]')
     .evaluateAll(
@@ -628,6 +631,14 @@ test('the week strip never contradicts the verdicts on the frames', async ({ pag
 
   expect(strip).toContain(`${passedOnFrames} passed`)
   expect(strip).toContain(`${CUT_COUNT - passedOnFrames} held`)
+
+  // And now the strip draws the week rather than describing it, so the
+  // drawing has to agree too: one filled slot per cut that passed, no more.
+  // A seven-day grid is an easy place to round nine up to a tidier number.
+  const filled = await stage.locator('[data-week-strip] .output-week-cut').count()
+  const slots = await stage.locator('[data-week-strip] [data-week-slot]').count()
+  expect(filled).toBe(passedOnFrames)
+  expect(slots).toBe(WEEK_SLOTS)
 })
 
 /* -------------------------------------------------------------------------- */
@@ -745,18 +756,9 @@ test('under reduced motion the argument sections are at their final state', asyn
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto(FAQ_PAGE)
 
-  const stacked = page.locator('.stack-cards')
-  await stacked.scrollIntoViewIfNeeded()
-
-  // The deck is the grid again: sticky only applies inside the no-preference
-  // block, so the three cards sit side by side exactly as they always have.
-  const positions = await stacked.evaluate((node) =>
-    Array.from(node.children).map((child) => getComputedStyle(child).position),
-  )
-  expect(positions.length).toBe(3)
-  for (const position of positions) {
-    expect(position).not.toBe('sticky')
-  }
+  // M4's stacked deck is gone (D44), so there is no reduced-motion fallback
+  // left to assert here: the 2026 cards are the three-column grid at every
+  // width and under every motion preference. The test below keeps it so.
 
   const row = page.locator('.lit-row').first()
   await row.scrollIntoViewIfNeeded()
@@ -1013,6 +1015,30 @@ test('under reduced motion the mark is already drawn, and the form still settles
   // And the final state is the finished one, not a frozen first frame: the
   // thank-you arrives, which is the whole point of the sequence.
   await expect(page.getByRole('heading', { name: 'That is with us.' })).toBeVisible()
+})
+
+test('the 2026 cards are a grid, and nothing is left of the deck', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  // D44. Asserted rather than assumed, because a reverted effect leaves two
+  // things behind that both look harmless: a class on an element and a block
+  // of CSS nothing matches. Either one invites the next person to "finish"
+  // the half of it they found.
+  expect(await page.locator('.stack-cards').count()).toBe(0)
+
+  const cards = page.locator('#changed-heading').locator('xpath=../../..').locator('ol > li')
+  await expect(cards).toHaveCount(3)
+
+  const positions = await cards.evaluateAll((nodes) =>
+    nodes.map((node) => getComputedStyle(node).position),
+  )
+  for (const position of positions) {
+    expect(position).toBe('static')
+  }
+
+  // The weight that replaced the stacking: an icon per card, and the
+  // headline on the title scale rather than the subtitle one.
+  await expect(cards.locator('svg[aria-hidden="true"]').first()).toBeAttached()
 })
 
 /* -------------------------------------------------------------------------- */

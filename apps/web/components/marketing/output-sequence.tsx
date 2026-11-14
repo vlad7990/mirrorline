@@ -37,9 +37,41 @@
  */
 
 import { cutSummary, cuts, sourceVideo } from '@mirrorline/mock'
+import Image from 'next/image'
 import * as React from 'react'
 
 import { CutWall } from './cut-wall'
+
+/**
+ * The episode's waveform, as bar heights in percent.
+ *
+ * Fixed rather than generated: this renders on the server and again on the
+ * client, and anything random would differ between the two and patch itself
+ * on hydration. It is not a real audio analysis of anything and does not
+ * pretend to be — it is the shape of speech, standing in for a track the
+ * reader cannot hear.
+ */
+const WAVEFORM = [
+  18, 34, 52, 41, 66, 78, 59, 44, 71, 88, 62, 39, 27, 46, 69, 84, 73, 51, 36, 58, 79, 92, 67, 43,
+  31, 55, 74, 86, 64, 48, 37, 61, 82, 70, 49, 33, 57, 76, 90, 68, 45, 29, 53, 72, 85, 60, 42, 35,
+  63, 81, 75, 50, 38, 56, 77, 89, 65, 47, 30, 40,
+] as const
+
+/**
+ * How many bars are drawn. The pattern above repeats to fill it.
+ *
+ * Sixty was the first attempt and it read as a row of fat blocks rather than
+ * as a waveform: across a 950px bar that is a 15px block each. What makes
+ * this legible as audio is many thin bars, so the count is well past the
+ * number of distinct heights and the repeat is invisible at this size.
+ */
+const WAVE_BAR_COUNT = 160
+
+/** Mon–Sun, in the machine's voice. */
+const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
+
+/** The cadence the gate section states in prose, made of real slots here. */
+const POSTS_PER_DAY = 3
 
 /**
  * Scroll distance for the whole sequence, as a multiple of the viewport.
@@ -311,10 +343,44 @@ export function OutputSequence() {
           {/* The episode and its timeline. Decorative: the panel readout below
               already states the episode's length in words. */}
           <div aria-hidden="true" data-episode className="output-episode">
+            {/* A real 16:9 frame rather than the empty grey box this was. The
+                image is the same AI-generated room the hero uses, which is
+                the honest choice twice over: it is a room an episode would
+                actually be recorded in, and it is already generated material
+                this site labels as such. The section's paragraph below says
+                every frame here is AI-generated; the chip says it again,
+                where the frame is. */}
             <div className="output-episode-frame">
-              <span className="machine text-mono">{sourceVideo.durationLabel}</span>
+              <Image
+                src="/hero/studio-1920.webp"
+                alt=""
+                width={1920}
+                height={1080}
+                sizes="(min-width: 64rem) 760px, 100vw"
+                className="output-episode-image"
+              />
+              <span className="output-episode-chip machine text-mono">
+                {sourceVideo.durationLabel}
+              </span>
+              {/* Non-negotiable 4, on the frame itself. */}
+              <span className="output-episode-ai">AI-generated</span>
             </div>
             <div data-timeline-bar className="output-timeline">
+              {/* The waveform the playhead crosses. Bars, not an image: a
+                  picture of a waveform is one more asset to keep honest, and
+                  this is decoration standing in for audio nobody can hear.
+                  The heights are a fixed pattern rather than random — a
+                  `Math.random` here is a hydration mismatch waiting to
+                  happen, and it would also redraw on every navigation. */}
+              <span aria-hidden="true" className="output-wave">
+                {Array.from({ length: WAVE_BAR_COUNT }, (_, index) => (
+                  <span
+                    key={index}
+                    className="output-wave-bar"
+                    style={{ height: `${WAVEFORM[index % WAVEFORM.length]}%` }}
+                  />
+                ))}
+              </span>
               {cuts.map((cut, index) => (
                 <span
                   key={cut.id}
@@ -336,11 +402,40 @@ export function OutputSequence() {
           {/* Front layer (0.6): the week the passed cuts go out on, in the
               same figures the gate section states in prose. */}
           <div aria-hidden="true" data-layer-front className="output-front">
+            {/* A real week, not a pill. Seven columns, and the nine cuts that
+                passed land three to a day across the first three — which is
+                exactly what "three a day" and "nine passed" mean together,
+                rather than a sentence asserting both and showing neither.
+
+                Thursday to Sunday are empty on purpose and the caption says
+                why. Filling them would mean drawing fourteen cuts this
+                episode did not produce, which is the kind of flattering
+                rounding non-negotiable 7 exists to stop. */}
             <div data-week-strip className="output-week">
-              <span className="machine text-mono">
-                {cutSummary.passed} passed · {cutSummary.needsYourEye} held
+              <div className="output-week-grid">
+                {WEEK_DAYS.map((day, dayIndex) => (
+                  <div key={day} className="output-week-day">
+                    <span className="output-week-label machine text-mono">{day}</span>
+                    <div className="output-week-slots">
+                      {Array.from({ length: POSTS_PER_DAY }, (_, slot) => {
+                        const filled = dayIndex * POSTS_PER_DAY + slot < cutSummary.passed
+                        return (
+                          <span
+                            key={slot}
+                            data-week-slot
+                            className={filled ? 'output-week-cut' : 'output-week-empty'}
+                          />
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <span className="output-week-note text-meta">
+                <span className="machine">{cutSummary.passed}</span> passed ·{' '}
+                <span className="machine">{cutSummary.needsYourEye}</span> held · three a day. The
+                rest of the week comes from the next episode.
               </span>
-              <span className="text-meta">Posting Mon–Sun, 3 a day</span>
             </div>
           </div>
         </div>

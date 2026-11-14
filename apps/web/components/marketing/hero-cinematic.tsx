@@ -30,7 +30,7 @@ import * as React from 'react'
 
 import { NICHE_SCAN } from '@/lib/site-map'
 
-import { HeroDepth } from './hero-depth'
+import { HeroDepth, HeroFloatMobile } from './hero-depth'
 import { HeroBackdrop, HeroIndex, HeroMarginNote } from './hero-parts'
 import { FEATURE_TABS } from './home-content'
 import { SplitReveal } from './split-reveal'
@@ -127,6 +127,11 @@ export function HeroCinematic({ phrases }: HeroCinematicProps) {
                 <Link href="/pricing">See plans</Link>
               </Button>
             </div>
+
+            {/* The phone's one cut card. The floating three are wide-screen
+                only — `HeroFloatMobile` says why they cannot simply be
+                unhidden here. */}
+            <HeroFloatMobile />
           </div>
 
           <HeroMarginNote>one episode 52:14 · twelve cuts · three minutes</HeroMarginNote>

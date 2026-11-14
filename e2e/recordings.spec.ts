@@ -125,8 +125,10 @@ test.describe('motion-v2 recordings', () => {
     // Start at the 2026 cards and run through the contrast rows, the recipe
     // and the metrics band — the four effects of PR4 in the order a reader
     // meets them.
-    const stack = page.locator('.stack-cards')
-    await stack.scrollIntoViewIfNeeded()
+    // The 2026 cards, which are the grid again (D44) — still the right place
+    // to start, because the contrast rows and the recipe follow them.
+    const start = page.locator('#changed-heading')
+    await start.scrollIntoViewIfNeeded()
     await page.waitForTimeout(700)
 
     for (let index = 0; index < 26; index += 1) {

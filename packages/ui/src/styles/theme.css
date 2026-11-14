@@ -560,20 +560,6 @@
      Lighthouse score is an acceptance criterion.
      --------------------------------------------------------------------- */
 
-  /* M4 · The three 2026 rule cards stack as you scroll (Arigo "Latest work").
-
-     Sticky, at an increasing offset, so each card parks a little below the
-     one before it and the deck reads as a deck. The travel comes from the
-     space *between* the cards, not from making the cards taller: a card that
-     has to be 44vh to produce scroll is a card with a lot of empty bottom.
-
-     The default is the three-column grid it has always been. This only applies
-     where there is room for it and where motion is wanted, so a narrow screen,
-     reduced motion and a browser without view timelines all keep the grid. */
-  .stack-cards > li {
-    --stack-offset: 1.25rem;
-  }
-
   /* M5 · The before → after rows light as they pass the middle of the screen.
 
      **Neither column dims below `--color-text-muted`, and that is deliberate.**
@@ -787,48 +773,15 @@
 
   @media (prefers-reduced-motion: no-preference) {
     @supports (animation-timeline: view()) {
-      @media (width >= 64rem) {
-        /* Doubled class to out-specify the single Tailwind utility on the
-           element, without `!important`. In the grid the list paints the
-           hairlines *between* the cards — a 1px gap over its own background.
-           Stacked, the cards leave real space between them and that
-           background becomes a large empty panel with a border round it,
-           which is what the first attempt shipped. The cards carry their own
-           corners, so the list needs neither. */
-        .stack-cards.stack-cards {
-          display: flex;
-          flex-direction: column;
-          gap: 0;
-          background-color: transparent;
-          border-color: transparent;
-        }
-
-        .stack-cards > li {
-          position: sticky;
-          /* Below the sticky header, then one step per card. */
-          top: calc(9rem + var(--index) * var(--stack-offset));
-          /* The cards are `bg-ink-800` on an ink-800 band: in the grid their
-             edges come from the 1px gaps over the list's own background, and
-             stacked there is no such gap. Without an edge of their own they
-             read as three paragraphs floating on the band, which is what the
-             second attempt shipped. A card has to look like a card before it
-             can look like a card on top of another one. */
-          border: 1px solid var(--color-ink-line);
-          /* And it has to be opaque, or the card underneath shows through the
-             one covering it. */
-          background-color: var(--color-ink-800);
-          /* The travel, and it is deliberately short. This space is *empty*
-             while the next card crosses it, and these cards are four lines
-             tall — the first attempt used 34vh and left two dark voids the
-             height of a laptop screen. Enough to feel the card arrive and
-             cover the one before it; not enough to look unfinished. */
-          margin-bottom: 10vh;
-        }
-
-        .stack-cards > li:last-child {
-          margin-bottom: 0;
-        }
-      }
+      /* M4's stacked deck lived here and is gone — D44, Vlad's call on 14
+         November after seeing both laid out side by side. Stacking is a
+         device for large image cards; on four-line text cards each one
+         became a full-width bar sliding under another full-width bar, which
+         reads as a list collapsing rather than as a deck and cost two and a
+         half screens of scroll to say three sentences. The weight it was
+         reaching for is now in the cards themselves: an icon and a
+         title-size headline, in the three-column grid, with the section
+         heading still beside them. */
 
       .lit-before::after {
         animation: mirrorline-strike linear both;
@@ -1028,6 +981,41 @@
      inset (hence the 8% on `b`, which is the only one that shares its column),
      and a card lower than that has to be left of it. `c` is also kept below
      `a`'s bottom edge so the three read as placed rather than stacked. */
+  /* The phone's one cut card. In the flow, not floated: everything above is
+     positioned against a hero whose proportions only exist from 64rem up.
+     The lean is what keeps it reading as a card rather than a thumbnail. */
+  .hero-float-mobile {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    max-width: 22rem;
+    margin-top: 0.25rem;
+  }
+
+  .hero-float-mobile-image {
+    flex: none;
+    width: 5.25rem;
+    height: auto;
+    aspect-ratio: 9 / 16;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-ink-line);
+    rotate: -4deg;
+  }
+
+  .hero-float-mobile-caption {
+    min-width: 0;
+    font-size: var(--text-meta);
+    line-height: 1.35;
+    color: var(--color-on-ink-muted);
+    /* Two lines. A hook that wraps to four turns the card into a paragraph
+       with a picture beside it. */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
   .hero-float-a {
     top: 6%;
     right: 26%;
@@ -1180,9 +1168,12 @@
   }
 
   /* 16:9, the episode's own shape. */
+  /* A real frame now, not an empty box with a duration in the middle of it.
+     `position: relative` so the duration chip and the AI label can sit on
+     the image; `overflow: hidden` so the image takes the frame's corners. */
   .output-episode-frame {
-    display: grid;
-    place-items: center;
+    position: relative;
+    overflow: hidden;
     aspect-ratio: 16 / 9;
     max-height: 32vh;
     margin-inline: auto;
@@ -1193,22 +1184,81 @@
     color: var(--color-on-ink-muted);
   }
 
-  /* The bar the twelve moments are found on. */
+  .output-episode-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* Darkened, because this is the thing being taken apart rather than the
+       thing being shown: the twelve frames in front of it have to win. */
+    opacity: 0.55;
+  }
+
+  .output-episode-chip,
+  .output-episode-ai {
+    position: absolute;
+    padding: 0.25rem 0.625rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-ink-line-strong);
+    background-color: color-mix(in oklab, var(--color-ink-900) 82%, transparent);
+    font-size: var(--text-caption);
+    line-height: 1.2;
+  }
+
+  .output-episode-chip {
+    left: 0.75rem;
+    bottom: 0.75rem;
+    color: var(--color-on-ink-900);
+  }
+
+  /* Non-negotiable 4. Top-right, where it is on the frame rather than under
+     it — a label you have to look for is the same failure as not having one,
+     which is the lesson D34 wrote down about the hero's disclosure. */
+  .output-episode-ai {
+    right: 0.75rem;
+    top: 0.75rem;
+    color: var(--color-on-ink-muted);
+  }
+
+  /* The bar the twelve moments are found on. Taller than it was, because it
+     now holds a waveform rather than being a plain track. */
   .output-timeline {
     position: relative;
-    height: 10px;
+    height: 34px;
     margin-top: 0.75rem;
-    border-radius: 999px;
+    border-radius: var(--radius-md);
     background-color: var(--color-ink-800);
     overflow: hidden;
   }
 
+  /* The waveform the playhead crosses. */
+  .output-wave {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1px;
+    padding-inline: 2px;
+  }
+
+  /* Thin and fixed, not flexible. A bar that grows to fill its share of the
+     track is 15px wide at this width, and 160 of those is a bar chart; 2px
+     with the space between them is a waveform. */
+  .output-wave-bar {
+    flex: none;
+    width: 2px;
+    border-radius: 1px;
+    background-color: color-mix(in oklab, var(--color-on-ink-900) 22%, transparent);
+  }
+
+  /* Full height of the taller bar, so a found moment reads as a cut through
+     the waveform rather than as a dot sitting on it. */
   .output-marker {
     position: absolute;
-    top: 50%;
+    top: 0;
+    bottom: 0;
     width: 2px;
-    height: 10px;
-    translate: -50% -50%;
+    translate: -50% 0;
     background-color: var(--color-gold-bright);
   }
 
@@ -1253,19 +1303,68 @@
     pointer-events: none;
   }
 
+  /* A week, not a pill. The radius comes down with it: a seven-column grid
+     inside a 999px capsule leaves two dead crescents at the ends. */
   .output-week {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem 1rem;
+    flex-direction: column;
+    gap: 0.625rem;
     margin-inline: auto;
-    width: fit-content;
-    max-width: 100%;
-    padding: 0.625rem 1.25rem;
+    width: 100%;
+    max-width: 44rem;
+    padding: 0.75rem 1rem;
     border: 1px solid var(--color-ink-line-strong);
-    border-radius: 999px;
+    border-radius: var(--radius-lg);
     background-color: var(--color-ink-800);
+    color: var(--color-on-ink-muted);
+  }
+
+  .output-week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.375rem;
+  }
+
+  .output-week-day {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3125rem;
+    min-width: 0;
+  }
+
+  .output-week-label {
+    font-size: var(--text-caption);
+    line-height: 1;
+    color: var(--color-on-ink-faint);
+    text-align: center;
+  }
+
+  .output-week-slots {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1875rem;
+  }
+
+  /* A cut that landed, and a slot that did not get one. Both are drawn:
+     an empty slot is information — it is why the caption can say the rest of
+     the week comes from the next episode without that being a claim about
+     cuts this episode made. */
+  .output-week-cut,
+  .output-week-empty {
+    height: 0.5rem;
+    border-radius: 2px;
+  }
+
+  .output-week-cut {
+    background-color: var(--color-gold-bright);
+  }
+
+  .output-week-empty {
+    background-color: color-mix(in oklab, var(--color-on-ink-900) 12%, transparent);
+  }
+
+  .output-week-note {
+    text-align: center;
     color: var(--color-on-ink-muted);
   }
 

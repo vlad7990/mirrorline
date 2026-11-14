@@ -1654,3 +1654,115 @@ interaction work rather than motion on existing work. Not built.
 rather than going back to the three-column grid, and the Output section keeps
 D42's refusal of the mobile pin. Both remain one-line changes if that ever
 changes.
+
+## 2026-11-14 · D44 · The home page loses three sections, M4 is reverted, and six screenshots were a palette out of date
+
+A polish pass, preview only. Seven items, and most of them changed something
+that was wrong rather than adding something missing.
+
+### The home page is seventeen sections, not twenty
+
+Vlad's call. Three merges, each joining two sections that were making one
+argument:
+
+| Was | Now |
+|---|---|
+| 7 · "Four jobs, one loop" | an `h3` inside **Seven agents, one loop** |
+| 13 · "One demo week, in numbers" | an `h3` inside **Metrics** |
+| 16 · "Your files, your accounts" | an `h3` inside **Not a farm** |
+
+The order now: hero · 1 Start here · 2 Sound familiar · 3 What changed in
+2026 · 4 We built the opposite · 5 Any niche · 6 Two ways in · 7 The output ·
+8 Showcase · 9 Seven agents *(+ four jobs)* · 10 The gate · 11 Metrics *(+ a
+demo week)* · 12 From views to calls · 13 Who it is for · 14 Not a farm *(+
+plain billing)* · 15 Pricing · 16 FAQ · 17 Final CTA.
+
+**Which section absorbed which was decided by the band, not by the running
+order.** `FeatureTabs` paints its tab strip in `text-gold-bright` and
+`text-on-ink-faint` and its panel on an ink gradient: it is built for a dark
+band. Moving the agent ladder up into section 7 instead would have been the
+same merge with the colour risk pointing the other way. Likewise the demo
+week's figures were `text-gold-bright` on an ink band and are now
+`text-gold-text`, because the metrics section is `band-snow` — the D40 trap,
+where the band utilities remap surface, border and text but not the gold.
+
+### M4, the stacked 2026 cards, is reverted
+
+**Vlad's call, 14 November, taken from screenshots of both.** It reverses the
+"neither revert" line in D43, and the reason is that D43 decided about the
+cards as they were, not as they are now.
+
+Stacking is a device for large image cards. On four-line text cards each one
+became a full-width bar sliding under another full-width bar — a list
+collapsing, not a deck — and it cost two and a half screens of scroll to say
+three sentences, with the section heading long gone off the top. PR4 had
+already fought it twice: 34vh of travel left two dark voids, and removing the
+list's panel left the cards reading as floating paragraphs.
+
+What the stack was reaching for was weight. That is now in the cards
+themselves: an icon each and a title-size headline, in the three-column grid,
+with the heading still beside them. A third of the height, and it reads.
+
+The CSS went with it, and so did the class. A reverted effect leaves two
+things that both look harmless — a class on an element, and a block of CSS
+nothing matches — and either one invites the next person to finish the half
+they found. A test asserts `.stack-cards` no longer exists.
+
+### The vertical hero note was drawn over the screenshot on six pages
+
+`HeroMarginNote` is `absolute right-4`; the screenshot beside it is
+`lg:-mr-[6vw] xl:-mr-[10vw]`, which is to say it is *meant* to bleed off the
+right edge. Every page passing both — pricing, metrics, agents, product,
+how-it-works, trust — drew a column of letters down the middle of its own
+screenshot.
+
+Nothing caught it, and nothing could: the note is `aria-hidden`, so axe has
+no opinion, and both elements were exactly where their own CSS put them. Vlad
+saw it on /pricing; the other five came out of grepping for the pair.
+
+With a screenshot the same words now sit under the lead as an ordinary line,
+and they stop being `aria-hidden` while they are at it. Once it is horizontal
+readable text stating something true about the price, there is no reason a
+screen reader should be the one visitor who does not get it.
+
+### The studio screenshots were from before the gold restyle
+
+All eight files in `public/shots/` were dated 10 November — the coral
+palette, on six marketing pages. Vlad asked for the pricing one; all four
+pairs are regenerated, because the other three are the same staleness on the
+same six pages, and re-capturing one of four is choosing which one to leave
+wrong. Taken at 1440×900 from the gold preview, light and dark.
+
+### The Output section's episode is a frame now, and the week is a week
+
+17 §3 stage 1 was an empty grey box with a duration in the middle of it, and
+stage 5 was a pill of summary text. The episode is now the AI-generated room
+the hero already uses — honest twice over, since it is a room an episode
+would be recorded in and it is already material this site labels — with the
+duration chip, an "AI-generated" label on the frame itself, and a waveform
+the playhead crosses.
+
+The week strip is seven day columns of three slots, and the nine cuts that
+passed fill the first three days. **Thursday to Sunday are empty on purpose**
+and the caption says why. Drawing fourteen cuts this episode did not produce
+in order to tidy the grid is exactly the flattering rounding non-negotiable 7
+rules out. A test asserts one filled slot per passed verdict, and no more.
+
+The first waveform was sixty bars stretched to fill the track, which at that
+width is a 15px block each and reads as a bar chart. 160 bars at 2px reads as
+audio.
+
+### Two smaller things
+
+**Every marketing `h2` is now Geist Serif with one gold phrase.** Eight were
+Geist Sans. One of the eight, "Get started", turned out to be an `sr-only`
+heading sitting above `FinalCta`'s own visible `h2` — so that section was
+named by a heading nobody could see, while the visible one was referenced by
+nothing. The sr-only one is deleted and the visible one carries the id.
+
+**"Made for people who sell what they know" is gone.** It named an audience,
+and naming one is what 16 §1 rules out: it reads as coaches and consultants
+however carefully it is phrased, which is the narrowing D38 corrected
+everywhere else. It is now "Different trades, the same week of work", which
+is what the marquee underneath actually shows. The account-picker lead is
+Vlad's wording: "We never make you pick from an industry list."

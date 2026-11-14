@@ -90,6 +90,12 @@ export function PageHero({
             {lead}
           </p>
           {action ? <div className="reveal flex flex-wrap gap-3">{action}</div> : null}
+          {/* The margin note's other home. See the note further down for why
+              it cannot stay in the margin when a screenshot is bleeding
+              through it. */}
+          {marginNote && shot ? (
+            <p className="machine reveal m-0 text-mono text-on-ink-faint">{marginNote}</p>
+          ) : null}
         </div>
 
         {/* Bleeds past the container on wide screens, so the frame reads as a
@@ -130,11 +136,24 @@ export function PageHero({
         The room behind this is an AI-generated image, not a photograph of a client.
       </p>
 
-      {/* In the margin, not under the content. Placed in the flow it landed
-          below the screenshot in open space and read as a stray line; the
-          reference runs this type down the page edge, which is also the only
-          place it does not compete with anything. */}
-      {marginNote ? (
+      {/* Two placements, and which one runs depends on whether there is a
+          screenshot — because when there is, there is no margin.
+
+          The vertical note is `absolute right-4`, and the figure beside it is
+          `lg:-mr-[6vw] xl:-mr-[10vw]`: the screenshot is *meant* to bleed off
+          the right edge. So on all six pages that pass both, the note was
+          being drawn straight down the middle of the image — unreadable, and
+          making the screenshot look broken. On /pricing it read as a column
+          of letters over the dashboard. Nothing caught it: the note is
+          `aria-hidden`, so axe has no opinion, and both elements were exactly
+          where their own CSS put them.
+
+          With a screenshot the same words go under the lead as an ordinary
+          line — and stop being `aria-hidden` while they are at it. Once it is
+          horizontal readable text saying something true about the price,
+          there is no reason a screen reader should be the one visitor that
+          does not get it. */}
+      {marginNote && !shot ? (
         <div className="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 lg:block">
           <HeroMarginNote>{marginNote}</HeroMarginNote>
         </div>

@@ -64,8 +64,12 @@ export function FinalCta() {
   return (
     <Card className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
       <div className="flex min-w-0 max-w-[52ch] flex-col gap-2">
-        <h2 className="m-0 font-heading text-title text-text">
-          Start with the scan. It costs nothing.
+        {/* The id the Final CTA section's `aria-labelledby` points at. It
+            used to point at an sr-only "Get started" above this card, so the
+            section was named by a heading nobody could see while this
+            visible one sat under it, referenced by nothing. */}
+        <h2 id="final-cta-heading" className="m-0 font-serif text-site-h2 text-text">
+          Start with the scan. <span className="gold-phrase">It costs nothing.</span>
         </h2>
         <p className="m-0 text-meta text-text-muted">
           We look at what is actually growing in your niche and show you the format recipes before

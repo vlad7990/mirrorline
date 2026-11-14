@@ -13,7 +13,7 @@
  */
 
 import { Card, cn } from '@mirrorline/ui'
-import { ArrowRight, Check } from 'lucide-react'
+import { ArrowRight, BadgeCheck, Check, Scissors, Send, type LucideIcon } from 'lucide-react'
 import * as React from 'react'
 
 import { CountUp } from '../count-up'
@@ -31,26 +31,57 @@ import {
 /* 3. What changed in 2026                                                     */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * One icon per fact, keyed by id rather than by position.
+ *
+ * By id, because the three facts are a content constant someone will reorder
+ * one day, and an array indexed by position would silently hand the scissors
+ * to the sends card.
+ */
+const FACT_ICONS: Record<string, LucideIcon> = {
+  originality: BadgeCheck,
+  sends: Send,
+  'material-edits': Scissors,
+}
+
 export function ChangedIn2026() {
   return (
-    /* `stack-cards` makes this the stacked deck of 17 §1 M4 on wide screens,
-       where there is room for it and motion is wanted. Everywhere else —
-       narrow, reduced motion, no view timelines — the three-column grid is
-       exactly what it has always been, which is why those grid classes stay
-       on the element rather than being swapped out.
+    /* The three-column grid, and 17 §1 M4's stacked deck is gone.
+       Vlad's call on 14 November, taken from screenshots of both.
 
-       `overflow-hidden` had to go with it: it clips a sticky child to the
-       list's own box, so the cards would stop sticking the moment the list
-       scrolled past. The rounded corner moves onto the cards. */
-    <ol className="stack-cards m-0 grid list-none grid-cols-1 gap-px rounded-lg border border-ink-line bg-ink-line p-0 md:grid-cols-3">
+       Stacking is a device for large image cards. These are four lines of
+       text, so at `lg` each card became a full-width bar sliding under
+       another full-width bar — which reads as a list collapsing rather than
+       as a deck, and cost two and a half screens of scroll to say three
+       sentences. PR4 had already fought it twice (34vh of dead space, then
+       cards that read as floating paragraphs until they were given their own
+       border and background).
+
+       What the stack was reaching for was weight, and the icons and
+       title-size headlines added here give it that in a third of the height,
+       with the section heading still on screen beside the three facts.
+       Logged as D44. */
+    <ol className="m-0 grid list-none grid-cols-1 gap-px rounded-lg border border-ink-line bg-ink-line p-0 md:grid-cols-3">
       {CHANGE_FACTS.map((fact, position) => (
-        <li
-          key={fact.id}
-          className="reveal-item flex flex-col gap-2 rounded-lg bg-ink-800 p-6"
-          style={{ '--index': position } as React.CSSProperties}
-        >
-          <span className="machine text-mono text-gold-bright">{`0${position + 1}`}</span>
-          <h3 className="m-0 font-heading text-subtitle text-on-ink-900">{fact.headline}</h3>
+        <li key={fact.id} className="reveal-item flex flex-col gap-3 bg-ink-800 p-6">
+          {/* The weight the stack was missing. Stacking is a device built for
+              large image cards, and four lines of text sliding under four
+              more lines of text reads as a list that has gone wrong. An icon
+              and a title-size headline give each card something to be, so the
+              one covering the last one is covering something. */}
+          <div className="flex items-center justify-between gap-3">
+            <span
+              aria-hidden="true"
+              className="grid size-10 shrink-0 place-items-center rounded-full border border-ink-line text-gold-bright"
+            >
+              {React.createElement(FACT_ICONS[fact.id] ?? BadgeCheck, {
+                className: 'size-5',
+                strokeWidth: 1.6,
+              })}
+            </span>
+            <span className="machine text-mono text-gold-bright">{`0${position + 1}`}</span>
+          </div>
+          <h3 className="m-0 font-heading text-title text-on-ink-900">{fact.headline}</h3>
           <p className="m-0 text-meta text-on-ink-muted">{fact.body}</p>
         </li>
       ))}

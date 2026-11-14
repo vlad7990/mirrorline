@@ -52,6 +52,42 @@ const FLOAT_POSITIONS = [
   { className: 'hero-float-c', rotate: -3 },
 ] as const
 
+/**
+ * One cut card for the phone, in the flow under the buttons.
+ *
+ * The three floating cards are `display: none` below 64rem and should stay
+ * that way: they are absolutely placed against proportions that only exist
+ * on a wide screen, and the hand-measured positions that clear the inset
+ * preview there land on the headline here. So the phone gets one, laid out
+ * rather than floated — same frame, same hook, a slight lean so it still
+ * reads as a card rather than as a thumbnail.
+ *
+ * `aria-hidden` for the reason the floating three are: these are frames the
+ * Output section lists in full, and a screen reader meeting one here hears
+ * the same hook twice, the first time with none of its context. The hero's
+ * AI disclosure sits below and covers it, which is why this goes above that
+ * paragraph rather than under it.
+ */
+export function HeroFloatMobile() {
+  const cut = cuts[PREVIEW_CUT_INDEX]
+  const asset = cut ? reelAsset(cut.id) : undefined
+  if (!cut || !asset) return null
+
+  return (
+    <div aria-hidden="true" className="hero-float-mobile lg:hidden">
+      <Image
+        src={asset.posterSrc}
+        alt=""
+        width={180}
+        height={320}
+        sizes="96px"
+        className="hero-float-mobile-image"
+      />
+      <span className="hero-float-mobile-caption">{cut.hook}</span>
+    </div>
+  )
+}
+
 export function HeroDepth() {
   const floating = cuts.slice(0, FLOATING_COUNT)
   const previewCut = cuts[PREVIEW_CUT_INDEX]
