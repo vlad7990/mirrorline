@@ -40,7 +40,16 @@ export function ThemeSwitch({ className }: { className?: string }) {
       <legend className="sr-only">Theme</legend>
       <div className="flex gap-1 rounded-md border border-border bg-background p-1">
         {OPTIONS.map(({ value, label, Icon }) => (
-          <label key={value} className="flex-1">
+          // `relative` is not spacing. The input below is `sr-only`, which is
+          // `position: absolute`, so without a positioned ancestor it resolves
+          // against whatever happens to be positioned further up — or the
+          // initial containing block — and the control's hit target ends up
+          // somewhere else on the page. A real click still works, because it
+          // lands on the span and the label forwards it; a synthetic click on
+          // the control does not, which is how this surfaced once the switch
+          // was put in the footer. The same failure `.scroll-x` guards against
+          // in theme.css.
+          <label key={value} className="relative flex-1">
             <input
               type="radio"
               name={groupName}
