@@ -164,7 +164,7 @@ while being three of the most image-heavy pages described. Per inner page:
 1. ★ Page hero — own AI image, labelled, inset = cross-fade of three samples.
 2. ★ Scroll-lit comparison table, categories only and no brand names.
 3. ★ Four category columns with a visual each: clipping tool (raw files), agency (one generic post), DIY (an empty calendar), Mirrorline (a filled calendar).
-4. ★ **A decision helper that can recommend against us.** Two or three questions, and where the honest answer is a freelance editor or doing it yourself, it says so and does not show a plan. A comparison page that recommends itself in every branch is a price list wearing a quiz.
+4. ★ **A decision helper that can recommend against us.** Three questions, and where the honest answer is a freelance editor or doing it yourself, it says so and does not show a plan. A comparison page that recommends itself in every branch is a price list wearing a quiz. **Built, and the honesty is a test rather than a promise:** of the eighteen answer combinations, fifteen end somewhere other than a plan of ours, and the suite fails if that ever drops below half (D51).
 5. ★ Page-specific final CTA.
 
 ### ★ /metrics (F4)

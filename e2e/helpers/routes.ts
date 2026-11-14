@@ -179,7 +179,10 @@ export const ROUTES: readonly RouteEntry[] = [
     slug: 'pricing',
     name: 'Pricing',
     area: 'marketing',
-    h1: 'One flat price a month',
+    // `getByRole('heading', { name })` matches on a substring, so the accent
+    // phrase after the comma is not required here — but the comma is, because
+    // F3 reworded the headline and this table is what noticed.
+    h1: 'One flat price,',
   },
   {
     path: '/trust',

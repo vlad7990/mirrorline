@@ -18,10 +18,22 @@ import type { Metadata } from 'next'
 import * as React from 'react'
 
 import { Choices } from '@/components/marketing/choices'
+import { CompareColumns } from '@/components/marketing/compare-columns'
+import { DecisionHelper } from '@/components/marketing/decision-helper'
 import { CONTRAST_ROWS } from '@/components/marketing/home/problem-content'
-import { PageHero } from '@/components/marketing/page-hero'
+import { HeroInset, InsetCycle } from '@/components/marketing/kit/hero-inset'
+import { PAGE_CTAS, PageCta } from '@/components/marketing/kit/page-cta'
+import { PageHeroImage } from '@/components/marketing/kit/page-hero-image'
+import { PAGE_HERO_IMAGES, allocateFrames } from '@/components/marketing/kit/page-media'
 import { Section, SectionHeading } from '@/components/marketing/primitives'
-import { SiteCta } from '@/components/marketing/site-cta'
+
+/**
+ * Three for the hero's cycle, one for the agency column.
+ *
+ * Offset 2 so this page does not open on a frame /pricing or /how-it-works
+ * opened with.
+ */
+const [INSET_FRAMES = [], AGENCY_FRAMES = []] = allocateFrames([3, 1], 2)
 
 export const metadata: Metadata = {
   title: 'Compare',
@@ -63,7 +75,7 @@ const WHERE_WE_LOSE: readonly Honest[] = [
 export default function ComparePage() {
   return (
     <>
-      <PageHero
+      <PageHeroImage
         eyebrow="Compare"
         title={
           <>
@@ -71,6 +83,7 @@ export default function ComparePage() {
           </>
         }
         lead="Five approaches, including ours, and the rows where the other four win. We name categories rather than companies: the argument is about the method, whoever is selling it."
+        image={PAGE_HERO_IMAGES.compare}
         index={[
           { number: '01', title: 'Doing it yourself' },
           { number: '02', title: 'A freelance editor' },
@@ -78,8 +91,31 @@ export default function ComparePage() {
           { number: '04', title: 'A content agency' },
           { number: '05', title: 'Repost pages' },
         ]}
-        marginNote="categories, not brand names"
+        inset={
+          <HeroInset caption="Three accounts that chose differently.">
+            <InsetCycle frames={INSET_FRAMES} />
+          </HeroInset>
+        }
       />
+
+      {/* What each one hands you ------------------------------------------ */}
+      <Section className="band-snow" aria-labelledby="columns-heading">
+        <SectionHeading
+          id="columns-heading"
+          eyebrow="What you end up with"
+          rail
+          title={
+            <>
+              Four approaches, <span className="gold-phrase">four different objects.</span>
+            </>
+          }
+          headingClassName="text-site-h2"
+          lead="The difference is less about quality than about what is actually in your hands on Friday — a folder, a post, a thin calendar or a full one."
+        />
+        <div className="mt-10">
+          {AGENCY_FRAMES[0] ? <CompareColumns frame={AGENCY_FRAMES[0]} /> : null}
+        </div>
+      </Section>
 
       {/* The table -------------------------------------------------------- */}
       <Section aria-labelledby="choices-heading">
@@ -132,7 +168,14 @@ export default function ComparePage() {
             </thead>
             <tbody>
               {CONTRAST_ROWS.map((row) => (
-                <tr key={row.category} className="border-b border-border last:border-b-0">
+                /* `scroll-lit`: the row lights as it reaches the middle of
+                   the screen and dims as it leaves (19 v2 ★2, the device the
+                   home page uses). It dims and never disappears — theme.css
+                   carries the warning, and the reason is that a view-timeline
+                   animation holds its start state, so fading real text toward
+                   transparent would park it below 4.5:1 for as long as it sat
+                   there. Both ends of this are readable. */
+                <tr key={row.category} className="scroll-lit border-b border-border last:border-b-0">
                   <th scope="row" className="p-4 align-top">
                     <span className="block font-heading text-subtitle text-text">
                       {row.category}
@@ -202,7 +245,31 @@ export default function ComparePage() {
         </ul>
       </Section>
 
-      <SiteCta next={{ href: '/pricing', label: 'Pricing' }} />
+      {/* The decision helper ---------------------------------------------- */}
+      {/* Last, on purpose. It is the only section that asks the reader for
+          anything, and it should come after they have seen the table, the
+          columns and the three rows where we lose — so the verdict lands as a
+          summary of what they have just read rather than as a quiz that
+          decides it for them. */}
+      <Section className="band-snow" aria-labelledby="helper-heading">
+        <SectionHeading
+          id="helper-heading"
+          eyebrow="Three questions"
+          rail
+          title={
+            <>
+              Should you <span className="gold-phrase">use us at all?</span>
+            </>
+          }
+          headingClassName="text-site-h2"
+          lead="Answer honestly and this will often say no. Most people who read a page like this would be better served by an editor, or by doing it themselves for another few months."
+        />
+        <div className="mt-10">
+          <DecisionHelper />
+        </div>
+      </Section>
+
+      <PageCta cta={PAGE_CTAS.compare} />
     </>
   )
 }

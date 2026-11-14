@@ -2629,3 +2629,124 @@ nothing here is dishonest — but it is the first place that gap is visible to
 somebody who is not looking for it. Fixing it means changing studio
 components, which would also invalidate the six screenshots this PR just
 took, so it is a PR of its own rather than a quiet widening of this one.
+
+## 2026-11-14 · D51 · A pricing page that draws the month it sells, and a quiz that tells most people to go elsewhere
+
+PR F3, /pricing and /compare. Both were already honest; neither had anything
+to look at. The interesting decisions here are about what the honesty is
+allowed to cost.
+
+### The decision helper has to be able to lose the sale, so that is asserted
+
+19 v2 ★4 asks /compare for "a decision helper that can recommend against us",
+and Vlad's own instruction is explicit: it "must honestly recommend a
+freelancer or DIY when that fits". That is easy to write once and easy to
+erode later — a branch changed here, a default changed there, and in a year
+every path ends at a plan and nobody remembers it was meant not to.
+
+So the logic is a pure function in `decision-helper-content.ts` with the
+honesty written down as tests. Three questions give eighteen combinations;
+**fifteen of them do not sell anything**, and the suite fails if that ever
+drops below half. Four of the six verdicts have `planId: null`, and a
+separate assertion pins the rule the component depends on: `isUs: false` and
+"here is a plan" can never both be true. A third test asserts every verdict is
+reachable, because a branch nobody can arrive at is dead copy pretending to be
+a choice.
+
+Verified in a browser as well as in the suite, because the component is where
+the rule could still be broken: answering "no footage" and "I want to choose
+the cuts myself" each produce a verdict with **zero** buttons in the panel,
+and only the best case renders one.
+
+**The questions ask about inputs and cadence, never about a trade.** 16 §1 and
+13 §1 allow segmentation by account type and goal only, so "what industry are
+you in" would contradict the premise of the entire site. A test greps the
+question and option text for `industry`, `niche`, `sector` and three trades.
+
+**The ladder is ordered by how decisive each answer is, not by the order the
+questions are asked.** No footage settles it whatever else is true — there is
+nothing for us, an editor, or a tool to work from. Wanting to direct the edit
+settles it next, because that is a working relationship we do not offer at any
+volume, and saying so is cheaper for both sides than discovering it in month
+two.
+
+### The price list became a card grid, which overturns its own comment
+
+The old page argued, in a comment, that a price list reads down: one bordered
+band, one row per tier, so the mono figures line up against each other. That
+was true of four rows. It stopped being true at five, where the list ran most
+of a screen and the two prices a reader actually wanted to compare had
+scrolled apart. Three columns put all five plans where they can be compared at
+once, which is what the comment was protecting in the first place.
+
+**The month preview is drawn from the plan's own post count, and the count is
+now a number.** The volume was only ever prose — `"90 posts a month (3 a
+day)"` — and drawing a calendar from that would have meant parsing a sentence,
+which makes rewording the copy silently change the picture. `postsInPeriod`
+is a typed field beside the prose, exactly as `priceUsd` sits beside `price`,
+**and a test reads the digits back out of the copy and asserts they agree**.
+Parsing is the wrong way to render it and precisely the right way to check it.
+
+`distributePosts` spreads the remainder rather than piling it on one day: 40
+over 30 is ten days of two and twenty of one, not one day of eleven. Front-
+loaded, because the grid reads left to right. A test asserts the dots always
+sum to the number printed beside them — a calendar showing 89 dots next to the
+words "90 posts a month" is the kind of small dishonesty nobody notices and
+nobody can defend.
+
+**Studio draws no month at all.** It is a waitlist, `postsInPeriod` is null,
+and a full calendar for a plan nobody can buy would be a picture of something
+that does not happen.
+
+### Two accessibility decisions that changed the markup
+
+**The plan cards are not the selection control.** Each card contains the
+button that opens the lead form, so making the card itself a radio would nest
+an interactive element inside an interactive one — ambiguous to a screen
+reader and unreachable in any sensible tab order. The selection lives in its
+own labelled radio group under the grid and the matching card answers by
+taking the gold. One state, two places showing it, no nesting.
+
+**The gold sweep never carries the state.** It is `aria-hidden`, it runs once,
+and it lives inside `prefers-reduced-motion: no-preference`. What holds the
+selection is a gold border and `aria-checked`, both of which survive reduced
+motion and a repaint. Same rule as the choice pill on /faq.
+
+The decision helper uses native `<input type="radio">` rather than buttons
+with `role="radio"`: arrow-key navigation, a single tab stop and form
+semantics come free, and nothing here needs a control a radio cannot be. Its
+verdict sits in an `aria-live="polite"` region — polite, because a verdict is
+not urgent enough to interrupt what someone is reading.
+
+### The route table caught the headline change; a second copy of it did not
+
+/pricing's `h1` became "One flat price, a month at a time." and the sweep
+failed immediately: `e2e/helpers/routes.ts` pins the exact visible heading for
+every route, and four specs read it. Updated to match on `One flat price,` —
+the comma included, because that is the part that actually changed.
+
+**And then the same rename broke a fifth place nobody had looked at.**
+`navigation-race.spec.ts` asserted the pricing heading with its own string
+literal rather than reading the table, so it kept failing after the table was
+fixed. The instructive part is how it presented: it failed in the full run
+alongside the known `motion.spec.ts` selection-pill flake, so the obvious
+reading was "two flakes". Re-running both in isolation three times is what
+separated them — the pill passed 3 of 3 and this failed 3 of 3. **A
+consistent failure wearing a flake's clothes**, and it would have been
+committed if the pair had simply been written off.
+
+It now reads the heading out of `ROUTES` and throws if the route is missing,
+rather than falling back to something that would let the assertion quietly
+stop asserting. A second place holding the same string is a second place to
+forget.
+
+### Measurements
+
+Lighthouse mobile, medians of three runs each, after the rebuild: **/product
+90, /how-it-works 91, /pricing 91.** /pricing was 92 before this PR and lost a
+point to the card grid and the month preview, which is an acceptable price for
+the section and still clear of the bar. /product remains the one sitting
+exactly on 90 — F4 adds an interactive picker to /metrics and should re-check
+all three.
+
+Unit tests: 465, up 25. axe: clean on both pages in both themes.

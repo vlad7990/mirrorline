@@ -192,3 +192,47 @@
     width: var(--fill);
   }
 }
+
+/* ---------------------------------------------------------------------------
+   The gold sweep on a chosen plan (19 v2 ★2, /pricing).
+
+   A band of light that crosses the card once when it becomes the selection,
+   and then is gone. It runs on a timer rather than a scroll timeline because
+   it answers a click: the reader did something, and this is the
+   acknowledgement.
+
+   **The selection is never conveyed by the sweep.** It is decorative and
+   `aria-hidden`; the card carries `aria-checked` and a permanent gold border,
+   both of which survive reduced motion, a repaint and a screen reader. The
+   same rule the choice pill on /faq is built under — a moving thing may
+   confirm a state and must never be the only thing holding it.
+   --------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  .plan-sweep::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(
+      100deg,
+      transparent 20%,
+      rgba(245, 184, 61, 0.26) 48%,
+      transparent 76%
+    );
+    /* Starts off the left edge and ends off the right. `both` would hold it
+       parked over the card; `forwards` on a one-shot that ends transparent is
+       the same thing, so neither is used and the default fill lets it
+       disappear. */
+    animation: mirrorline-plan-sweep 900ms var(--ease-out);
+  }
+}
+
+@keyframes mirrorline-plan-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}

@@ -36,6 +36,22 @@ export interface PricingTier {
    */
   readonly bestFor: string
   readonly includes: readonly string[]
+  /**
+   * How many posts the tier delivers across its `days`, for the month
+   * preview on /pricing (19 v2 ★3).
+   *
+   * A typed number beside the prose rather than a number parsed out of it.
+   * The volume is already written in `includes` — "90 posts a month (3 a
+   * day)" — and reading it back out with a regular expression would make a
+   * sentence load-bearing: rephrasing the line would silently change the
+   * calendar. This is the same arrangement `priceUsd` has with `price`, and
+   * it carries the same guarantee: **a test asserts the two never disagree.**
+   *
+   * `null` where there is no volume to draw. Studio is a waitlist, and
+   * drawing a month of posts for a plan nobody can buy would be a picture of
+   * something that does not happen.
+   */
+  readonly postsInPeriod: number | null
   /** Growth is the suggested tier. */
   readonly isSuggested: boolean
   /**
@@ -56,6 +72,7 @@ export const PRICING_TIERS: readonly PricingTier[] = [
     summary: 'A short, paid trial. You see real videos before you commit to a month.',
     bestFor: 'A business trying us out, on a new or an existing account.',
     includes: ['12 videos', 'The Niche Scan', 'Scheduling', 'One full report'],
+    postsInPeriod: 12,
     isSuggested: false,
     comingLaterLabel: null,
   },
@@ -69,6 +86,7 @@ export const PRICING_TIERS: readonly PricingTier[] = [
     summary: 'Daily posting on three platforms, with two remakes a week.',
     bestFor: 'A business with an account that posts rarely or generically.',
     includes: ['90 posts a month (3 a day)', '2 remakes a week', '3 platforms', 'Weekly ledger'],
+    postsInPeriod: 90,
     isSuggested: true,
     comingLaterLabel: null,
   },
@@ -88,6 +106,7 @@ export const PRICING_TIERS: readonly PricingTier[] = [
       'Monthly strategy call',
       'Portfolio view across brands',
     ],
+    postsInPeriod: 180,
     isSuggested: false,
     comingLaterLabel: null,
   },
@@ -101,6 +120,7 @@ export const PRICING_TIERS: readonly PricingTier[] = [
     summary: 'For one person posting on two platforms, built around your own long-form.',
     bestFor: 'An individual — creator, expert or personal brand — with an audience already.',
     includes: ['~40 posts a month', '1 remake a week', '2 platforms', 'Weekly ledger'],
+    postsInPeriod: 40,
     isSuggested: false,
     comingLaterLabel: null,
   },
@@ -118,6 +138,7 @@ export const PRICING_TIERS: readonly PricingTier[] = [
       'The same engine at the smallest size. Not open yet: joining the waitlist is the only action, and there is nothing to pay.',
     bestFor: 'An individual starting an account from zero.',
     includes: ['From month 2: 60 posts a month', '4 created videos a month', 'You approve each post'],
+    postsInPeriod: null,
     isSuggested: false,
     comingLaterLabel: 'Waitlist',
   },

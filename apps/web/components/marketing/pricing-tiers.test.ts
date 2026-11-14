@@ -21,6 +21,51 @@ function tier(id: string) {
   return found
 }
 
+describe('postsInPeriod', () => {
+  /**
+   * The volume is written twice — once as prose in `includes` and once as a
+   * number for the month preview to draw. This is the assertion that makes
+   * the duplication safe, and it is the same guarantee `price`/`priceUsd`
+   * already has.
+   *
+   * It reads the digits back out of the prose on purpose. Parsing is the
+   * wrong way to *render* the calendar, because it would make a sentence
+   * load-bearing; it is exactly the right way to *check* it, because the
+   * check should fail when the sentence and the number stop agreeing.
+   */
+  it.each(
+    PRICING_TIERS.filter((candidate) => candidate.postsInPeriod !== null).map((candidate) => [
+      candidate.id,
+      candidate,
+    ]),
+  )('the number for %s matches the volume its own copy claims', (_id, candidate) => {
+    // Arrange: the line that states a post or video count.
+    const volumeLine = candidate.includes.find((line) => /\d+\s+(posts|videos)/.test(line))
+
+    // Act
+    const claimed = Number(volumeLine?.match(/(\d+)\s+(?:posts|videos)/)?.[1])
+
+    // Assert
+    expect(volumeLine).toBeDefined()
+    expect(claimed).toBe(candidate.postsInPeriod)
+  })
+
+  it('draws no month for a plan nobody can buy', () => {
+    // Studio is a waitlist. A calendar full of posts for it would be a
+    // picture of something that does not happen.
+    expect(tier('studio').postsInPeriod).toBeNull()
+  })
+
+  it('never claims more posts a day than the largest plan delivers', () => {
+    // Six a day is the most any plan promises (Scale). A tier above that
+    // would be a volume we have never said we can produce.
+    for (const candidate of PRICING_TIERS) {
+      if (candidate.postsInPeriod === null) continue
+      expect(candidate.postsInPeriod / candidate.days).toBeLessThanOrEqual(6)
+    }
+  })
+})
+
 describe('perDayUsd', () => {
   it('divides a two-week price by fourteen days', () => {
     // Arrange: Pilot is $750 for 2 weeks.

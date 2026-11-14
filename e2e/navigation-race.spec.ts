@@ -28,6 +28,20 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
 import { onlyProject } from './helpers/project-gate'
+import { ROUTES } from './helpers/routes'
+
+/**
+ * The visible `<h1>` of /pricing, from the one table that holds it.
+ *
+ * Throws rather than falling back: a missing route here means the table has
+ * been renamed or the path has moved, and a test that quietly stopped
+ * checking the heading would still pass while asserting nothing.
+ */
+function pricingHeading(): string {
+  const pricing = ROUTES.find((route) => route.path === '/pricing')
+  if (pricing === undefined) throw new Error('No /pricing route in e2e/helpers/routes.ts')
+  return pricing.h1
+}
 
 onlyProject('chromium', 'a navigation race is a property of the router, not of the viewport')
 
@@ -178,7 +192,15 @@ test('a transition is released by its own navigation, not by the stall timeout',
   await mainNav.getByRole('link', { name: 'Pricing', exact: true }).click()
 
   await expect(page).toHaveURL(/\/pricing$/)
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('One flat price a month')
+  /*
+   * The heading comes from the route table rather than from a literal here.
+   *
+   * It was a literal, and F3 reworded /pricing's headline: `routes.ts` was
+   * updated, this copy was not, and the test then failed three runs in a row
+   * while looking exactly like the timing flake sitting beside it in the same
+   * run. A second place holding the same string is a second place to forget.
+   */
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(pricingHeading())
 
   // Chromium supports the API, so a transition really ran. A runner without
   // it records nothing — the component falls back to a plain navigation,
