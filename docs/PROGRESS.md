@@ -11,10 +11,10 @@
 **Branch** `v4/site-and-metrics` · **last commit** `aa35524` · clean tree,
 pushed. The `Branch: main` line above is stale; this is where the work is.
 
-**Preview:** https://mirrorline-h5idtti5w-vn-mn-product-group.vercel.app —
+**Preview:** https://mirrorline-jbkzvdgz0-vn-mn-product-group.vercel.app —
 `target: preview`, Ready, built from the PR B tree. Nothing has been promoted
 to production. Share link (expires 15 Nov):
-`?_vercel_share=AwKroqtN3qTBp57WzVUBZdGxnam7niDy`. What to look at: `/` for
+`?_vercel_share=gZp0FyvtICPD9mq60uF6XG10fd2HjrzS`. What to look at: `/` for
 the twelve sample reels in the marquee and one per account-type card, and for
 the footer at the bottom of it; the footer again at 834px and 390px, where it
 goes to three columns and then to collapsible groups; the theme switch in its
