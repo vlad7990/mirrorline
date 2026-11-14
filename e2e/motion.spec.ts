@@ -264,6 +264,235 @@ test('reduced motion keeps the pill and drops only its travel', async ({ page })
 })
 
 /* -------------------------------------------------------------------------- */
+/* Motion v2 — 17 §1 M1, the hero                                              */
+/* -------------------------------------------------------------------------- */
+
+test('splitting the headline does not cost the page its h1', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  // The trap D33 wrote up, one level deeper. SplitText with `aria: 'auto'`
+  // moves the original text onto the element it splits as an `aria-label` and
+  // hides the pieces — so splitting the wrong element empties the heading's
+  // accessible name, and the section pointing at it with `aria-labelledby`
+  // loses its name too. Here only the fixed line is split, and the cycling
+  // half must still be part of the name.
+  const heading = page.getByRole('heading', { level: 1 })
+  await expect(heading).toHaveCount(1)
+
+  const name = await heading.evaluate((node) => (node.textContent ?? '').trim())
+  expect(name).toContain('Original short video')
+  expect(name.length).toBeGreaterThan('Original short video,'.length)
+
+  // The section is named by it, so an empty h1 would take the landmark with it.
+  await expect(page.locator('section[aria-labelledby="hero-heading"]')).toHaveCount(1)
+})
+
+test('the split never labels an element that may not carry a label', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  // `aria: 'auto'` moves the split text onto the element as an `aria-label`.
+  // On the `<h2>` the showcase heading splits that is permitted; on the plain
+  // `<span>` the hero splits it is `aria-prohibited-attr` — a serious axe
+  // violation, and how the lines branch came to use `aria: 'none'`.
+  //
+  // Asserted here as well as in the axe sweep because axe reports it as one
+  // of many findings on a whole page, and this names the cause.
+  const prohibited = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('[aria-label]'))
+      .filter((node) => {
+        const role = node.getAttribute('role')
+        if (role) return false
+        // The elements where a label is allowed without an explicit role.
+        return !/^(a|button|input|select|textarea|img|h[1-6]|nav|section|aside|form|dialog|table|summary|iframe|area|fieldset|figure|video|audio|ol|ul|li)$/i.test(
+          node.tagName,
+        )
+      })
+      .map((node) => `${node.tagName.toLowerCase()}[aria-label="${node.getAttribute('aria-label')}"]`),
+  )
+
+  expect(prohibited).toEqual([])
+})
+
+test('the hero headline rises without fading, because it is the LCP', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  // Text held at `opacity: 0` has not been painted, so a fade on the hero
+  // headline moves Largest Contentful Paint by the whole duration of the
+  // animation. Lines are masked and move instead — the same lesson
+  // `mirrorline-reveal` carries in theme.css.
+  const opacities = await page
+    .locator('#hero-heading')
+    .evaluateAll((nodes) =>
+      nodes.flatMap((node) =>
+        Array.from(node.querySelectorAll('*')).map((child) => getComputedStyle(child).opacity),
+      ),
+    )
+
+  for (const opacity of opacities) {
+    expect(Number.parseFloat(opacity)).toBeGreaterThan(0)
+  }
+})
+
+test('the hero depth runs on three distinct depths, on a scroll timeline', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  const depths = await page.evaluate(() => {
+    const read = (selector: string) => {
+      const element = document.querySelector(selector)
+      if (!element) return null
+      const computed = getComputedStyle(element)
+      return {
+        depth: computed.getPropertyValue('--hero-depth').trim(),
+        timeline: computed.animationTimeline,
+        name: computed.animationName,
+      }
+    }
+    return { glow: read('.hero-glow'), floats: read('.hero-floats'), inset: read('.hero-inset') }
+  })
+
+  for (const layer of [depths.glow, depths.floats, depths.inset]) {
+    expect(layer).not.toBeNull()
+    expect(layer?.name).toBe('mirrorline-hero-depth')
+    // `scroll()`, not `view()`: the hero starts in the viewport, so a view
+    // timeline would have spent a third of its travel before the reader
+    // touched anything.
+    expect(layer?.timeline).toContain('scroll')
+  }
+
+  // Three layers at one depth is not depth.
+  const values = [depths.glow?.depth, depths.floats?.depth, depths.inset?.depth]
+  expect(new Set(values).size).toBe(3)
+})
+
+test('under reduced motion the hero is a flat composition', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto(FAQ_PAGE)
+
+  const states = await page.evaluate(() =>
+    ['.hero-glow', '.hero-floats', '.hero-inset'].map((selector) => {
+      const element = document.querySelector(selector)
+      const computed = element ? getComputedStyle(element) : null
+      return { selector, name: computed?.animationName, transform: computed?.transform }
+    }),
+  )
+
+  for (const state of states) {
+    // The whole depth block sits inside `no-preference`, so there is no
+    // animation at all — the layers are still placed, just not moved.
+    expect(state.name, state.selector).toBe('none')
+    expect(['none', 'matrix(1, 0, 0, 1, 0, 0)']).toContain(state.transform)
+  }
+})
+
+test('the floating cuts clear the inset preview and stay inside the hero', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  const geometry = await page.evaluate(() => {
+    const box = (selector: string) => {
+      const element = document.querySelector(selector)
+      return element ? element.getBoundingClientRect() : null
+    }
+    return {
+      hero: box('section[aria-labelledby="hero-heading"]'),
+      inset: box('.hero-inset'),
+      floats: Array.from(document.querySelectorAll('.hero-float')).map((node) => {
+        const rect = node.getBoundingClientRect()
+        return { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right }
+      }),
+    }
+  })
+
+  expect(geometry.hero).not.toBeNull()
+  expect(geometry.inset).not.toBeNull()
+  expect(geometry.floats).toHaveLength(3)
+
+  const inset = geometry.inset!
+  const hero = geometry.hero!
+
+  for (const float of geometry.floats) {
+    // The bug this exists for: at 1440x900 two cards sat on top of the inset
+    // preview and the third ran off the bottom of the hero. Decoration that
+    // covers the one frame a reader can actually watch is not decoration.
+    const overlapsInset =
+      float.left < inset.right &&
+      float.right > inset.left &&
+      float.top < inset.bottom &&
+      float.bottom > inset.top
+    expect(overlapsInset, 'a floating cut is sitting on the inset preview').toBe(false)
+
+    // And they stay in the room: a card half-outside the hero reads as a
+    // rendering fault rather than as depth.
+    expect(float.bottom).toBeLessThanOrEqual(hero.bottom + 1)
+    expect(float.top).toBeGreaterThanOrEqual(hero.top - 1)
+  }
+})
+
+test('nothing decorative is drawn over the hero AI disclosure', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  // Non-negotiable 4, as geometry. The sentence ran under the inset preview
+  // and behind a floating card, and a label you cannot read is the same
+  // failure as not having one — which is why it was moved above the index in
+  // the first place. Both are decoration; the label outranks both.
+  const overlaps = await page.evaluate(() => {
+    const label = Array.from(document.querySelectorAll('p')).find((node) =>
+      (node.textContent ?? '').includes('AI-generated sample frames'),
+    )
+    if (!label) return null
+
+    // The *glyphs*, not the block. The paragraph is full width with padding
+    // that keeps the text out of the inset's column, so its own box still
+    // reaches the corner while nothing readable is under there. A Range gives
+    // the rectangles the text actually occupies, line by line.
+    const range = document.createRange()
+    range.selectNodeContents(label)
+    const textBoxes = Array.from(range.getClientRects())
+
+    const hits = (selector: string) =>
+      Array.from(document.querySelectorAll(selector))
+        .map((node) => node.getBoundingClientRect())
+        .filter((box) =>
+          textBoxes.some(
+            (text) =>
+              box.left < text.right &&
+              box.right > text.left &&
+              box.top < text.bottom &&
+              box.bottom > text.top,
+          ),
+        ).length
+
+    return { inset: hits('.hero-inset'), floats: hits('.hero-float') }
+  })
+
+  expect(overlaps).not.toBeNull()
+  expect(overlaps?.inset, 'the inset preview covers its own label').toBe(0)
+  expect(overlaps?.floats, 'a floating cut covers the AI disclosure').toBe(0)
+})
+
+test('the hero labels its generated frames where a reader will meet them', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  const hero = page.locator('section[aria-labelledby="hero-heading"]')
+
+  // The floating cards duplicate three of the twelve frames the Output
+  // section lists in full, so they are decoration and hidden.
+  await expect(hero.locator('.hero-floats')).toHaveAttribute('aria-hidden', 'true')
+  await expect(hero.locator('.hero-glow')).toHaveAttribute('aria-hidden', 'true')
+
+  // The inset preview is not decoration: it is the one frame in the hero a
+  // reader can look at, so non-negotiables 4 and 7 have to be answered on it
+  // rather than by a sentence somewhere below.
+  const inset = hero.locator('.hero-inset')
+  await expect(inset).not.toHaveAttribute('aria-hidden', 'true')
+  await expect(inset).toContainText('AI scene')
+  await expect(inset).toContainText('Sample')
+
+  // And the sentence that covers the cards, which cannot carry a label
+  // themselves. It used to name only the room.
+  await expect(hero).toContainText('AI-generated sample frames')
+})
+
+/* -------------------------------------------------------------------------- */
 /* Motion v2 — 17 §3, the Output sequence                                      */
 /* -------------------------------------------------------------------------- */
 

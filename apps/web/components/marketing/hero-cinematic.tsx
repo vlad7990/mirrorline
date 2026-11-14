@@ -30,8 +30,10 @@ import * as React from 'react'
 
 import { NICHE_SCAN } from '@/lib/site-map'
 
+import { HeroDepth } from './hero-depth'
 import { HeroBackdrop, HeroIndex, HeroMarginNote } from './hero-parts'
 import { FEATURE_TABS } from './home-content'
+import { SplitReveal } from './split-reveal'
 import { TypedPhrase } from './typed-phrase'
 
 /** The id of the upload band, further down, where "You send" begins. */
@@ -60,6 +62,7 @@ export function HeroCinematic({ phrases }: HeroCinematicProps) {
       className="band-ink relative isolate flex min-h-[86vh] flex-col justify-end overflow-clip"
     >
       <HeroBackdrop />
+      <HeroDepth />
 
       <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 px-5 pb-7 pt-28 sm:px-8 sm:pt-32">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-end">
@@ -83,7 +86,20 @@ export function HeroCinematic({ phrases }: HeroCinematicProps) {
               id="hero-heading"
               className="reveal-lead m-0 max-w-[18ch] text-balance text-site-hero text-on-ink-900"
             >
-              Original short video,
+              {/* **Only the fixed half is split, and that is the design.**
+                  SplitText rewrites the DOM it is given; `TypedPhrase`
+                  rewrites its own text on a timer. Handed the whole headline,
+                  the split would freeze the cycling line into whatever it
+                  happened to say at that instant — and `aria: 'auto'` would
+                  copy that half-typed string onto the element as a permanent
+                  `aria-label`, so the page's one `h1` would be named after a
+                  phrase no longer on screen.
+
+                  Split the fixed line; leave the cycling one to the component
+                  that owns it. */}
+              <SplitReveal as="span" type="lines" className="block">
+                <span className="block">Original short video,</span>
+              </SplitReveal>
               <span className="block">
                 <TypedPhrase phrases={phrases} className="gold-phrase" />
               </span>
@@ -122,8 +138,23 @@ export function HeroCinematic({ phrases }: HeroCinematicProps) {
             screen — a label for a generated image that you have to scroll to
             find is not a label. The room is generated; nothing in it is a
             customer, a result or a claim. */}
-        <p className="m-0 text-right text-caption text-on-ink-faint">
-          The room behind this is an AI-generated image, not a photograph of a client.
+        {/* Extended when the floating cuts and the inset preview arrived
+            (17 §1 M1). It used to name only the room, which was true of the
+            hero as it then was — a backdrop and a headline. The hero now also
+            shows generated frames of a presenter who does not exist, and a
+            disclosure that covers the wallpaper but not the faces is the gap
+            non-negotiable 4 exists to close. The preview carries its own "AI
+            scene" and "Sample" labels as well; this is the sentence for the
+            decorative cards, which are hidden from assistive technology and
+            so cannot carry one. */}
+        {/* The right padding keeps it out of the inset preview's column. The
+            inset is positioned and this is in flow, so it paints over this
+            sentence — and the label ran underneath the card it was labelling,
+            which is the same failure as not having one. Measured at 1440: the
+            inset is 190px wide with a 3rem gutter. */}
+        <p className="m-0 text-right text-caption text-on-ink-faint lg:pr-[240px]">
+          The room and every cut shown here are AI-generated sample frames, not photographs of a
+          client or a customer result.
         </p>
 
         {/* The reference runs 01–04 with a caption each; we already have

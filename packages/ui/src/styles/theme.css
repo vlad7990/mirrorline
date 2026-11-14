@@ -507,6 +507,173 @@
   }
 
   /* ---------------------------------------------------------------------
+     The hero's depth (17 §1 M1).
+
+     Three layers at the plan's three depths — the room behind (0.15), the
+     glow and grain (0.35), the floating cuts (0.6) — on a `scroll()` timeline
+     rather than `view()`. The difference matters here: `view()` measures an
+     element's passage through the viewport, and the hero *starts* in the
+     viewport, so a third of its travel has already happened before the reader
+     touches anything. `scroll()` measures the document, which is what "moves
+     as the page moves" actually means.
+
+     Everything is inside `prefers-reduced-motion: no-preference`, so a reader
+     who asked for stillness gets the hero as a flat composition — which it
+     still is: the layers are placed by CSS, not by the animation.
+     --------------------------------------------------------------------- */
+  .hero-glow {
+    position: absolute;
+    inset: -20% -10% auto;
+    height: 70%;
+    z-index: -9;
+    background: radial-gradient(
+      ellipse 60% 50% at 50% 0%,
+      rgb(245 184 61 / 0.16) 0%,
+      transparent 70%
+    );
+    pointer-events: none;
+  }
+
+  /* **The bottom third is not theirs.** The hero's last band carries the
+     non-negotiable 4 disclosure and the numbered index, and a card behind
+     low-contrast caption text makes that sentence unreadable — which is the
+     same failure as not having it, and the reason the label was moved above
+     the index in the first place. The float layer stops before it. */
+  .hero-floats {
+    position: absolute;
+    inset: 0 0 34% 0;
+    z-index: -8;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    pointer-events: none;
+    /* Below `lg` there is no margin to float anything into: the headline
+       already fills the width, and three cards behind it is noise over text. */
+    display: none;
+  }
+
+  .hero-float {
+    position: absolute;
+    width: clamp(92px, 11vw, 150px);
+    rotate: var(--float-rotate, 0deg);
+    border-radius: var(--radius-thumb);
+    overflow: hidden;
+    border: 1px solid var(--color-ink-line-strong);
+    /* The cards sit over a photograph, so they need their own floor or the
+       caption lands on whatever the room is doing behind them. */
+    background-color: var(--color-ink-800);
+  }
+
+  .hero-float-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    opacity: 0.85;
+  }
+
+  /* Two lines, then stop. A hook is a sentence and these cards are small. */
+  .hero-float-caption {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    padding: 0.5rem 0.625rem;
+    font-size: var(--text-caption);
+    line-height: 1.3;
+    color: var(--color-on-ink-muted);
+  }
+
+  /* **Hand-placed around two things that were already there**, and the first
+     attempt was not. Measured at 1440×900, where the hero is 792px tall: the
+     cards collided with the inset preview and with the vertical margin note,
+     and the third ran off the bottom of the hero entirely.
+
+     The rule they follow, from those measurements. The inset owns the
+     right-hand column from 51% of the hero's height down; the margin note owns
+     the last 3% of its width. So a card on the right has to *finish* above the
+     inset (hence the 8% on `b`, which is the only one that shares its column),
+     and a card lower than that has to be left of it. `c` is also kept below
+     `a`'s bottom edge so the three read as placed rather than stacked. */
+  .hero-float-a {
+    top: 6%;
+    right: 26%;
+  }
+
+  /* The only card sharing a column with the inset, so it has to finish above
+     it rather than merely miss it. */
+  .hero-float-b {
+    top: 4%;
+    right: 6%;
+  }
+
+  .hero-float-c {
+    top: 46%;
+    right: 38%;
+  }
+
+  /* The inset preview, bottom right. Not `aria-hidden`: it is the one frame in
+     the hero a reader can actually look at, and it carries its own labels. */
+  .hero-inset {
+    position: absolute;
+    right: clamp(1rem, 4vw, 3rem);
+    bottom: clamp(1rem, 4vw, 3rem);
+    z-index: 1;
+    width: clamp(132px, 14vw, 190px);
+    display: none;
+  }
+
+  @media (width >= 64rem) {
+    .hero-floats,
+    .hero-inset {
+      display: block;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: scroll()) {
+      .hero-glow,
+      .hero-floats,
+      .hero-inset {
+        animation: mirrorline-hero-depth linear both;
+        animation-timeline: scroll();
+        /* The hero is roughly one screen tall, so the whole effect is spent
+           in the first screen of scrolling. Beyond that it is off-screen and
+           still moving, which is work nobody sees. */
+        animation-range: 0 100vh;
+      }
+
+      .hero-glow {
+        --hero-depth: var(--parallax-mid);
+      }
+
+      .hero-floats {
+        --hero-depth: var(--parallax-front);
+      }
+
+      /* The inset sits with the floats but travels less: it is the one thing
+         here a reader may want to watch, and a frame that runs off the bottom
+         of the screen while it is playing is a frame nobody finishes. */
+      .hero-inset {
+        --hero-depth: var(--parallax-back);
+      }
+    }
+  }
+
+  /* Translate only, and the depth is the multiplier. 120px is the full travel
+     at depth 1, so the front layer moves 72px across a screen of scrolling and
+     the back 18px — far enough to read as depth, short enough that nothing
+     drifts out of its own composition. */
+  @keyframes mirrorline-hero-depth {
+    from {
+      transform: translateY(0);
+    }
+
+    to {
+      transform: translateY(calc(var(--hero-depth, 0.35) * -120px));
+    }
+  }
+
+  /* ---------------------------------------------------------------------
      The Output sequence: "one episode, twelve cuts" as a pinned scene
      (17 §3, D42).
 

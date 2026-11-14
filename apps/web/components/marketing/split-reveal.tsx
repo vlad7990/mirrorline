@@ -32,19 +32,36 @@
 
 import * as React from 'react'
 
+/**
+ * `words` for a heading that should read as a sentence being spoken; `lines`
+ * for a display headline that should rise as whole lines (17 §1 M1).
+ *
+ * Not the same animation with a different unit. Lines are **masked and move
+ * without fading**; words fade as they arrive. See the branch below for why
+ * the hero cannot afford the fade.
+ */
+export type SplitRevealType = 'words' | 'lines'
+
 export interface SplitRevealProps {
   children: React.ReactNode
   className?: string
+  /** Defaults to `words`, which is what the showcase heading has always used. */
+  type?: SplitRevealType
+  /**
+   * The wrapper element. `div` by default; `span` when this sits *inside* a
+   * heading rather than around one — a `div` inside an `<h1>` is invalid, and
+   * the hero splits only part of its headline.
+   */
+  as?: 'div' | 'span'
 }
 
-/**
- * Words, not characters: a per-character cascade across a whole sentence
- * reads as a novelty. Per word still reads as a sentence being spoken.
- */
-const SPLIT_TYPE = 'words'
-
-export function SplitReveal({ children, className }: SplitRevealProps) {
-  const hostRef = React.useRef<HTMLDivElement>(null)
+export function SplitReveal({
+  children,
+  className,
+  type = 'words',
+  as: Wrapper = 'div',
+}: SplitRevealProps) {
+  const hostRef = React.useRef<HTMLElement>(null)
 
   React.useEffect(() => {
     const host = hostRef.current
@@ -75,18 +92,51 @@ export function SplitReveal({ children, className }: SplitRevealProps) {
 
       const mm = gsap.matchMedia()
       mm.add('(prefers-reduced-motion: no-preference)', () => {
-        const split = SplitText.create(target, { type: SPLIT_TYPE, aria: 'auto' })
+        const isLines = type === 'lines'
 
-        gsap.from(split.words, {
-          yPercent: 40,
-          opacity: 0,
-          duration: 0.55,
+        // `mask: 'lines'` wraps each line in its own overflow-hidden parent,
+        // so a line can rise from behind the one above it rather than sliding
+        // over the page. Words do not get it: a mask per word is a row of
+        // little windows, which is a different and much busier effect.
+        const split = SplitText.create(target, {
+          type,
+          // **`auto` for words, `none` for lines, and axe settled it.**
+          //
+          // `aria: 'auto'` moves the original text onto the split element as
+          // an `aria-label` and hides the pieces. That is right for words:
+          // without it a screen reader reads a sentence one stuttered word at
+          // a time, and the element it labels there is an `<h2>`, where
+          // `aria-label` is permitted.
+          //
+          // It is wrong for lines. The hero splits a plain `<span>` inside its
+          // heading, and `aria-label` on an element with no role is
+          // `aria-prohibited-attr` — a *serious* axe violation, which is how
+          // this was found. Lines do not need the label either: a line is
+          // already a readable run of text, so leaving the ARIA alone gives
+          // the same sentence in the same order with nothing hidden.
+          aria: isLines ? 'none' : 'auto',
+          ...(isLines ? { mask: 'lines' as const } : {}),
+        })
+
+        gsap.from(isLines ? split.lines : split.words, {
+          // Lines come from fully behind their mask; words only lift.
+          yPercent: isLines ? 100 : 40,
+          // **No fade on lines, and that is not a style preference.** This is
+          // used on the hero headline, which is the page's LCP element — text
+          // held at `opacity: 0` is text that has not been painted, so fading
+          // it in moves Largest Contentful Paint by the whole duration of the
+          // animation. It is also the lesson `mirrorline-reveal` in theme.css
+          // carries: movement reads as arrival on its own, and the fade only
+          // ever cost legibility.
+          ...(isLines ? {} : { opacity: 0 }),
+          duration: isLines ? 0.9 : 0.55,
           ease: 'power3.out',
-          stagger: 0.045,
+          stagger: isLines ? 0.08 : 0.045,
           scrollTrigger: {
             trigger: host,
             // Late enough that the heading is properly on screen, early
             // enough that it is never still moving while it is being read.
+            // A hero is above the fold, so this fires on load.
             start: 'top 85%',
             once: true,
           },
@@ -106,11 +156,15 @@ export function SplitReveal({ children, className }: SplitRevealProps) {
       cancelled = true
       cleanup?.()
     }
-  }, [])
+    // `type` is in the list because it decides which split is built. It is a
+    // constant at every call site today, so this never re-runs in practice —
+    // but an effect that silently ignores a prop it reads is a bug waiting
+    // for the first caller who changes one.
+  }, [type])
 
   return (
-    <div ref={hostRef} className={className}>
+    <Wrapper ref={hostRef as React.Ref<HTMLDivElement & HTMLSpanElement>} className={className}>
       {children}
-    </div>
+    </Wrapper>
   )
 }
