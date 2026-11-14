@@ -19,6 +19,9 @@ export default defineConfig({
       'packages/**/src/**/*.test.ts',
       'packages/**/src/**/*.test.tsx',
       'apps/web/**/*.test.ts',
+      // The repo gates in scripts/ are plain ESM, not TypeScript: they run
+      // under bare `node` with no build step, so their tests are .mjs too.
+      'scripts/**/*.test.mjs',
     ],
     exclude: ['**/node_modules/**', 'e2e/**'],
   },

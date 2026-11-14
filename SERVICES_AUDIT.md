@@ -50,9 +50,12 @@ grep -rnoE 'https?://[a-zA-Z0-9.-]+' --include='*.ts' --include='*.tsx' apps/web
 **One absolute external URL in app code:** `https://example.com`, in a
 placeholder. No CDN, no font host, no script tag, no pixel.
 
-**423 dependencies, every licence on the allow-list** (`pnpm licence-check`).
-The one exception is `gsap`, pinned by name in `scripts/licence-check.mjs` on
-Vlad's decision (D33); it widens nothing else.
+**424 dependencies, every licence on the allow-list** (`pnpm licence-check`).
+The only exception is the GSAP family — `gsap` and `@gsap/react` — pinned by
+package name and by licence URL in `scripts/licence-check.mjs` on Vlad's
+decision (D33, scoped by D41); it widens nothing else. That command now runs a
+second gate as well: `scripts/gsap-scope.mjs` fails any GSAP import from
+outside the marketing site, and fails ScrollSmoother or Lenis anywhere.
 
 ## Three findings
 

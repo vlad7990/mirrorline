@@ -1378,3 +1378,94 @@ and the codebase already had the answer to both.
 
 The lesson for the next KPI surface: a status colour has two tokens, the fill
 and the on-soft text, and the band decides which pair is in scope.
+
+## 2026-11-13 · D41 · GSAP is scoped to the marketing site, and the scope is enforced
+
+**Vlad's decision, approved 13 November 2026.** `gsap` core, ScrollTrigger and
+SplitText — plus `@gsap/react` for `useGSAP`, the same licence and the only
+supported way to get cleanup right in React — are allowed on the **public
+marketing site only**. Free under the GSAP Standard No-Charge licence
+(https://gsap.com/standard-license/); we are not reselling it. **Not allowed**
+in the studio app, `packages/ui`, the Remotion templates, or any
+customer-facing animation tooling. **ScrollSmoother and Lenis stay banned**,
+marketing included.
+
+This narrows D33 rather than extending it. D33 admitted the package; it said
+nothing about where, and in practice that read as "anywhere". The two things
+the licence actually asks of us map onto this boundary almost exactly, which is
+why the line is drawn here rather than somewhere more convenient:
+
+- **The non-compete.** The licence bars use in tools competing with Webflow's
+  visual animation builder. A marketing page that animates is not such a tool.
+  Something we hand a customer to animate their own videos could be argued to
+  be one. Keeping GSAP out of the studio, `packages/ui` and the Remotion
+  templates means the clause never has to be argued — not because we think it
+  reaches us, but because an unargued clause cannot be lost.
+- **Unilateral amendment, and termination at Webflow's discretion.** If the
+  terms change, what we have to replace is some marketing-page motion. Had
+  GSAP gone into `packages/ui` it would be in every screen of the product, and
+  the same event would be a rewrite. The scope is a blast radius as much as a
+  licence reading.
+
+**What was wrong before this, and is now fixed.** Nothing enforced any of it.
+`gsap` was already in `apps/web/package.json` and the licence gate was green,
+so an import from `apps/web/components/studio/` would have passed lint,
+typecheck, tests, build and `licence-check` without a word. The rule existed
+only in a comment.
+
+**Two gates, because rule 10 now asks two different questions.**
+
+1. *May we install this?* — a package-manifest question, which the existing
+   allow-list answers. `GSAP_LICENCE_EXCEPTIONS` gains `@gsap/react`. Its
+   `license` field reads `SEE LICENSE AT https://gsap.com/standard-license`
+   where core's reads `Standard 'no charge' license: <url>`, so the pattern now
+   matches the **licence URL** both share instead of either sentence. That is
+   the stricter choice as well as the shorter one: prose gets copied by
+   accident, a link to Webflow's own licence page does not. 423 → 424 packages,
+   still green.
+2. *Where may we use it?* — not a manifest question at all, so it reads our own
+   source. `scripts/gsap-scope.mjs` is **default-deny**: a GSAP-family
+   specifier fails unless the importing file sits under
+   `apps/web/app/(marketing)/` or `apps/web/components/marketing/`. The studio,
+   `packages/ui`, the Remotion templates and whatever customer-facing tooling
+   comes next are covered without being listed — a list of banned places rots
+   the first time someone adds a directory, and an allow-list does not.
+
+Separately and unconditionally, ScrollSmoother and Lenis fail **anywhere**,
+marketing included. ScrollSmoother needs naming precisely because Webflow made
+every plugin free: it now ships inside the package we are allowed to install,
+so nothing else would have stopped the import. `gsap/all` fails with them — it
+re-exports every plugin, ScrollSmoother included, which makes it a way round
+the rule rather than a convenience.
+
+**One trap, found by writing the test first.** The obvious implementation —
+search for the word "ScrollSmoother" — fails existing marketing components,
+because their comments explain why D32 rebuilt Arigo's scroll mechanics in CSS
+*instead of* using it. A gate that punishes a file for documenting the rule it
+follows is worse than no gate, so detection is on **module specifiers** only:
+`from 'x'`, `import 'x'`, `import('x')`, `require('x')`. Two tests pin that
+behaviour so nobody "simplifies" it back.
+
+**Verified by breaking it, not by reading it.** Twenty unit tests in
+`scripts/gsap-scope.test.mjs` cover allow, deny, dynamic `import()`, the
+`.js`-suffix dodge, prose-is-not-an-import, and a last one asserting the live
+repo is clean. Then the real check: a `gsap` import appended to
+`components/studio/alerts-board.tsx` and a `gsap/ScrollSmoother` import
+appended to `components/marketing/agent-loop.tsx`. `pnpm licence-check` named
+both files, both specifiers and both reasons and exited 1; the repo test went
+red. Restored, both green again.
+
+Both gates also run to completion before either exits, so a run that fixes a
+dependency licence sees an import-scope failure in the same pass instead of
+discovering it on the next commit.
+
+**Spec 17's Rules section is amended in place**, the way D33 amended
+non-negotiable 10, because it said "No GSAP / ScrollSmoother / Lenis" and would
+otherwise have contradicted this the moment the first motion PR landed. Its
+heading no longer claims to be unchanged. The CSS-first instruction stays, and
+is worth restating: `animation-timeline` costs no dependency, so GSAP earns a
+section only where CSS cannot go — splitting text into lines, a long pinned
+timeline with ordered steps, shared-element flight between two layouts.
+
+`vitest.config.ts` gains `scripts/**/*.test.mjs`. The repo gates are plain ESM
+run by bare `node`, so their tests could not previously run at all.
