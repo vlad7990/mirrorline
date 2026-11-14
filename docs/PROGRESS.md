@@ -8,16 +8,18 @@
 
 ## Handoff — 13 November 2026 (evening: motion v2 begins)
 
-**Branch** `v4/site-and-metrics` · **last commit** `2d352e0` · clean tree,
+**Branch** `v4/site-and-metrics` · **last commit** `8f306ec` · clean tree,
 pushed. The `Branch: main` line above is stale; this is where the work is.
 
-**Preview:** https://mirrorline-qkh70b323-vn-mn-product-group.vercel.app —
-`target: preview`, Ready, built from the finished PR6 tree. Nothing has been
+**Preview:** https://mirrorline-chioc3rzk-vn-mn-product-group.vercel.app —
+`target: preview`, Ready, built from the polish tree. Nothing has been
 promoted to production. Share link (expires 15 Nov):
-`?_vercel_share=B1KRX9JtfhFCMmwFCNhGMucXFMZXdkhx`. What to look at: `/` for
-the PROVEN band (scroll to "Nothing reaches your calendar unchecked") and
-for the transition between any two header links; `/app/results` for the KPI
-ticks; `/niche-scan` for the submit button.
+`?_vercel_share=fZyIH5ZmHi2p0Fzw6HR4I1HUKqnE09BY`. What to look at: `/` for
+the shorter page, the 2026 cards back as a grid, the PROVEN band, and the
+Output section's new episode frame and week strip; `/pricing` for the label
+that is no longer over the screenshot and for the gold dashboard; `/` at
+390px for the hero's one cut card; `/app/results` for the KPI ticks;
+`/niche-scan` for the submit button.
 
 **Recordings:** `docs/screens-built/motion-v2/` — fourteen clips, desktop
 (1440) and mobile (390): `home-rails-and-reveals-*.webm` (14.6s),
@@ -28,6 +30,40 @@ and `word-band-and-page-transitions-*.webm` (~13s). Regenerate with
 `MOTION_RECORD=1 pnpm exec playwright test e2e/recordings.spec.ts
 --project=chromium --project=mobile`. The spec skips without that variable, so
 it never slows `pnpm test:e2e`.
+
+### The polish pass (14 Nov, `8f306ec`) — read D44 for the reasoning
+
+Seven items, and most of them fixed something wrong rather than adding
+something missing.
+
+| # | Item | Outcome |
+|---|---|---|
+| 1 | `/pricing` label over the screenshot | Fixed — **and it was six pages, not one** |
+| 1b | Stale coral dashboard shot | **All four pairs** regenerated from the gold studio |
+| 2 | Output episode frame + week strip | Real AI frame with a waveform; a seven-day strip |
+| 3 | Eight Geist Sans `h2`s | Serif with one gold phrase; one duplicate heading deleted |
+| 4 | 2026 stacked cards | **Reverted to the grid** — both shown first, D44 |
+| 5 | Copy + demo workspaces | Done; the workspaces follow-up was already in |
+| 6 | Three section merges | Twenty sections to seventeen; order logged in D44 |
+| 7 | Mobile hero cut card | One card under the buttons, laid out not floated |
+
+**Three of these were bugs nobody had reported.** The vertical hero note is
+drawn over the screenshot on *six* pages, not just `/pricing` — it is
+`absolute right-4` and the figure beside it bleeds off that edge by design.
+All eight files in `public/shots/` were from 10 November, which is the coral
+palette, on those same six pages. And "Get started" was an `sr-only` heading
+sitting above `FinalCta`'s own visible `h2`, so that section was named by a
+heading nobody could see while the visible one was referenced by nothing.
+
+**The 2026 cards went back to the grid, which reverses D43's "neither
+revert".** D43 decided about the cards as they were; with an icon and a
+title-size headline each they fit in a third of the height, in three columns,
+with the section heading still beside them. Stacked, the same cards were
+full-width bars sliding under one another over two and a half screens. Both
+were screenshotted before the call.
+
+**Still open on `/pricing`, and not mine to fix in a polish pass:** nothing.
+The vertical-label bug reported in the PR6 handoff is the one fixed here.
 
 ### Where motion v2 is
 
