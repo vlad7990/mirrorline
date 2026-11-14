@@ -52,8 +52,8 @@ before moving on.
 |---|---|---|
 | 1 | **PR A** · the e2e flake and the blank marketing HTML | done, `354c4f5` |
 | 2 | **PR B2** · four loop tabs, theme switch off the public site | done, `4b3cbbd` |
-| 3 | **PR7** · calendar drag-to-reschedule | next |
-| 4 | **PR C** · Co-pilot (write `docs/specs/18_COPILOT.md` first) | queued |
+| 3 | **PR7** · calendar drag-to-reschedule | done, see below |
+| 4 | **PR C** · Co-pilot (write `docs/specs/18_COPILOT.md` first) | next |
 | 5 | **PR D** · Long-form YouTube add-on | queued |
 | 6 | **PR E** · remaining motion, site and studio | queued |
 | 7 | **PR F1–F5** · inner pages, to `docs/specs/19_INNER_PAGES.md` | queued |
@@ -118,6 +118,54 @@ every public page shipped with no `<main>` in its HTML. Keep the boundary
 around the component that reads the params, the way `AccountChoiceProvider`
 now does, and check `curl localhost:3000/metrics | grep -c '<main'` before
 calling it done.
+
+### PR7 · a post can be dragged to another day (14 Nov) — read D48
+
+**Two paths, one promise.** Drag a chip to another day in the same platform
+row — ghost card under the pointer, the drop slot ringed before you let go —
+or select the post and use **Move to…** in the panel, which changes the day
+*and* the time. The menu is the WCAG 2.5.7 (Dragging Movements) path and is
+deliberately the more capable control: the drag cannot set a time, because a
+day column has no finer target inside it and inventing one from the drop's
+y-position would be a number the reader never chose.
+
+**Pointer events, not HTML5 drag-and-drop.** The native API gives an
+unstylable drag image, a `dataTransfer` contract that varies by browser, and
+`dragover` semantics that fight the `.scroll-x` container the week grid lives
+in by design. Pointer events also mean the e2e tests drive real presses and
+moves rather than a synthesised `drop` — the same instinct PR A was about.
+
+**Touch deliberately does not drag.** Inside a horizontally scrolling table a
+touch drag either steals the scroll or is stolen by it. Touch, keyboard and
+screen reader all use the menu, which is in the panel and therefore in the
+mobile drawer too. Verified at 390px end to end.
+
+**A move never changes the platform.** Rows are platforms, so dropping across
+one would be a publishing decision under different rules, not a scheduling
+one. A foreign row never highlights and the drop is ignored; there is a test
+for that refusal, because "nothing happened" is the failure that reads as a
+bug rather than a rule.
+
+**Nothing is saved, and the grid says so before you touch it** — the line sits
+above the week, and every toast repeats "Sample data, not saved. Nothing has
+been rescheduled on your accounts." The moves are React state over a pure
+transform in `lib/studio/schedule-moves.ts`; a unit test serialises the
+fixtures before and after to prove `@mirrorline/mock` is never edited, which
+is the failure nobody would see.
+
+**Gates:** lint, typecheck, **426 unit tests** (11 new on the transform),
+build, licence-check, and the **full e2e suite at 264 passed** (6 new,
+covering both paths plus Escape-cancels and the cross-row refusal).
+
+#### Watch — updated
+
+6. **The post panel renders twice at 390px**, once in the `hidden xl:block`
+   aside and once in the open drawer, so there are now two "Day" and two
+   "Time" selects in the DOM. Benign for users — the aside copy is
+   `display: none`, out of the a11y tree, unfocusable, and axe is clean — but
+   a trap for any test that does not scope to the drawer. Not restructured:
+   gating the aside on `isWide` would leave it empty for one client render at
+   1440 and risk a layout shift on the widest surface. D48.
 
 ### PR B2 · four tabs that show four jobs, and a switch the public site loses (14 Nov) — read D47
 
@@ -224,17 +272,21 @@ reference PNGs in `docs/screens-built/` are regenerated in this PR.
 
 #### Watch
 
-1. **React #418 on the preview, still unreproduced.** Seen once, on the
-   one-time `?_vercel_share=` redirect navigation. The same production build
-   is clean locally with and without a stored theme preference, and fresh
-   preview loads are clean. Checked again on the PR A deployment — including
-   the share-link redirect hop, which is where it appeared — and the console
-   is clean: 0 errors on `/`, on `/?who=individual&account=new`, and across a
-   `/` → `/pricing` → `/compare` client navigation. That is reassuring but
-   not a diagnosis, and PR A changed the hydration shape of every marketing
-   page, so it is worth one more look if it ever returns. The theme script in
-   the root layout is the first place to go: it is the one thing that writes
-   to `<html>` before React sees it.
+1. **React #418 — now reproducible, and it is not on the marketing site at
+   all.** Carried since PR B as "seen once, does not reproduce", which sent
+   two PRs looking in the wrong place: the marketing pages and the theme
+   script. It reproduces on a **production build, `/app/calendar`, at a 390px
+   viewport, on load** — intermittently, which is why every clean-load sweep
+   missed it. 1440px is clean, so it is width-dependent, and it fires on the
+   **PR B2 preview too**, so it predates PR7 and is not the drag.
+
+   Where to start: a branch that renders differently on the server than on
+   the client at narrow widths. `useIsWide()` in `calendar-view.tsx` seeds
+   `useSyncExternalStore` with a server snapshot of `false`, and the
+   sidebar/drawer split in the studio shell is the other candidate. Worth its
+   own pass, the way the Suspense boundary in D46 was — it is a real
+   hydration mismatch on a screen a buyer is walked through, and recoverable
+   errors are the kind that stop being recoverable.
 2. **Two GSAP warnings after navigating away from the home page**, on
    `/compare`: `GSAP target [data-cut-frame] not found` and the same for
    `[data-cut-frame] [data-status-chip]`. Those are the Output sequence's

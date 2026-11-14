@@ -16,6 +16,7 @@
 
 import type { PostStatus, ScheduledPost } from '@mirrorline/mock'
 import { STATUS_STYLES, cn } from '@mirrorline/ui'
+import type * as React from 'react'
 
 /**
  * The 4px left edge, one token per lifecycle state.
@@ -56,9 +57,21 @@ export interface PostChipProps {
   dayLabel: string
   isSelected: boolean
   onSelect: (postId: string) => void
+  /** Begins a pointer drag. See `use-chip-drag.ts` for why it is not HTML5 DnD. */
+  onPointerDown?: (event: React.PointerEvent) => void
+  /** True while this chip is the one travelling, so it reads as lifted. */
+  isDragging?: boolean
 }
 
-export function PostChip({ post, status, dayLabel, isSelected, onSelect }: PostChipProps) {
+export function PostChip({
+  post,
+  status,
+  dayLabel,
+  isSelected,
+  onSelect,
+  onPointerDown,
+  isDragging = false,
+}: PostChipProps) {
   const word = statusWord(status)
 
   return (
@@ -66,6 +79,7 @@ export function PostChip({ post, status, dayLabel, isSelected, onSelect }: PostC
       type="button"
       aria-pressed={isSelected}
       onClick={() => onSelect(post.id)}
+      onPointerDown={onPointerDown}
       // The day comes first: a name without it leaves 20 chips sounding alike.
       aria-label={`${dayLabel}, ${post.timeLabel}, ${post.platformLabel}, ${post.title}, ${word.toLowerCase()}`}
       // The visible title is truncated to one line so seven day columns fit at
@@ -84,6 +98,10 @@ export function PostChip({ post, status, dayLabel, isSelected, onSelect }: PostC
         isSelected ? 'border-2 border-ink' : 'border border-border',
         'border-l-4',
         STATUS_EDGE_CLASS[status],
+        // The chip left behind while the ghost travels. Dimmed rather than
+        // removed: taking it out of flow would collapse the cell and shuffle
+        // every other chip out from under the pointer mid-drag.
+        isDragging && 'opacity-35',
       )}
     >
       {/* The thumbnail is one of the four fixed demo colours, so it stays a

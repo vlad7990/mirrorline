@@ -2170,3 +2170,111 @@ still carries the management-coaching hooks this entry removes from the
 marketing page, because they come from `cuts` in `@mirrorline/mock` rather
 than from the home copy. Out of scope here — it is studio fixture data, not
 the public site — and logged in PROGRESS.md under "Watch".
+
+## 2026-11-14 · D48 · A post can be dragged to another day, and the menu that does it without dragging is the better control
+
+### Pointer events, not HTML5 drag-and-drop
+
+The native API hands you a drag image you cannot style, a `dataTransfer`
+contract that differs across browsers, and `dragover` semantics that fight a
+horizontally scrolling container — and this grid lives inside `.scroll-x` by
+design, because DESIGN.md "Layout" says the week grid scrolls inside its card
+rather than breaking the page.
+
+Pointer events give one code path for mouse and pen, a ghost we draw
+ourselves, and — the part that decided it — behaviour a test can drive
+deterministically with `page.mouse.move`. PR A was spent on a suite that was
+flaky for environmental reasons; picking the testable mechanism here is part
+of that fix staying fixed. The six e2e tests drive real presses and moves,
+not a synthesised `drop` event.
+
+### The drag is a mouse affordance, and the menu is the real control
+
+**"Move to…" is the WCAG 2.5.7 path, and it is deliberately the more capable
+one.** SC 2.5.7 (Dragging Movements, AA in 2.2) asks only that anything
+operated by a drag also work with a single pointer that does not drag. That
+is a floor. What shipped clears it and keeps going:
+
+| | Drag | "Move to…" |
+|---|---|---|
+| Changes the day | yes | yes |
+| Changes the time | **no** | yes |
+| Works on touch | no | yes |
+| Works from the keyboard | no | yes |
+
+The drag cannot change the time because a day column has no finer target
+inside it, and inventing a time from the drop's y-position would be a number
+the reader did not choose. So the no-drag path is not the grudging
+equivalent — it is the one that does more. It lives in the post panel, which
+appears as the desktop aside and as the mobile drawer, so every viewport has
+it. Verified at 390px: open a chip, pick a day in the drawer, press "Move
+post", and the chip leaves its cell.
+
+**Touch does not drag at all, on purpose.** Inside a horizontally scrolling
+table a touch drag either steals the scroll or is stolen by it, and the
+honest answer is not a longer press delay — it is a control that does the
+same job without dragging. `use-chip-drag.ts` returns early on
+`pointerType: 'touch'`.
+
+### What a move may and may not change
+
+**The day and the time. Never the platform.** The grid's rows are platforms,
+so dropping across rows would mean "post this to TikTok instead", which is a
+different decision under different rules — TikTok posts stay private until
+our app is approved, for one. Moving within a row is a scheduling change;
+moving across one is a publishing change. The drag refuses it (a foreign row
+never highlights, and the drop is ignored) and the menu does not offer it.
+There is an e2e test for the refusal, because "nothing happened" is the
+failure mode that looks like a bug rather than a rule.
+
+**The times offered are the slots that platform already posts in**,
+deduplicated and in order, read off the row itself. A free-text time would
+promise a scheduling engine we do not have; the Publisher posts in the slots
+the plan bought.
+
+### Nothing is saved, and the screen says so before anyone tries
+
+There is no API behind this. The grid carries "Drag a post to another day, or
+use **Move to…** on the right. Sample data, not saved." *above* the week,
+before a reader touches anything, and every confirmation repeats it: "Sample
+data, not saved. Nothing has been rescheduled on your accounts."
+Non-negotiable 7 asks for demo data to be labelled; a drag that appears to
+work and is gone on reload needs the stronger claim, which is "not saved"
+rather than "sample".
+
+The moves live in React state beside the existing status overrides, and
+`lib/studio/schedule-moves.ts` is a pure transform — `weekSchedule` and
+`weekPosts` are module constants from `@mirrorline/mock`, so a mutation would
+follow the reader to Results and survive a navigation, which is exactly what
+"not saved" promises it will not do. A unit test serialises the fixture
+before and after a move and compares, because that is the failure nobody
+would see.
+
+Eleven unit tests cover the transform, including the half that is easy to
+forget: a move has to take the chip *out* of its old cell as well as put it
+in the new one, and the test asserts it appears exactly once across the whole
+row rather than only that it arrived.
+
+### Two things found on the way, neither fixed here
+
+1. **React #418 now has a reproduction.** PROGRESS has carried it since PR B
+   as "seen once on the preview, does not reproduce". It reproduces: a
+   production build, `/app/calendar`, **390px viewport, on load** — and
+   intermittently, which is why clean-load sweeps kept missing it. It is
+   width-dependent (1440px is clean) and it is **not from PR7**: the PR B2
+   preview, built before any of this, throws the same single `#418` on the
+   same route at the same width. The suspect is a width-dependent branch
+   rendering differently on the server than on the client — `useIsWide()` and
+   the sidebar/drawer split are where to start. Left alone here because it
+   predates the feature and is its own investigation, the way the Suspense
+   boundary in D46 was.
+2. **The post panel renders twice at 390px** — once in the `hidden xl:block`
+   aside and once in the open drawer. Benign for users (the aside copy is
+   `display: none`, so it is out of the accessibility tree and unfocusable,
+   and axe is clean), but PR7 adds form controls to that panel, so there are
+   now two "Day" and two "Time" selects in the DOM holding independent state.
+   Not restructured here: gating the aside on `isWide` would leave it empty
+   for one client render at 1440 and risk a layout shift on the screen's
+   widest surface, which is a worse trade than a hidden duplicate. The tests
+   scope to the drawer at 390, and at 1440 there is only one copy. Logged
+   under "Watch".
