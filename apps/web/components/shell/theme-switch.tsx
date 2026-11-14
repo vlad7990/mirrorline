@@ -42,13 +42,18 @@ export function ThemeSwitch({ className }: { className?: string }) {
         {OPTIONS.map(({ value, label, Icon }) => (
           // `relative` is not spacing. The input below is `sr-only`, which is
           // `position: absolute`, so without a positioned ancestor it resolves
-          // against whatever happens to be positioned further up — or the
-          // initial containing block — and the control's hit target ends up
-          // somewhere else on the page. A real click still works, because it
-          // lands on the span and the label forwards it; a synthetic click on
-          // the control does not, which is how this surfaced once the switch
-          // was put in the footer. The same failure `.scroll-x` guards against
-          // in theme.css.
+          // against whatever is positioned further up the tree — or the
+          // initial containing block — and the hidden input ends up somewhere
+          // else on the page entirely. Measured in the footer before this:
+          // the input sat at the page origin rather than at its own segment.
+          //
+          // Nothing user-facing was broken by that — a click lands on the
+          // visible span and the label forwards it, and the keyboard never
+          // cared where the input was painted. What it breaks is anything
+          // that reasons about the control's position: a stray absolutely
+          // positioned element in an overflow container is the same failure
+          // `.scroll-x` guards against in theme.css, and there it widened the
+          // page.
           <label key={value} className="relative flex-1">
             <input
               type="radio"

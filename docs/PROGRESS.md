@@ -8,18 +8,91 @@
 
 ## Handoff — 13 November 2026 (evening: motion v2 begins)
 
-**Branch** `v4/site-and-metrics` · **last commit** `8f306ec` · clean tree,
+**Branch** `v4/site-and-metrics` · **last commit** `aa35524` · clean tree,
 pushed. The `Branch: main` line above is stale; this is where the work is.
 
-**Preview:** https://mirrorline-chioc3rzk-vn-mn-product-group.vercel.app —
-`target: preview`, Ready, built from the polish tree. Nothing has been
-promoted to production. Share link (expires 15 Nov):
-`?_vercel_share=fZyIH5ZmHi2p0Fzw6HR4I1HUKqnE09BY`. What to look at: `/` for
-the shorter page, the 2026 cards back as a grid, the PROVEN band, and the
-Output section's new episode frame and week strip; `/pricing` for the label
-that is no longer over the screenshot and for the gold dashboard; `/` at
-390px for the hero's one cut card; `/app/results` for the KPI ticks;
-`/niche-scan` for the submit button.
+**Preview:** https://mirrorline-h5idtti5w-vn-mn-product-group.vercel.app —
+`target: preview`, Ready, built from the PR B tree. Nothing has been promoted
+to production. Share link (expires 15 Nov):
+`?_vercel_share=AwKroqtN3qTBp57WzVUBZdGxnam7niDy`. What to look at: `/` for
+the twelve sample reels in the marquee and one per account-type card, and for
+the footer at the bottom of it; the footer again at 834px and 390px, where it
+goes to three columns and then to collapsible groups; the theme switch in its
+bottom bar; `/` for the shorter page, the 2026 cards back as a grid, the
+PROVEN band, and the Output section's episode frame and week strip;
+`/pricing` for the label that is no longer over the screenshot and for the
+gold dashboard; `/app/results` for the KPI ticks; `/niche-scan` for the
+submit button.
+
+### PR B · twelve sample reels, and a footer half the height (14 Nov, `e4b7bdf` + `aa35524`) — read D45
+
+| # | Item | Outcome |
+|---|---|---|
+| 1 | Twelve AI frames for varied trades | Generated, labelled, live in two sections |
+| 1b | Marquee tiles | Flat colours → twelve stills, hook and goal tag kept |
+| 1c | Account-type cards | A different frame each, replacing the repeated podcast still |
+| 1d | Output section | **Unchanged** — podcast frames stay, one episode and one client |
+| 1e | "Accounts you own" | **No frames added** — rule cards, and they already carry icons |
+| 1f | Ken Burns | On the four still frames only; off under reduced motion |
+| 2 | Footer redesign | ~950px → **523px** at 1440; 800px tablet; collapsible on a phone |
+| 2b | Theme toggle | Now in the footer bottom bar of every marketing page |
+
+**The frames.** `apps/web/public/samples/sample-01…12.webp`, 440×788, 16–75KB
+each, about 390KB for the set. Generated with Nano Banana Pro at 9:16 / 1k
+and downscaled. Twelve fictional accounts: bakery, car bay, yoga studio,
+empty property, unboxing, florist, solo creator, a hardware-shop owner
+filming his first post, café, workbench, bike repair stand, plant nursery.
+Six faces, three hands, three places, spanning age, gender and ethnicity. No
+likeness of a real person, no health claim, no before-and-after.
+
+The first attempt came back as 16:9 letterboxed into 9:16 with blurred bands
+— the model read "frame from a short social video" as a widescreen still. The
+prompt now opens with "Full-bleed vertical portrait-orientation photograph
+that fills the entire 9:16 frame edge to edge. No letterbox, no blurred
+bands". Worth keeping for the next batch. Four of the twelve came back
+`rate_limit_reached`: the account allows **4 concurrent jobs**, and eleven
+were fired at once.
+
+**Two hooks changed.** "You're not tired / You're over-responsible" and
+"Burnout isn't / a workload problem" are coaching copy — the audience-naming
+D38 retired — and over a baker and a hardware-shop owner they read as a
+mismatch. Two more were shortened because the account-card thumb is 124px
+wide and a four-line burned-in caption covers the photograph under it.
+
+**Three new tests** in `home-content.test.ts`: every `frameSrc` is really on
+disk, no two cards share a frame, and the set is at least ten — below that
+the doubled marquee track is narrower than a desktop viewport and the seam
+the duplication exists to hide becomes a gap.
+
+**One real bug fixed on the way**, `aa35524`: `ThemeSwitch`'s radio is
+`sr-only`, which is `position: absolute`, and its label was not positioned —
+so the input resolved against the initial containing block and sat at the
+page origin instead of on its own segment. Nothing user-facing was broken by
+it (a click lands on the visible span and the label forwards it), but it is
+the same failure `.scroll-x` guards against in theme.css, where it widened
+the page. One class on the label; correct in the studio too.
+
+**Verified on the preview**, not only in tests: 52 `<img>` from `/samples/`,
+12 unique files, 0 broken; the footer's theme switch really flips `.dark`,
+sets `color-scheme`, persists the preference and checks the radio.
+
+**Two things left open, both honestly:**
+
+1. **`demo-path.spec.ts:38` fails under full-suite load**, at
+   `openFromSidebar('Results')` — the click lands during a studio page
+   transition and the assertion for the `Overview` h1 finds Calendar still on
+   screen. It passed 3/3 in isolation and on `--repeat-each=3`, and failed in
+   three of four full runs. **Nothing in this PR touches the studio** beyond
+   one class on `ThemeSwitch`'s label, and it failed the same way before that
+   commit existed. The suspect is PR5's sliding nav marker or PR6's View
+   Transitions; the extra image load may be what pushes a latent race over
+   the edge under six parallel workers. It wants a look before PR7 ships
+   calendar interactions on the same screens.
+2. **One React #418 hydration error** seen once on the preview, on the
+   one-time `?_vercel_share=` redirect navigation. It does not reproduce: the
+   same production build is clean locally with and without a stored theme
+   preference, and three fresh loads of the preview are clean. Recorded
+   rather than explained away.
 
 **Recordings:** `docs/screens-built/motion-v2/` — fourteen clips, desktop
 (1440) and mobile (390): `home-rails-and-reveals-*.webm` (14.6s),
