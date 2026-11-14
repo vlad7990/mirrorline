@@ -6,20 +6,87 @@
 
 ---
 
-## Handoff — 13 November 2026
+## Handoff — 13 November 2026 (evening: motion v2 begins)
 
-**Branch** `v4/site-and-metrics` · **last commit** `07a0e2d` · clean tree,
+**Branch** `v4/site-and-metrics` · **last commit** `54244dd` · clean tree,
 pushed. The `Branch: main` line above is stale; this is where the work is.
 
-**Preview:** https://mirrorline-h5jslq4zt-vn-mn-product-group.vercel.app —
-`target: preview`, Ready, from `07a0e2d`: all five follow-ups, plus two alert
-fixes found by looking at the thing in a browser — only the measurement is
-mono, and the date is written once rather than in both the prose and the
-timing note. Nothing has been promoted to production.
+**Preview:** https://mirrorline-3ppp16mv1-vn-mn-product-group.vercel.app —
+`target: preview`, Ready, from `54244dd`. Nothing has been promoted to
+production. Share link (expires 14 Nov):
+`?_vercel_share=O5OHbDCBTVI0rZhcrPCOVSxokWacW4ui`.
 
-Checked in a browser on 13 November, not just in CI: all eleven studio routes
-and all seven Results tabs load with one `<h1>` and **zero console errors**;
-the sidebar is eight items; both alert kinds render their own timing sentence;
+**Recordings:** `docs/screens-built/motion-v2/` — four clips, desktop (1440)
+and mobile (390): `home-rails-and-reveals-*.webm` (14.4s) and
+`account-picker-pill-*.webm` (11.6s). Regenerate with
+`MOTION_RECORD=1 pnpm exec playwright test e2e/recordings.spec.ts
+--project=chromium --project=mobile`. The spec skips without that variable, so
+it never slows `pnpm test:e2e`.
+
+### Where motion v2 is
+
+Two of seven are in. The order is Vlad's, from the evening brief.
+
+| PR | What | State |
+|---|---|---|
+| **Licence** | D41 · GSAP scoped to marketing, and enforced | **Done** — `518477b` |
+| **1** | Motion tokens · numbered rails · button and selector micro-interactions | **Done** — `e4097b8`, fixed by `54244dd` |
+| 2 | Output section as the pinned "multiply" sequence, 3-layer parallax | **Next** |
+| 3 | Hero depth parallax, floating cut cards, inset preview, SplitText headline | Not started |
+| 4 | Stacked 2026 cards, scroll-lit rows, recipe assembly, metrics count/draw | Not started |
+| 5 | Studio micro-interactions (no GSAP) | Not started |
+| 6 | One trial band of oversized words, page transitions | Not started |
+
+**The five follow-ups were already done** before this session — nav at eight
+items, immediate connection alerts, three unlike trades in Portfolio,
+`.env.example` names, `report-button.tsx` deleted. Checked in the tree rather
+than taken from this log. No PR was needed.
+
+**D41, and what it changed.** D33 admitted `gsap` but said nothing about
+*where*, and nothing enforced it: `gsap` was already a dependency and the
+licence gate was green, so an import from `components/studio/` would have
+passed lint, typecheck, tests, build and `licence-check` without a word.
+`pnpm licence-check` now runs two gates — the allow-list (same shape, plus
+`@gsap/react`, matching the licence **URL** the two packages share rather than
+either prose sentence), and `scripts/gsap-scope.mjs`, which is **default-deny**:
+a GSAP specifier fails unless the file sits under `apps/web/app/(marketing)/`
+or `apps/web/components/marketing/`. ScrollSmoother, Lenis and `gsap/all` fail
+anywhere. 20 unit tests, verified by adding real violations and watching the
+gate name both files and exit 1.
+
+Spec 17's Rules section said "No GSAP" and is amended in place, the way D33
+amended non-negotiable 10.
+
+### Opening it in a browser found a bug CI could not
+
+The home rails rendered **"01" fourteen times**. A `counter-increment` with no
+`counter-reset` is implicitly reset on the root in CSS 2.1 — which is what my
+comment claimed — but css-lists-3 changed that, and browsers follow the newer
+rule: an out-of-scope counter is created **on the incrementing element**. So
+every rail minted its own. One `counter-reset` on `body` fixes it, and the
+rails now read 01 → 14 on the preview, on both the ink and the snow bands.
+
+The test was the more useful half of it. It asserted the index glyphs had
+non-zero width, which stayed true the whole time the page was wrong — "01" is
+exactly as wide as "02". Comparing the two spans as *images* was tried next and
+is worse than useless: an element screenshot is cropped out of the page, so two
+spans at different subpixel offsets differ whatever digits they carry, and it
+passes either way. It now asserts the condition that makes the numbering
+correct — exactly one element resets the counter, it is `BODY`, and it contains
+every rail — and that was verified by removing the reset and watching it fail.
+
+**Two pre-existing console errors on `/`, and they are not from this work:** a
+`favicon.ico` 404, and React #418, a hydration mismatch on `<html>` — almost
+certainly the no-flash theme script, whose fix is `suppressHydrationWarning` on
+`<html>`. Both appear identically on the `07a0e2d` preview; I opened the two
+side by side before writing this. The morning's "zero console errors" line was
+about the eleven **studio** routes and still holds. Neither is fixed here —
+this run is motion only — so both are open.
+
+### Still true from the morning
+
+All eleven studio routes and all seven Results tabs load with one `<h1>`; the
+sidebar is eight items; both alert kinds render their own timing sentence;
 Portfolio shows three unlike trades; the switcher lists all three brands; and
 the two honesty rules hold in the built output — LinkedIn shows a connect
 prompt rather than zeroes, and the ledger names the sales column it cannot
