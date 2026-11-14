@@ -14,6 +14,7 @@ import { SiteFooter } from '@/components/marketing/site-footer'
 // throwing stub rather than a number. See site-chrome.ts.
 import { HEADER_HEIGHT_PX } from '@/components/marketing/site-chrome'
 import { SiteHeader } from '@/components/marketing/site-header'
+import { ViewTransitions } from '@/components/marketing/view-transitions'
 import { AccountChoiceProvider } from '@/lib/audience/account-type-context'
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
@@ -46,6 +47,12 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           {/* Last in the tree, and fixed to the bottom: it must not be the
               first thing a keyboard user tabs into on every page. */}
           <CookieBanner />
+          {/* 17 §1 M11. Renders nothing — it is one delegated click
+              listener — and it is mounted here rather than in the root
+              layout so a studio navigation can never reach it.
+              `studio-nav.tsx` keeps the arrival of those screens instant on
+              purpose. */}
+          <ViewTransitions />
         </div>
       </AccountChoiceProvider>
     </React.Suspense>

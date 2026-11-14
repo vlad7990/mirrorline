@@ -642,6 +642,63 @@
     clip-path: inset(0 0 0 0);
   }
 
+  /* 17 §1 M10 · One oversized word behind one band, drifting as it passes.
+     The component, and why it is on this band and no other, is
+     `apps/web/components/marketing/background-word.tsx`.
+
+     Three things about the colour, because this is the rule the device is
+     most likely to break. It is `currentColor` at 7%, so it follows whatever
+     band it is dropped on rather than hard-coding an ink value that would be
+     invisible on snow and glaring on ink. 7% is low enough that the heading
+     over it keeps its contrast — near-white on this band is ~18:1 and the
+     word takes it to ~15:1, nowhere near the 4.5 floor. And it is behind
+     `isolate`, so it cannot land on top of a card. */
+  .band-word {
+    position: absolute;
+    /* A fixed offset from the top of the band, **not** a percentage of it,
+       and that is the one measurement here that was got wrong first. `50%`
+       centres the word on the band, which on the desktop layout is exactly
+       where the card starts — the word was almost entirely behind it, and
+       the sliver that showed read as a mistake rather than as scale. Worse
+       on a phone, where the same band is 1393px tall instead of 722 and the
+       word disappeared completely. The heading is a fixed distance from the
+       top of the band at every width, so the word is too.
+
+       Horizontally over-wide, so both ends are already outside the clip and
+       the drift never reveals an edge. */
+    top: 9rem;
+    left: 50%;
+    width: 140%;
+    z-index: 0;
+    translate: -50% -50%;
+    text-align: center;
+    text-transform: uppercase;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    /* Oversized is the whole point, but it has to stay oversized on a phone
+       without becoming taller than the band it decorates. */
+    font-size: clamp(5rem, 22vw, 16rem);
+    line-height: 0.8;
+    letter-spacing: -0.03em;
+    color: color-mix(in oklab, currentColor 7%, transparent);
+    user-select: none;
+    /* It is `aria-hidden`, but a pointer should not be able to select or
+       drag it either — it is not text anyone is reading. */
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .band-word {
+        animation: mirrorline-word-drift linear both;
+        animation-timeline: view();
+        /* The whole time the band is on screen, so the drift is slow enough
+           to read as depth rather than as something sliding past. */
+        animation-range: cover 0% cover 100%;
+      }
+    }
+  }
+
   /* 17 §2 · The submit button morphs into a spinner, then a drawn checkmark.
      Public forms only — Niche Scan and the lead dialog. The component, and
      the reasoning for animating `max-width` here when nothing else in this
@@ -839,6 +896,24 @@
 
     to {
       clip-path: inset(0 0 0 0);
+    }
+  }
+
+  /* M10 · The drift. `translate` rather than `transform`, so it composes with
+     the centring `translate` on the element instead of overwriting it — a
+     `transform: translateX()` here would throw away the -50% -50% and drop
+     the word into the band's bottom-right quadrant.
+
+     ±4% of a 140%-wide element, which is about a tenth of the travel the
+     content makes over the same scroll. That ratio is the effect: slower
+     than the content, which is what reads as distance. */
+  @keyframes mirrorline-word-drift {
+    from {
+      translate: calc(-50% - 4%) -50%;
+    }
+
+    to {
+      translate: calc(-50% + 4%) -50%;
     }
   }
 
@@ -2310,5 +2385,60 @@
       transition: none !important;
       translate: none !important;
     }
+  }
+}
+
+/* --------------------------------------------------------------------------
+   17 §1 M11 · Between marketing pages
+   --------------------------------------------------------------------------
+
+   Outside every `@layer`, on purpose. View-transition pseudo-elements are
+   matched against the document's own transition pseudo tree, and the user
+   agent's default cross-fade is not in a layer either — putting these in one
+   means losing to it and wondering why nothing changed.
+
+   Only the root pair is named. The spec also asks for the pricing card to
+   morph into the checkout header, and there is no checkout: `/pricing` opens
+   the lead dialog on the page you are already on. A shared-element flight
+   needs two pages, so that half is not built rather than faked against a
+   destination that does not exist. Logged in D43.
+
+   Short, and shorter leaving than arriving — DESIGN.md puts exits at about
+   65% of an entrance, because leaving is not an event. 180ms out, 280ms in:
+   the whole thing is over inside a third of a second, which is the point. A
+   page transition the reader has time to notice is a page transition they
+   have time to resent.
+
+   `opacity` and `translate` only, so the compositor does all of it. */
+::view-transition-old(root) {
+  animation: mirrorline-page-out 180ms var(--ease-out) both;
+}
+
+::view-transition-new(root) {
+  animation: mirrorline-page-in 280ms var(--ease-out-expo) both;
+}
+
+/* Belt and braces. The component already refuses to start a transition under
+   reduced motion, so this covers a transition started any other way — and it
+   is the rule, not the implementation, that the next person will read. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+@keyframes mirrorline-page-out {
+  to {
+    opacity: 0;
+    translate: 0 -8px;
+  }
+}
+
+@keyframes mirrorline-page-in {
+  from {
+    opacity: 0;
+    translate: 0 12px;
   }
 }

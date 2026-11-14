@@ -1542,3 +1542,115 @@ which gives away the trick the whole section exists to perform. An explicit
 Both were invisible to CI and obvious in a browser, which is now twice in two
 PRs. The pattern worth naming: assertions about end states cannot see a
 sequence that is wrong in the middle.
+
+## 2026-11-13 · D43 · One band of oversized words, a page transition built the hard way, and what the calendar gets instead
+
+Four decisions from PR6, and the three Vlad settled alongside it.
+
+### M10 is on one band, and that is the spec's own second thought
+
+17 §1 M10 offers "two or three bands" and then says "trial on one band
+first". The second instruction wins. This is a device that either reads as
+scale or reads as a mistake, and three shipped together is three to undo.
+
+The band is "Nothing reaches your calendar unchecked" — **PROVEN** — chosen
+because it is the one argument section with no other motion in it. The hero,
+the Output sequence and the metrics band are each already carrying something,
+and a second slow layer behind any of them is two parallaxes disagreeing
+about depth.
+
+**The anchor is a fixed offset from the top of the band, not a percentage of
+it**, and the first version got that wrong in a way nothing could catch.
+`top: 50%` centres the word on the band, which on the desktop layout is
+exactly where the gate card starts: the word was almost entirely behind it,
+and the sliver that showed read as a rendering accident rather than as
+scale. On a phone the same band is 1393px tall rather than 722, so the same
+rule pushed the word further behind the card and it disappeared altogether.
+The heading sits a fixed distance from the top of the band at every width, so
+the word does too. Found by screenshotting the preview at both widths, which
+is the only place it is visible: every test passed, and the markup was
+correct the whole time.
+
+**The contrast is measured, not asserted in prose.** The word is
+`currentColor` at 7%, which takes the heading over it from 17.0:1 to 14.6:1
+and the lead from 9.5:1 to 8.1:1 — nowhere near the 4.5 floor. A test
+composites the word's colour onto the band and re-measures both, because axe
+cannot see this class of problem at all: it reads declared background
+colours, not what a translucent span above one does to the pixels under it.
+
+### M11 is the browser's API, not Next's flag, and the first version silently did nothing
+
+Next 15.5 has `experimental.viewTransition`, and it needs React's
+`<ViewTransition>`, which ships only on the experimental channel —
+`react@19.2.0` exports nothing of the sort. Moving the whole app onto an
+experimental React for one page transition is not a trade worth making. 17
+§1 M11 says "View Transitions API with fallback" in any case, so that is what
+was built: one delegated listener mounted by the marketing layout, and the
+fallback is an ordinary navigation.
+
+**The bug worth recording is the first version's.** React attaches its
+listeners to the root container, which is *inside* `document`, so `<Link>`'s
+handler runs first and has already called `preventDefault()` by the time a
+bubble-phase listener on `document` sees the click. The first version read
+that as "someone else handled this" and returned. The result: zero
+transitions on a preview where the API was supported, the listener was
+attached, and every navigation worked perfectly. Nothing failed. It was found
+by patching `document.startViewTransition` in the browser and counting — and
+the test that now holds it asserts the **named** animations ran, not that the
+URL changed, because the URL changed the whole time it was broken.
+
+The fix is to treat `defaultPrevented` as the signal rather than the
+disqualifier: Next owns the navigation and the transition is wrapped around
+it. The other available fix, `stopPropagation()` in the capture phase, is
+rejected on purpose — it would have taken the click away from every component
+that closes itself when you click a link inside it, starting with the mobile
+drawer, and would have done so silently.
+
+**The second half of M11 is not built.** "The pricing card morphs into the
+checkout header" needs a checkout, and there is none: `/pricing` opens the
+lead dialog on the page you are already on. A shared-element flight needs two
+pages. Faking one against a destination that does not exist is the kind of
+thing non-negotiable 7 exists to rule out, so it is written down here
+instead.
+
+### The studio is excluded from both, and that is the existing rule
+
+`studio-nav.tsx` carries the decision that the arrival of a studio screen
+stays instant, because people move between those screens dozens of times a
+day and a transition reads as lag rather than as feedback. `ViewTransitions`
+is mounted by the marketing layout, so a studio navigation never reaches it,
+and `isPublicPath` refuses one if it ever does. A test clicks a studio nav
+item and asserts that zero transitions start.
+
+### Calendar drag: built, as its own PR, with a menu as the accessible path
+
+**Vlad's call, 13 November.** 17 §2 describes decorating a drag-and-drop that
+does not exist — there is not one `draggable`, `onDrop` or pointer handler in
+`components/calendar/`. It is built as its own piece of work after PR6,
+rather than dropped or smuggled into a motion pass:
+
+- pointer drag-to-reschedule, with the ghost card and the highlighted drop
+  slot 17 §2 asks for;
+- a **"Move to…" menu on each post**, with a date and time picker, as the
+  touch and keyboard path. WCAG 2.5.7 requires a single-pointer alternative
+  to any dragging action, and a menu is a better one than a keyboard-only
+  grid dance: it is the same control on a phone, on a trackpad and under a
+  screen reader;
+- until Supabase is connected the move updates mock data only, and **says
+  so** — a small "Sample data, not saved" note on the calendar. A reschedule
+  that looks like it persisted and did not is a lie the interface tells, and
+  that is the same class of problem as an unlabelled AI scene.
+
+### Mobile swipe-to-approve: dropped
+
+**Vlad's call, 13 November.** The approve button already does the job on
+touch and is the fallback 17 §2 itself requires. A swipe that duplicates a
+visible control is the lowest-value gesture available, and it is new
+interaction work rather than motion on existing work. Not built.
+
+### The two open reverts: neither
+
+**Vlad's call, 13 November.** The stacked 2026 cards (M4) stay as built
+rather than going back to the three-column grid, and the Output section keeps
+D42's refusal of the mobile pin. Both remain one-line changes if that ever
+changes.

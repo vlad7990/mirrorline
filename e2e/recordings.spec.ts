@@ -194,4 +194,40 @@ test.describe('motion-v2 recordings', () => {
 
     await save(page, testInfo, 'studio-ticks-and-form')
   })
+
+  test('the oversized word drifting, and the pages changing', async ({ page }, testInfo) => {
+    await page.goto('/')
+
+    // Part one: the word. Approach the band from above so the drift is seen
+    // against content moving over it at its own, faster rate — the ratio is
+    // the effect, and a clip that starts level with the word shows neither.
+    const word = page.locator('.band-word')
+    await word.scrollIntoViewIfNeeded()
+    await page.mouse.wheel(0, -700)
+    await page.waitForTimeout(600)
+
+    for (let index = 0; index < 16; index += 1) {
+      await page.mouse.wheel(0, 110)
+      await page.waitForTimeout(420)
+    }
+
+    // Part two: three navigations, with a beat on each page so the clip shows
+    // the arrival rather than a blur of header.
+    //
+    // Whichever link happens to be on screen, rather than the header's: at
+    // 390px the header's are inside a drawer, and driving a drawer open and
+    // shut three times is a clip about a drawer. The transition is a property
+    // of the navigation, not of the control that started it, so the footer's
+    // copy of the same link records the same thing.
+    for (const href of ['/pricing', '/product', '/metrics']) {
+      const link = page.locator(`a[href="${href}"]:visible`).first()
+      await link.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(400)
+      await link.click()
+      await expect(page).toHaveURL(new RegExp(`${href}$`))
+      await page.waitForTimeout(1_400)
+    }
+
+    await save(page, testInfo, 'word-band-and-page-transitions')
+  })
 })

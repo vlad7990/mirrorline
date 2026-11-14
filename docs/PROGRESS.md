@@ -18,19 +18,19 @@ promoted to production. Share link (expires 15 Nov):
 same link — `/app/results` and `/niche-scan` are the two screens PR5
 changed.
 
-**Recordings:** `docs/screens-built/motion-v2/` — twelve clips, desktop
+**Recordings:** `docs/screens-built/motion-v2/` — fourteen clips, desktop
 (1440) and mobile (390): `home-rails-and-reveals-*.webm` (14.6s),
 `hero-depth-and-headline-*.webm` (13.4s), `output-multiply-sequence-*.webm`
 (15.8s), `argument-and-metrics-*.webm` (12.5s),
-`account-picker-pill-*.webm` (11.5s) and `studio-ticks-and-form-*.webm`
-(~14s). Regenerate with
+`account-picker-pill-*.webm` (11.5s), `studio-ticks-and-form-*.webm` (~14s)
+and `word-band-and-page-transitions-*.webm` (~13s). Regenerate with
 `MOTION_RECORD=1 pnpm exec playwright test e2e/recordings.spec.ts
 --project=chromium --project=mobile`. The spec skips without that variable, so
 it never slows `pnpm test:e2e`.
 
 ### Where motion v2 is
 
-Six of seven are in. The order is Vlad's, from the evening brief.
+All seven are in. The order is Vlad's, from the evening brief.
 
 | PR | What | State |
 |---|---|---|
@@ -40,7 +40,8 @@ Six of seven are in. The order is Vlad's, from the evening brief.
 | **3** | Hero depth parallax, floating cut cards, inset preview, SplitText headline | **Done** — `dd7b57d` |
 | **4** | Stacked 2026 cards, scroll-lit rows, recipe assembly, metrics count/draw | **Done** — `41064cf` |
 | **5** | Studio micro-interactions (no GSAP) | **Done** — `4eb8502` (markers), `4d0f78c` (ticks, form). Two items **declined pending your call**, see below |
-| 6 | One trial band of oversized words, page transitions | In progress |
+| **6** | One trial band of oversized words, page transitions | **Done** — see below. One half of M11 declined, see D43 |
+| **7** | Calendar drag-to-reschedule, with a "Move to…" menu (D43) | **Next.** Your call on 13 Nov: a feature PR, not a motion pass |
 
 **The five follow-ups were already done** before this session — nav at eight
 items, immediate connection alerts, three unlike trades in Portfolio,
@@ -165,26 +166,82 @@ collapsed shape came back 48×44 — a stadium, not a circle — in a geometry
 read taken on the preview. `size` is now explicit, and the reason is in both
 the component and theme.css.
 
-**Still open, and both are your call rather than work left over:**
+**The two items PR5 could not decide are now decided — yours, 13 November,
+written up as D43:**
 
-1. **Mobile swipe-to-approve** — ⚠️ **this is a new interaction, not motion on
-   an existing one.** There is no touch gesture handling in the calendar
-   today. Approve exists as a button (`calendar-view.tsx:159`), so the button
-   fallback the spec requires is already there, but the swipe itself has to be
-   built.
-2. **Calendar drag** — ⚠️ **the same, and larger.** 17 §2 says "drag shows a
-   ghost card and the drop slot highlights", which describes decorating a
-   drag-and-drop that **does not exist**: there is not one `draggable`,
-   `onDrop` or pointer handler in `components/calendar/`. Building it means
-   drag-to-reschedule *plus* a keyboard equivalent — WCAG 2.5.7 requires any
-   dragging action to have a single-pointer alternative — and that is a
-   feature, not a motion pass. **It needs your call**: build it properly as
-   its own piece of work, or drop it from the motion plan.
+1. **Mobile swipe-to-approve — dropped.** The approve button already does the
+   job on touch and is the fallback 17 §2 itself asks for. Not built.
+2. **Calendar drag — built, as its own PR, next.** Pointer
+   drag-to-reschedule with the ghost card and the highlighted drop slot, plus
+   a **"Move to…" menu** on each post (date and time picker) as the touch and
+   keyboard path WCAG 2.5.7 requires. Until Supabase is connected the move
+   updates mock data only and says so, in a small "Sample data, not saved"
+   note — a reschedule that looks like it persisted and did not is the same
+   class of untruth as an unlabelled AI scene.
+3. **The two open reverts — neither.** The stacked 2026 cards stay as built,
+   and Output keeps D42's refusal of the mobile pin. Both are still one-line
+   changes if you change your mind.
 
 **Also worth knowing: `motion` is not installed.** D19 cleared it and 17 names
 it for layout and spring effects, but nothing has needed it yet — the sliding
 markers, the account pill and every reveal are CSS. Worth keeping that way
 unless something genuinely needs spring physics.
+
+### PR6, which found a sixth and a seventh browser-only bug
+
+**One band carries the oversized word: PROVEN, behind "Nothing reaches your
+calendar unchecked."** It is the one argument section with nothing else
+moving in it; the hero, the Output sequence and the metrics band are each
+already carrying something, and a second slow layer behind any of those is
+two parallaxes disagreeing about depth. 17 offers two or three bands and then
+says "trial on one first", and the second instruction is the one worth
+following.
+
+**The sixth bug: the word was invisible, and the markup was perfect.**
+Centring it on the band (`top: 50%`) puts it exactly where the gate card
+starts — almost all of it was behind the card, and the sliver that showed
+read as a rendering accident. On a phone the same band is 1393px tall rather
+than 722, so the same rule hid it completely. Every test passed. It is now a
+fixed offset from the top of the band, because the heading is, at every
+width.
+
+**The contrast is measured rather than claimed.** The word is `currentColor`
+at 7%, which takes the heading over it from 17.0:1 to 14.6:1 and the lead
+from 9.5:1 to 8.1:1. A test composites the word onto the band and re-measures
+both, because axe genuinely cannot see this: it reads declared background
+colours, not what a translucent span above one does to the pixels under it.
+
+**The seventh bug: the page transition started nothing, and nothing failed.**
+Next's `experimental.viewTransition` is unusable here — it needs React's
+`<ViewTransition>`, which ships only on the experimental channel, and
+`react@19.2.0` has no such export. So M11 is the browser's own API behind one
+delegated listener in the marketing layout, which is what 17 names anyway.
+
+The first version bailed whenever the click was already `defaultPrevented`.
+React attaches its listeners to the root container, which is *inside*
+`document`, so `<Link>` has always already prevented the default by then:
+**zero transitions, on a preview where the API was supported, the listener
+was attached and every navigation worked perfectly.** Found by patching
+`document.startViewTransition` in the browser and counting. `defaultPrevented`
+is now the signal that Next has taken the navigation, and the transition is
+wrapped around it rather than replacing it — the alternative,
+`stopPropagation()` in the capture phase, would have silently broken every
+component that closes itself when you click a link inside it.
+
+The test asserts the **named** animations ran, not that the URL changed. The
+URL changed the whole time it was broken.
+
+**Half of M11 is declined, and D43 says why.** "The pricing card morphs into
+the checkout header" needs a checkout; `/pricing` opens the lead dialog on
+the page you are already on. A shared-element flight needs two pages, and
+faking a destination is the thing non-negotiable 7 exists to stop.
+
+**One thing found on `/pricing` that is not mine and is not motion.** The
+vertical mono label "introductory prices · set per engagement, in writing"
+(`lg:[writing-mode:vertical-rl]`, `absolute right-4 top-1/2`) sits on top of
+the dashboard image at 1440px and is unreadable. It is on a direct page load,
+so it predates this run — I have left it alone because this is a motion pass
+and the layout is locked, but it is worth a line of your time.
 
 ### PR4, and two things that are your call
 

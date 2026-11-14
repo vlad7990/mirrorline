@@ -1015,6 +1015,214 @@ test('under reduced motion the mark is already drawn, and the form still settles
   await expect(page.getByRole('heading', { name: 'That is with us.' })).toBeVisible()
 })
 
+/* -------------------------------------------------------------------------- */
+/* 17 §1 M10 · One oversized word, on one band                                 */
+/* -------------------------------------------------------------------------- */
+
+test('the oversized word is on exactly one band, and is decoration', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+
+  // "Trial on one band first" is the instruction the spec gives after
+  // offering two or three, and it is the one being followed. If a second
+  // appears, that was a decision and this test should be the thing that makes
+  // someone say so out loud.
+  await expect(page.locator('.band-word')).toHaveCount(1)
+
+  const word = page.locator('.band-word')
+  await word.scrollIntoViewIfNeeded()
+
+  const state = await word.evaluate((node) => {
+    const style = getComputedStyle(node)
+    const band = node.closest('section') as HTMLElement
+    return {
+      ariaHidden: node.getAttribute('aria-hidden'),
+      pointerEvents: style.pointerEvents,
+      zIndex: style.zIndex,
+      animationName: style.animationName,
+      timeline: style.animationTimeline,
+      bandOverflow: getComputedStyle(band).overflow,
+    }
+  })
+
+  expect(state.ariaHidden).toBe('true')
+  expect(state.pointerEvents).toBe('none')
+  expect(state.zIndex).toBe('0')
+  expect(state.animationName).toBe('mirrorline-word-drift')
+  expect(state.timeline).toBe('view()')
+  // `clip`, never `hidden`. `hidden` makes the band a scrollport, and a
+  // `view()` timeline measured against the band it cannot move within freezes
+  // at a constant progress — the note is on `Section.backdrop`, and this is
+  // what keeps it true.
+  expect(state.bandOverflow).toBe('clip')
+})
+
+test('the word never costs the text over it its contrast', async ({ page }) => {
+  await page.goto(FAQ_PAGE)
+  await page.locator('.band-word').scrollIntoViewIfNeeded()
+
+  // Composite the word's colour onto the band and re-measure the heading and
+  // the lead against it. A decorative layer under text is the one way this
+  // device can break 17's "dim states stay ≥ 4.5:1", and axe cannot see it:
+  // it reads declared background colours, not what a translucent span above
+  // one does to the pixels underneath.
+  const ratios = await page.evaluate(() => {
+    const channel = (value: number) => {
+      const c = value / 255
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+    }
+    const luminance = ([r, g, b]: number[]) =>
+      0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+    const parse = (value: string) => value.match(/[\d.]+/g)!.slice(0, 3).map(Number)
+    const ratio = (a: number[], b: number[]) => {
+      const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+      return (high + 0.05) / (low + 0.05)
+    }
+
+    const word = document.querySelector('.band-word') as HTMLElement
+    const band = word.closest('section') as HTMLElement
+    const bandStyle = getComputedStyle(band)
+    const bandBackground = parse(
+      bandStyle.backgroundColor === 'rgba(0, 0, 0, 0)'
+        ? getComputedStyle(document.body).backgroundColor
+        : bandStyle.backgroundColor,
+    )
+
+    // The word paints its own colour at whatever alpha the stylesheet set.
+    const wordColor = getComputedStyle(word).color
+    const alpha = Number(wordColor.match(/\/\s*([\d.]+)\s*\)/)?.[1] ?? '1')
+    const washed = parse(wordColor).map(
+      (c, index) => c * 255 * alpha + bandBackground[index] * (1 - alpha),
+    )
+
+    const heading = document.querySelector('#gate-heading') as HTMLElement
+    const lead = band.querySelector('p') as HTMLElement
+    return {
+      alpha,
+      heading: ratio(parse(getComputedStyle(heading).color), washed),
+      lead: ratio(parse(getComputedStyle(lead).color), washed),
+    }
+  })
+
+  // Low enough to be a wash rather than a layer.
+  expect(ratios.alpha).toBeLessThanOrEqual(0.1)
+  expect(ratios.heading).toBeGreaterThanOrEqual(4.5)
+  expect(ratios.lead).toBeGreaterThanOrEqual(4.5)
+})
+
+test('under reduced motion the word is still there, and still', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto(FAQ_PAGE)
+
+  const word = page.locator('.band-word')
+  // Present: it is a composition, not an animation. Only the drift goes.
+  await expect(word).toHaveCount(1)
+  await word.scrollIntoViewIfNeeded()
+  expect(await word.evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
+})
+
+/* -------------------------------------------------------------------------- */
+/* 17 §1 M11 · Between marketing pages                                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Count the transitions a navigation starts, and name the animations it runs.
+ *
+ * Installed before any page script, so the component's own `typeof` check at
+ * mount and its call at click time both see the same patched function.
+ */
+async function instrumentViewTransitions(page: Page) {
+  await page.addInitScript(() => {
+    const record = { started: 0, animations: [] as string[] }
+    ;(window as unknown as { __transitions: typeof record }).__transitions = record
+
+    const original = document.startViewTransition?.bind(document)
+    if (!original) return
+
+    document.startViewTransition = ((callback: () => void | Promise<void>) => {
+      record.started += 1
+      const transition = original(callback)
+      // `ready`, not a timer. The pseudo-element tree does not exist until
+      // the callback's promise settles, and how long that takes is how long
+      // the new route takes to render — fast on a built preview, not fast on
+      // `next dev`. A fixed sample caught nothing there and said the
+      // animations were missing when they were merely late.
+      transition.ready.then(
+        () => {
+          record.animations = document
+            .getAnimations()
+            .filter((animation) =>
+              String(animation.effect?.pseudoElement ?? '').includes('view-transition'),
+            )
+            .map((animation) => (animation as CSSAnimation).animationName)
+        },
+        () => {
+          // A skipped transition rejects `ready`. Leaving the list empty is
+          // the correct report.
+        },
+      )
+      return transition
+    }) as typeof document.startViewTransition
+  })
+}
+
+function transitionRecord(page: Page) {
+  return page.evaluate(
+    () =>
+      (window as unknown as { __transitions: { started: number; animations: string[] } })
+        .__transitions,
+  )
+}
+
+test('a marketing navigation runs the page transition', async ({ page }) => {
+  await instrumentViewTransitions(page)
+  await page.goto(FAQ_PAGE)
+
+  await page.locator('header a[href="/pricing"]').first().click()
+  await expect(page).toHaveURL(/\/pricing$/)
+
+  // Polled rather than slept: the transition becomes ready when the new route
+  // has rendered, and that is a different length of time on a dev server and
+  // on a built one.
+  await expect.poll(async () => (await transitionRecord(page)).animations.length).toBeGreaterThan(0)
+
+  const record = await transitionRecord(page)
+  expect(record.started).toBe(1)
+  // Named, not merely started. The first version of this component started
+  // nothing at all and the navigation still worked perfectly — which is
+  // exactly why "the URL changed" is not the assertion.
+  expect(record.animations).toContain('mirrorline-page-out')
+  expect(record.animations).toContain('mirrorline-page-in')
+})
+
+test('the studio keeps its instant arrival', async ({ page }) => {
+  await instrumentViewTransitions(page)
+  await page.goto('/app/results')
+
+  // `studio-nav.tsx` carries the rule: people move between these screens
+  // dozens of times a day, and a transition on one reads as lag rather than
+  // as feedback. The component is mounted by the marketing layout, so it is
+  // not even here — and this is the test that notices if it is moved up.
+  await page.locator('nav[aria-label="Studio"] a[href="/app/calendar"]').first().click()
+  await expect(page).toHaveURL(/\/app\/calendar$/)
+  await page.waitForTimeout(400)
+
+  expect((await transitionRecord(page)).started).toBe(0)
+})
+
+test('reduced motion navigates without a transition', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await instrumentViewTransitions(page)
+  await page.goto(FAQ_PAGE)
+
+  await page.locator('header a[href="/pricing"]').first().click()
+  // The navigation still happens. That is the half worth asserting: a
+  // transition that is switched off must not take the page with it.
+  await expect(page).toHaveURL(/\/pricing$/)
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+
+  expect((await transitionRecord(page)).started).toBe(0)
+})
+
 test('the CTA arrow answers the keyboard as well as the pointer', async ({ page }) => {
   await page.goto(FAQ_PAGE)
 

@@ -23,6 +23,7 @@ import * as React from 'react'
 
 import { LOOP_CLOSING_LINE } from '@/components/marketing/agents'
 import { AgentLoop } from '@/components/marketing/agent-loop'
+import { BackgroundWord } from '@/components/marketing/background-word'
 import { OutputSequence } from '@/components/marketing/output-sequence'
 import { ReelBackdrop } from '@/components/marketing/reel-backdrop'
 import { Faq } from '@/components/marketing/faq'
@@ -407,8 +408,10 @@ export default function LandingPage() {
         </div>
       </Section>
 
-      {/* 10. Nothing reaches your calendar unchecked --------------------- */}
-      <Section aria-labelledby="gate-heading">
+      {/* 10. Nothing reaches your calendar unchecked ---------------------
+          The one trial band for 17 §1 M10. Why this band, and why not the
+          two more the spec offers, is in `background-word.tsx`. */}
+      <Section aria-labelledby="gate-heading" backdrop={<BackgroundWord>Proven</BackgroundWord>}>
         <SectionHeading
           id="gate-heading"
           title="Nothing reaches your calendar unchecked"
