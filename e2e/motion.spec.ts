@@ -859,6 +859,162 @@ test('reduced motion keeps the marker and drops only its travel', async ({ page 
   }
 })
 
+/* -------------------------------------------------------------------------- */
+/* 17 §2 · KPI figures tick on arrival                                         */
+/* -------------------------------------------------------------------------- */
+
+test('the Results tabs count their figures and `/app/home` does not', async ({ page }) => {
+  await page.goto('/app/results')
+  expect(await page.locator('.count-figure').count()).toBeGreaterThan(0)
+
+  // The other half of the prop, and the answer to the question PR4 left open:
+  // a tab switch is an arrival worth confirming, the screen you land on and
+  // stay on is not.
+  await page.goto('/app/home')
+  expect(await page.locator('.count-figure').count()).toBe(0)
+})
+
+test('a counting figure never hands assistive technology a half-counted number', async ({
+  page,
+}) => {
+  await page.goto('/app/results')
+
+  const figure = page.locator('.count-figure').first()
+  await figure.scrollIntoViewIfNeeded()
+
+  // Read it *during* the count. The visible digits are mid-flight; the
+  // announced one must not be.
+  const announced = await figure.evaluate(
+    (node) => node.querySelector('.sr-only')?.textContent ?? '',
+  )
+  expect(announced).toMatch(/\d/)
+
+  // And it lands exactly on the figure it was given — the reason the hook
+  // interpolates against timestamps instead of stepping an interval.
+  await expect
+    .poll(async () =>
+      figure.evaluate((node) => node.querySelector('[aria-hidden="true"]')?.textContent ?? ''),
+    )
+    .toBe(announced)
+})
+
+/* -------------------------------------------------------------------------- */
+/* 17 §2 · The submit button morphs, then draws a checkmark                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Hold the response open so the `sending` phase can be read, then release it.
+ *
+ * Nothing reaches `/api/niche-scan`, so the suite never stores a request.
+ */
+async function stubNicheScan(page: Page, delayMs: number) {
+  await page.route('**/api/niche-scan', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, delayMs))
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true }),
+    })
+  })
+}
+
+async function submitNicheScan(page: Page) {
+  await page.locator('#scan-niche').fill('A two-person bookkeeping practice for tradespeople')
+  await page.locator('#scan-email').fill('someone@example.com')
+  await page.locator('.morph-submit').click()
+}
+
+test('the submit button collapses to a spinner before it draws its mark', async ({ page }) => {
+  await stubNicheScan(page, 1200)
+  await page.goto('/niche-scan')
+
+  const button = page.locator('.morph-submit')
+  await button.scrollIntoViewIfNeeded()
+  const resting = await button.evaluate((node) => node.getBoundingClientRect().width)
+  expect(resting).toBeGreaterThan(120)
+
+  await submitNicheScan(page)
+
+  // Mid-sequence, not end state. Every browser-only bug in PRs 2–4 was
+  // something that was right at the end and wrong in the middle.
+  await expect(button).toHaveAttribute('data-morph', 'sending')
+
+  // Polled, not sampled once: the label fades over `--duration-press`, so
+  // reading it the instant the attribute flips catches it part-way down and
+  // says nothing about where it ends up. What matters is that it gets there
+  // while the request is still in flight — the label is gone *before* the
+  // mark arrives, not at the same time as it.
+  await expect
+    .poll(async () =>
+      button.evaluate((node) => {
+        const label = node.querySelector('.morph-submit__label') as HTMLElement
+        return getComputedStyle(label).opacity
+      }),
+    )
+    .toBe('0')
+  await expect(button).toHaveAttribute('data-morph', 'sending')
+
+  const sending = await button.evaluate((node) => {
+    const spinner = node.querySelector('.morph-submit__spinner') as HTMLElement
+    return {
+      width: node.getBoundingClientRect().width,
+      spinnerAnimation: getComputedStyle(spinner).animationName,
+      spinnerOpacity: getComputedStyle(spinner).opacity,
+    }
+  })
+
+  expect(sending.width).toBeLessThan(resting)
+  expect(sending.spinnerAnimation).toBe('mirrorline-morph-spin')
+  expect(sending.spinnerOpacity).toBe('1')
+
+  await expect(button).toHaveAttribute('data-morph', 'done')
+  const drawn = await button.evaluate((node) => {
+    const check = node.querySelector('.morph-submit__check') as HTMLElement
+    return {
+      animation: getComputedStyle(check).animationName,
+      opacity: getComputedStyle(check).opacity,
+    }
+  })
+  expect(drawn.animation).toBe('mirrorline-morph-draw')
+  expect(drawn.opacity).toBe('1')
+
+  // The mark is a beat, not the destination: the thank-you still arrives.
+  await expect(page.getByRole('heading', { name: 'That is with us.' })).toBeVisible()
+})
+
+test('under reduced motion the mark is already drawn, and the form still settles', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  // Long enough to read the button while it is still on screen. Under reduced
+  // motion the hand-off is immediate, so the `done` phase cannot be sampled
+  // after the fact — the form has already replaced it.
+  await stubNicheScan(page, 1200)
+  await page.goto('/niche-scan')
+
+  await submitNicheScan(page)
+  await expect(page.locator('.morph-submit')).toHaveAttribute('data-morph', 'sending')
+
+  const sending = await page.locator('.morph-submit').evaluate((node) => {
+    const label = node.querySelector('.morph-submit__label') as HTMLElement
+    const spinner = node.querySelector('.morph-submit__spinner') as HTMLElement
+    return {
+      buttonTransition: getComputedStyle(node).transitionDuration,
+      labelTransition: getComputedStyle(label).transitionDuration,
+      spinnerAnimation: getComputedStyle(spinner).animationName,
+    }
+  })
+
+  // No travel. The button is simply already the circle.
+  expect(toMs(sending.buttonTransition)).toBeLessThanOrEqual(1)
+  expect(toMs(sending.labelTransition)).toBeLessThanOrEqual(1)
+  expect(sending.spinnerAnimation).toBe('none')
+
+  // And the final state is the finished one, not a frozen first frame: the
+  // thank-you arrives, which is the whole point of the sequence.
+  await expect(page.getByRole('heading', { name: 'That is with us.' })).toBeVisible()
+})
+
 test('the CTA arrow answers the keyboard as well as the pointer', async ({ page }) => {
   await page.goto(FAQ_PAGE)
 

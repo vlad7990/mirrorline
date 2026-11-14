@@ -19,6 +19,7 @@ import { Button, Card, Sparkline, cn } from '@mirrorline/ui'
 import { Info, Plug } from 'lucide-react'
 import * as React from 'react'
 
+import { KpiFigure } from './kpi-figure'
 import {
   type GoodDirection,
   type Kpi,
@@ -69,6 +70,22 @@ export interface KpiCardProps {
    */
   readonly animateSeries?: boolean
   /**
+   * Count the measured figure up when the card arrives (17 §1 M9, 17 §2).
+   *
+   * Opt-in like the two above, and switched on in exactly two places: the
+   * marketing metrics preview, and the Results tabs. **It is deliberately off
+   * on `/app/home`**, which answers the question PR4 left open. The Results
+   * tabs are seven routes and arriving on one is a navigation, so a tick
+   * there says "these are this tab's numbers, and they are new". The studio
+   * home screen is where someone lands and stays, and a figure that counts
+   * itself up again every time you return to the screen you live on is a
+   * fidget rather than feedback.
+   *
+   * Off also means the figure stays a server-rendered `<span>` with no
+   * client component behind it — see `kpi-figure.tsx`.
+   */
+  readonly animateValue?: boolean
+  /**
    * What the card is sitting on, which decides the gold.
    *
    * Three cases, not two, and the third is the one that caused a bug. The
@@ -85,6 +102,14 @@ export interface KpiCardProps {
   readonly className?: string
 }
 
+/**
+ * One constant, two branches. The counting figure and the static one have to
+ * be typographically identical — `.machine` is what makes the digits tabular,
+ * and a counting number in proportional figures jitters its own width on
+ * every frame.
+ */
+const MEASURED_FIGURE_CLASS = 'machine text-metric text-text'
+
 const TARGET_CLASS: Record<'ink' | 'snow' | 'theme', string> = {
   ink: 'text-gold-bright',
   snow: 'text-gold-text',
@@ -97,6 +122,7 @@ export function KpiCard({
   now,
   surface = 'theme',
   animateSeries = false,
+  animateValue = false,
   className,
 }: KpiCardProps) {
   const { definition, value, target } = kpi
@@ -129,9 +155,17 @@ export function KpiCard({
 
       {value.state === 'measured' ? (
         <>
-          <span className="machine text-metric text-text">
-            {formatKpiValue(value.value, definition.unit)}
-          </span>
+          {animateValue ? (
+            <KpiFigure
+              value={value.value}
+              unit={definition.unit}
+              className={MEASURED_FIGURE_CLASS}
+            />
+          ) : (
+            <span className={MEASURED_FIGURE_CLASS}>
+              {formatKpiValue(value.value, definition.unit)}
+            </span>
+          )}
           {value.series && value.series.length > 1 ? (
             <Sparkline values={value.series} className={animateSeries ? 'draw-line' : undefined} />
           ) : null}

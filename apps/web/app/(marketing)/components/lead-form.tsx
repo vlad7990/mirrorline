@@ -15,6 +15,7 @@ import { Check } from 'lucide-react'
 import * as React from 'react'
 
 import { Modal } from '@/components/marketing/modal'
+import { SubmitMorph, type SubmitPhase } from '@/components/marketing/submit-morph'
 
 export type LeadIntent = 'pilot' | 'demo'
 
@@ -46,7 +47,25 @@ const INTENT_COPY: Record<LeadIntent, IntentCopy> = {
   },
 }
 
-type FormState = 'idle' | 'sending' | 'sent' | 'failed'
+/**
+ * `confirming` is the beat 17 §2 asks for: the request has succeeded and the
+ * button is drawing its checkmark, but the form has not been replaced yet.
+ *
+ * It is its own state rather than a flag on `sent` because the two say
+ * different things — one is "this worked", the other is "here is what happens
+ * next" — and because what ends it is the mark finishing, not the network.
+ */
+type FormState = 'idle' | 'sending' | 'confirming' | 'sent' | 'failed'
+
+/** The form's states in the morph's vocabulary. A failure goes back to idle:
+ *  the `role="alert"` above the fields is the louder, more specific signal. */
+const MORPH_PHASE: Record<FormState, SubmitPhase> = {
+  idle: 'idle',
+  sending: 'sending',
+  confirming: 'done',
+  sent: 'done',
+  failed: 'idle',
+}
 
 type FieldName = 'name' | 'email' | 'company' | 'want'
 type FormValues = Record<FieldName, string>
@@ -138,7 +157,9 @@ function LeadForm({ intent, onDone }: LeadFormProps) {
         return
       }
 
-      setState('sent')
+      // Not 'sent': the checkmark draws first, and `SubmitMorph` says when
+      // it has landed.
+      setState('confirming')
     } catch {
       setErrorMessage('We could not reach the server. Check your connection and try again.')
       setState('failed')
@@ -148,8 +169,6 @@ function LeadForm({ intent, onDone }: LeadFormProps) {
   if (state === 'sent') {
     return <LeadFormSent email={values.email} onDone={onDone} />
   }
-
-  const isSending = state === 'sending'
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -211,16 +230,16 @@ function LeadForm({ intent, onDone }: LeadFormProps) {
         />
       </Field>
 
-      <Button
-        type="submit"
-        variant="primary"
-        fullWidth
-        className="press"
-        loading={isSending}
-        loadingLabel="Sending"
+      {/* 17 §2: the button collapses to a spinner, then draws a checkmark,
+          and only then does the thank-you take its place. */}
+      <SubmitMorph
+        phase={MORPH_PHASE[state]}
+        sendingLabel="Sending"
+        doneLabel="Sent"
+        onSettled={() => setState('sent')}
       >
-        {isSending ? 'Sending' : copy.submitLabel}
-      </Button>
+        {copy.submitLabel}
+      </SubmitMorph>
 
       <p className="m-0 text-meta text-text-muted">
         We use this to reply to you and nothing else. No newsletter, no list.

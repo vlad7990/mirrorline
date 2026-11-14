@@ -37,21 +37,37 @@ const STATUS_TONE: Partial<Record<SocialAccount['status'], Status>> = {
 
 export function AccountsBoard({
   accounts = ACCOUNT_METRICS,
+  animateValues = false,
 }: {
   readonly accounts?: readonly AccountMetrics[]
+  /**
+   * 17 §2's tick, passed only by the Results page.
+   *
+   * This board is on two screens: the Results "Accounts" tab, one of seven
+   * you move between, and `/app/accounts`, which is a destination you land
+   * on. Only the first is an arrival worth confirming — the argument is on
+   * `KpiCardProps.animateValue`.
+   */
+  readonly animateValues?: boolean
 }) {
   return (
     <ul className="m-0 flex list-none flex-col gap-5 p-0">
       {accounts.map((entry) => (
         <li key={entry.account.id} className="min-w-0">
-          <AccountCard entry={entry} />
+          <AccountCard entry={entry} animateValues={animateValues} />
         </li>
       ))}
     </ul>
   )
 }
 
-function AccountCard({ entry }: { entry: AccountMetrics }) {
+function AccountCard({
+  entry,
+  animateValues,
+}: {
+  entry: AccountMetrics
+  animateValues: boolean
+}) {
   const { account, kpis, leadShare } = entry
   const headingId = `account-${account.id}`
   const tone = STATUS_TONE[account.status]
@@ -89,7 +105,7 @@ function AccountCard({ entry }: { entry: AccountMetrics }) {
 
       {kpis.length > 0 ? (
         <>
-          <KpiGrid kpis={kpis} columns={4} />
+          <KpiGrid kpis={kpis} columns={4} animateValues={animateValues} />
           {leadShare === null ? null : (
             <p className="m-0 border-t border-border pt-3 text-caption text-text-muted">
               <span className="machine">{Math.round(leadShare * 100)}%</span> of this week’s leads

@@ -26,6 +26,15 @@ export interface KpiGridProps {
    * written up in `sample-dashboard.ts`.
    */
   readonly now?: Date
+  /**
+   * Tick the figures up on arrival (17 §2).
+   *
+   * Passed by the Results page and by nothing else. The reasoning — why a
+   * navigation earns a tick and `/app/home` does not — is on
+   * `KpiCardProps.animateValue`, which is where anyone switching it on for a
+   * new screen will be reading.
+   */
+  readonly animateValues?: boolean
   readonly className?: string
 }
 
@@ -35,7 +44,13 @@ const COLUMN_CLASS: Record<2 | 3 | 4, string> = {
   4: 'sm:grid-cols-2 lg:grid-cols-4',
 }
 
-export function KpiGrid({ kpis, columns = 3, now = SAMPLE_NOW, className }: KpiGridProps) {
+export function KpiGrid({
+  kpis,
+  columns = 3,
+  now = SAMPLE_NOW,
+  animateValues = false,
+  className,
+}: KpiGridProps) {
   if (kpis.length === 0) return null
 
   return (
@@ -49,6 +64,7 @@ export function KpiGrid({ kpis, columns = 3, now = SAMPLE_NOW, className }: KpiG
             // Colouring their drop red would tell the user they are losing
             // while they are winning.
             goodDirection={LOWER_IS_BETTER.has(kpi.definition.key) ? 'down' : 'up'}
+            animateValue={animateValues}
           />
         </li>
       ))}

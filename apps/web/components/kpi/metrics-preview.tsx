@@ -65,6 +65,10 @@ export function MetricsPreview({ onInk, full, className }: MetricsPreviewProps) 
                 surface={onInk ? 'ink' : 'snow'}
                 goodDirection={LOWER_IS_BETTER.has(kpi.definition.key) ? 'down' : 'up'}
                 animateSeries
+                // The other half of M9, which PR4 left out: "KPI numbers
+                // count". On the public page this is simply the reveal; in
+                // the studio the same prop carries a stricter rule.
+                animateValue
               />
             </li>
           ))}

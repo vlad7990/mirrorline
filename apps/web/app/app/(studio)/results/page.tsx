@@ -78,7 +78,7 @@ function Panel({ slug }: { slug: ResultsTabSlug }) {
       )
 
     case 'accounts':
-      return <AccountsBoard />
+      return <AccountsBoard animateValues />
 
     case 'goals':
       return <GoalsBoard />
@@ -109,7 +109,11 @@ function Overview() {
       <AlertsBoard />
       {/* Directly under the page's h1, so the bar's own heading is an h2. */}
       <GoalProgress {...SAMPLE_GOAL} headingLevel={2} />
-      <KpiGrid kpis={SAMPLE_KPIS} columns={4} />
+      {/* 17 §2: the numbers tick on arrival. The seven tabs are seven routes,
+          so "arrival" is a navigation and the tick says these figures belong
+          to the tab you just opened. `/app/home` does not do this — see
+          `KpiCardProps.animateValue`. */}
+      <KpiGrid kpis={SAMPLE_KPIS} columns={4} animateValues />
 
       <Link
         href="/app/agents"

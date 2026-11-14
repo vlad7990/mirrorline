@@ -642,6 +642,92 @@
     clip-path: inset(0 0 0 0);
   }
 
+  /* 17 §2 · The submit button morphs into a spinner, then a drawn checkmark.
+     Public forms only — Niche Scan and the lead dialog. The component, and
+     the reasoning for animating `max-width` here when nothing else in this
+     file does, is `apps/web/components/marketing/submit-morph.tsx`.
+
+     All three phases hang off one attribute, `data-morph`, so they cannot
+     disagree with each other: there is no state in the CSS. */
+  .morph-submit {
+    position: relative;
+    overflow: hidden;
+    /* The resting width is whatever the label needs. `max-width` is the only
+       thing that moves, so the idle button lays out exactly as it did before
+       this class existed. */
+    max-width: 100%;
+    transition:
+      max-width var(--duration-dropdown) var(--ease-in-out-quint),
+      border-radius var(--duration-dropdown) var(--ease-in-out-quint);
+  }
+
+  /* 3rem is the `lg` button's height, which is the size `SubmitMorph` always
+     asks for. Equal width and height, plus a full radius, is the circle —
+     and at `md` it is a 48×44 stadium instead, which is how the missing
+     `size` was spotted. */
+  .morph-submit[data-morph='sending'],
+  .morph-submit[data-morph='done'] {
+    max-width: 3rem;
+    border-radius: 9999px;
+  }
+
+  .morph-submit__label {
+    transition: opacity var(--duration-press) var(--ease-out);
+  }
+
+  .morph-submit[data-morph='sending'] .morph-submit__label,
+  .morph-submit[data-morph='done'] .morph-submit__label {
+    opacity: 0;
+  }
+
+  /* Out of the flow, so the label alone decides the button's real width and
+     nothing shifts underneath when the marks arrive. */
+  .morph-submit__marks {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+  }
+
+  .morph-submit__spinner,
+  .morph-submit__check {
+    grid-area: 1 / 1;
+    opacity: 0;
+  }
+
+  .morph-submit[data-morph='sending'] .morph-submit__spinner {
+    opacity: 1;
+    animation: mirrorline-morph-spin 1s linear infinite;
+  }
+
+  /* `clip-path`, not `stroke-dashoffset`: see `.draw-line` above. A
+     left-to-right wipe is the same picture, and composites. */
+  .morph-submit__check {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  .morph-submit[data-morph='done'] .morph-submit__check {
+    opacity: 1;
+    animation: mirrorline-morph-draw var(--duration-dropdown) var(--ease-out-expo) both;
+  }
+
+  /* The static fallback is the *end* of the sequence, not the start: the
+     button is already the circle and the mark is already drawn. Nothing here
+     is said only through motion either — the `role="status"` line in the
+     component carries the same news in words. */
+  @media (prefers-reduced-motion: reduce) {
+    .morph-submit,
+    .morph-submit__label {
+      transition: none;
+    }
+
+    .morph-submit[data-morph='sending'] .morph-submit__spinner,
+    .morph-submit[data-morph='done'] .morph-submit__check {
+      animation: none;
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     @supports (animation-timeline: view()) {
       @media (width >= 64rem) {
@@ -753,6 +839,29 @@
 
     to {
       clip-path: inset(0 0 0 0);
+    }
+  }
+
+  /* The same wipe as `mirrorline-draw`, kept separate because the checkmark
+     needs `both` fill and a different duration token, and sharing one
+     keyframe across two very different timings is how one of them quietly
+     stops matching its comment. */
+  @keyframes mirrorline-morph-draw {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  /* Tailwind's `animate-spin` would do, but it is a utility class and this
+     spinner is turned on by an attribute selector rather than by a class on
+     the element. Own keyframes, no dependency on the framework's name. */
+  @keyframes mirrorline-morph-spin {
+    to {
+      rotate: 360deg;
     }
   }
 

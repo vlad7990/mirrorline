@@ -13,15 +13,29 @@
  * answers if anything went wrong.
  */
 
-import { AlertBar, Button, Card, Input, Label, cn } from '@mirrorline/ui'
+import { AlertBar, Card, Input, Label, cn } from '@mirrorline/ui'
 import * as React from 'react'
 
+import { SubmitMorph, type SubmitPhase } from '@/components/marketing/submit-morph'
 import { track } from '@/lib/analytics/events'
 import { GOALS, type GoalKey } from '@/lib/audience/account-type'
 import { useAccountChoice } from '@/lib/audience/account-type-context'
 import { MAX_HANDLES } from '@/lib/leads/niche-scan-lead'
 
-type State = 'idle' | 'sending' | 'sent'
+/**
+ * `confirming` is 17 §2's beat: the request is stored and the button is
+ * drawing its checkmark, but the thank-you has not replaced the form yet.
+ */
+type State = 'idle' | 'sending' | 'confirming' | 'sent'
+
+/** The form's states in the morph's vocabulary. A failure returns to idle and
+ *  the `AlertBar` below the fields says what went wrong. */
+const MORPH_PHASE: Record<State, SubmitPhase> = {
+  idle: 'idle',
+  sending: 'sending',
+  confirming: 'done',
+  sent: 'done',
+}
 
 export function ScanForm() {
   const { choice } = useAccountChoice()
@@ -62,7 +76,9 @@ export function ScanForm() {
         return
       }
 
-      setState('sent')
+      // Not 'sent': the checkmark draws first, and `SubmitMorph` says when it
+      // has landed.
+      setState('confirming')
     } catch {
       // Network failure. Never leave the button spinning, and never claim the
       // scan is on its way when nothing reached us.
@@ -171,9 +187,17 @@ export function ScanForm() {
         {error ? <AlertBar tone="danger" title="That did not send" description={error} /> : null}
 
         <div className="flex flex-col gap-3">
-          <Button type="submit" size="lg" variant="gold" disabled={state === 'sending'}>
-            {state === 'sending' ? 'Sending…' : 'Get my free Niche Scan'}
-          </Button>
+          {/* 17 §2: the button collapses to a spinner, then draws a
+              checkmark, and only then does the thank-you take its place. */}
+          <SubmitMorph
+            phase={MORPH_PHASE[state]}
+            variant="gold"
+            sendingLabel="Sending"
+            doneLabel="Sent"
+            onSettled={() => setState('sent')}
+          >
+            Get my free Niche Scan
+          </SubmitMorph>
           <p className="m-0 text-caption text-text-muted">
             No card, no call booked automatically, and we do not add you to a mailing list. We use
             your email to send the scan and to answer you.
