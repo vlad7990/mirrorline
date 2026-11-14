@@ -8,15 +8,26 @@
 
 ## Handoff — 13 November 2026 (evening: motion v2 begins)
 
-**Branch** `v4/site-and-metrics` · **last commit** `4b3cbbd` · clean tree,
+**Branch** `v4/site-and-metrics` · **last commit** `27653c9` · clean tree,
 pushed. The `Branch: main` line above is stale; this is where the work is.
 
-**Preview:** https://mirrorline-q5trj0gam-vn-mn-product-group.vercel.app —
+**Preview:** https://mirrorline-p6ohijce0-vn-mn-product-group.vercel.app —
 Ready, `target: null` (a preview; nothing has been promoted to production),
-built from the PR B2 tree. Share link (expires 15 Nov, 13:26):
-`?_vercel_share=0VZlbcR5Huedgum7p1wAGBjXSS5LBLEv`.
+built from the PR7 tree. Share link (expires 15 Nov, 19:35):
+`?_vercel_share=82Cyb9rEGdkEZPWziNww4BVYimiZuxpW`.
 
-What to look at for **PR B2**: the "How the loop runs" section on `/`, and
+What to look at for **PR7**: `/app/calendar`. Drag a chip sideways onto
+another day in the same platform row — the ghost follows the pointer, the
+target cell takes a ring, and the toast says it was not saved. Then try to
+drag it onto a different platform row and watch it refuse. Then click any
+chip and use **Move to…** on the right, which also changes the time. At 390px
+the same menu is in the drawer, and dragging is off by design. Verified on
+this deployment: ghost present, drop slot ringed, chip moved, toast reads
+"Sample data, not saved."
+
+The PR B2 preview was https://mirrorline-q5trj0gam-vn-mn-product-group.vercel.app
+(share `?_vercel_share=0VZlbcR5Huedgum7p1wAGBjXSS5LBLEv`, expires 15 Nov
+13:26). What to look at there: the "How the loop runs" section on `/`, and
 click all four tabs — they should now show four different things rather than
 the same six rectangles. Then the same section at 390px, where the three
 frames become a side-swipe. And the footer, which no longer has a theme
