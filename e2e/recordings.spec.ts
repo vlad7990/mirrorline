@@ -77,6 +77,24 @@ test.describe('motion-v2 recordings', () => {
     await save(page, testInfo, 'home-rails-and-reveals')
   })
 
+  test('the hero, settling and then scrolled', async ({ page }, testInfo) => {
+    await page.goto('/')
+    await expect(page.locator('h1').first()).toBeVisible()
+
+    // Hold on the hero first: the headline's line reveal and the inset
+    // preview's first loop both happen on load, and a clip that starts
+    // scrolling immediately misses the half of this PR that is not parallax.
+    await page.waitForTimeout(3_500)
+
+    // Then a slow drift down, which is where the three depths separate.
+    for (let index = 0; index < 18; index += 1) {
+      await page.mouse.wheel(0, 60)
+      await page.waitForTimeout(430)
+    }
+
+    await save(page, testInfo, 'hero-depth-and-headline')
+  })
+
   test('the Output sequence, start to finish', async ({ page }, testInfo) => {
     await page.goto('/')
 

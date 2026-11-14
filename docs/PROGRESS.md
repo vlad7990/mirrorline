@@ -8,33 +8,33 @@
 
 ## Handoff — 13 November 2026 (evening: motion v2 begins)
 
-**Branch** `v4/site-and-metrics` · **last commit** `8c8b02e` · clean tree,
+**Branch** `v4/site-and-metrics` · **last commit** `dd7b57d` · clean tree,
 pushed. The `Branch: main` line above is stale; this is where the work is.
 
-**Preview:** https://mirrorline-oafzvb3cy-vn-mn-product-group.vercel.app —
-`target: preview`, Ready, built from the PR2 tree. Nothing has been promoted to
+**Preview:** https://mirrorline-i07eet04e-vn-mn-product-group.vercel.app —
+`target: preview`, Ready, built from the PR3 tree. Nothing has been promoted to
 production. Share link (expires 15 Nov):
-`?_vercel_share=dho5vJ4uBilzgedrXi4YxX2r3HeDk4hQ`.
+`?_vercel_share=dKTGhokJMLQQUlhasX7sZFbYvvo5qOfg`.
 
-**Recordings:** `docs/screens-built/motion-v2/` — six clips, desktop (1440) and
-mobile (390): `home-rails-and-reveals-*.webm` (14.4s),
-`output-multiply-sequence-*.webm` (15.8s) and `account-picker-pill-*.webm`
-(11.6s). Regenerate with
+**Recordings:** `docs/screens-built/motion-v2/` — eight clips, desktop (1440)
+and mobile (390): `home-rails-and-reveals-*.webm` (14.6s),
+`hero-depth-and-headline-*.webm` (13.4s), `output-multiply-sequence-*.webm`
+(15.8s) and `account-picker-pill-*.webm` (11.5s). Regenerate with
 `MOTION_RECORD=1 pnpm exec playwright test e2e/recordings.spec.ts
 --project=chromium --project=mobile`. The spec skips without that variable, so
 it never slows `pnpm test:e2e`.
 
 ### Where motion v2 is
 
-Three of seven are in. The order is Vlad's, from the evening brief.
+Four of seven are in. The order is Vlad's, from the evening brief.
 
 | PR | What | State |
 |---|---|---|
 | **Licence** | D41 · GSAP scoped to marketing, and enforced | **Done** — `518477b` |
 | **1** | Motion tokens · numbered rails · button and selector micro-interactions | **Done** — `e4097b8`, fixed by `54244dd` |
 | **2** | Output section as the pinned "multiply" sequence, 3-layer parallax | **Done** — `8c8b02e` (D42) |
-| 3 | Hero depth parallax, floating cut cards, inset preview, SplitText headline | **Next** |
-| 4 | Stacked 2026 cards, scroll-lit rows, recipe assembly, metrics count/draw | Not started |
+| **3** | Hero depth parallax, floating cut cards, inset preview, SplitText headline | **Done** — `dd7b57d` |
+| 4 | Stacked 2026 cards, scroll-lit rows, recipe assembly, metrics count/draw | **Next** |
 | 5 | Studio micro-interactions (no GSAP) | Not started |
 | 6 | One trial band of oversized words, page transitions | Not started |
 
@@ -81,6 +81,29 @@ uninstalled — `useGSAP` needs a module-scope `gsap` import, which would put
 ~70 KB in the home page's first load against a 30 KB budget. `gsap.context()`
 gives the same cleanup contract; `/` went 192 KB → 194 KB.
 
+### PR3, and the one serious thing it nearly shipped
+
+The hero now has three layers at three speeds (room 0.15, glow 0.35, three
+floating cut cards 0.6), a labelled inset preview in the bottom-right corner,
+and a headline whose fixed line rises a line at a time. It is **CSS, not
+GSAP** — `scroll()`, not `view()`, because the hero starts in the viewport and
+a view timeline would have spent a third of its travel before the reader
+touched anything. First load is unchanged at 194 kB.
+
+**The headline splits only its fixed half**, and that is not fussiness.
+SplitText rewrites the DOM it is given; `TypedPhrase` rewrites its own text on
+a timer. Handed the whole headline, the split freezes the cycling line into
+whatever it said at that instant — and `aria: 'auto'` copies that half-typed
+string onto the element as a permanent `aria-label`, so the page's one `h1`
+ends up named after a phrase no longer on screen.
+
+**A serious axe violation came out of the same option.** `aria: 'auto'` puts
+an `aria-label` on the element it splits, which is permitted on the `<h2>` the
+showcase heading uses and is `aria-prohibited-attr` on the plain `<span>` the
+hero splits. Lines now use `aria: 'none'` and need no label — a line is
+already a readable run of text. This one CI *did* catch, because the axe sweep
+covers `/`; the two below it did not.
+
 ### Opening it in a browser found a bug CI could not
 
 The home rails rendered **"01" fourteen times**. A `counter-increment` with no
@@ -111,6 +134,25 @@ drawn — giving away the trick the section exists to perform.
 The lesson worth carrying into PR3: **assertions about end states cannot see a
 sequence that is wrong in the middle.** The new stacking test asserts order
 rather than pixels and was verified by restoring the bug.
+
+**And twice more in PR3, both about things sitting on top of each other.** The
+three floating cut cards were placed by eye against a hero I assumed was 900px
+tall; it is 792. Two of them sat on the inset preview and the third ran off
+the bottom. Then, with those moved, the **AI disclosure ran underneath the
+inset and behind a card** — and a label you cannot read is the same failure as
+not having one, which is exactly why that sentence was moved above the index
+back in D34.
+
+Both are now geometric tests: the cards must clear the inset and stay inside
+the hero, and nothing decorative may intersect the disclosure. The second
+measures the *glyphs* via a `Range`, not the paragraph's box — the box is full
+width with padding that holds the text clear, so a box-level assertion failed
+while the page was correct. Verified by removing the padding and watching it
+fail.
+
+Four browser-only bugs in three PRs. Every one was something overlapping,
+mis-stacked or mid-sequence — none of it visible to a test that checks a
+finished state on a correct-looking DOM.
 
 **Two pre-existing console errors on `/`, and they are not from this work:** a
 `favicon.ico` 404, and React #418, a hydration mismatch on `<html>` — almost
