@@ -43,6 +43,82 @@ section's episode frame and week strip; `/pricing` for the label that is no
 longer over the screenshot and for the gold dashboard; `/app/results` for the
 KPI ticks; `/niche-scan` for the submit button.
 
+### The queue, in order (set by Vlad, 14 Nov)
+
+Do not reorder. Each one is preview only, gates green, this handoff updated
+before moving on.
+
+| # | PR | State |
+|---|---|---|
+| 1 | **PR A** · the e2e flake and the blank marketing HTML | done, `354c4f5` |
+| 2 | **PR B2** · four loop tabs, theme switch off the public site | done, `4b3cbbd` |
+| 3 | **PR7** · calendar drag-to-reschedule | next |
+| 4 | **PR C** · Co-pilot (write `docs/specs/18_COPILOT.md` first) | queued |
+| 5 | **PR D** · Long-form YouTube add-on | queued |
+| 6 | **PR E** · remaining motion, site and studio | queued |
+| 7 | **PR F1–F5** · inner pages, to `docs/specs/19_INNER_PAGES.md` | queued |
+
+#### PR F1–F5 · bring every inner page up to the home page
+
+Added 14 Nov, after PR E and not before it. Spec:
+`docs/specs/19_INNER_PAGES.md`. Locked design rules still apply — only
+content, layout **within the existing system**, imagery and motion change.
+
+- **F1 · the shared kit.** Page hero pattern (full-bleed AI image, depth
+  parallax, inset preview card; vertical labels over images removed), section
+  rails, a reel strip, a browser-frame screenshot component, and the
+  persona-aware final CTA on every page.
+- **F2** · `/product`, `/how-it-works`, `/agents`
+- **F3** · `/metrics` (interactive goal picker), `/compare`, `/pricing`
+- **F4** · `/trust`, `/businesses`, `/individuals`, `/niche-scan`,
+  `/niche-scan/sample`
+- **F5** · `/about`, `/contact`, `/faq`, `/resources` (+ article pages),
+  `/changelog`, `/legal/*`, `/accessibility` — readable layout only, no reels
+
+Checked against the spec's own table: every page it lists is assigned exactly
+once across F2–F5, none left out and none covered twice.
+
+**Rules, per PR:** reuse `public/samples/` and generate more where a page
+needs its own (fictional, varied, no real likeness, labelled
+"AI-generated sample"); never repeat the same reel set twice on one page; no
+more than two text-only sections in a row; 4–8 screens at 1440×900;
+screenshots from the current gold studio. Before/after shots at 1440 and 390
+into `docs/screens-built/inner-pages/`; all gates green; Lighthouse mobile
+≥ 90 on `/product`, `/how-it-works` and `/pricing`; preview only.
+
+**Why F really does come after E**, rather than that being a preference — the
+spec leans on four things that do not exist yet:
+
+- the hover-loop reels (§Shared rules) and the animated Niche Scan stepper
+  (`/niche-scan`) are **PR E**;
+- the long-form YouTube add-on card on `/pricing` is **PR D**;
+- the "Ask about Mirrorline" link on `/faq` is **PR C**.
+
+Building F first would mean stubbing all four and coming back.
+
+**Two things to settle when F1 starts, flagged now rather than discovered
+then:**
+
+1. **Asset volume is the real cost.** Sixteen pages, a visual in every second
+   section, and no reel set repeated twice on one page. The twelve marquee
+   frames plus the four loop frames do not cover that, so F1 should fix the
+   generation budget and the trade-and-person spread up front — otherwise F2
+   quietly sets a precedent F5 cannot afford.
+2. **Lighthouse ≥ 90 on mobile pulls against all of it.** `/product`,
+   `/how-it-works` and `/pricing` are the three pages the spec wants fast and
+   three of the most image-heavy it describes. Decide the image budget in F1,
+   not page by page in F2–F5.
+
+**And one trap worth knowing before anyone writes the goal picker.**
+`/metrics` wants a goal picker and `/pricing` a plan selection. If either
+takes its state from the URL with `useSearchParams`, it needs a Suspense
+boundary above it — and D46 is the record of what happens when that boundary
+goes in the layout instead: the whole marketing tree became the fallback and
+every public page shipped with no `<main>` in its HTML. Keep the boundary
+around the component that reads the params, the way `AccountChoiceProvider`
+now does, and check `curl localhost:3000/metrics | grep -c '<main'` before
+calling it done.
+
 ### PR B2 · four tabs that show four jobs, and a switch the public site loses (14 Nov) — read D47
 
 **The loop section was one tab rendered four times.** Multiply, Remake,
