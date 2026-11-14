@@ -6,10 +6,17 @@
 
 ---
 
-## Handoff — 13 November 2026 (evening: motion v2 begins)
+## Handoff — 14 November 2026 (PR A, PR B2 and PR7 shipped; PR C is next)
 
-**Branch** `v4/site-and-metrics` · **last commit** `27653c9` · clean tree,
-pushed. The `Branch: main` line above is stale; this is where the work is.
+**Branch** `v4/site-and-metrics` · **last feature commit** `27653c9` (PR7),
+with this handoff committed on top · clean tree, pushed. The `Branch: main`
+line above is stale; this is where the work is.
+
+**Where to start reading:** "The queue, in order" immediately below gives the
+agreed sequence and what is done. Then D46, D47 and D48 in
+`docs/DECISIONS.md` for the three PRs of 14 November. Two open problems are
+worth knowing before touching the studio — the React #418 repro and the
+duplicated post panel — both under "Watch" in the PR7 section.
 
 **Preview:** https://mirrorline-p6ohijce0-vn-mn-product-group.vercel.app —
 Ready, `target: null` (a preview; nothing has been promoted to production),
@@ -936,6 +943,12 @@ Full detail under "Needs Vlad" below; one line each:
 - **E** — the written IP assignment, still the single gate on the whole
   GenAIUniq reuse list. `docs/provenance.md`'s register stays empty until it
   exists.
+- **F** — `ANTHROPIC_API_KEY`, for PR C. Not a blocker: the co-pilot is built
+  behind an adapter that returns canned answers without it, so the key only
+  decides whether the preview answers for real.
+- **G** — start the **YouTube API audit** for PR D. Weeks of queue, and until
+  it passes anything we publish to YouTube stays private — the same
+  limitation TikTok already carries on the calendar legend.
 
 ---
 
@@ -1304,6 +1317,33 @@ D. ~~**`git rm apps/web/components/results/report-button.tsx`**~~ **Done
 E. **The written IP assignment** remains the single gate on the whole
    GenAIUniq reuse list. `docs/provenance.md`'s register is empty and stays
    empty until it exists.
+
+### New, for PRs that are queued but not started (14 November)
+
+Both have lead time, which is why they are here now rather than when the PR
+begins. Neither blocks anything shipped so far.
+
+F. **An Anthropic API key as `ANTHROPIC_API_KEY`**, for **PR C** (the
+   co-pilot). The plan is that it is server-side only, behind an adapter that
+   returns canned responses when the variable is missing — so PR C can be
+   built, reviewed and previewed without it, and the key only decides whether
+   the preview answers for real. A spend cap per workspace is part of the
+   same PR. Nothing is spent until you set it.
+
+   Worth deciding at the same time: the studio co-pilot is specified as
+   `claude-sonnet-5-5` and the website one as `claude-haiku-5-5`, on the
+   reasoning that the public-facing one only answers from our own pages. If
+   you would rather both were the cheaper model, say so before PR C rather
+   than after.
+
+G. **A YouTube API audit, and the thing to know is that uploads stay private
+   until it passes.** For **PR D** (the long-form add-on). Google's audit is
+   the gate on an app being allowed to make uploads public, and the queue for
+   it is measured in weeks — so it wants starting well before the feature
+   lands, not after. Until it passes, anything we publish to YouTube is
+   private, which is the same limitation TikTok already has on the calendar
+   legend ("TikTok posts stay private until our app is approved"). PR D will
+   say so on the screen in the same words.
 
 ### From earlier runs
 
