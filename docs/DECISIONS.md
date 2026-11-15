@@ -2844,3 +2844,208 @@ it is named in the handoff.
 Lighthouse mobile, medians of three runs: **/product 90, /how-it-works 91,
 /pricing 91, /metrics 91.** Unit tests 503, up 38. axe clean on both pages in
 both themes.
+
+## 2026-11-14 · D53 · A resources page that gives the templates away, a door that stops pretending to be the studio, and a credit estimate that was wrong by half
+
+PR F5: `/resources` and its article template, `/sign-in` and `/sign-up`. The
+last of the F series, and the one where the spec's own old copy turned out to
+be the hardest constraint in it.
+
+### The old hero's margin note is the whole specification
+
+The page this replaces said, in small type beside the headline: "no gated
+downloads · no email required". Six words, written months ago, and they rule
+out the shape a resources page normally takes — the card that offers to email
+you a worksheet, the glossary behind a form, the "get the free template"
+button that is a lead magnet with a helpful face.
+
+So 19 v2 ★4's phrasing — "templates and a glossary, **each a real list rather
+than a promise of one**" — is implemented literally. The four templates are
+printed on the page, in the HTML, in mono, as the lines you would copy onto
+paper. There is nothing to download because there is no file, and nothing to
+sign up for because nothing is being withheld. A test asserts the negative (no
+template's text contains "download", "subscribe" or "enter your email"),
+because this is precisely the kind of thing that gets added later by somebody
+who thinks they are improving conversion.
+
+**The newsletter form is the same argument, inverted.** ★5 asks for a signup
+"with explicit consent, and the form sends nothing". Three commitments, and
+each is structural rather than copy: the consent box starts unticked and
+submitting without it fails visibly; there is no `fetch`, no action and no
+endpoint anywhere in the component; and the notice saying so renders *above*
+the field rather than in the confirmation, because telling somebody what
+happened to their address after they have typed it is not the same as telling
+them before. An e2e test counts outbound requests across the submission and
+fails on any that is not an image, a script, a stylesheet or a font — so an
+action added later fails the suite rather than quietly collecting addresses.
+
+### The category filter is links, and that is not the thing D46 forbids
+
+★3 asks for "a filter that works without JavaScript where it can", which
+settles the implementation: each category is a URL the server answers, the
+page reads `searchParams`, and the filtered list is in the document before any
+script runs. A spec asserts it against a context with `javaScriptEnabled:
+false`, which is the only way to tell this apart from a filter built out of
+buttons — they look identical until scripting is off.
+
+**It is worth being explicit that this is not D46.** D46 is about
+`useSearchParams`, the client hook: calling it opts its subtree out of static
+rendering, and the Suspense boundary that silenced the build once sat in the
+marketing layout, which made the prerendered HTML of every public page *be
+that boundary's fallback* — `curl /` returned nothing. The server
+`searchParams` prop shares the name and none of the behaviour. The real cost
+is different and smaller: `/resources` renders per request instead of at build
+time. The article pages are untouched and still prerender, all six.
+
+### Three articles became six, and the content moved so that it could be tested
+
+The asset budget reserved six covers, which means six articles; there were
+three. The three new ones are what the existing three left out — what posting
+through the official APIs actually supports, how to write the first three
+seconds, and the first thirty days of an account with nothing on it.
+
+**The content module moved from `.tsx` to `.ts`, and the extension is the
+reason.** `tsconfig.base.json` sets `jsx: "preserve"` and `vitest.config.ts`
+includes only `*.test.ts` under `apps/web`, so a `.tsx` content module cannot
+be imported by a spec at all — the same constraint that moved `PAGE_CTAS` out
+of a component file in F1. Everything worth asserting about this content was
+unassertable while it lived next to the page.
+
+The test that earns its place is the one on the rule the page is built around:
+**no article names the product.** "Each one is useful without us" is the
+standard an article has to meet to go here, and an article does not stop
+meeting it in one edit — it stops a sentence at a time, each of which reads as
+a helpful aside. Naming the product is the earliest point at which that is
+detectable by a machine, so that is where the line is drawn, and it is drawn
+in a test rather than in a review checklist because checklists are not run.
+
+### Fourteen credits against nine, and one picture that had a brand on it
+
+The budget in 19 v2 says six covers at Nano Banana 2, 16:9, **9 credits**. The
+actual spend was **14**, and both halves of the gap are worth recording.
+
+**Nano Banana 2 at 2k costs 2, not 1.5.** `higgsfield generate cost` quoted
+1.5 for the model and the balance fell by 12 across six images. The 1.5 in D29
+and in the v2 budget appears to be the price at a smaller resolution. Six
+images, twelve credits.
+
+**The seventh was a regeneration, and it was not optional.** The cover for
+"The first three seconds" came back with a legible camera-maker's wordmark on
+the camera body. DESIGN.md says not to show real brand logos, and that is not
+a rule with a "but it is small" clause in it — a real trademark on a page
+about making your own material is the wrong thing to be careless about. Two
+credits, re-prompted for an unbranded body, and the replacement is a better
+picture than the original anyway.
+
+**Five credits remain, not the twelve the plan held back.** That is the retry
+margin for everything after F5, and it is thin enough that PR D should check
+it before planning anything visual.
+
+The other five came back in the register D49 set — warm, open, lit, ordinary
+people doing ordinary work — and were kept.
+
+### /resources sits exactly on the image ceiling, which is why the glossary has three frames and not eight
+
+The per-page budget allows one `priority` image and at most twelve lazy. This
+page spends one (the hero), three (the hero inset's cross-fade) and six (the
+article covers), which is ten; the glossary's visual takes it to twelve.
+
+That is the ceiling and not a target, and it is what decided the shape of that
+visual. `ReelStrip` was the obvious reach and it is cut for eight frames in an
+eight-column grid, which would have been both over budget and three slivers
+against five empty columns. `SampleTrio` is three frames at a readable size,
+and its caption says why they are there: every term in that glossary assumes a
+9:16 vertical a few seconds long, and that shape is the one thing a definition
+list cannot show.
+
+### The auth pages were wearing the studio's clothes
+
+`/sign-in` and `/sign-up` were a white app bar over a light page — what the
+studio looks like once you are inside it. A visitor reaching them has come off
+the marketing site, and ★1 puts them back on it: `band-ink`, the gold accent,
+and the shared generated image down one side, labelled.
+
+**The change cost nothing in the components**, which is the band system
+working as designed: the utilities remap the semantic tokens (D40), so
+`Input`, `Checkbox` and `Button` render against ink with no auth-specific
+variants.
+
+**And the trap still caught me once, in my own new code.** The link colour
+went in as `text-accent`, which clears AA on ink from both `:root` and `.dark`
+— so nothing failed, and nothing would have. But `--color-accent` is one of
+the tokens the bands do *not* pin, and D25 is explicit that the public site's
+bands are "art direction, not a theme … `.dark` does not reach it". A link
+that changes colour with the visitor's operating system on an ink band has let
+it reach. `text-gold-bright` is a fixed value: 9.8:1 on ink, and the same for
+everybody. **The lesson is narrower than D52's and worth adding to it: a
+band-pinned palette is not only about contrast failures. A token that passes
+contrast and still varies with the OS is a different bug, and axe will never
+report it.**
+
+**The studio teaser came off `/sign-in`.** It showed today's sample schedule
+and all seven agent pills, honestly labelled, in a panel beside the form.
+★5 — "no reels and no final CTA; they are a door, not a page of argument" —
+rules it out, and rightly: anybody on that page has already decided, and a
+panel of somebody else's posting schedule is an argument aimed at a person who
+has left the room.
+
+### The error state, and how to fail a sign-in honestly with no backend
+
+★2 asks for a failed sign-in, "said plainly and without saying which half was
+wrong". There is no auth backend, so there is nothing a password can be wrong
+*against* — every password is as correct as every other, and a form that
+rejected one at random would be theatre.
+
+The honest version: `.example` is a reserved domain (RFC 2606) that can never
+be registered, so **no address under it is ever an account**. The placeholder
+is one, so copying the placeholder shows the error. That is deterministic, it
+is true, and it makes the state reachable by anybody looking at the page
+rather than only by somebody who knows a magic string.
+
+The message names neither half, and a test asserts that it does not: "wrong
+password" confirms the account exists, which is address enumeration one guess
+at a time. The forgotten-password state (★3) refuses the same information for
+the same reason, and says so in its confirmation rather than leaving the
+vagueness looking like sloppiness.
+
+★4's neutral address replaces `maya@mayatorres.example`, the demo workspace
+owner's. A plausible full name in the sign-in field of a product with no
+customers is the smallest possible version of inventing one.
+
+### The reading-progress line draws nothing where it cannot work
+
+★7's progress line is CSS — `animation-timeline: scroll(root block)` — with no
+scroll listener and no library. The whole rule lives inside `@supports`, and
+that is the decision rather than a detail: a progress bar is only honest if it
+tracks something, and where `animation-timeline` is unsupported the fill would
+freeze at one end. Permanently empty reads as "you have read none of this" at
+the foot of the article; permanently full reads as the opposite. Both are
+worse than no bar, so where it cannot work the track is not drawn at all. The
+same under `prefers-reduced-motion`.
+
+### A flake that had already been called a flake once
+
+The full suite failed on `motion.spec.ts`, "the selection pill follows the
+chosen account option". Re-run three times in isolation it passed three times
+— and the same test was flagged flaky earlier the same day, which is the point
+at which "flaky" stops being a diagnosis.
+
+The cause is the assertion's shape. `expect(await pillIndex()).toBe('1')`
+reads the custom property exactly once, in the same tick as the click, so what
+it asserts is that React has *already* re-rendered: true on an idle machine,
+not true with six other workers on the CPU. `expect.poll` asserts what the
+test means. Fixed rather than re-run until green, because a known-flaky test
+left in place fails somebody else's pull request next.
+
+### Also done here
+
+`app/(marketing)/resources/resources-content.tsx` is deleted rather than left
+beside its replacement. Nothing imports it, and a superseded content module
+sitting next to the live one is the kind of dead code that gets edited by
+mistake a month later.
+
+### Measurements
+
+Unit tests 522, up 19. e2e 287, up 12. axe clean on all three pages in both
+themes. Six covers at 1600×900 WebP, 60–81 KB each. Lighthouse mobile medians
+are in the handoff for this PR.

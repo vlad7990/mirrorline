@@ -256,11 +256,18 @@ test('the selection pill follows the chosen account option', async ({ page }) =>
       getComputedStyle(element).getPropertyValue('--choice-index').trim(),
     )
 
+  // `expect.poll`, not `expect(await …)`, and the difference is the whole
+  // reason this test has now failed twice in a full run and never once on its
+  // own. A bare `expect` on an awaited value reads the custom property exactly
+  // once, in the same tick as the click — so what it actually asserts is that
+  // React has *already* re-rendered, which is true on an idle machine and not
+  // true with six other workers on the CPU. Polling asserts what the test
+  // means: that the pill ends up under the chosen option.
   await options.nth(0).click()
-  expect(await pillIndex()).toBe('0')
+  await expect.poll(pillIndex).toBe('0')
 
   await options.nth(1).click()
-  expect(await pillIndex()).toBe('1')
+  await expect.poll(pillIndex).toBe('1')
 
   // The selection is never conveyed by the moving pill alone.
   await expect(options.nth(1)).toHaveAttribute('aria-checked', 'true')

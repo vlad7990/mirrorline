@@ -153,6 +153,93 @@
 }
 
 /* ---------------------------------------------------------------------------
+   The article card's hover lift (19 v2 ★/resources item 2).
+
+   On the card's wrapper rather than on the `Card` itself, because the shadow
+   has to grow outside the card's own `overflow-hidden` — which is there to
+   keep the cover's corners inside the rounded edge, and would otherwise clip
+   the lift it is supposed to show.
+
+   `:focus-within` for the reason `.reel-push` has it: the title inside each
+   card is a link, so a keyboard user arrives here and should see what a mouse
+   user sees. Transform and box-shadow only, so it stays off the main thread
+   and moves no layout.
+   --------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  .card-lift {
+    transition:
+      transform var(--dur-reveal) var(--ease-out),
+      box-shadow var(--dur-reveal) var(--ease-out);
+  }
+
+  .card-lift:hover,
+  .card-lift:focus-within {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgb(0 0 0 / 0.14);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The article page's reading-progress line (19 v2 ★/resources item 7).
+
+   Scroll-driven and CSS-only: `animation-timeline: scroll(root block)` ties
+   the fill to the document's own scroll position, which the browser runs off
+   the main thread. The alternatives were a scroll listener (banned here: it
+   fires every frame) or a library for what is one transform.
+
+   **The whole thing lives inside `@supports`, and that is the interesting
+   part.** A progress bar is only honest if it tracks something. Where
+   `animation-timeline` is unsupported the fill would sit frozen at one end —
+   either permanently empty, which reads as "you have read none of this" at
+   the foot of the article, or permanently full, which reads as the opposite.
+   Both are worse than no bar. So where it cannot work the track is not drawn
+   at all and the element collapses to nothing, which is also what happens
+   under `prefers-reduced-motion`: a line chasing the scroll is movement
+   nobody asked for.
+   --------------------------------------------------------------------------- */
+.reading-progress {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .reading-progress {
+      position: sticky;
+      /* Under the site header, which is `fixed` at z-40 and would otherwise
+         cover this entirely. The offset is passed in as a variable because
+         the height is `HEADER_HEIGHT_PX` in site-chrome.ts, and a second
+         hand-written copy of it here is how the two drift apart. */
+      top: var(--reading-progress-top, 0px);
+      z-index: 20;
+      display: block;
+      height: 2px;
+      /* The track. Faint, because the filled part is the signal and a strong
+         rule across the top of every article is a border nobody asked for. */
+      background-color: var(--color-border);
+    }
+
+    .reading-progress-fill {
+      display: block;
+      height: 100%;
+      background-color: var(--color-gold);
+      transform-origin: 0 50%;
+      transform: scaleX(0);
+      animation: mirrorline-reading-progress linear forwards;
+      animation-timeline: scroll(root block);
+    }
+  }
+}
+
+@keyframes mirrorline-reading-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* ---------------------------------------------------------------------------
    A meter that fills to its figure as it comes into view.
 
    /product's Originality Gate demo (19 v2) shows a similarity reading against

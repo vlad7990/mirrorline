@@ -93,9 +93,18 @@ Banana 2 costs 1.5; Kling 3.0 Turbo costs 7.5 a clip (D29). The spend:
 |---|---|---|---|
 | Page hero images, one per page | Nano Banana Pro, 16:9, 2k | 7 | 14 |
 | One shared image behind /sign-in and /sign-up | Nano Banana Pro, 16:9, 2k | 1 | 2 |
-| Article cover images for /resources | Nano Banana 2, 16:9 | 6 | 9 |
-| **Spent** | | **14** | **25** |
-| **Held for regenerations** | | | **12** |
+| Article cover images for /resources | Nano Banana 2, 16:9 | 6 | 9 → **12** |
+| **Spent** | | **14** | ~~25~~ **30** |
+| **Held for regenerations** | | | ~~12~~ **5** |
+
+**Corrected at F5, 14 November (D53).** Nano Banana 2 at 2k costs **2**, not
+the 1.5 this table planned with — `higgsfield generate cost` quotes 1.5 for
+the model, and the balance fell by 12 across the six covers. A seventh image
+was then regenerated at 2 credits, because the first version of "The first
+three seconds" came back with a legible camera-maker's wordmark on the camera
+body, which DESIGN.md rules out. So F5 spent 14 against the 9 reserved, and
+**five credits remain, not twelve.** Anything after F5 that wants new imagery
+should check the balance before planning it.
 
 **No new video, and that is the budget deciding a design question.** Nine page
 loops through Kling would be 67.5 credits, which we do not have. So the
