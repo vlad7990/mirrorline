@@ -6,9 +6,9 @@
 
 ---
 
-## Handoff — 14 November 2026, evening (PR F1, F2 and F3 shipped; F4 is next)
+## Handoff — 14 November 2026, evening (PR F1–F4 shipped; F5 is next)
 
-**Branch** `v4/site-and-metrics` · **last feature commit** `27b4893` (PR F3),
+**Branch** `v4/site-and-metrics` · **last feature commit** `56848ea` (PR F4),
 with this handoff committed on top · clean tree. The `Branch: main` line above
 is stale; this is where the work is.
 
@@ -19,8 +19,8 @@ is the thing to read before writing any more of them. Then D49, D50 and D51 in
 has been reordered to match what Vlad asked for on 14 November: **F runs
 before C, D and E.**
 
-**Preview:** https://mirrorline-1t2kss173-vn-mn-product-group.vercel.app —
-built from the F3 tree (`27b4893`). It returns 302 behind Vercel's deployment
+**Preview:** https://mirrorline-pxzgwod5a-vn-mn-product-group.vercel.app —
+built from the F4 tree (`56848ea`). It returns 302 behind Vercel's deployment
 protection, exactly as previous previews have; open it signed in to the team,
 or mint a share link from the dashboard. Nothing is promoted to production.
 
@@ -88,15 +88,26 @@ left out rather than stubbed.
 | 4 | **PR F1** · the shared inner-page kit + 19 v2 | done, `6c87511` |
 | 5 | **PR F2** · /product and /how-it-works | done, `d9cb358` |
 | 6 | **PR F3** · /pricing and /compare | done, `27b4893` |
-| 7 | **PR F4** · /metrics and /niche-scan | **next** |
-| 8 | **PR F5** · /resources + article template, /sign-in, /sign-up | queued |
+| 7 | **PR F4** · /metrics and /niche-scan | done, `56848ea` (one ★ open) |
+| 8 | **PR F5** · /resources + article template, /sign-in, /sign-up | **next** |
 | 9 | **small PR** · React #418 at `/app/calendar` 390px | queued, after F5 |
 | 10 | **PR C** · Co-pilot (`docs/specs/18_COPILOT.md` is already written) | queued |
 | 11 | **PR D** · Long-form YouTube add-on | queued |
 | 12 | **PR E** · remaining motion, site and studio | queued |
 | — | **PR F6** · the eleven inner pages F1–F5 do not cover | not scheduled |
 
-#### Picking up F4 — read this before starting
+#### The one ★ still open in F1–F4
+
+**/niche-scan's four-step stepper was not built** (19 v2 ★2, D52). Everything
+else on that page is done. `ScanForm.onSubmit` reads
+`new FormData(event.currentTarget)` for `niche` and `email`, so unmounting
+inactive steps silently drops those fields from the lead payload, and keeping
+them mounted behind `hidden` breaks native `required` validation — a hidden
+required field blocks submit with no visible error. Either route means
+replacing the form's validation, which is a real piece of work on a live
+lead-capture path and wants a session with room to verify it.
+
+#### Picking up F4 — superseded, kept for the goal-picker reasoning
 
 Everything F4 needs already exists; the work is assembly. The ★ list is in
 19 v2 under "/metrics" and "/niche-scan".
