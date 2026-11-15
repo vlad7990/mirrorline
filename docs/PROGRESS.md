@@ -8,8 +8,8 @@
 
 ## Handoff — 14 November 2026, late evening (F1–F5 shipped, and every ★ is closed)
 
-**Branch** `v4/site-and-metrics` · **last feature commit** `STEPPER_COMMIT`
-(the /niche-scan stepper), with PR F5 at `8e7740e` before it and this handoff
+**Branch** `v4/site-and-metrics` · **last feature commit** `dca571c` (the
+/niche-scan stepper), with PR F5 at `8e7740e` before it and this handoff
 committed on top · clean tree. The `Branch: main` line above is stale; this is
 where the work is.
 
@@ -19,10 +19,20 @@ half of that file is the ★ checklist every inner page is built against, and
 one per PR of this evening. The queue table below matches what Vlad asked for
 on 14 November: **F runs before C, D and E.**
 
-**Preview:** https://mirrorline-6cmwdwhhy-vn-mn-product-group.vercel.app —
-built from the F5 tree (`8e7740e`). It returns 302 behind Vercel's deployment
-protection, exactly as previous previews have; open it signed in to the team,
-or mint a share link from the dashboard. Nothing is promoted to production.
+**Preview:** https://mirrorline-a0cshhnyr-vn-mn-product-group.vercel.app —
+built from the stepper tree (`dca571c`), so it has everything below. The F5
+preview was https://mirrorline-6cmwdwhhy-vn-mn-product-group.vercel.app and is
+superseded by it. Both return 302 behind Vercel's deployment protection,
+exactly as previous previews have; open signed in to the team, or mint a share
+link from the dashboard. Nothing is promoted to production.
+
+What to look at **for the stepper**: **/niche-scan**. The form is four
+questions now, one at a time, with a rail above it. Answer the first and press
+Next with the keyboard rather than the mouse — Enter advances, and focus lands
+on the "Step n of 4" line rather than being dropped at the top of the page.
+Press Next on an empty first question and the refusal is ours, not a browser
+bubble. Then walk to step four and send: the niche you typed on step one is in
+the request, which is the whole of what D52 was worried about.
 
 What to look at **for F5**: **/resources** — the category chips along the top
 are links, so they work with JavaScript off and a filtered URL can be shared;
