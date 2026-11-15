@@ -183,8 +183,18 @@ test.describe('motion-v2 recordings', () => {
     await page.waitForTimeout(2_600)
 
     // Part two: the submit button.
+    // Four steps now (19 v2 ★/niche-scan 2, D54), so the recording walks
+    // them. That is also the better recording: the morph becomes the end of a
+    // short sequence rather than something that happens to a form nobody
+    // watched being filled in.
     await page.goto('/niche-scan')
     await page.locator('#scan-niche').fill('A two-person bookkeeping practice for tradespeople')
+    await page.getByRole('button', { name: 'Next' }).click()
+    await page.waitForTimeout(400)
+    await page.getByRole('button', { name: 'Next' }).click()
+    await page.waitForTimeout(400)
+    await page.getByRole('button', { name: 'Next' }).click()
+    await page.waitForTimeout(400)
     await page.locator('#scan-email').fill('someone@example.com')
 
     const submit = page.locator('.morph-submit')

@@ -67,7 +67,20 @@ export default function NicheScanPage() {
 
           <div className="flex flex-col gap-8">
             <div className="flex flex-col gap-4">
-              <h3 className="m-0 font-heading text-title text-text">What you get back</h3>
+              {/* Retitled when the form became a stepper (D54). Two numbered
+                  runs of four, side by side, read as one list and its legend
+                  — and the first item of this one, "You tell us your niche",
+                  really is the form's first question, so the two appear to
+                  line up and then diverge, which is the worst version of the
+                  confusion. The heading and the line under it say which
+                  sequence is which: four questions on the left, and what
+                  happens to the answers on the right. */}
+              <div className="flex flex-col gap-1.5">
+                <h3 className="m-0 font-heading text-title text-text">After you send it</h3>
+                <p className="m-0 text-meta text-text-muted">
+                  The form is four questions. This is what happens to the answers.
+                </p>
+              </div>
               <ol className="m-0 flex list-none flex-col gap-0 p-0">
                 {SCAN_STEPS.map((step) => (
                   <li

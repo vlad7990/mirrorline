@@ -33,10 +33,30 @@ import {
 /** Loose on purpose: something@something.something. */
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-const MAX_SHORT = 200
-const MAX_NICHE = 400
+export const MAX_SHORT = 200
+export const MAX_NICHE = 400
 /** Three, per 12 §1 and 14 §3. More is a research job, not a free scan. */
 export const MAX_HANDLES = 3
+
+/**
+ * The same address check the route handler applies, exported for the form.
+ *
+ * **Exported because the form now has to do this itself.** It used to lean on
+ * the browser: `type="email" required` on a field that was always mounted. The
+ * four-step stepper mounts one step at a time, so the email field does not
+ * exist while somebody is on step one — and a validation the browser performs
+ * only on whichever fields happen to be in the DOM is not a validation of the
+ * form. The checks moved into the submit path, and this is the piece of them
+ * that has to agree with the server.
+ *
+ * Two copies of "what counts as an email" is how a form starts accepting
+ * something the route then rejects, with a message about a field the user
+ * cannot see. There is one copy, and it lives beside the server's use of it.
+ */
+export function isValidEmail(value: string): boolean {
+  const trimmed = value.trim()
+  return trimmed.length > 0 && trimmed.length <= MAX_SHORT && EMAIL_PATTERN.test(trimmed)
+}
 
 export interface NicheScanRequest {
   readonly email: string

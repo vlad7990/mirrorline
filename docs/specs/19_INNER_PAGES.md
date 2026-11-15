@@ -195,7 +195,7 @@ holds its own state and does not touch the URL.
 ### ★ /niche-scan (F4)
 
 1. ★ Page hero — own AI image, labelled, inset = cross-fade of three samples.
-2. ★ Multi-step form with a stepper: four steps, one question a step, state held in the component. **Not built in F4.** `ScanForm` reads `FormData` off the live DOM at submit, so stepping it needs its validation replaced or the lead payload silently loses fields (D52). The only outstanding ★ in F1–F4.
+2. ★ Multi-step form with a stepper: four steps, one question a step, state held in the component. **Built after F5 (D54).** It was deferred through F4 because `ScanForm` read `FormData` off the live DOM at submit, so stepping it meant replacing the form's validation on a live lead-capture path — the fields are controlled now, the payload is built from state, and the step rules live in `scan-steps.ts` where a spec can assert them against the server's own.
 3. ★ Beside it, a preview of what comes back — three sample recipe cards that animate in.
 4. ★ A trust note on sources, naming what the scan reads and what it never touches (12 §Allowed and banned sources).
 5. ★ Page-specific final CTA.

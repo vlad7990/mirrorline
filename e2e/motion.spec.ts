@@ -960,9 +960,25 @@ async function stubNicheScan(page: Page, delayMs: number) {
   })
 }
 
-async function submitNicheScan(page: Page) {
+/**
+ * Walk the four steps to the one with the submit button on it.
+ *
+ * The form became a stepper (19 v2 ★/niche-scan 2, D54), so the two fields
+ * are never mounted at the same time and `.morph-submit` does not exist until
+ * step four. These tests are about the button's morph rather than about the
+ * form, so the walk is a helper and not the thing being asserted —
+ * `niche-scan-stepper.spec.ts` owns the stepper's own behaviour.
+ */
+async function reachSubmitStep(page: Page) {
   await page.locator('#scan-niche').fill('A two-person bookkeeping practice for tradespeople')
+  await page.getByRole('button', { name: 'Next' }).click()
+  await page.getByRole('button', { name: 'Next' }).click() // the goal, which has a default
+  await page.getByRole('button', { name: 'Next' }).click() // the handles, which are optional
   await page.locator('#scan-email').fill('someone@example.com')
+}
+
+async function submitNicheScan(page: Page) {
+  await reachSubmitStep(page)
   await page.locator('.morph-submit').click()
 }
 
@@ -970,12 +986,16 @@ test('the submit button collapses to a spinner before it draws its mark', async 
   await stubNicheScan(page, 1200)
   await page.goto('/niche-scan')
 
+  // The walk comes first now: the submit button is on step four, so there is
+  // no resting width to measure until the form has got there.
+  await reachSubmitStep(page)
+
   const button = page.locator('.morph-submit')
   await button.scrollIntoViewIfNeeded()
   const resting = await button.evaluate((node) => node.getBoundingClientRect().width)
   expect(resting).toBeGreaterThan(120)
 
-  await submitNicheScan(page)
+  await button.click()
 
   // Mid-sequence, not end state. Every browser-only bug in PRs 2–4 was
   // something that was right at the end and wrong in the middle.

@@ -3046,6 +3046,136 @@ mistake a month later.
 
 ### Measurements
 
-Unit tests 522, up 19. e2e 287, up 12. axe clean on all three pages in both
-themes. Six covers at 1600×900 WebP, 60–81 KB each. Lighthouse mobile medians
-are in the handoff for this PR.
+Unit tests 522, up 19. e2e **276**, up 12. axe clean on all three pages in
+both themes. Six covers at 1600×900 WebP, 60–81 KB each. Lighthouse mobile
+medians are in the handoff for this PR.
+
+**Corrected.** The e2e figure first written here, and in commit `8e7740e`'s
+message, was 287. It was never measured — the run reported "275 passed, 1
+failed", which is 276, and 287 was arithmetic done from memory rather than
+read off the output. The commit message is wrong and stays wrong, because
+rewriting a pushed commit to fix a count is a worse trade than a correction
+that is visible. Counted properly: 264 before F5, 276 after it, 283 after the
+stepper (D54).
+
+## 2026-11-14 · D54 · The last ★ closes, and the thing that made it risky was never the stepper
+
+The four-step Niche Scan form (19 v2 ★/niche-scan item 2) — the one ★ left
+open after F1–F5, deferred twice, and the only item in the F series that was
+postponed for a reason rather than for scope.
+
+### The reason it was deferred was right, and it was not about steps
+
+D52 put it plainly: `ScanForm.onSubmit` read `new FormData(event.currentTarget)`
+for `niche` and `email`. Splitting the form into steps breaks that two ways,
+and both are quiet.
+
+Unmount the inactive steps and those inputs are not in the form element any
+more, so `FormData` returns nothing for them. The request still goes out. The
+server still answers. The lead arrives with a blank niche and a blank address,
+and the only visible symptom is a rejection naming a field three screens back
+— on a **live lead-capture path**, which is the part that made this worth
+waiting for a session with room in it.
+
+Keep them mounted behind `hidden` instead and the other half bites: native
+`required` on a field that is not on screen blocks the submit, and the browser
+reports that by trying to focus something invisible and otherwise doing
+nothing at all. The user presses the button and the page does not react.
+
+**So the work was never the stepper. It was replacing the validation**, which
+is why D52 said so and declined to start it with too little context left to
+verify it.
+
+### What replaced it
+
+Both fields are controlled, and the payload is built from state. That is the
+whole fix, and everything else follows from it: once the answers live in
+React, unmounting a step costs nothing, because the value was never in the
+input.
+
+The rules then had to be written by hand, and three decisions came with them.
+
+**They live in `scan-steps.ts`, not in the component.** `jsx: "preserve"` plus
+a runner that includes only `*.test.ts` means validation inside `scan-form.tsx`
+is validation no test can import — and hand-written validation on a lead form
+is exactly the thing that should be under test. This is the third time that
+constraint has decided a file's extension (F1's `PAGE_CTAS`, F5's articles,
+now this), which is enough to call it a rule: **content and rules in `.ts`,
+components in `.tsx`.**
+
+**The email check is the server's, imported.** `isValidEmail` is exported from
+`lib/leads/niche-scan-lead.ts` and used by both. Two copies of "what counts as
+an address" is how a form starts accepting what the route then rejects, and a
+test asserts the agreement in both directions: every address the step rules
+refuse is one `validateNicheScanRequest` also refuses, and answers that clear
+every step are answers the server accepts.
+
+**`noValidate` on the form**, which is a smaller decision that turned out to
+matter. Left off, the browser's own check runs first and `onSubmit` never
+fires for a malformed address — so step four would be refused by a native
+bubble while steps one to three were refused by our own message. One rule,
+two behaviours. The e2e test caught this rather than review: the custom
+message simply never appeared. `type="email"` stays, because that is what
+gives a phone the right keyboard, and a keyboard is not a validation.
+
+### One form element, four steps
+
+Not four forms, and not a `<div>` with click handlers. A single `<form>` means
+the Enter key does the obvious thing on every step — `onSubmit` reads it as
+"advance" on one to three and as "send" on four — and that is the kind of
+thing nobody notices is missing until somebody fills the form in without a
+mouse. There is a test for it for the same reason.
+
+Focus moves to the "Step n of 4" line when the step changes. Without it,
+pressing Next leaves focus on a button that has just been replaced, which
+drops a keyboard user to the top of the document; with it, the new step is
+announced and the next Tab lands in the right place. The first render is
+exempt, because focusing on page load would scroll the form over whatever the
+visitor was reading.
+
+**The final submit re-checks every step, not just the last one.** With one
+step mounted at a time, "all the answers are valid" stops being implicit in
+the browser having allowed the submit, so it has to be asked for — and the
+answer names the *first* bad step and sends the user back to it. An error
+about a question that is not on screen is not an error anybody can act on,
+which is the same failure mode the old `FormData` read produced silently.
+
+### The rail, and the argument against it on the next page over
+
+`/compare`'s decision helper says in its own comments that a stepper "would
+make the page feel like a funnel", and refuses one. That is correct about
+`/compare`: its three questions are a tool for deciding whether to buy
+anything at all, and a sequence would imply an outcome waiting at the end.
+
+This page is the opposite case and it is worth writing down so the two do not
+look inconsistent later. The Niche Scan **is** 14 §3's lead magnet and this
+form **is** a funnel step; there is nothing to disguise. What a rail usefully
+does here is say how much is left before anyone starts typing, and showing
+four questions at once is what makes a short form look long.
+
+### Two existing specs were filling both fields at once
+
+`motion.spec.ts` and `recordings.spec.ts` both did
+`fill('#scan-niche')` then `fill('#scan-email')` then click the morph button —
+which the stepper makes impossible, because those two inputs are never in the
+document together. Both now walk the steps. The recording is better for it:
+the button's morph becomes the end of a short sequence rather than something
+that happens to a form nobody watched being filled in.
+
+That is also the honest shape of this PR's cost. A form that three other
+specs reach into is a form with more surface than it looks like it has.
+
+### The test that would have caught the original bug
+
+`e2e/niche-scan-stepper.spec.ts` intercepts the POST and asserts the request
+body after walking all four steps: the niche and the address are both typed
+into steps that are gone from the DOM by the time the button is pressed. Under
+the old `FormData` read that assertion fails with two empty strings — which is
+precisely the failure D52 described and nothing else in the suite would have
+noticed.
+
+### Measurements
+
+Unit tests 542, up 20. e2e 283, up 7 — the whole suite green, no failures and
+nothing re-run to get there. Lighthouse and axe unchanged: this PR touches one
+page's form and ships no new imagery.

@@ -6,16 +6,18 @@
 
 ---
 
-## Handoff — 14 November 2026, late evening (PR F1–F5 shipped; the F series is done)
+## Handoff — 14 November 2026, late evening (F1–F5 shipped, and every ★ is closed)
 
-**Branch** `v4/site-and-metrics` · **last feature commit** `8e7740e` (PR F5),
-with this handoff committed on top · clean tree. The `Branch: main` line above
-is stale; this is where the work is.
+**Branch** `v4/site-and-metrics` · **last feature commit** `STEPPER_COMMIT`
+(the /niche-scan stepper), with PR F5 at `8e7740e` before it and this handoff
+committed on top · clean tree. The `Branch: main` line above is stale; this is
+where the work is.
 
 **Where to start reading:** `docs/specs/19_INNER_PAGES.md` **v2** — the second
-half of that file is the ★ checklist every inner page is built against. Then
-D49–D53 in `docs/DECISIONS.md`, one per PR of this evening. The queue table
-below matches what Vlad asked for on 14 November: **F runs before C, D and E.**
+half of that file is the ★ checklist every inner page is built against, and
+**every ★ in it now exists on its page.** Then D49–D54 in `docs/DECISIONS.md`,
+one per PR of this evening. The queue table below matches what Vlad asked for
+on 14 November: **F runs before C, D and E.**
 
 **Preview:** https://mirrorline-6cmwdwhhy-vn-mn-product-group.vercel.app —
 built from the F5 tree (`8e7740e`). It returns 302 behind Vercel's deployment
@@ -107,8 +109,8 @@ left out rather than stubbed.
 | 6 | **PR F3** · /pricing and /compare | done, `27b4893` |
 | 7 | **PR F4** · /metrics and /niche-scan | done, `56848ea` (one ★ open) |
 | 8 | **PR F5** · /resources + article template, /sign-in, /sign-up | done, `8e7740e` |
-| 9 | **the one ★** · /niche-scan's four-step stepper (D52) | **next** |
-| 10 | **small PR** · React #418 at `/app/calendar` 390px | queued |
+| 9 | **the one ★** · /niche-scan's four-step stepper (D52 → D54) | done, see below |
+| 10 | **small PR** · React #418 at `/app/calendar` 390px | **next** |
 | 11 | **PR C** · Co-pilot (`docs/specs/18_COPILOT.md` is already written) | queued |
 | 12 | **PR D** · Long-form YouTube add-on | queued |
 | 13 | **PR E** · remaining motion, site and studio | queued |
@@ -123,25 +125,33 @@ camera-maker's wordmark on the camera body, which DESIGN.md rules out. 19 v2's
 budget table is corrected and D53 has the detail. **Check the balance before
 planning anything that needs new imagery.**
 
-#### The one ★ still open in F1–F5
+#### The ★ that was open through F1–F5 is closed — read D54
 
-**/niche-scan's four-step stepper was not built** (19 v2 ★2, D52). Everything
-else on that page is done. `ScanForm.onSubmit` reads
-`new FormData(event.currentTarget)` for `niche` and `email`, so unmounting
-inactive steps silently drops those fields from the lead payload, and keeping
-them mounted behind `hidden` breaks native `required` validation — a hidden
-required field blocks submit with no visible error. Either route means
-replacing the form's validation, which is a real piece of work on a live
-lead-capture path and wants a session with room to verify it.
+**/niche-scan's four-step stepper is built**, and with it **every ★ in 19 v2
+exists on its page.** There is nothing outstanding in the F series.
 
-**It is next, and F5 built the pattern it should copy.** The sign-in card in
-`app/(auth)/components/auth-forms.tsx` is a two-state form where the state is
-held in React and the fields are controlled — no `FormData`, nothing read off
-the DOM at submit, and a validation message that is rendered from state rather
-than left to the browser. A four-step stepper is the same shape with four
-states instead of two. The work on `ScanForm` is to make its two fields
-controlled and to validate them in the submit handler, after which unmounting
-an inactive step costs nothing because the value never lived in the input.
+What made it worth deferring twice was never the stepping. `ScanForm.onSubmit`
+read `new FormData(event.currentTarget)` for `niche` and `email`, so unmounting
+the inactive steps would have posted a lead with both blank — the request goes
+out, the server answers, and the only symptom is a rejection naming a field
+three screens back. Keeping them mounted behind `hidden` breaks the other way:
+native `required` on an off-screen field blocks submit with nothing visible
+happening. Either route meant replacing the validation of a live lead-capture
+form, which is what D52 declined to start without room to verify.
+
+Both fields are controlled now and the payload is built from state, so
+unmounting a step costs nothing. The step rules moved to `scan-steps.ts` so a
+spec can reach them, and the email check is imported from the route handler's
+own module rather than rewritten — a test asserts the two agree in both
+directions. `e2e/niche-scan-stepper.spec.ts` intercepts the POST and asserts
+the request body after walking all four steps, which is the assertion that
+fails with two empty strings under the old code.
+
+**Two existing specs had to change**, and that is the part worth knowing
+about: `motion.spec.ts` and `recordings.spec.ts` both filled `#scan-niche` and
+`#scan-email` in the same breath, which is now impossible. Both walk the steps
+instead. If anything else starts reaching into that form, it will need the
+same.
 
 #### F5 · what shipped, and the three things to watch — read D53
 
