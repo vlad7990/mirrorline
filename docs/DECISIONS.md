@@ -3350,3 +3350,219 @@ rather than leaving the reader to infer it from the absence of a file.
 entry is the whole of the deliverable. Unit tests 542, e2e 283, Lighthouse and
 axe all exactly as D54 left them. No preview was deployed, because there would
 be nothing on it to look at.
+
+## 2026-11-15 · D56 · The co-pilot's adapter layer, the corpus that was too small to cache, and two bugs the tests found before the key did
+
+PR C1: `lib/copilot/{adapter,canned,grounding,spend}.ts`, three route handlers
+under `app/api/copilot/*`, and the tests from 18 §8 that apply to them. **No
+UI** — C2 and C3 are the website and studio surfaces, and this is the thing
+they both stand on.
+
+### The spec's four API facts all hold, and there is a fifth it does not have
+
+18 §0 lists four things that would each be a bug if assumed the old way. All
+four were checked against the live API reference before any code was written,
+and all four are correct: the model ids are `claude-sonnet-5` and
+`claude-haiku-4-5` with no date suffix, thinking is on by default on Sonnet 5
+and shares `max_tokens` with the answer, `budget_tokens`/`temperature`/
+`top_p`/`top_k` are all 400s there, and the prompt-cache minimum really is
+1024 on Sonnet 5 and **4096 on Haiku 4.5**.
+
+**The fifth is `output_config.effort`, which Haiku 4.5 does not support.** It
+is a 400 exactly like the parameters §0 does list, and the spec's §5 website
+request happens not to set it — so the spec is right by omission rather than
+by instruction, and a reasonable person adding effort to both surfaces for
+consistency would have found out at the first real call. It is now written
+down in `adapter.ts` beside the other four, set on the studio request only,
+and a test asserts its absence from the website one.
+
+### The corpus was 21,110 characters, and that was not provably enough
+
+§5 is unambiguous that the check must be "a real token count via
+`messages.countTokens`, not a character estimate", and the reason is that
+below 4096 tokens caching "silently does nothing — no error, just a bill".
+
+**There is no key, so there is no real count to take.** That is the whole
+difficulty, and the dishonest resolutions were both available: assert a
+character estimate and call it verified, or skip the test and let a green run
+imply a check that never happened. D52's eighth goal-picker test and D55's
+wrong theme key are both the same failure, and neither was going to be
+repeated here.
+
+What shipped instead is a **floor**, not an estimate. English prose tokenises
+at roughly four characters per token; six is pessimistic enough that
+punctuation and whitespace make it unreachable, so `characters / 6` is a
+number the real count is *guaranteed to exceed*. A floor above 4096 proves the
+corpus caches. A floor below it proves nothing either way — and that is the
+honest asymmetry, stated in the code and in the measurement's own `reason`
+string.
+
+The first corpus failed that test. 21,110 characters is about 5,300 real
+tokens and would almost certainly have been fine, and "almost certainly fine"
+is exactly the claim this surface is not allowed to make about its own bill.
+**So the corpus grew rather than the floor shrinking** — the four home-page
+stages, the `/resources` glossary and the four templates in full, all of them
+product facts a grounded bot should have had anyway. It now stands at
+**27,481 characters: a floor of 4,580 tokens against a minimum of 4,096**,
+about 12% clear of the threshold, and a test asserts the character count
+directly so that deleting a section fails loudly rather than quietly costing
+money.
+
+`/api/copilot/status` reports `verifiedByRealCount: false` and says so in
+words. The moment a key exists, the same code path takes the real count and
+the claim gets stronger without anything being edited.
+
+### The FAQ had to leave `.tsx`, which is the fourth time
+
+Spec §9.3 is explicit that the corpus must read "from the content modules
+rather than copying prose, or the bot will answer from a site that no longer
+exists". The FAQ is the largest body of product prose we have — and it lived
+in `faq-content.tsx` as JSX, which `jsx: "preserve"` makes unimportable by any
+test and any `.ts` module.
+
+The alternative was a second copy of eleven answers kept in step by hand, with
+the failure mode being a public bot quoting a page we no longer serve. So the
+words moved to `faq-text.ts` and `faq-content.tsx` became their renderer.
+Three answers set a figure in `<span className="machine">`, so a paragraph is
+modelled as a list of runs — prose or machine figure — and the rendered DOM is
+byte-for-byte what it was. **This is the fourth time `jsx: "preserve"` has
+decided a file's extension** (F1's `PAGE_CTAS`, F5's articles, D54's scan
+rules, now this), which is D54's rule earning its keep: content and rules in
+`.ts`, components in `.tsx`.
+
+### What is deliberately *not* in the corpus is the more interesting half
+
+**Every sample figure.** `PROOF_CARDS` is a fictional client's week,
+`SAMPLE_RECIPE`'s scores are invented, `SHOWCASE_CARDS` are hooks from
+accounts that do not exist, and `FeatureTab.stat` is a figure in the machine's
+voice. All four are honestly labelled where they render — and **the label does
+not survive being quoted.** A bot that could read those numbers could state an
+invented customer result, which non-negotiable 7 forbids and which §3.2's
+second refusal exists to prevent. A corpus containing them would have made
+that refusal impossible to keep honestly. A test asserts their absence.
+
+**The `/resources` articles, but not the library.** D53's standard for an
+article is "useful without us", and a test asserts none names the product.
+They are general advice, so quoting one would be the "generally, companies
+like this…" §3.1 rules out. The glossary and the four templates on the library
+page are the opposite case and are in: the glossary defines the words our own
+KPIs use, and the templates are printed in full precisely so nothing is
+withheld.
+
+**The rules.** Facts in the corpus, conduct in the system prompt. Keeping them
+apart is what lets the four refusals be stated as rules rather than buried
+among the things being refused.
+
+### Two bugs, both found by writing the test before believing the code
+
+**The refusal that did not fire.** "What results have you got for a client in
+my industry?" was answered from the corpus rather than refused: the pattern
+wanted "results" and "client" adjacent, and real questions put eighteen
+characters between them. Eight characters of regex, and without the test it
+would have shipped as a refusal that worked on the phrasings its author
+imagined.
+
+**The right number for a question nobody asked.** Asked "tell me the cost per
+enquiry on LinkedIn", the studio bot matched the cost-per-lead KPI on the
+single word "cost" and read a real figure back — cited, accurate, and not an
+answer. That is the §2.2 failure in its least obvious form: the claim *is*
+tied to a row we hold. The fix is the two-word floor the corpus retrieval
+already used, and the lesson is that "grounded" and "responsive" are different
+properties.
+
+**And a third thing that is a feature rather than a fix.** The same
+investigation turned up "what will my revenue be next quarter?", which matched
+the revenue KPI and would have returned this month's figure. A measurement
+offered where a prediction was asked for is one step from the thing the
+Performance Analyst's own limit forbids — "no projected or inflated figure is
+ever shown as an actual" — so forecasts are now a refusal category of their
+own, on the studio surface, with no digits anywhere in the reply.
+
+### The banned-phrase list became a module, and immediately caught two files
+
+§3.2 ends with "the banned phrase list the site already tests against applies
+to generated text too", and a list held inside a test file cannot be applied
+to anything. It moved to `lib/copy/banned-phrases.ts`; the sweep imports it,
+and so do the corpus and the canned replies.
+
+Moving it exposed two things, both correct:
+
+1. **The test file still needs an exemption**, for a different reason than
+   before. Its allowlist *reasons* quote the phrases they exempt — "guaranteed
+   results" and "runs locally, on this machine" are both named there as the
+   subject of an exemption. The old blanket exemption had been hiding that.
+2. **Two new files needed one.** `adapter.ts`, because the system prompt tells
+   the model "never say a video will go viral" and naming the phrase is what
+   makes the instruction land; and `canned.test.ts`, because proving the bot
+   refuses a question about a named competitor requires naming one. Both are
+   the phrase-as-subject case, and both carry the argument rather than a flag.
+
+### The cap is a hard stop, and the part of it that is a stub
+
+Count the real tokens, check the cap, *then* call. A projection that crosses
+the cap means the request is never made. There are two ceilings, and the
+second is the one that matters today: a **per-request** limit enforced from
+the projection rather than the ledger, so it holds on a cold instance with no
+history — which, since the ledger lives in process memory, is every instance.
+
+**The month ledger is per instance, not global, and that is written down
+rather than implied.** On Vercel, N instances could each spend up to the cap.
+The real fix is a Supabase row and belongs with "Needs Vlad F". What makes it
+acceptable now is simply that there is no key, so there is no spend — and the
+per-request ceiling is the half that cannot be walked around by restarting.
+
+`cache_read_input_tokens` is recorded alongside the bill because it is the
+only symptom of a broken prefix: zero across repeated questions means the
+corpus is being re-sent at full price every time, with no error anywhere.
+`cacheHealth()` says that in words, and the status route shows it.
+
+### Server-side only, checked by reachability rather than by grep
+
+§4 asks for a unit test that no `'use client'` module imports the adapter. A
+grep would pass: nobody writes that import directly. **The mistake that
+actually happens is transitive** — a helper added to a shared module, that
+module imported by a client component three hops away, and the SDK in the
+bundle with nothing in the diff to notice. So the test builds the real import
+graph and asks a reachability question, and it asserts its own instrument
+first: that it found 20+ client modules, resolved 300+ imports, and *can* see
+the adapter being reached from the route handler that is supposed to reach it.
+A sweep that cannot see the thing it forbids cannot be trusted about its
+absence.
+
+Verified independently against the real build: `@anthropic-ai/sdk` appears in
+`server/chunks/` and in **no client chunk**, and neither does the corpus text
+or any `x-api-key` string.
+
+### Smaller decisions
+
+**NDJSON, not Server-Sent Events.** SSE is the standard and would win if these
+were GETs, but `EventSource` cannot POST, and a question belongs in a body
+rather than a URL — §3.3 forbids logging questions with identifiers, and a URL
+is the most logged thing there is.
+
+**The rate limiter stores no address.** §3.3 asks for a per-IP limit and
+forbids storing personal data in the same breath. It keys on a truncated
+SHA-256 of the address with a per-process salt, regenerated every boot: enough
+to count one visitor inside one window, not enough to recover the address or
+to compare it with anything.
+
+**`requiresApproval` is the literal `true`, not a boolean.** §2.3 says there
+is no auto-approve and no setting that adds one. A boolean would let somebody
+write `false` and have it compile; the literal makes that variant
+unrepresentable. `parseProposal` enforces the same thing at the JSON boundary,
+where types do not apply.
+
+### Measurements
+
+Unit tests **640**, up 98 from 542. e2e **292**, up 9. Lint, typecheck, build
+and licence-check green; licence-check 432 packages, GSAP scope clean. No
+screenshots and no Lighthouse: C1 changes no page, and `faq-content.tsx`
+renders the DOM it rendered before.
+
+**What is not verified, and will not be until "Needs Vlad F":** that a real
+`messages.countTokens` puts the corpus over 4096 (the floor proves it, a count
+has not); that Haiku 4.5's refusals hold up on live transcripts (§9.2 already
+names the fix if they do not — move the website bot to Sonnet 5 rather than
+loosen the refusals); and that the typed error handling in §7 behaves against
+a real API. The canned path is fully exercised; the live path is written to
+the reference and unexercised.

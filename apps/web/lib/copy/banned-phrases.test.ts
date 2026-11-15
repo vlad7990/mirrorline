@@ -23,6 +23,12 @@
  *
  * **Allowlisted files carry a reason, not a flag**, and a third test fails if
  * an exemption stops being needed. A silent allowlist is how a ban decays.
+ *
+ * **The patterns moved to `banned-phrases.ts`** when the co-pilot arrived.
+ * Spec 18 §3.2 requires this list to be applied to generated text as well as
+ * to our own source, and a list held inside a test file cannot be applied to
+ * anything else. The rules are unchanged; this file is now the sweep, and the
+ * module beside it is the list.
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs'
@@ -30,6 +36,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { describe, expect, test } from 'vitest'
+
+import { BANNED_PATTERNS, stripComments } from './banned-phrases'
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
 
@@ -43,65 +51,6 @@ const SEARCH_ROOTS = [
 ]
 
 const EXTENSIONS = new Set(['.ts', '.tsx'])
-
-interface BannedPattern {
-  readonly id: string
-  readonly pattern: RegExp
-  /** What is wrong with it, quoted back in the failure message. */
-  readonly why: string
-}
-
-const BANNED: readonly BannedPattern[] = [
-  {
-    id: 'guarantee',
-    // The claim is "guaranteed <outcome>", so the outcome has to follow.
-    // "we do not guarantee views" and "never guarantees" are the sentences we
-    // want on the site, and the lookbehinds keep them.
-    pattern:
-      /\b(?<!not )(?<!never )(?<!no )(?<!any )guarantee(?:s|d)?\s+(?:of\s+|a\s+)?(?:results?|views?|followers?|leads?|sales?|growth|rankings?|incomes?)\b/i,
-    why: 'Non-negotiable 7: no guarantees of views, followers, compliance or anything else.',
-  },
-  {
-    id: 'go-viral',
-    pattern: /\bgo(?:es|ing)? viral\b/i,
-    why: 'P2: nobody can promise a video goes viral, and that promise is the pitch we are not making.',
-  },
-  {
-    id: 'multiplier-claim',
-    // "10x your reach". A bare "10x" in a measurement is fine; the claim is
-    // the thing being multiplied.
-    pattern: /\b\d+x\s+(?:your|their)\b/i,
-    why: 'A multiplier on someone’s results is a claim about an outcome nobody can measure in advance.',
-  },
-  {
-    id: 'number-one',
-    pattern: /#1\b/,
-    why: 'A ranking claim about ourselves with nothing behind it.',
-  },
-  {
-    id: 'best-in-the-world',
-    pattern: /\bbest in the (?:world|business|industry)\b/i,
-    why: 'A superlative with no measurement behind it.',
-  },
-  {
-    id: 'competitor-brand',
-    // Categories only (11 §evidence). Naming a competitor invites a comparison
-    // we would then have to keep accurate for ever.
-    pattern: /\b(?:opus ?clip|submagic|vizard|klap|repurpose\.io|munch|crayo|descript)\b/i,
-    why: '11: the public site paraphrases the complaint and names categories, never a brand.',
-  },
-  {
-    id: 'industry-exclusive',
-    pattern:
-      /\b(?:built for|made for|designed for|for)\s+(?:coaches|consultants|clinics|dentists|realtors|restaurants|salons|gyms|lawyers|plumbers)\b/i,
-    why: '16 §1 and D38: the product is industry-agnostic. An industry in the copy is a customer turned away.',
-  },
-  {
-    id: 'local-machine-claim',
-    pattern: /\b(?:runs?|happens?|happened)\s+(?:here and now,?\s+)?(?:locally,?\s+)?on this machine\b/i,
-    why: 'Untrue for a visitor on a deployment. Removed once already; see the changelog entry for 12 November.',
-  },
-]
 
 /**
  * Files allowed to contain a match, each with the argument for it.
@@ -119,7 +68,20 @@ const ALLOWED: Readonly<Record<string, string>> = {
     'Renders only after /api/engine/status confirms the engine is present, which is only ever a local checkout. "This runs locally, on this machine" is true wherever it is visible, and visible nowhere else.',
   'apps/web/app/(marketing)/legal/acceptable-use/page.tsx':
     'Lists the claims we refuse to make for a client, "guaranteed results" among them. The phrase is the subject of the prohibition, not a claim.',
-  'apps/web/lib/copy/banned-phrases.test.ts': 'This file. It holds the patterns by definition.',
+  'apps/web/lib/copy/banned-phrases.ts': 'The list itself. It holds the patterns by definition.',
+  // The co-pilot's two exemptions, and both are the phrase-as-subject case
+  // this allowlist exists for rather than new permissions.
+  'apps/web/lib/copilot/adapter.ts':
+    'SITE_SYSTEM tells the model what it may never say, and naming the phrase is what makes the instruction land — "Never say a video will go viral" is a prohibition addressed to the model, not copy addressed to a visitor. No part of a system prompt is ever rendered.',
+  'apps/web/lib/copilot/canned.test.ts':
+    'Asks the website bot "Is Opus Clip worse than you?" to prove it refuses. The test has to name a brand to show the refusal fires, and it asserts the *answer* names none — building the question out of the pattern instead would be testing the detector with the detector.',
+  // This file still needs an exemption after the patterns moved out, and for
+  // a different reason than before: the entries above *quote* the phrases
+  // they exempt, so the allowlist is itself matched by the list. Found by the
+  // sweep the moment the old blanket exemption was removed, which is the
+  // third test below earning its place twice in one commit.
+  'apps/web/lib/copy/banned-phrases.test.ts':
+    'The allowlist reasons quote the phrases they exempt — "guaranteed results" and "runs locally, on this machine" are both named here as the subject of an exemption, not as a claim.',
 }
 
 function walk(directory: string): readonly string[] {
@@ -128,21 +90,6 @@ function walk(directory: string): readonly string[] {
     if (statSync(full).isDirectory()) return walk(full)
     return EXTENSIONS.has(path.extname(full)) ? [full] : []
   })
-}
-
-/**
- * Strip comments, so the rule is about what a visitor reads.
- *
- * Line-based and deliberately crude: a real parser would be more code than the
- * check, and the failure mode of being crude here is a missed match inside a
- * block comment, not a false positive blocking a commit.
- */
-function stripComments(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .split('\n')
-    .filter((line) => !line.trimStart().startsWith('//'))
-    .join('\n')
 }
 
 interface Finding {
@@ -162,7 +109,7 @@ function sweep(): readonly Finding[] {
     if (relative in ALLOWED) continue
 
     const source = stripComments(readFileSync(file, 'utf8'))
-    for (const banned of BANNED) {
+    for (const banned of BANNED_PATTERNS) {
       const match = banned.pattern.exec(source)
       if (!match) continue
 
@@ -201,7 +148,7 @@ describe('banned phrases', () => {
   test('every allowlisted file still exists and still needs allowing', () => {
     for (const [relative, reason] of Object.entries(ALLOWED)) {
       const source = stripComments(readFileSync(path.join(REPO_ROOT, relative), 'utf8'))
-      const matches = BANNED.some((banned) => banned.pattern.test(source))
+      const matches = BANNED_PATTERNS.some((banned) => banned.pattern.test(source))
 
       // An exemption nobody is using reads as permission to the next person.
       expect(matches, `${relative} no longer needs its exemption: ${reason}`).toBe(true)
