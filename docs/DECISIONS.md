@@ -3179,3 +3179,174 @@ noticed.
 Unit tests 542, up 20. e2e 283, up 7 — the whole suite green, no failures and
 nothing re-run to get there. Lighthouse and axe unchanged: this PR touches one
 page's form and ships no new imagery.
+
+## 2026-11-14 · D55 · React #418 does not reproduce, the lead we were chasing could not have caused it, and the test written to prove it was dropped for flaking
+
+The small PR queued as "React #418 at `/app/calendar` 390px". **It does not
+fix anything, because there is nothing reproducible to fix** — and that is the
+finding rather than a failure to deliver, so it is written up as one.
+
+### 0 of 70 loads
+
+The handoff described it as reproducible: a production build, `/app/calendar`,
+a 390px viewport, on load, intermittently, with 1440px clean. That is specific
+enough to test, which nobody had done — it had been carried as prose through
+four pull requests.
+
+Seventy fresh browser contexts against the current production build:
+
+| Condition | 390px | 1440px |
+|---|---|---|
+| Plain load | 0/10 | 0/10 |
+| Stored `dark` preference | 0/10 | 0/10 |
+| Stored `light` against an OS asking for dark | 0/10 | 0/10 |
+| OS asking for dark, nothing stored | 0/10 | 0/10 |
+| CPU throttled 6× | 0/10 | 0/10 |
+
+A fresh context per load, because hydration happens once per document and a
+warm cache changes the timing an intermittent bug depends on. `/app/home` and
+`/app/results` were swept too, in case the calendar was only where it happened
+to be noticed. Nothing, anywhere.
+
+**One of those rows tested nothing on the first pass and is worth admitting
+to.** The stored-theme conditions used the key `mirrorline.theme`; the real
+one is `mirrorline-theme`, a hyphen rather than a dot. Two of five conditions
+were writing a key nothing reads. Found by checking the constant rather than
+by the run failing, because a run that tests nothing passes exactly like a run
+that tests something — which is the same failure mode as the eighth goal-picker
+test in D52, in a different costume.
+
+### The lead in the handoff could not have been the cause
+
+`useIsWide()` in `calendar-view.tsx` was named as the first place to look:
+`useSyncExternalStore` with a server snapshot of `false`. It is the wrong
+suspect twice over.
+
+**`useSyncExternalStore` is the documented fix for this, not a cause of it.**
+A differing `getServerSnapshot` is exactly what the third argument is for:
+React hydrates against the server snapshot and re-renders, with no mismatch
+reported. Reaching for it is what you do *instead* of `useEffect` precisely to
+avoid #418.
+
+**And at 390px the two snapshots agree anyway.** The query is
+`(min-width: 1280px)`, so at 390 the client reads `false` and the server reads
+`false`. If this hook could produce a mismatch it would do so at **1440**,
+which is the width the report says is clean. The hypothesis predicted the
+opposite of the observation and nobody noticed, because a note in a handoff
+makes no prediction anyone has to check.
+
+Following it through the file finishes the argument: `isWide` reaches the tree
+in exactly one place, `<Dialog open={!isWide && isDrawerOpen}>`, and
+`isDrawerOpen` initialises to `false` — so `open` is `false` on the server and
+on the client whatever `isWide` says. The other use is inside a callback. It
+cannot render differently.
+
+**Two pull requests were sent looking in the wrong place by a plausible
+sentence**, first at the marketing pages and the theme script, now at this
+hook. The sentence was written in good faith and was never tested, which is
+the whole problem.
+
+### A guard was written, and then dropped — which is the second finding
+
+The intention was to replace the note with a test: `e2e/hydration.spec.ts`,
+walking every route in `ALL_SCREENS` at both reference widths and failing on
+any hydration error in the console. A separate gate rather than part of the
+axe sweep, because of what a hydration error does — React recovers by
+discarding the server's HTML and re-rendering on the client, so the page
+*looks* right afterwards and nothing visual catches it.
+
+**It does not ship, on Vlad's call, and the reason is worth more than the
+test would have been.** Three times it reported green in isolation and failed
+in the full suite, each time for a different reason that had nothing to do
+with hydration:
+
+1. The first version navigated as soon as the `<h1>` appeared — see below;
+   that one produced #418 itself.
+2. The second waited for `networkidle`, which under seven parallel workers
+   against one server may never arrive. It failed for traffic.
+3. The third waited on React's own `__reactFiber$` property, which is the
+   commit itself and not a proxy — and still failed, because on a loaded
+   server the *heading* assertion and the fiber wait expire on their own
+   budgets (16.8s and 5.6s: expiring waits, not a 180s sweep timeout).
+
+A sweep of thirty routes, run serially inside a suite whose other six workers
+are saturating the same server, is load-sensitive by construction. Every fix
+addressed the symptom the previous run showed and left that intact.
+
+**The deciding argument is the one this session already made twice.** A
+known-flaky test left in place fails somebody else's pull request next — that
+is why `motion.spec.ts` got `expect.poll` rather than a re-run, and it applies
+with more force to a guard whose whole purpose is to be trusted when it goes
+red. A hydration guard that cries wolf under load is worse than no hydration
+guard, because the next person to see it fail will do what I did for an hour:
+chase a bug their own tooling invented.
+
+**So the finding is the deliverable, and the finding is below.** If this is
+picked up again, the shape that could work is a separate Playwright project
+that runs alone, the way `screenshots` does — not a spec inside the parallel
+suite.
+
+### The first version of the guard produced #418 itself, and that is the answer
+
+Worth recording in full, because for about ten minutes it looked like the bug
+had been caught and it had not been.
+
+Run on its own the spec passed. Run alongside two other spec files it failed
+**3 times out of 3** — at 1440px, on a *different* route each time
+(`/legal/cancellation-refunds`, then `/legal/privacy` with `/app/accounts` and
+`/app/portfolio`, then `/faq`), with a real `Minified React error #418`. Load
+dependent, width dependent, route-random, intermittent: every adjective in the
+original report, reproduced at last.
+
+It was the spec. The loop navigated as soon as the `<h1>` was visible — and
+the `<h1>` is in the *server's* HTML, so it is on screen well before React has
+attached. The next `goto` tore the document down mid-hydration, and React
+reported a mismatch against a tree that was being destroyed underneath it.
+Adding `networkidle` plus a short settle between routes takes it to **21
+passed, 3 runs out of 3**, with zero hydration errors anywhere.
+
+**That is a better explanation of the original sighting than anything the
+handoff proposed, and it fits the evidence that was already there.** #418 was
+seen on a `?_vercel_share=` **redirect navigation** — an interrupted load,
+which is precisely what this reproduces. The second sighting was on a preview,
+where a cold edge and a redirect make the same interruption far likelier than
+on a warm local server. Nothing in the markup has to differ at all.
+
+So the "intermittent, width-dependent" framing was two coincidences doing the
+work of a theory: 1440 fails more readily than 390 only because the desktop
+viewport finishes layout sooner and so reaches the next navigation earlier.
+The width was never the variable. The *timing* was.
+
+**It also means any future guard has to wait for hydration to commit, or it
+is worse than nothing** — a hydration spec that navigates eagerly manufactures
+the exact error it exists to detect. That is not a hypothetical: it is what
+happened here, and for ten minutes it looked like the four-pull-request bug
+had finally been caught.
+
+### What this does not claim
+
+**Not "the bug was never real".** It was seen twice, by someone reading a
+console. What this PR claims is narrower and better supported than the
+handoff's version: there is **no server/client markup mismatch** on any route
+at either width, the cause the handoff named is ruled out on two independent
+grounds, and interrupting hydration with a fast navigation reproduces #418
+exactly — which is what a `?_vercel_share=` redirect does.
+
+**Not "it is fixed", either.** Nothing was fixed, because no defect was found
+to fix. If the interrupted-navigation explanation is right then there is
+nothing to repair: React recovering from a torn-down hydration is React
+working. The honest status is **"no reproducible defect, and a plausible
+mechanism for both sightings"**.
+
+**And not "this is now guarded".** The test that would have made the question
+answerable by running the suite was written and dropped, for the reasons
+above. The next person still has to read rather than run — which is the same
+position the original note left everybody in, and is worth saying plainly
+rather than leaving the reader to infer it from the absence of a file.
+
+### Measurements
+
+**Nothing measurable changed.** No application code, no spec, no asset: this
+entry is the whole of the deliverable. Unit tests 542, e2e 283, Lighthouse and
+axe all exactly as D54 left them. No preview was deployed, because there would
+be nothing on it to look at.

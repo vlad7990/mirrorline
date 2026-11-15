@@ -120,8 +120,8 @@ left out rather than stubbed.
 | 7 | **PR F4** · /metrics and /niche-scan | done, `56848ea` (one ★ open) |
 | 8 | **PR F5** · /resources + article template, /sign-in, /sign-up | done, `8e7740e` |
 | 9 | **the one ★** · /niche-scan's four-step stepper (D52 → D54) | done, see below |
-| 10 | **small PR** · React #418 at `/app/calendar` 390px | **next** |
-| 11 | **PR C** · Co-pilot (`docs/specs/18_COPILOT.md` is already written) | queued |
+| 10 | **small PR** · React #418 at `/app/calendar` 390px | done — no repro, D55 |
+| 11 | **PR C** · Co-pilot (`docs/specs/18_COPILOT.md` is already written) | **next** |
 | 12 | **PR D** · Long-form YouTube add-on | queued |
 | 13 | **PR E** · remaining motion, site and studio | queued |
 | — | **PR F6** · the eleven inner pages F1–F5 do not cover | not scheduled |
@@ -134,6 +134,34 @@ seventh image was regenerated because the first came back with a legible
 camera-maker's wordmark on the camera body, which DESIGN.md rules out. 19 v2's
 budget table is corrected and D53 has the detail. **Check the balance before
 planning anything that needs new imagery.**
+
+#### React #418 closed as "not reproducible" — read D55
+
+The small PR queued for it **fixes nothing, because there is nothing
+reproducible to fix.** 0 of 70 loads across both widths and five conditions,
+and the cause this handoff named — `useIsWide` in `calendar-view.tsx` — is
+ruled out on two independent grounds (see the Watch entry below, which is
+struck through rather than deleted so the wrong lead is visible as wrong).
+
+**Writing a guard found the probable mechanism, and then the guard was
+dropped.** Its first version reproduced #418 exactly — 3 of 3 runs,
+intermittent, route-random — because it navigated away before hydration
+committed. Interrupting hydration throws #418 with no markup difference
+anywhere, and both original sightings were on interrupted loads (a
+`?_vercel_share=` redirect, and a preview). That is a better fit for the
+evidence than anything previously proposed.
+
+The guard itself was cut on Vlad's call after it passed in isolation and
+failed the full suite three times, each time for a different load-related
+reason and never for hydration. A sweep of thirty routes inside a suite whose
+other six workers saturate the same server is load-sensitive by construction,
+and a flaky guard fails somebody else's PR next — the same argument that got
+`motion.spec.ts` fixed properly earlier today. **If it is picked up again, it
+wants its own serial Playwright project, like `screenshots`** — not a spec in
+the parallel suite. D55 has the full reasoning.
+
+**So this item ships documentation only.** No application code, no spec, no
+preview: there would be nothing on it to look at.
 
 #### The ★ that was open through F1–F5 is closed — read D54
 
@@ -448,21 +476,36 @@ reference PNGs in `docs/screens-built/` are regenerated in this PR.
 
 #### Watch
 
-1. **React #418 — now reproducible, and it is not on the marketing site at
-   all.** Carried since PR B as "seen once, does not reproduce", which sent
-   two PRs looking in the wrong place: the marketing pages and the theme
-   script. It reproduces on a **production build, `/app/calendar`, at a 390px
-   viewport, on load** — intermittently, which is why every clean-load sweep
-   missed it. 1440px is clean, so it is width-dependent, and it fires on the
-   **PR B2 preview too**, so it predates PR7 and is not the drag.
+1. ~~**React #418 — now reproducible, and it is not on the marketing site at
+   all.**~~ **Superseded — read D55.** It does **not** reproduce: 0 of 70
+   fresh loads on the current production build, across both widths, with and
+   without a stored theme, with the OS asking for dark, and at 6× CPU
+   throttling. `/app/home` and `/app/results` are clean too.
 
-   Where to start: a branch that renders differently on the server than on
-   the client at narrow widths. `useIsWide()` in `calendar-view.tsx` seeds
-   `useSyncExternalStore` with a server snapshot of `false`, and the
-   sidebar/drawer split in the studio shell is the other candidate. Worth its
-   own pass, the way the Suspense boundary in D46 was — it is a real
-   hydration mismatch on a screen a buyer is walked through, and recoverable
-   errors are the kind that stop being recoverable.
+   **And the lead written here was wrong, which is why two PRs found
+   nothing.** `useSyncExternalStore` is the documented *fix* for a
+   server/client difference, not a cause of one — and at 390px both snapshots
+   read `false` anyway, so if `useIsWide` could mismatch it would do so at
+   1440, the width this note calls clean. It reaches the tree once, as
+   `<Dialog open={!isWide && isDrawerOpen}>`, and `isDrawerOpen` starts
+   `false`, so that prop is `false` on both sides regardless.
+
+   **The likely mechanism, found by accident:** the first version of the new
+   guard reproduced #418 perfectly — 3 runs of 3, 1440px, a different route
+   each time — and it was the *spec*, navigating away before React had
+   attached. Interrupting hydration produces #418 with no markup difference
+   at all, and the original sighting was on a `?_vercel_share=` **redirect**,
+   which is exactly that. The width was never the variable; the timing was.
+
+   It is not claimed the bug was imagined — it was seen twice. It is claimed
+   that there is **no markup mismatch to fix**, on any route, at either width.
+
+   **There is no automated guard**, and that is a deliberate choice rather
+   than an omission: one was written and cut for flaking under the full
+   suite (D55). So this stays a read-not-run item. If #418 is seen again,
+   the first question is whether the load was interrupted — a redirect, a
+   fast second navigation, a closed tab — because that reproduces it exactly
+   with no defect present.
 2. **Two GSAP warnings after navigating away from the home page**, on
    `/compare`: `GSAP target [data-cut-frame] not found` and the same for
    `[data-cut-frame] [data-status-chip]`. Those are the Output sequence's
