@@ -6,12 +6,15 @@
 
 ---
 
-## Handoff — 14 November 2026, late evening (F1–F5 shipped, and every ★ is closed)
+## Handoff — 14 November 2026, late evening (F1–F5 shipped, every ★ closed, PR C1 teed up)
 
 **Branch** `v4/site-and-metrics` · **last feature commit** `dca571c` (the
-/niche-scan stepper), with PR F5 at `8e7740e` before it and this handoff
-committed on top · clean tree. The `Branch: main` line above is stale; this is
-where the work is.
+/niche-scan stepper), then `340bf7d` (the React #418 finding) and `c877230`
+(the co-pilot SDK), with this handoff committed on top · clean tree. The
+`Branch: main` line above is stale; this is where the work is.
+
+**Pick up at PR C1** — see "PR C is split into three" below. The spec is
+written and verified, the dependency is in, and nothing imports it yet.
 
 **Where to start reading:** `docs/specs/19_INNER_PAGES.md` **v2** — the second
 half of that file is the ★ checklist every inner page is built against, and
@@ -121,10 +124,44 @@ left out rather than stubbed.
 | 8 | **PR F5** · /resources + article template, /sign-in, /sign-up | done, `8e7740e` |
 | 9 | **the one ★** · /niche-scan's four-step stepper (D52 → D54) | done, see below |
 | 10 | **small PR** · React #418 at `/app/calendar` 390px | done — no repro, D55 |
-| 11 | **PR C** · Co-pilot (`docs/specs/18_COPILOT.md` is already written) | **next** |
-| 12 | **PR D** · Long-form YouTube add-on | queued |
-| 13 | **PR E** · remaining motion, site and studio | queued |
+| 11 | **PR C1** · Co-pilot adapter layer (`lib/copilot/`, routes, tests) | **next** — SDK in, `c877230` |
+| 12 | **PR C2** · Website co-pilot (launcher, grounded answers, refusals) | queued |
+| 13 | **PR C3** · Studio co-pilot (panel + ⌘K, citation chips, proposals) | queued |
+| 14 | **PR D** · Long-form YouTube add-on | queued |
+| 15 | **PR E** · remaining motion, site and studio | queued |
 | — | **PR F6** · the eleven inner pages F1–F5 do not cover | not scheduled |
+
+#### PR C is split into three, and the SDK is already in
+
+**Start at C1.** `18_COPILOT.md` describes three surfaces' worth of work — the
+shared adapter, the website bot and the studio bot — which is well past one
+reviewable pull request. The split, and the order:
+
+- **C1 · the adapter layer.** `lib/copilot/{adapter,canned,grounding,spend}.ts`,
+  the route handlers under `app/api/copilot/*`, and the tests. No UI.
+  **It must work with no API key** (canned mode, labelled), which is the thing
+  that lets C2 and C3 be built and previewed before "Needs Vlad F" lands.
+- **C2 · the website co-pilot** — launcher, panel, grounded answers, the four
+  refusals of 18 §3.2.
+- **C3 · the studio co-pilot** — side panel and ⌘K, citation chips, and the
+  three proposals behind Approve/Dismiss.
+
+C1 deserves a fresh context window: it is the module that touches a live API
+key and a spend cap, and 18 §4 requires a test proving no `'use client'`
+module imports it.
+
+**`@anthropic-ai/sdk` 1.8.0 is already installed** (`c877230`), Apache-2.0,
+licence-check green at 432 packages. Nothing imports it yet.
+
+**The spec was checked against the live Anthropic API reference before the
+install, and it holds.** Worth knowing, because two of its claims are the kind
+that are expensive to discover late: `budget_tokens` really does return 400 on
+Sonnet 5 (depth is `output_config.effort`), and the prompt-cache minimums
+really are **1024 on Sonnet 5 and 4096 on Haiku 4.5** — so §5's warning that
+the website corpus must clear 4096 tokens or caching silently does nothing,
+with no error and a larger bill, is correct and load-bearing. The corrected
+model IDs are right, and the Sonnet/Haiku tier split is Vlad's own choice, so
+it stands rather than defaulting to Opus.
 
 #### Before PR D: there are five Higgsfield credits, not twelve
 
