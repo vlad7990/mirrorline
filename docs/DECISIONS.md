@@ -2750,3 +2750,97 @@ exactly on 90 — F4 adds an interactive picker to /metrics and should re-check
 all three.
 
 Unit tests: 465, up 25. axe: clean on both pages in both themes.
+
+## 2026-11-14 · D52 · A goal picker that changes what leads, not what the numbers say — and the band trap, three times in one evening
+
+PR F4, /metrics and /niche-scan. One of the two is finished; the other is
+not, and §"What F4 did not do" says which.
+
+### The seven goal cards become a picker, and the honest part is what it refuses to do
+
+/metrics is the page whose whole argument is that we *report* — and the
+section carrying that argument was seven static cards naming a goal and its
+headline KPI, showing nothing happening. 19 v2 ★2 replaces them.
+
+**What changes with the goal is which KPIs lead, not what the numbers say.**
+This is the decision worth not re-opening. One fictional account is being
+previewed; choosing "Audience growth" does not make it a different account
+with different measurements, it decides which of its measurements you are
+judged on. Re-rolling a fresh set of healthy figures per goal would be seven
+fictional accounts pretending to be one, and it would be invisible — nobody
+can tell a fabricated dashboard from a real one by looking. So the component
+says what it is doing, in a sentence under the funnel, and the data is a
+`GOAL_VIEWS` record naming four keys out of the eight in `SAMPLE_KPIS`.
+
+**Every goal keeps a not-connected KPI and a labelled projection** (15 §8),
+and seven tests enforce it. Dropping those two cards is the single easiest
+way to make a preview look better than the product, and it would be a
+defensible-looking edit: `bookings` reads "Not connected" on a page selling
+bookings. An eighth test checks the fixture still has those states at all, so
+the other seven cannot pass while asserting nothing.
+
+The funnel is the same five steps every time with the line drawn in a
+different place — awareness is judged at Views, bookings at Bookings. Bars are
+scaled to the real share of the top step rather than drawn to look like a
+funnel, and steps past the judged one stay visible but go quiet: those numbers
+are still measured, they are just not what this goal is about.
+
+**`MetricsPreview` came off this page.** It renders live KPI cards and so does
+the picker; three dashboards on one page is two too many. What replaced it is
+the thing cards cannot show — the whole screen, in a browser frame, with four
+numbered hotspots. The numbers are repeated as a list beside the image,
+because a hotspot whose explanation only appears on hover is invisible on a
+phone and to a keyboard.
+
+### The band trap, three times, and what it actually is
+
+D40 established that a band utility *pins* the palette. F2 hit it, and this PR
+hit it twice more in the same evening, which is enough to call it a pattern
+rather than a slip:
+
+1. `band-ink-alt` on the goal picker pinned the studio `KpiCard`'s tokens to
+   ink values on a light ground.
+2. Removing the band did not fix it — the card's target line is small gold
+   text whose correct value depends on what it sits on, and on the default
+   surface it still failed.
+3. `text-success` on /niche-scan's recipe cards failed the same way under
+   `band-snow`.
+
+**The rule, stated properly:** a band and a component's `surface` prop are
+set together or not at all. `KpiCard` takes `surface: 'ink' | 'snow' |
+'theme'` precisely because it cannot know what it was pinned to. The fix is
+`band-snow` on the section *and* `surface="snow"` on the cards — using the
+system as designed rather than removing the band and hoping. Where a
+component has no such prop (the recipe cards), the band comes off instead.
+
+A fourth, smaller one: `gold-phrase` on a `text-subtitle` heading failed
+contrast in both themes. That utility is a gradient cut for the display scale;
+the emphasis a small heading needs is weight, which costs no colour.
+
+**And a self-inflicted one worth recording because it cost a build:** three
+JSX comments I inserted opened `{/*` and closed `*/` with no `}`. The compiler
+pointed at the *next* section each time, which is how twenty lines of
+perfectly good JSX end up under suspicion.
+
+### What F4 did not do
+
+**The /niche-scan form is still a single form, not the four-step stepper 19 v2
+★2 asks for.** The page's other ★s are done — its own hero image and inset,
+three sample recipes drawn from the real `trends` fixture rather than written
+for the page, the trust note on sources, and a page-specific CTA.
+
+The stepper was left because of how `ScanForm` submits: `onSubmit` reads
+`new FormData(event.currentTarget)` for `niche` and `email`. Unmounting the
+inactive steps removes those inputs from the DOM and silently drops them from
+the payload; keeping them mounted behind `hidden` breaks native `required`
+validation, because a hidden required field blocks submit with no visible
+error. Either route means replacing the form's validation, and doing that to a
+working lead-capture form with too little context left to verify it properly
+is a worse outcome than not doing it. It is the one outstanding ★ in F1–F4 and
+it is named in the handoff.
+
+### Measurements
+
+Lighthouse mobile, medians of three runs: **/product 90, /how-it-works 91,
+/pricing 91, /metrics 91.** Unit tests 503, up 38. axe clean on both pages in
+both themes.

@@ -5,14 +5,32 @@
  * back but an email, which is why every CTA anywhere points here.
  */
 
+import { trends } from '@mirrorline/mock'
+import { Card } from '@mirrorline/ui'
 import type { Metadata } from 'next'
 import * as React from 'react'
 
 import { SCAN_STEPS } from '@/components/marketing/home/problem-content'
-import { PageHero } from '@/components/marketing/page-hero'
-import { Section } from '@/components/marketing/primitives'
+import { HeroInset, InsetCycle } from '@/components/marketing/kit/hero-inset'
+import { PAGE_CTAS, PageCta } from '@/components/marketing/kit/page-cta'
+import { PageHeroImage } from '@/components/marketing/kit/page-hero-image'
+import { PAGE_HERO_IMAGES, allocateFrames } from '@/components/marketing/kit/page-media'
+import { Section, SectionHeading } from '@/components/marketing/primitives'
 
 import { ScanForm } from './scan-form'
+
+/** Offset 9, so this page does not open on a frame another page opened with. */
+const [INSET_FRAMES = []] = allocateFrames([3], 9)
+
+/**
+ * Three of the recipes a scan comes back with.
+ *
+ * The real ones, from the same fixture the studio's Niche Scan screen renders
+ * — not three written for this page. A marketing page inventing prettier
+ * recipes than the product produces is exactly the gap between demo and
+ * delivery that P2 is a complaint about.
+ */
+const SAMPLE_RECIPES = trends.slice(0, 3)
 
 export const metadata: Metadata = {
   title: 'Free Niche Scan',
@@ -23,7 +41,7 @@ export const metadata: Metadata = {
 export default function NicheScanPage() {
   return (
     <>
-      <PageHero
+      <PageHeroImage
         eyebrow="Free Niche Scan"
         title={
           <>
@@ -31,8 +49,13 @@ export default function NicheScanPage() {
           </>
         }
         lead="A strategist and our Trend Scout look at what is actually growing where you are, and send back the format recipes. It costs nothing, there is no call attached, and you could use it without us."
+        image={PAGE_HERO_IMAGES['niche-scan']}
         index={SCAN_STEPS.map((step) => ({ number: step.number, title: step.title }))}
-        marginNote="free · about 48 hours · no call attached"
+        inset={
+          <HeroInset caption="Three accounts the scan has been run for.">
+            <InsetCycle frames={INSET_FRAMES} />
+          </HeroInset>
+        }
       />
 
       <Section aria-labelledby="form-heading">
@@ -77,6 +100,65 @@ export default function NicheScanPage() {
           </div>
         </div>
       </Section>
+
+      {/* What comes back ------------------------------------------------- */}
+      {/* No band utility: the recipe cards carry `text-success` for the
+          growth figure, which a band would pin to its ink-band value on a
+          light ground (D40). Same trap as the goal picker on /metrics. */}
+      <Section tone="subtle" aria-labelledby="recipes-heading">
+        <SectionHeading
+          id="recipes-heading"
+          eyebrow="What comes back"
+          rail
+          title={
+            <>
+              Five to ten recipes. <span className="gold-phrase">Here are three.</span>
+            </>
+          }
+          headingClassName="text-site-h2"
+          lead="Each one is a structure with its beats, why it is growing, and how well it fits the account. A recipe is a shape — never somebody else's video, and never their footage."
+        />
+        <ul className="m-0 mt-10 grid list-none grid-cols-1 gap-4 p-0 lg:grid-cols-3">
+          {SAMPLE_RECIPES.map((recipe, position) => (
+            <li
+              key={recipe.id}
+              className="reveal-item"
+              style={{ '--index': position } as React.CSSProperties}
+            >
+              <Card className="flex h-full flex-col gap-4">
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="m-0 font-heading text-subtitle text-text">{recipe.format}</h3>
+                  <span className="machine shrink-0 text-mono text-success">
+                    {recipe.growthLabel}
+                  </span>
+                </div>
+
+                <ol className="m-0 flex list-none flex-col gap-2 p-0">
+                  {recipe.beats.map((beat) => (
+                    <li
+                      key={beat.order}
+                      className="flex items-baseline gap-3 border-b border-border pb-2 last:border-b-0 last:pb-0"
+                    >
+                      <span className="machine shrink-0 text-mono text-text-muted">
+                        {String(beat.order).padStart(2, '0')}
+                      </span>
+                      <span className="text-meta text-text">{beat.label}</span>
+                    </li>
+                  ))}
+                </ol>
+
+                <p className="m-0 text-meta text-text-muted">{recipe.whyItWorks}</p>
+                <p className="m-0 mt-auto border-t border-border pt-3 text-caption text-text-muted">
+                  <span className="machine">{recipe.viewsPerFollower}x</span> views per follower in
+                  this niche &middot; sample data from a fictional demo account
+                </p>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      <PageCta cta={PAGE_CTAS['niche-scan']} />
     </>
   )
 }

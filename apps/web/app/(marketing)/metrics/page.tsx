@@ -16,11 +16,16 @@ import type { Metadata } from 'next'
 import * as React from 'react'
 
 import { KPI_TIERS } from '@/components/kpi/kpi-types'
-import { MetricsPreview } from '@/components/kpi/metrics-preview'
-import { PageHero } from '@/components/marketing/page-hero'
+import { BrowserFrame } from '@/components/marketing/kit/frames'
+import { GoalPicker } from '@/components/marketing/goal-picker'
+import { HeroInset, InsetCycle } from '@/components/marketing/kit/hero-inset'
+import { PAGE_CTAS, PageCta } from '@/components/marketing/kit/page-cta'
+import { PageHeroImage } from '@/components/marketing/kit/page-hero-image'
+import { PAGE_HERO_IMAGES, allocateFrames } from '@/components/marketing/kit/page-media'
 import { SampleDataLabel, Section, SectionHeading } from '@/components/marketing/primitives'
-import { SiteCta } from '@/components/marketing/site-cta'
-import { GOALS } from '@/lib/audience/account-type'
+
+/** Offset 5, so this page does not open on a frame another page opened with. */
+const [INSET_FRAMES = []] = allocateFrames([3], 5)
 
 export const metadata: Metadata = {
   title: 'Metrics and KPIs',
@@ -69,6 +74,55 @@ const CASCADE: readonly CascadeStep[] = [
   },
 ]
 
+interface Hotspot {
+  readonly number: number
+  /** Percentage positions over the 16:10 screenshot. */
+  readonly left: string
+  readonly top: string
+  readonly title: string
+  readonly body: string
+}
+
+/**
+ * The four parts of the Results screen worth pointing at.
+ *
+ * Positions are percentages of the screenshot rather than pixels, so they
+ * stay put as the frame scales from 620px to a phone's full width. They are
+ * eyeballed against `results-16x10` and will need a look if that screenshot
+ * is retaken — which is why each one also appears in the list beside it,
+ * where the explanation survives a marker drifting.
+ */
+const DASHBOARD_HOTSPOTS: readonly Hotspot[] = [
+  {
+    number: 1,
+    left: '26%',
+    top: '18%',
+    title: 'The goal, with its progress',
+    body: 'One goal per account, the one chosen in onboarding. Everything under it is measured against that and nothing else.',
+  },
+  {
+    number: 2,
+    left: '26%',
+    top: '42%',
+    title: 'KPI cards, with targets',
+    body: 'Each carries its figure, how it moved, and the target it is being read against — plus how old the number is, because platform data arrives late.',
+  },
+  {
+    number: 3,
+    left: '74%',
+    top: '42%',
+    title: 'The states we do not hide',
+    body: 'A source nobody connected says “Not connected” and offers a button. A projection is dashed and says what it assumes. Neither is ever shown as a measurement.',
+  },
+  {
+    number: 4,
+    left: '50%',
+    top: '78%',
+    title: 'The weekly ledger',
+    body: 'The same table every week, whatever it contains. Nothing is quietly dropped for looking worse than the week before.',
+  },
+]
+
 interface HonestyRule {
   readonly id: string
   readonly title: string
@@ -112,7 +166,7 @@ const HONESTY_RULES: readonly HonestyRule[] = [
 export default function MetricsPage() {
   return (
     <>
-      <PageHero
+      <PageHeroImage
         eyebrow="Metrics and KPIs"
         title={
           <>
@@ -120,14 +174,16 @@ export default function MetricsPage() {
           </>
         }
         lead="On every plan, in every industry. You pick one goal and the KPI set, the targets and the dashboard follow it — your trade only decides what the agents research."
-        shot="results-16x10"
-        shotAlt="The Results screen, showing a goal bar, KPI cards with targets and a weekly ledger."
-        shotCaption="Sample data from a fictional demo account."
+        image={PAGE_HERO_IMAGES.metrics}
         index={KPI_TIERS.map((tier) => ({
           number: String(tier.number).padStart(2, '0'),
           title: tier.name,
         }))}
-        marginNote="seven tiers · one goal · targets you approve"
+        inset={
+          <HeroInset caption="Three accounts, three different goals.">
+            <InsetCycle frames={INSET_FRAMES} />
+          </HeroInset>
+        }
       />
 
       {/* The cascade ----------------------------------------------------- */}
@@ -164,7 +220,15 @@ export default function MetricsPage() {
       </Section>
 
       {/* The seven goals -------------------------------------------------- */}
-      <Section className="band-ink-alt" size="md" aria-labelledby="goals-heading">
+      {/* `band-snow`, paired with `surface="snow"` on the KPI cards inside.
+          This section renders the studio's own `KpiCard`, and that component
+          takes a surface precisely because its target line is small gold text
+          whose correct value depends on what it sits on. Leaving it on the
+          default `theme` surface failed axe here; `band-ink-alt` failed it
+          the other way (D40). A band pins the palette and the matching
+          surface tells the card which palette it was pinned to — the two are
+          meant to be set together. */}
+      <Section className="band-snow" size="md" aria-labelledby="goals-heading">
         <SectionHeading
           id="goals-heading"
           eyebrow="The seven goals"
@@ -176,23 +240,13 @@ export default function MetricsPage() {
           lead="You may add a second. Not one of them is an industry, and that is the point: two businesses in completely different trades chasing bookings get the same KPI set."
           headingClassName="text-site-h2 font-serif"
         />
-        <ul className="m-0 mt-10 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 lg:grid-cols-4">
-          {GOALS.map((goal, position) => (
-            <li
-              key={goal.key}
-              className="reveal-item"
-              style={{ '--index': position % 4 } as React.CSSProperties}
-            >
-              <Card className="flex h-full flex-col gap-2">
-                <h3 className="m-0 font-heading text-subtitle text-text">{goal.label}</h3>
-                <p className="m-0 mt-auto border-t border-border pt-3 text-caption text-text-muted">
-                  Headline KPI
-                </p>
-                <p className="machine m-0 text-mono text-gold-bright">{goal.headlineKpi}</p>
-              </Card>
-            </li>
-          ))}
-        </ul>
+        {/* The seven cards became a picker (19 v2 ★2, D52). They stated what
+            each goal was and showed nothing happening, on the one page whose
+            argument is that we *report* — so the section carrying that
+            argument was the most inert on the site. */}
+        <div className="mt-10">
+          <GoalPicker />
+        </div>
       </Section>
 
       {/* The seven tiers -------------------------------------------------- */}
@@ -248,7 +302,50 @@ export default function MetricsPage() {
           headingClassName="text-site-h2 font-serif"
           aside={<SampleDataLabel />}
         />
-        <MetricsPreview full className="mt-10" />
+        {/* The whole screen, annotated — rather than `MetricsPreview` again.
+            That component renders the live KPI cards, and the goal picker
+            above already does: three dashboards on one page is two too many.
+            What this section adds is the thing the cards cannot show on their
+            own, which is where they sit in a screen somebody works in.
+
+            The markers are numbered and repeated as a list below, so nothing
+            here depends on hovering. A hotspot whose explanation only appears
+            on hover is invisible on a phone and to a keyboard. */}
+        <div className="mt-10 grid gap-8 lg:grid-cols-12 lg:gap-10">
+          <BrowserFrame
+            className="lg:col-span-7"
+            shot="results-16x10"
+            path="/app/results"
+            alt="The Results screen: a goal bar, KPI cards with targets, the funnel and the weekly ledger."
+            sizes="(min-width: 1024px) 620px, 100vw"
+            caption="Sample data from a fictional demo account."
+          >
+            {DASHBOARD_HOTSPOTS.map((spot) => (
+              <span
+                key={spot.number}
+                aria-hidden="true"
+                className="machine absolute flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-gold-deep text-caption font-semibold text-ink-900 shadow-lg"
+                style={{ left: spot.left, top: spot.top }}
+              >
+                {spot.number}
+              </span>
+            ))}
+          </BrowserFrame>
+
+          <ol className="m-0 flex list-none flex-col gap-4 p-0 lg:col-span-5">
+            {DASHBOARD_HOTSPOTS.map((spot) => (
+              <li key={spot.number} className="flex gap-3">
+                <span className="machine mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-gold-deep text-caption font-semibold text-ink-900">
+                  {spot.number}
+                </span>
+                <span className="flex flex-col gap-1">
+                  <span className="font-heading text-subtitle text-text">{spot.title}</span>
+                  <span className="text-meta text-text-muted">{spot.body}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
       </Section>
 
       {/* The honesty rules ------------------------------------------------ */}
@@ -280,7 +377,7 @@ export default function MetricsPage() {
         </ul>
       </Section>
 
-      <SiteCta next={{ href: '/pricing', label: 'Pricing' }} />
+      <PageCta cta={PAGE_CTAS.metrics} />
     </>
   )
 }
