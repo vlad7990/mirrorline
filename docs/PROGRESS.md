@@ -6,31 +6,48 @@
 
 ---
 
-## Handoff — 14 November 2026, evening (PR F1–F4 shipped; F5 is next)
+## Handoff — 14 November 2026, late evening (PR F1–F5 shipped; the F series is done)
 
-**Branch** `v4/site-and-metrics` · **last feature commit** `56848ea` (PR F4),
+**Branch** `v4/site-and-metrics` · **last feature commit** `8e7740e` (PR F5),
 with this handoff committed on top · clean tree. The `Branch: main` line above
 is stale; this is where the work is.
 
 **Where to start reading:** `docs/specs/19_INNER_PAGES.md` **v2** — the second
-half of that file is the ★ checklist every inner page is built against, and it
-is the thing to read before writing any more of them. Then D49, D50 and D51 in
-`docs/DECISIONS.md` for the three PRs of this evening. The queue table below
-has been reordered to match what Vlad asked for on 14 November: **F runs
-before C, D and E.**
+half of that file is the ★ checklist every inner page is built against. Then
+D49–D53 in `docs/DECISIONS.md`, one per PR of this evening. The queue table
+below matches what Vlad asked for on 14 November: **F runs before C, D and E.**
 
-**Preview:** https://mirrorline-pxzgwod5a-vn-mn-product-group.vercel.app —
-built from the F4 tree (`56848ea`). It returns 302 behind Vercel's deployment
+**Preview:** https://mirrorline-6cmwdwhhy-vn-mn-product-group.vercel.app —
+built from the F5 tree (`8e7740e`). It returns 302 behind Vercel's deployment
 protection, exactly as previous previews have; open it signed in to the team,
 or mint a share link from the dashboard. Nothing is promoted to production.
 
-What to look at: **/product** (six-screen tour, reel strip, Originality Gate
-demo with the meter scaled to its 30% limit), **/how-it-works** (a different
-visual per phase), **/pricing** (card grid, and the month preview under the
-plan chips — the dots are drawn from each plan's own post count) and
-**/compare** (four category columns, then the three-question helper at the
-bottom: answer "None, and I do not plan to record" and it refuses to sell you
-anything).
+What to look at **for F5**: **/resources** — the category chips along the top
+are links, so they work with JavaScript off and a filtered URL can be shared;
+the four templates are printed on the page rather than offered by email; and
+the signup at the bottom says, above the field, that it sends nothing. Tick
+the box, submit, and the confirmation says the same. Then any article, e.g.
+**/resources/what-to-measure**, for the progress line under the header (it
+draws nothing in Firefox, by design — D53) and the related block at the foot.
+Then **/sign-in**, which is ink and gold now with the image down the left:
+type the example address from the hint and submit, and the error names neither
+half of the credentials on purpose. Then "Forgot your password?", which is a
+second state in the same card.
+
+**Verified on the build this deployment was cut from:** /resources serves 200
+with six cards, `?category=rules` with two, and `?category=not-a-category`
+with all six rather than an empty page; the signup makes no network request on
+submit (counted in `e2e/resources-and-auth.spec.ts`); /sign-in's error names
+neither field. On the deployment itself every route returns 302 at the edge,
+which is the protection and not a fault.
+
+Still worth looking at from **F2–F4**: **/product** (six-screen tour, reel
+strip, Originality Gate demo with the meter scaled to its 30% limit),
+**/how-it-works** (a different visual per phase), **/pricing** (card grid, and
+the month preview under the plan chips — the dots are drawn from each plan's
+own post count) and **/compare** (four category columns, then the
+three-question helper at the bottom: answer "None, and I do not plan to
+record" and it refuses to sell you anything).
 
 What to look at for **PR7**: `/app/calendar`. Drag a chip sideways onto
 another day in the same platform row — the ghost follows the pointer, the
@@ -89,14 +106,24 @@ left out rather than stubbed.
 | 5 | **PR F2** · /product and /how-it-works | done, `d9cb358` |
 | 6 | **PR F3** · /pricing and /compare | done, `27b4893` |
 | 7 | **PR F4** · /metrics and /niche-scan | done, `56848ea` (one ★ open) |
-| 8 | **PR F5** · /resources + article template, /sign-in, /sign-up | **next** |
-| 9 | **small PR** · React #418 at `/app/calendar` 390px | queued, after F5 |
-| 10 | **PR C** · Co-pilot (`docs/specs/18_COPILOT.md` is already written) | queued |
-| 11 | **PR D** · Long-form YouTube add-on | queued |
-| 12 | **PR E** · remaining motion, site and studio | queued |
+| 8 | **PR F5** · /resources + article template, /sign-in, /sign-up | done, `8e7740e` |
+| 9 | **the one ★** · /niche-scan's four-step stepper (D52) | **next** |
+| 10 | **small PR** · React #418 at `/app/calendar` 390px | queued |
+| 11 | **PR C** · Co-pilot (`docs/specs/18_COPILOT.md` is already written) | queued |
+| 12 | **PR D** · Long-form YouTube add-on | queued |
+| 13 | **PR E** · remaining motion, site and studio | queued |
 | — | **PR F6** · the eleven inner pages F1–F5 do not cover | not scheduled |
 
-#### The one ★ still open in F1–F4
+#### Before PR D: there are five Higgsfield credits, not twelve
+
+F5 spent 14 against the 9 its budget reserved. Nano Banana 2 at 2k costs **2**
+credits, not the 1.5 D29 and 19 v2 planned with — six covers cost 12 — and a
+seventh image was regenerated because the first came back with a legible
+camera-maker's wordmark on the camera body, which DESIGN.md rules out. 19 v2's
+budget table is corrected and D53 has the detail. **Check the balance before
+planning anything that needs new imagery.**
+
+#### The one ★ still open in F1–F5
 
 **/niche-scan's four-step stepper was not built** (19 v2 ★2, D52). Everything
 else on that page is done. `ScanForm.onSubmit` reads
@@ -106,6 +133,49 @@ them mounted behind `hidden` breaks native `required` validation — a hidden
 required field blocks submit with no visible error. Either route means
 replacing the form's validation, which is a real piece of work on a live
 lead-capture path and wants a session with room to verify it.
+
+**It is next, and F5 built the pattern it should copy.** The sign-in card in
+`app/(auth)/components/auth-forms.tsx` is a two-state form where the state is
+held in React and the fields are controlled — no `FormData`, nothing read off
+the DOM at submit, and a validation message that is rendered from state rather
+than left to the browser. A four-step stepper is the same shape with four
+states instead of two. The work on `ScanForm` is to make its two fields
+controlled and to validate them in the submit handler, after which unmounting
+an inactive step costs nothing because the value never lived in the input.
+
+#### F5 · what shipped, and the three things to watch — read D53
+
+**Gates:** lint, typecheck, 522 unit (up 19), build, licence-check and 287 e2e
+(up 12) all green. Lighthouse mobile, medians of three runs: **/product 90,
+/how-it-works 91, /pricing 91, /metrics 90** — unchanged from F4, so the
+~60 lines F5 added to `globals.css` cost nothing measurable.
+
+**Watch — new.**
+
+1. **`/resources` is the first marketing page that renders per request.**
+   The category filter is links the server answers, so the page reads
+   `searchParams` and the build marks it `ƒ` rather than `○`. Everything else
+   on the public site, the six article pages included, still prerenders. This
+   is deliberate and D53 explains the trade; it is listed here because a
+   future "why is this page dynamic?" is a reasonable question with a
+   non-obvious answer.
+2. **It sits exactly on the twelve-lazy-image ceiling.** One `priority` image
+   (the hero) plus twelve lazy: three in the hero inset's cross-fade, six
+   article covers, and three in the glossary's sample trio. 19 v2 allows
+   twelve, so this is at the limit and not over it — but any new image on
+   that page means taking one off.
+3. **The reading-progress line draws nothing in Firefox.** `animation-timeline`
+   is behind a flag there, and the rule is inside `@supports` on purpose: a
+   bar frozen empty at the foot of an article is a worse lie than no bar.
+   Expected, not a bug, and it will start working when Firefox ships it.
+
+**Fixed in passing:** `motion.spec.ts` "the selection pill follows the chosen
+account option" had a non-retrying assertion that read a custom property in
+the same tick as the click. It failed the full run, passed 3/3 in isolation,
+and had already been written off as a flake once earlier the same day. Now
+`expect.poll`. The four `index--*.png` reference shots also changed by under
+1% — the home marquee and the cycling hero line are not frame-deterministic,
+and nothing on that page was touched.
 
 #### Picking up F4 — superseded, kept for the goal-picker reasoning
 
