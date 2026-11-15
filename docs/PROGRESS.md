@@ -6,6 +6,105 @@
 
 ---
 
+## Handoff — 15 November 2026, midday (PR C2 shipped; C3 is next)
+
+**Branch** `v4/site-and-metrics` · **last commit** `0ef5549`, with this handoff
+on top · clean tree.
+**Preview:** https://mirrorline-odg1ps1jg-vn-mn-product-group.vercel.app — 302
+at the edge like every preview since PR A, which is Vercel's deployment
+protection and not a fault. Open it signed in to the team, or mint a share
+link from the dashboard. Nothing is promoted to production.
+
+**Pick up at PR C3** — the studio co-pilot: the right-hand panel, ⌘K from
+anywhere in `/app/*`, the citation chips 18 §2.2 asks for, and the three
+proposals with Approve and Dismiss. The endpoint it talks to has existed since
+C1, and the client-side half it needs — the wire contract, the stream reader
+and the transcript reducer — now exists too, and none of it is website-only.
+Read **D57** first, then 18 §2.
+
+### What C2 shipped
+
+The website co-pilot, end to end and visible on the preview:
+
+- `lib/copilot/events.ts` — the NDJSON contract and the two pure functions a
+  browser needs to read it. `CopilotEvent` **moved here out of `adapter.ts`**;
+  the adapter re-exports it, so nothing server-side changed. D57 explains why
+  the move was the honest answer rather than relaxing the guard.
+- `lib/copilot/site-stream.ts` — one POST, read line by line, as an async
+  generator. A 429 and a dead connection become `error` events; an abort ends
+  the stream silently.
+- `lib/copilot/transcript.ts` — events to one question-and-answer. **A refusal
+  finishes as `answered`.** Only transport failures fail.
+- `lib/copilot/site-copilot-copy.ts` — every word the UI says, in a `.ts` so
+  the banned-phrase sweep reads it and Vitest can import it.
+- `lib/consent/` — the cookie choice, lifted out of the banner so the launcher
+  can wait for it.
+- `components/marketing/copilot/` — launcher, panel, and the container that
+  owns the transcript.
+
+### How to look at it
+
+Open the preview, **dismiss the cookie banner**, and the launcher appears
+bottom-right. It is not there before that, on purpose (18 §3.3). Then:
+
+- Ask "What does the Growth plan include every month?" — the answer quotes our
+  own pricing page and puts a chip under it you can click.
+- Ask "Will I get 10,000 followers?" — a refusal, rendered as an answer with a
+  link to a person, with nothing red about it and no number in it.
+- Reload. The transcript is gone, because it only ever lived in the tab.
+
+The panel says **Sample answers** at the top, read from
+`/api/copilot/status`. If that call fails it says nothing rather than guessing
+— neither guess would be true.
+
+### Three things worth knowing before C3
+
+**1. The client may not name `adapter.ts`, even in a type import.**
+`server-only.test.ts` walks the import graph and cannot tell a type-only
+import from a value one. That is deliberate. C3's panel should import the
+event shape from `lib/copilot/events.ts`, which is already built for it, and
+`transcript.ts` already handles proposal events — it drops them, because the
+website has no Approve button. C3 is where that branch gets its screen.
+
+**2. Focus restoration has to wait a render.** The launcher is `hidden` while
+the panel is open, and `focus()` on a `display: none` element silently does
+nothing. The fix is a ref plus an effect, and C3's ⌘K panel will meet exactly
+the same thing.
+
+**3. The screenshot sweep failed once in the full run, and passed alone.**
+`capture every screen at 1440px in light` died on
+`browserContext.close: ENOENT … traces/…trace` — Playwright losing its own
+artefact while four contexts close together, not an assertion about the site.
+D55's rule was followed rather than the word "flake" being used on a single
+failure.
+
+### Checks on this commit
+
+Unit **687** (up 47 from 640), e2e **303** (up 11). Lint, typecheck, build and
+licence-check green; licence-check 432 packages, GSAP scope clean — this PR
+adds no dependency and no animation library.
+
+**Screenshots:** `docs/screens-built/copilot/`, ten of them — banner with no
+launcher, launcher, empty panel, answer, refusal, at 1440 and 390. The route
+sweep cannot reach these states, so `scripts/copilot-screenshots.mjs` drives
+them; run it against a production server. The ten reference PNGs the sweep
+rewrote during the full e2e run were reverted again: rendering churn on pages
+this PR does not touch.
+
+**Lighthouse mobile**, medians of three: **/product 89, /how-it-works 91,
+/pricing 90, /metrics 90**, accessibility 100 everywhere. /product was 90
+before and the baseline's own three runs were 86/90/91, so the point is noise
+rather than a regression — D57 has the numbers. `/` is 80, where it has always
+been.
+
+### Still needs Vlad
+
+Unchanged from C1. **"Needs Vlad F" — `ANTHROPIC_API_KEY`.** Sample mode is
+the supported path, and the whole surface is built and reviewable without it.
+Five Higgsfield credits remain, and they matter to PR D only.
+
+---
+
 ## Handoff — 15 November 2026, morning (PR C1 shipped; C2 is next)
 
 **Branch** `v4/site-and-metrics` · **last commit** `091c1f2` · clean tree.
