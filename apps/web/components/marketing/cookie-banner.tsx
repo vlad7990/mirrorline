@@ -17,50 +17,24 @@
  * **Nothing is set before a choice is made.** The only thing ever written is
  * the choice itself, under `mirrorline.cookie-consent`, which is a strictly
  * necessary record of a preference and the one category needing no consent.
+ *
+ * The storage moved to `lib/consent/cookie-consent.ts` when the co-pilot
+ * launcher became a second reader of the same answer (18 §3.3): the launcher
+ * may not appear until this banner is gone, and a rule two components depend
+ * on should not stay private to one of them.
  */
 
 import { Button, cn } from '@mirrorline/ui'
 import Link from 'next/link'
-import * as React from 'react'
 
-const STORAGE_KEY = 'mirrorline.cookie-consent'
-
-type Choice = 'essential' | 'all'
-
-function readChoice(): Choice | null {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    return raw === 'essential' || raw === 'all' ? raw : null
-  } catch {
-    // Storage blocked. We then show the banner every visit, which is the
-    // conservative failure: never assume a consent we cannot remember.
-    return null
-  }
-}
-
-function writeChoice(choice: Choice): void {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, choice)
-  } catch {
-    // The choice still holds for this visit, in React state.
-  }
-}
+import { useCookieConsent } from '@/lib/consent/cookie-consent-context'
 
 export function CookieBanner() {
   // Hidden on the server and on the first client render, so the markup
-  // matches and hydration cannot mismatch. The effect decides.
-  const [isOpen, setIsOpen] = React.useState(false)
+  // matches and hydration cannot mismatch. The provider's effect decides.
+  const { isResolved, hasChosen, choose } = useCookieConsent()
 
-  React.useEffect(() => {
-    if (readChoice() === null) setIsOpen(true)
-  }, [])
-
-  const choose = (choice: Choice) => {
-    writeChoice(choice)
-    setIsOpen(false)
-  }
-
-  if (!isOpen) return null
+  if (!isResolved || hasChosen) return null
 
   return (
     <div

@@ -3566,3 +3566,115 @@ names the fix if they do not — move the website bot to Sonnet 5 rather than
 loosen the refusals); and that the typed error handling in §7 behaves against
 a real API. The canned path is fully exercised; the live path is written to
 the reference and unexercised.
+
+## 2026-11-15 · D57 · The website co-pilot's surface: a launcher that waits, a refusal that is not an error, and a wire contract that had to move house
+
+PR C2: the website co-pilot's UI. `lib/copilot/{events,transcript,site-stream,
+site-copilot-copy}.ts`, `lib/consent/*`, three components under
+`components/marketing/copilot/`, and the 18 §3.3 rules held in tests. The
+studio surface is C3 and is untouched.
+
+### The event union had to leave `adapter.ts`, and the test that forced it was right
+
+`CopilotEvent` lived in `adapter.ts`, which is also the only module allowed to
+import the SDK and read the key. `server-only.test.ts` fails if any
+`'use client'` module can reach that file **at any depth**, and it reads
+`from '…'` without distinguishing a type-only import.
+
+That is not a false positive to work around. A type-only import of
+`CopilotEvent` really is erased at build time and really would be harmless —
+but the check cannot tell it from a value import without a parser, and the
+mistake it exists to catch is always transitive: a helper added to a shared
+module, imported three hops away, with nothing in the diff to notice. A guard
+that has to reason about erasure is a guard that can be argued with.
+
+So the contract moved down into `events.ts`, which imports its types from
+`canned.ts` and `spend.ts` and is importable from a browser bundle without
+pulling in the corpus, the canned answers or the SDK. `adapter.ts` re-exports
+it, so all five server-side callers are unchanged. **The rule was kept and the
+code moved, rather than the rule being narrowed to fit the code.**
+
+### A refusal is an answer, and the reducer is where that is held
+
+18 §3.1 calls "I don't know, here is a person" a success state and §3.2 calls
+the four refusals "the product". The easy version of this UI files anything
+unusual under errors and paints it red — which would mean the most carefully
+written answers on the public site look broken.
+
+`transcript.ts` states it instead: a `done` event finishes as `answered`
+whatever its `refusal` field says, and **only** an `error` event — the
+transport failing, the cap, the rate limit — finishes as `failed`. Three unit
+tests and an e2e test hold it, the last by asking for a follower guarantee and
+asserting the panel shows the answer and the handoff link and none of the
+failure copy.
+
+Two smaller rules live beside it. `done.answer.text` **replaces** the streamed
+deltas rather than appending to them, so a duplicated or dropped chunk cannot
+leave half a sentence on screen. And a proposal event is dropped on this
+surface: §1 allows the website bot to answer, cite and hand off, and a
+proposal card on a public page would have an Approve button wired to nothing.
+
+### The launcher waits for the consent banner, which took a shared fact rather than two effects
+
+§3.3 forbids the launcher appearing before the cookie banner is dismissed. The
+banner kept its choice in its own `useState` plus `localStorage`, so the
+launcher would have had to read the same storage and guess when it changed.
+Two components inferring one fact from a side channel is how they drift.
+
+The storage moved to `lib/consent/cookie-consent.ts` and the state to a
+provider in the marketing layout. The banner renders when the choice is
+unread-and-absent; the launcher renders when it exists; **neither renders on
+the first paint**, because the stored value is only read in an effect and
+reading it during render is the silent hydration mismatch
+`account-type-context.tsx` already documents. There are three states, not two,
+and the third is "we do not know yet".
+
+### Focus restoration needed a render, not a handler
+
+Escape closed the panel and dropped focus on `<body>`: the launcher is
+`hidden` while the panel is open, and `focus()` on a `display: none` element
+does nothing and reports nothing. The intent is now recorded in a ref and the
+focus moves in an effect, once the launcher is back in the layout. The e2e
+test that caught it is the one asserting focus returns — it failed on the
+first run, which is the only reason this is a paragraph rather than a bug.
+
+### Sample mode is read, never inferred
+
+The panel asks `/api/copilot/status` on first open — not on mount, so a page
+nobody asks a question on makes no request — and `readSiteMode` returns
+`null` when the call fails. **Null renders no badge at all.** Guessing `live`
+would present a scripted answer as a generated one and guessing `sample` would
+do the reverse, and both are the kind of small lie non-negotiable 7 exists to
+stop.
+
+### The screenshot sweep failed once in the full run, and it is not this PR
+
+`capture every screen at 1440px in light` failed with
+`browserContext.close: ENOENT … .playwright-artifacts-9/traces/…trace`, while
+the other three sweeps passed. That is Playwright losing its own trace file
+while four heavy contexts close at once, not an assertion about the site, and
+D55's rule applies: re-run three times in isolation before calling anything a
+flake. It was run three times on its own, with `SCREENSHOT_OUT_DIR` pointed
+away from the reference set, and passed 4/4 every time — then passed again in
+the final full run. Artefact loss under seven workers, not a broken sweep.
+
+### Measurements
+
+Unit tests **687**, up 47 from 640. e2e **303**, up 11 — eleven new co-pilot
+tests, one
+of which is an axe pass over the open panel, because `a11y.spec.ts` sweeps
+routes and this surface is not one. Lint, typecheck, build and licence-check
+green; licence-check 432 packages, GSAP scope clean.
+
+Screenshots of the four states — banner-with-no-launcher, launcher, empty
+panel, answer and refusal — at 1440 and 390, in
+`docs/screens-built/copilot/`, captured by `scripts/copilot-screenshots.mjs`
+because the route sweep cannot reach a state that needs a consent click and a
+question.
+
+Lighthouse mobile, medians of three runs: **/product 89, /how-it-works 91,
+/pricing 90, /metrics 90**. The same build with this PR stashed measured
+/product at 86/90/91 — median 90, spread of five — against 89/89/89 here, so
+the one point is inside this machine's run-to-run noise rather than a measured
+regression. Accessibility 100, best practices 96, SEO 100 on all four, and on
+`/` performance is 80, which is where the home page has always sat.

@@ -323,3 +323,34 @@
     transform: translateX(100%);
   }
 }
+
+/* ---------------------------------------------------------------------------
+   The website co-pilot's panel.
+
+   18 §2.4: "the panel slides in; the stream types. Both drop under
+   prefers-reduced-motion, where the answer simply appears." This is the first
+   half. It lives in a no-preference block like every other movement on the
+   site, so a reader who asked for stillness gets the panel with no entrance
+   rather than a reduced-motion branch written specially for it.
+
+   Nothing waits on this animation: the panel is a plain conditional render
+   with no Presence wrapper, so there is no `animationend` to miss and no
+   closed panel left mounted. Compare the accordion, where the opposite is
+   true and the duration collapses instead of the animation being removed.
+   --------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  .copilot-panel {
+    animation: mirrorline-copilot-panel-in 220ms var(--ease-out);
+  }
+}
+
+@keyframes mirrorline-copilot-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

@@ -68,6 +68,7 @@ import {
   renderStudioFact,
   type CorpusMeasurement,
 } from './grounding'
+import type { CopilotEvent } from './events'
 import { NO_USAGE, checkSpend, recordUsage, type EnvLike, type Usage } from './spend'
 
 export const SITE_MODEL = 'claude-haiku-4-5'
@@ -209,26 +210,17 @@ export function resetCorpusVerdict(): void {
   corpusVerdict = null
 }
 
-export type CopilotErrorKind =
-  | 'rate-limited'
-  | 'unreachable'
-  | 'refused'
-  | 'cap-reached'
-  | 'request-too-large'
-  | 'failed'
-
-export type CopilotEvent =
-  | { readonly type: 'meta'; readonly mode: CopilotMode; readonly notice: string | null }
-  | { readonly type: 'delta'; readonly text: string }
-  | { readonly type: 'citation'; readonly citation: Citation }
-  | { readonly type: 'proposal'; readonly proposal: Proposal }
-  | {
-      readonly type: 'done'
-      readonly answer: CopilotAnswer
-      readonly usage: Usage
-      readonly spendSummary: string | null
-    }
-  | { readonly type: 'error'; readonly kind: CopilotErrorKind; readonly message: string }
+/**
+ * The wire contract lives in `events.ts` and is re-exported here.
+ *
+ * It moved for C2. `server-only.test.ts` forbids any `'use client'` module
+ * from reaching this file at any depth, and it reads `from '…'` without
+ * distinguishing a type-only import — rightly, because the mistake it exists
+ * for is always transitive. The website panel needs the event shape, so the
+ * shape sits below this module rather than inside it. Every server-side
+ * caller still imports it from here.
+ */
+export type { CopilotErrorKind, CopilotEvent } from './events'
 
 export interface AskOptions {
   readonly surface: CopilotSurface
