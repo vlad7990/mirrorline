@@ -6,6 +6,133 @@
 
 ---
 
+## Handoff — 15 November 2026, morning (PR C1 shipped; C2 is next)
+
+**Branch** `v4/site-and-metrics` · **last commit** `091c1f2` · clean tree.
+**Preview:** https://mirrorline-ngkhpasqq-vn-mn-product-group.vercel.app
+
+**Pick up at PR C2** — the website co-pilot's UI. Everything it needs exists
+and answers: launcher, panel, grounded answers and the four refusals are all
+that is left to build. Read `docs/DECISIONS.md` **D56** first, then 18 §3.
+
+### What C1 shipped
+
+`lib/copilot/{adapter,canned,grounding,spend}.ts`, three route handlers under
+`app/api/copilot/*`, and the §8 tests that apply to them. **No UI**, by
+design — so there is nothing to look at on the preview, and the way to see it
+is to call it.
+
+### How to look at it, which means curl rather than a browser
+
+The preview returns **302 at the edge on every path**, which is Vercel's
+deployment protection and not a fault — the same as every preview since PR A.
+Open it signed in to the team, or mint a share link from the dashboard, then:
+
+```sh
+U=https://mirrorline-ngkhpasqq-vn-mn-product-group.vercel.app
+
+# Which mode, and whether the corpus will cache.
+curl -s "$U/api/copilot/status" | jq
+
+# A question it can answer, from our own pages.
+curl -s "$U/api/copilot/site" -H 'content-type: application/json' \
+  -d '{"question":"What does the Growth plan include every month?"}'
+
+# One it must refuse.
+curl -s "$U/api/copilot/site" -H 'content-type: application/json' \
+  -d '{"question":"Will I get 10k followers if I sign up?"}'
+
+# The studio surface proposing something it is not allowed to do.
+curl -s "$U/api/copilot/studio" -H 'content-type: application/json' \
+  -d '{"question":"Can you move my Thursday post to Tuesday?"}'
+```
+
+Each answer is newline-delimited JSON, one event per line: `meta` first with
+the mode, then `delta` pieces of the text, then any `citation` and `proposal`,
+then `done`. **Every reply says `"mode":"sample"`** because there is no key —
+that is the supported state, not a broken one.
+
+What to notice in the output:
+
+- The plans answer **quotes our own page and cites `/pricing`.** A quote you
+  cannot go and check is the thing this surface exists not to be.
+- The followers question comes back `"refusal":"guarantee"` with **no number
+  in it at all**, and offers what we report instead.
+- The move request comes back as a **proposal with `requiresApproval: true`
+  and no handler on it.** It is data describing a change; nothing can carry
+  one out but the screen you press Approve on.
+- `status` says `cachesOnHaiku: true` **and** `verifiedByRealCount: false`,
+  which are deliberately two different claims — see below.
+
+### The three things worth knowing before C2
+
+**1. No key is the supported mode, and it is what C2 is built against.**
+Every route answers, every answer is labelled, and nothing touches the
+network — there is a test with a `fetch` spy that throws, asserting it is
+never called. So C2 and C3 can be built, reviewed and previewed in full
+before "Needs Vlad F" lands. C2 should read `/api/copilot/status` and render
+the sample label from `mode`, not infer it.
+
+**2. The corpus clears the cache minimum by a floor, not by a measurement.**
+Haiku 4.5 caches nothing below 4096 tokens, and below it caching silently
+does nothing — no error, just a bigger bill. With no key there is no real
+`messages.countTokens` to take, so the check is a *lower bound* the real count
+is guaranteed to exceed: 27,481 characters at a pessimistic six characters per
+token is 4,580 tokens. That proves it caches; it does not verify it. **The
+first corpus was 21,110 characters and could not be proven to clear it**, so
+the corpus grew — the home-page stages, the glossary and the four templates —
+rather than the floor being weakened to fit. The real count runs the moment a
+key exists, with no code change.
+
+**3. Two bugs the tests found, both the same shape.** A refusal that only
+fired when "results" and "client" were adjacent, so a normally-phrased
+question was answered instead of refused. And a studio answer that matched a
+KPI on one incidental word and read back a real, cited, accurate number — for
+a question nobody asked. The second is the more interesting: on that surface
+"grounded" and "responsive" are different properties, and being tied to a row
+we hold is not the same as being an answer. Forecasts are now their own
+refusal category for the same reason.
+
+### Still needs Vlad
+
+**"Needs Vlad F" — `ANTHROPIC_API_KEY`.** Not a blocker for C2 or C3. When it
+lands, three things become verifiable that are currently only reasoned about:
+the real token count of the corpus, whether Haiku 4.5's refusals hold up on
+live transcripts (18 §9.2 already names the fix if they do not — move the
+website bot to Sonnet 5 rather than loosen the refusals), and the typed error
+handling in §7. Set `COPILOT_MONTHLY_CAP_USD` at the same time if $20 a month
+per workspace is the wrong number.
+
+**The spend ledger is per process, not global.** On Vercel each instance keeps
+its own, so N instances could each spend up to the cap. The per-request
+ceiling does hold on a cold instance, which is the half that matters while
+there is no key. The real fix is a Supabase row, and it belongs with the key.
+
+### Checks on this commit
+
+Unit **640** (up 98 from 542), e2e **292** (up 9), both green on the first
+run — the e2e suite builds and serves a production build, so the nine new API
+tests ran against the real thing. Lint, typecheck and build green;
+licence-check 432 packages, GSAP scope clean.
+
+**No screenshots and no Lighthouse**, because C1 changes no page. The FAQ's
+words moved from `faq-content.tsx` to `faq-text.ts` so the corpus could read
+them, and the component renders the same DOM — the `/faq` reference PNG came
+back byte-identical, which is the evidence for that. The ten PNGs the
+screenshots project rewrote during the full run were reverted: they are
+rendering churn on pages this PR does not touch.
+
+Verified against the real build rather than inferred: `@anthropic-ai/sdk`
+appears in `server/chunks/` and in **no client chunk**, and neither does the
+corpus text nor any `x-api-key` string.
+
+### Before PR D: there are five Higgsfield credits, not twelve
+
+Unchanged, and still worth checking before anything visual is planned. D53
+has the arithmetic.
+
+---
+
 ## Handoff — 14 November 2026, late evening (F1–F5 shipped, every ★ closed, PR C1 teed up)
 
 **Branch** `v4/site-and-metrics` · **last feature commit** `dca571c` (the
@@ -124,8 +251,8 @@ left out rather than stubbed.
 | 8 | **PR F5** · /resources + article template, /sign-in, /sign-up | done, `8e7740e` |
 | 9 | **the one ★** · /niche-scan's four-step stepper (D52 → D54) | done, see below |
 | 10 | **small PR** · React #418 at `/app/calendar` 390px | done — no repro, D55 |
-| 11 | **PR C1** · Co-pilot adapter layer (`lib/copilot/`, routes, tests) | **next** — SDK in, `c877230` |
-| 12 | **PR C2** · Website co-pilot (launcher, grounded answers, refusals) | queued |
+| 11 | **PR C1** · Co-pilot adapter layer (`lib/copilot/`, routes, tests) | done, `091c1f2` (D56) |
+| 12 | **PR C2** · Website co-pilot (launcher, grounded answers, refusals) | **next** |
 | 13 | **PR C3** · Studio co-pilot (panel + ⌘K, citation chips, proposals) | queued |
 | 14 | **PR D** · Long-form YouTube add-on | queued |
 | 15 | **PR E** · remaining motion, site and studio | queued |
