@@ -4021,3 +4021,172 @@ blocks the *first* write to each new path regardless of whether the four facts
 were already recited in the same message, so every new file and every first
 edit of a file costs two round trips rather than one. Fourteen files in this
 PR, fourteen extra turns. The settings entry at that item still fixes it.
+
+## 2026-11-16 · D61 · Milo arrives, the transparent cut-out does not, and the reader that was hard-coded to one endpoint
+
+### Two refactors before the panel, and the second one moved a rule
+
+**One reader, two endpoints.** `site-stream.ts` was hard-coded to
+`/api/copilot/site`. The wire format is identical on both routes — `respond.ts`
+is shared, so the NDJSON, the 429 shape and the `done` event are the same — and
+copying the file would have left two places to fix the next transport bug, on a
+module whose `done` event carries the entire answer. It is `stream.ts` now, the
+surface picks the endpoint from a `Record` over the union so a third surface is
+a type error rather than a silent fall-through to the site, and `readSiteMode`
+lost its "site": **mode is a property of the server, not of a surface**, and
+`/api/copilot/status` had always answered for both.
+
+The one genuine per-surface difference is the words shown when a request does
+not get through — the website offers a call, the studio does not — and those
+now arrive as `copy` from the caller. A lookup table inside the reader would
+have put website prose inside a module the studio imports, which is how a
+shared module quietly stops being shared.
+
+**The transcript keeps proposals, and the rule it was enforcing moved to the
+server.** That branch used to drop them, on the correct reasoning that the
+website has no Approve button. Still true — and now held where a claim about
+what we send belongs: `canned.test.ts` asserts no site answer carries a
+proposal for any question, so the website panel is never handed one to ignore.
+**A client-side drop was protecting the website from something the server does
+not send, at the cost of the studio needing a transcript of its own**, and
+18 §2.4 wants one answer to "where does the detail go" — which two reducers is
+not.
+
+The approve-or-dismiss decision lives there too rather than in the panel, for
+the reason the module exists at all: the panel is `.tsx` and Vitest cannot
+reach it. `decideProposal` returns the **same** exchange when there is nothing
+to decide, and the panel reads that identity — so a double-click, a duplicated
+event or a re-render cannot run a move twice. 18 §2.3 asks for "nothing ran
+until Approve" to be a test rather than a promise; this is the half that can
+be one.
+
+### The transparent cut-out is not achievable from these renders
+
+The brief asked for transparent WebP. It is worth being precise about why
+there is none, because the instinct is that background removal is a solved
+problem and here it is not.
+
+The renders are opaque PNGs on a dark navy field, **and that field is not
+flat**: the generator baked a polygonal lighting artefact into the background,
+a lighter region with straight diagonal edges, measuring 30–45 from the corner
+colour in RGB. Four approaches, four different rocks:
+
+| Approach | What it broke on |
+|---|---|
+| Key the navy out | The visor and the headphone cups are *darker* than the background. Milo arrives with a hole where his face was |
+| Difference matte, fill enclosed holes | Fixes the visor, then fills the background trapped inside the loop of the gold swoosh. Milo sits in a black puddle |
+| Erode first so thin walls break | The swoosh breaks and so does the helmet: its panel seams are dark lines that cut the rim, and the visor escapes through them |
+| Coarse silhouette as a trimap, diffused background field | Silhouette correct, and still cannot separate the artefact from the glow — at the artefact's edge they are the same distance from the background |
+
+**The honest fix is upstream and costs one setting**: re-export with an alpha
+channel. That is now a "Needs Vlad" item, and it costs nothing extra because
+four more renders are coming anyway.
+
+Meanwhile a rounded ink badge, and it is not a consolation prize. The art is
+*lit* for a dark field, so keeping the field is faithful to it; the rounding is
+CSS rather than pixels, so it stays crisp at any size and costs nothing in the
+file; and on the co-pilot panel, which is `bg-ink-900/97`, **the badge is
+invisible**. That is the proof the treatment is right rather than tolerated.
+
+The general lesson is worth keeping: **four failures with four different causes
+is the signal to stop and look upstream.** One failure is a bug; four is the
+input being wrong.
+
+### Measuring the crops, and the two ways of finding a head that do not work
+
+Nothing about the crops is hard-coded, because the next four renders will not
+frame him identically. The content box comes from a bright-pixel mask. Finding
+the *head* took three attempts:
+
+1. **A share of the figure's height.** The avatar came out tighter than the
+   head, because Milo's head is wider than that fraction of his height.
+2. **The largest connected blob in the top half.** Returns the whole figure:
+   the helmet and the torso are one blob, so the avatar zoomed out to a full
+   body.
+3. **The row-width profile.** Scanning down, the widest contiguous *run* in
+   each row traces the helmet, widening to the ears then narrowing sharply at
+   the neck. The first row below the widest that falls under three quarters of
+   it is the neck. A *run* rather than the row's extent, because the raised
+   hand sits at head height on the far side of the figure and an extent spans
+   both — centring the avatar on Milo's shoulder.
+
+### "Clearly marked placeholder", read as a thing a test can hold
+
+Only `greeting` has a render; the other four states use the concept image.
+Vlad asked for the placeholders to be clearly marked, and the question was
+*where*. A visible badge on the mascot was rejected: previews are what Vlad
+shows people, and a defaced mascot is worse than the placeholder. The word is
+also kept out of the alt text, because that would tell a screen-reader user
+something no sighted visitor is told — the placeholder is a fact about our
+build, not about the page.
+
+So it is marked in four places that cannot rot: `isPlaceholder` in the
+generated manifest, the same flag restated in `milo.ts`, `data-milo-placeholder`
+in the DOM where anyone inspecting a preview can see it, and a "Needs Vlad"
+entry. `milo.test.ts` reads the manifest off disk and fails if the TypeScript
+and the build disagree on a single filename or flag — so **a render landing
+without the flag being flipped is a failing test**, which is the failure a flag
+exists to prevent, and a flag flipped by hand with no render behind it is the
+same test failing the other way.
+
+`milo.ts` restating the manifest looks like the duplication the house style
+forbids, and is not: importing JSON into a client component ships the whole
+manifest to the browser and gives the compiler no way to know that `thinking`
+is a state and `thinkng` is not.
+
+### The mascot is a view of the co-pilot's events, and that is the Rive seam
+
+`miloStateFor` is a pure function from a `CopilotEvent` to one of five names.
+No timer, no reducer, nothing to keep in sync — **a mascot that could disagree
+with the panel beside it is worse than no mascot.** Two details carry weight:
+
+- **`citation` and `proposal` return `null`**, meaning "this event says nothing
+  about what he is doing". Without that, every citation chip mid-answer would
+  drop him out of `answering` and a cited reply would strobe.
+- **A refusal rests rather than looking sorry.** It arrives as an ordinary
+  `done`, and 18 §3.1 calls the handoff a success state. Only a transport
+  failure reaches `declined`, and even then the animation is a shrug.
+
+This is also the seam a Rive file replaces later. A runtime swapped into
+`MiloAvatar` reads the same five names from the same function, and nothing in
+`lib/copilot` learns that anything changed. Motion is CSS on a
+`data-milo-state` attribute for the same reason, all of it inside the
+`prefers-reduced-motion: no-preference` block the site already uses — so
+stillness is the default rather than an animation with an off switch somebody
+has to remember to wire up.
+
+The wave fires once per tab, from module scope rather than state, because the
+marketing layout mounts the co-pilot per page: a visitor walking from
+`/pricing` to `/product` would otherwise be waved at every time. Module scope
+dies with the tab, which is exactly the lifetime §3.3 gives the transcript.
+
+### Copy: the mascot's name is in the label because the mascot is on the button
+
+"Ask Milo about Mirrorline — AI assistant". A picture of a character beside the
+words "Ask about Mirrorline" leaves a screen-reader user with no idea there is
+a character at all. The AI label stays where §3.3 wants it, and the
+sample-mode notice is untouched.
+
+Two sizing findings, both from looking rather than reasoning: at **28px the
+face stops reading entirely** — the launcher was a dark smudge — and a circular
+mask clips the helmet at every size, because the inscribed circle's diameter is
+the square's side. Hence 48px inside a 60px pill, and a rounded square rather
+than a circle.
+
+### Measurements
+
+Unit **755**, up 21 across the three commits: 2 for the stream's second
+endpoint and its own failure copy, 7 for proposals and the decision that cannot
+be remade, 12 for Milo. e2e unchanged at 311, with the eleven website co-pilot
+specs green including axe on the open panel with the mascot in it. Lint,
+typecheck, build and licence-check green; 432 packages, GSAP scope clean.
+
+Assets: **six files, 47 KB, 13 KB on first load** against the 150 KB budget —
+keyed by source render, so four states sharing the concept image do not write
+four identical copies of every file. Screenshots regenerated at 1440 and 390.
+
+One thing to confess: `pnpm dev` reads `.env.local`, so the first screenshot
+run answered from the live model and spent a few tenths of a cent before it was
+restarted with the key pinned empty. The e2e suite is hermetic and the live
+script is opt-in; **the dev server is the third door and nothing pins it.**
+Worth closing the next time the co-pilot is touched.

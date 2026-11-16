@@ -6,6 +6,79 @@
 
 ---
 
+## Handoff — 16 November 2026 (Milo is in; the C3 panel itself is next)
+
+**Branch** `v4/site-and-metrics` · **last commit** `6c66a86` · pushed. Clean
+tree. Nothing promoted.
+
+**Pick up at the C3 panel.** Both refactors it needed are done and Milo is
+built, so what is left is the screen: ⌘K from anywhere in `/app/*`, Escape,
+focus-trapped dialog under `xl` and an inline aside above it, Approve and
+Dismiss wired to the calendar's PR7 reschedule on mock data, labelled
+"Sample data, not saved".
+
+### Three commits
+
+| Commit | What |
+|---|---|
+| `e3d2d2b` | The live check (`pnpm test:copilot-live`), proof the cap and rate limit stop the *call*, and the co-pilot's eighth line on `/app/agents`. D60 |
+| `bb53500` | The two C3 refactors: one reader for both endpoints, and a transcript that keeps proposals. D61 |
+| `6c66a86` | Milo — the mascot, five states, the asset build. D61 |
+
+### The thing to know about Milo before touching him
+
+**There is no transparent cut-out, and that is not a shortcut.** The renders
+are opaque on a dark navy field with a polygonal lighting artefact baked into
+the background. Four approaches failed on four different causes — keying
+removes the visor, hole-filling fills the inside of the gold swoosh, eroding
+breaks the helmet at its panel seams, and a trimap cannot separate the
+artefact from the glow. All four are written up in the header of
+`scripts/mascot-assets.mjs`, which is the first thing to read before trying a
+fifth. The fix is one export setting on Vlad's side and it is **Needs Vlad K**.
+
+What ships instead is a rounded ink badge, and on the co-pilot panel — which
+is `bg-ink-900/97` — the badge is invisible. That is the treatment working
+rather than being tolerated.
+
+**Only `greeting` has real art.** The other four states use the concept image
+and are marked in four places that cannot rot: the generated manifest, the
+restated flag in `lib/mascot/milo.ts`, `data-milo-placeholder` in the DOM, and
+`milo.test.ts`, which fails if the TypeScript and the files on disk disagree.
+Adding a render is: drop the PNG in, run the script, flip the flag, and the
+test tells you if you missed one.
+
+**The states are a view of the co-pilot's events, not a second machine.**
+`miloStateFor` is pure. `citation` and `proposal` return `null` so a cited
+reply does not strobe, and a refusal rests rather than looking sorry, because
+18 §3.1 calls the handoff a success. That function is also the seam a Rive
+file replaces later without `lib/copilot` learning anything changed.
+
+### Checks
+
+Unit **755** (up 21 from 734 across the three commits), e2e **311** unchanged
+with the eleven website co-pilot specs green, axe included, on the panel with
+the mascot in it. Lint, typecheck, build and licence-check green; 432
+packages, GSAP scope clean. Screenshots regenerated at 1440 and 390. No
+Lighthouse: the launcher gained one 4 KB image and `/app/agents` is not a
+tracked marketing page — worth re-running before PR E closes.
+
+### One hole worth closing
+
+`pnpm dev` reads `.env.local`, so a screenshot run answered from the live
+model and spent a few tenths of a cent before it was restarted with the key
+pinned empty. The e2e suite is hermetic and the live script is opt-in; **the
+dev server is the third door and nothing pins it.**
+
+### The queue
+
+1. **C3 — the panel.** Both refactors done; see above.
+2. **React #418** at `/app/calendar`, 390px, its own small PR. D55 stands:
+   nothing reproduced, and the next person reads rather than runs.
+3. **PR D** — long-form YouTube, with the add-on card on `/pricing`.
+4. **PR E** — the remaining motion.
+
+---
+
 ## Handoff — 16 November 2026, early (the key is live, the cap is proven; C3's refactors are next)
 
 **Branch** `v4/site-and-metrics` · **last feature commit** below · pushed.
@@ -2074,6 +2147,46 @@ H. **Set a monthly spend limit in the Anthropic console.** The in-app cap is
 
    For scale: the live check is six questions and costs **$0.0111**, with 97%
    of its input tokens served from the cached prefix.
+
+### Milo (16 November) — four items, one of which unblocks a nicer mascot
+
+I. **Confirm the commercial rights to the generated Milo art.** He is on the
+   public site now. Whatever tool produced `milo-concept-v2.png` and
+   `milo-greeting.png`, the question is the same one every generated asset
+   raises: do the terms grant commercial use and, if it matters to you,
+   exclusivity. Not a blocker for a preview; it is a blocker for anything
+   promoted, and it is cheaper to answer now than after he is on business
+   cards. Record the answer in `docs/provenance.md`, which exists for this.
+
+J. **A quick trademark check on the name "Milo".** It is a common word and a
+   common product name, and the one that matters is whether it is registered
+   in our class for software or marketing services. Ten minutes in a registry
+   search. If it is taken, renaming a mascot in this codebase is one constant
+   in `lib/mascot/milo.ts` and one copy line — deliberately, which is why the
+   name is not spread through components.
+
+K. **The remaining four Milo state renders** — `milo-idle.png`,
+   `milo-thinking.png`, `milo-answering.png`, `milo-declined.png`, in
+   `docs/design/mascot/`. Only `greeting` has art today; the other four use
+   the concept image and are marked as placeholders in the manifest, in the
+   DOM, and by a test that fails if the marking and the files disagree. Drop
+   the files in, run `node scripts/mascot-assets.mjs`, flip the four flags in
+   `lib/mascot/milo.ts`, and the test tells you if you missed one.
+
+   **And the thing to change while you are there: export them with a
+   transparent background.** The current renders are opaque on a dark navy
+   field with a polygonal lighting artefact baked into it, which is why there
+   is no transparent cut-out — four approaches failed on four different
+   causes, all written up in D61 and in the header of
+   `scripts/mascot-assets.mjs`. One export setting removes the whole problem,
+   and the script already handles alpha if it is there.
+
+L. **Optional, later: a Rive file from a designer.** The five states are
+   driven by `miloStateFor`, a pure function from a co-pilot event to one of
+   five names, and the image swap sits behind `MiloAvatar`. A Rive runtime
+   dropped in there reads the same five names and nothing in `lib/copilot`
+   changes. Worth it only if the mascot earns its place first — the CSS
+   version costs 47 KB and no new dependency.
 
 G. **A YouTube API audit, and the thing to know is that uploads stay private
    until it passes.** For **PR D** (the long-form add-on). Google's audit is
