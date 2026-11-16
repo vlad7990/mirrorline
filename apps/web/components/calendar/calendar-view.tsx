@@ -349,7 +349,13 @@ export function CalendarView() {
         onApproveAll={handleApproveAll}
       />
 
-      {/* Below xl the same panel arrives as a focus-trapped, Escape-closable drawer. */}
+      {/* Below xl the same panel arrives as a focus-trapped, Escape-closable
+          drawer. The aside above is `hidden xl:block` — CSS — so this `open`
+          expression is the whole of this route's exposure to viewport width,
+          and `isDrawerOpen` starts `false`, so the first render is the same
+          tree at 390 as at 1440. That is the short form of why React #418
+          cannot be width-specific here; the long form is in
+          `lib/motion/use-is-wide.ts`, and the history is D55 and D63. */}
       <Dialog open={!isWide && isDrawerOpen} onOpenChange={setDrawerOpen}>
         <Drawer>
           <DialogTitle>Selected post</DialogTitle>

@@ -4351,3 +4351,69 @@ failed once in a full-suite run that took 10.9 minutes, and passed three times
 in isolation afterwards. Nothing in this PR touches it; the file is slow
 enough that a timeout under load is the likely cause. Recorded rather than
 chased, and worth watching.
+
+---
+
+## 2026-11-16 · D63 · React #418 is closed by an argument, not a run: nothing on /app/calendar renders from the viewport
+
+The queue carried "React #418 at `/app/calendar`, 390px" through five pull
+requests. D55 took it seriously enough to test — 70 fresh browser contexts
+across five conditions, 0 reproductions — and found that the lead in the
+handoff predicted a mismatch at **1440**, the width the report calls clean. It
+closed on an absence: the bug had not appeared.
+
+**This closes it on a reason instead, and the reason is the deliverable.**
+Vlad's instruction was explicit: if it still does not reproduce, say what was
+ruled out and do not add a test that passes for no reason. So nothing ships
+but the reasoning, and it ships to the two places somebody would actually
+look — the header of `lib/motion/use-is-wide.ts`, which the handoff names as
+the lead, and the one line in `calendar-view.tsx` that reads the viewport.
+
+### A width-specific mismatch has nowhere to come from
+
+For #418 to happen at 390 and not at 1440, either the server's HTML or the
+first client render has to depend on the width. Neither can:
+
+| Ruled out | How it was checked | Result |
+|---|---|---|
+| Server-side width branching | swept `apps/web` and `packages/ui` for `userAgent`, `next/headers`, `Sec-CH-*`, `Viewport-Width`, `innerWidth`, `clientWidth` | **0 hits.** The server is never told the viewport, so its HTML is the same bytes at 390 and at 1440 |
+| Responsive markup branches | read the studio shell and the calendar | All CSS. Sidebar `hidden lg:block`, mobile bar `lg:hidden`, post-panel aside `hidden xl:block`. Hydration does not see a class |
+| `useIsWide`, the one hook that reads width | followed both consumers to the tree | `<Dialog open={!isWide && isDrawerOpen}>` and `{isOpen ? <StudioCopilotPanel isWide={isWide} …/> : null}`. Both AND it with a `useState(false)`, so the first render is the same tree at every width |
+| Theme preference | read `packages/ui/src/theme-provider.tsx` | `useState('system')` on both sides; `localStorage` is read in an effect. `THEME_SCRIPT` mutates `<html>` before React, and `<html suppressHydrationWarning>` is exactly the right scope for that |
+| Reduced motion | read `lib/motion/use-reduced-motion.ts` | `useState(false)`, corrected in an effect. Its only consumers are panels that do not exist until opened |
+| Locale and number formatting | swept `toLocale*` and `Intl.` | Every call pins its locale (`'en-US'`, one `'en-GB'`), so no server/client ICU difference is possible |
+| Clock and randomness | swept `new Date(`, `Date.now()`, `Math.random()` | None in any rendered studio path. `packages/mock` says so in its own header and holds to it; the hits are all API routes and a pinned `SAMPLE_NOW` |
+
+### The thing D55 could not have known
+
+**C3 added a second consumer of `useIsWide` after D55 was written**, and it is
+mounted by the studio *layout*, so it is now on `/app/calendar` on every load
+rather than on one screen. That is the one change since D55 that could have
+reopened this, which is why it was the first thing checked rather than the
+last. `StudioCopilot` keeps the shape: `isOpen` starts `false`, the panel is
+the only thing that sees `isWide`, and `data-copilot-open` is written to
+`<html>` in an effect, after hydration. It inherited the invariant instead of
+breaking it.
+
+### Why there is no new gate, and what would reopen this
+
+The argument rests on one property — no server-side width branching — and a
+source-scan gate in the shape of `scripts/gsap-scope.mjs` could hold it. It is
+**not built**, deliberately: it would be new machinery for a bug that has
+never been observed, which is the speculative generality the house rules name
+outright. The property is written down instead, with the two changes that
+break it:
+
+1. A server component that branches on `userAgent()` or a viewport client hint.
+2. A `useIsWide` consumer that renders the value directly rather than behind a
+   `false`-initial state.
+
+If either lands, this file becomes a suspect again and the next person should
+re-read the header rather than start from zero. Until then the item leaves the
+queue, and it leaves it **answered** rather than unreproduced.
+
+### Measurements
+
+No test added and none removed, which is the point. Unit **761**, e2e **319**,
+both unchanged. Lint, typecheck, build and licence-check green. The diff is
+two comments and this entry.

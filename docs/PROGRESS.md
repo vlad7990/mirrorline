@@ -6,6 +6,94 @@
 
 ---
 
+## Handoff — 16 November 2026, early afternoon (#418 is answered, not unreproduced; PR D is next)
+
+**Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.
+Nothing promoted.
+
+**React #418 leaves the queue.** It had been carried as prose through five
+pull requests. D55 tested it — 70 fresh contexts, 0 reproductions — and closed
+it on an absence. **D63 closes it on a reason**, which is what makes it stay
+closed.
+
+### Why it cannot be width-specific here
+
+The server is never told the viewport: no `userAgent`, no `next/headers`, no
+`Sec-CH-*`, no `innerWidth`, no `clientWidth` anywhere in `apps/web` or
+`packages/ui` — swept, 0 hits. So `/app/calendar`'s HTML is **the same bytes
+at 390 as at 1440**, and a mismatch at one width but not the other has nowhere
+to come from.
+
+Every responsive split on the route is CSS, which hydration cannot see:
+sidebar `hidden lg:block`, mobile bar `lg:hidden`, post-panel aside
+`hidden xl:block`. The aside is in the server HTML at *every* width and hidden
+by a class, not by a branch.
+
+`useIsWide` is the one exception and both its consumers are safe —
+`<Dialog open={!isWide && isDrawerOpen}>` and
+`{isOpen ? <StudioCopilotPanel isWide={…}/> : null}`, each ANDing it with a
+`useState(false)`.
+
+**The thing D55 could not have known:** C3 added that second consumer, and the
+studio *layout* mounts it, so it is on `/app/calendar` on every load now. It
+inherited the shape rather than breaking it. Also swept and ruled out: theme
+preference, reduced motion, locale formatting and clock/randomness — the table
+is in D63.
+
+### No test, deliberately
+
+Per Vlad: if it does not reproduce, say what was ruled out and do not add a
+test that passes for no reason. The reasoning went to the two places somebody
+would look — the header of `lib/motion/use-is-wide.ts` and the one line in
+`calendar-view.tsx` that reads the viewport. D63 also names the two changes
+that would reopen it, and why no source-scan gate was built for a bug never
+observed.
+
+### Checks
+
+Unit **761** and e2e **319**, both unchanged — which is the point of the PR.
+Lint, typecheck, build and licence-check green; 432 packages, GSAP scope
+clean. The diff is two comments and one decision entry; the four screenshot
+PNGs the capture run rewrote were reverted, because this PR changed no pixels.
+
+**The 390px dark flake did not recur.** `screenshots.spec.ts` passed first
+time in an 11.8-minute full-suite run. Still worth watching; one clean run is
+not three.
+
+### The queue
+
+1. **PR D** — long-form YouTube, with the add-on card on `/pricing`. See the
+   two notes below before starting.
+2. **PR E** — the remaining motion, per `docs/specs/17_MOTION_PLAN.md`.
+   Lighthouse mobile ≥ 90 on `/product`, `/how-it-works` and `/pricing` has
+   not been run since the co-pilot landed and must be before E closes.
+
+### Two things PR D should know before it starts
+
+**Higgsfield is at five credits** — checked, not assumed
+(`higgsfield account status`). That is the pre-existing reserve from D53, not
+new budget. So the add-on card is built from the existing
+`apps/web/public/samples/` frames and the `/shots/*-16x10-{light,dark}.png`
+studio screenshots through the kit's `BrowserFrame`, labelled. Generated
+long-form clips stay an optional "Needs Vlad".
+
+**No spec writes the add-on's price, and 09 §11 is "the one place a price is
+written down".** So PR D has to add a row there and log it, rather than typing
+a figure onto `/pricing`. The add-on cannot be bought today either — Needs
+Vlad **G**, the YouTube API audit, has not started — so it takes the same
+waitlist treatment Studio has, and it must carry the private-until-approved
+line **in the calendar legend's own words**: `week-grid.tsx:155` reads "TikTok
+posts stay private until our app is approved." That caveat is also what
+answers 19 v2's objection that "a card for an add-on whose API audit has not
+started would be an invented product".
+
+Needs Vlad is unchanged: **G** (start the YouTube API audit), **H** (a spend
+limit in the Anthropic console) and **I–L** (Milo's commercial rights, the
+trademark check, the four remaining state renders exported *with alpha*, and a
+Rive file later).
+
+---
+
 ## Handoff — 16 November 2026, midday (C3 is done; React #418 is next)
 
 **Branch** `v4/site-and-metrics` · **last commit** `0ace298` · pushed. Clean

@@ -25,6 +25,39 @@
  * `/app/calendar` and 390px as never reproducing; this snapshot is the first
  * thing to re-read if it comes back, which is why the reasoning is here
  * rather than in a commit message.
+ *
+ * ## Re-read on 16 November: #418 cannot be width-specific on this route
+ *
+ * The queue carried "React #418 at `/app/calendar`, 390px" through five pull
+ * requests. D55 failed to reproduce it in 70 fresh browser contexts. What
+ * follows is the argument for why no number of contexts would have found it,
+ * which is worth more than another run — and it is why the next person reads
+ * this file instead of loading the page again.
+ *
+ * **The server has no viewport, and this app never asks for one.** No
+ * `userAgent()`, no `next/headers`, no viewport client hint, no `innerWidth`
+ * and no `clientWidth` anywhere in `apps/web` or `packages/ui` — swept, not
+ * assumed. The HTML for `/app/calendar` is therefore the same bytes at 390 as
+ * at 1440, and a mismatch that appears at one width but not the other has
+ * nowhere to come from.
+ *
+ * **Every responsive split on that route is CSS, which hydration cannot see.**
+ * The sidebar is `hidden lg:block`, the mobile bar is `lg:hidden`, and the
+ * post panel's aside is `hidden xl:block` — present in the server HTML at
+ * every width and hidden by a class, not by a branch.
+ *
+ * **This hook is the single exception, and both its consumers are safe.**
+ * `calendar-view.tsx` spends it on `<Dialog open={!isWide && isDrawerOpen}>`;
+ * `studio-copilot.tsx` spends it on `{isOpen ? <StudioCopilotPanel
+ * isWide={isWide} ... /> : null}`. In both the value is ANDed with a
+ * `useState(false)`, so the first render is the same tree whatever the
+ * viewport says. C3 added the second consumer *after* D55 was written, and it
+ * inherited the shape rather than breaking it.
+ *
+ * **What would invalidate all of the above:** server-side width branching —
+ * `userAgent()` or a client hint read in a server component — or a consumer
+ * that renders `isWide` directly rather than behind a `false`-initial state.
+ * Either makes this file a suspect again. Neither exists today.
  */
 
 import { useMemo, useSyncExternalStore } from 'react'
