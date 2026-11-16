@@ -6,6 +6,72 @@
 
 ---
 
+## Handoff — 16 November 2026, early (the key is live, the cap is proven; C3's refactors are next)
+
+**Branch** `v4/site-and-metrics` · **last feature commit** below · pushed.
+**Preview:** the status endpoint on the latest preview answers
+`"mode":"live"`. Still behind deployment protection at the edge, still not
+promoted.
+
+**The key question is answered: the preview is live**, and it was already live
+before this PR — the Vercel variable landed before the `c641ecd` build, so no
+redeploy was needed. The proof is not the mode flag, which could be echoing
+its own input; it is the corpus reading **6,791 tokens with
+`verifiedByRealCount: true`**, which requires a `countTokens` call and so
+requires a key. D60 has it.
+
+### What this PR shipped
+
+| Thing | Where |
+|---|---|
+| `pnpm test:copilot-live` — the refusal and grounding tests against the real models, opt-in, its own config and env loader | `vitest.live.config.ts`, `vitest.live.setup.ts`, `lib/copilot/live-model.live.test.ts` |
+| Proof that the cap and the rate limit stop the **call**, not just the answer | `lib/copilot/stops-requests.test.ts` |
+| The co-pilot's eighth line in the Agent operations KPIs (18 §6) | `lib/copilot/operations.ts`, `components/agents/copilot-operations.tsx`, `/app/agents` |
+
+**Haiku 4.5 refused all four categories**, so 18 §9's fallback — moving the
+website bot to Sonnet 5 — is not needed and the tier split stands.
+
+**The live run costs $0.0111 for six questions, and 97% of its input tokens
+come from the cached prefix.** That share is the number 18 §6 asks to be
+watched and it has now been read against a real response rather than a
+fixture. A figure near zero there means the prefix is being rebuilt on every
+question, which has no error attached to it anywhere — correct answers, a bill
+several times its size. The eighth line shows it, and shows `—` rather than
+`0%` when there have been no calls, because those two states need to look
+different.
+
+### Checks on this commit
+
+Unit **734** (up 11 from 723), e2e **311** unchanged. Lint, typecheck, build
+and licence-check green; 432 packages, GSAP scope clean. No screenshots and no
+Lighthouse: `/app/agents` is behind the studio and is not a tracked marketing
+page.
+
+### Still needs Vlad
+
+**"Needs Vlad F" is closed** — the key is in both places and the entry is
+struck through with what it settled, including the two model ids it had wrong.
+
+**New: "Needs Vlad H" — set a monthly spend limit in the Anthropic console.**
+The in-app cap is real and now provably stops the call, but it lives in
+process memory: on Vercel each instance keeps its own ledger and a cold start
+begins at zero, so N instances can each spend up to $20. The $0.50
+per-request ceiling survives that; the month's total does not. A console limit
+is the only ceiling outside this repo's reach. The durable fix here is a
+Supabase row instead of the `Map`, which waits on Needs Vlad A.
+
+**Five Higgsfield credits**, unchanged, and they matter to PR D.
+
+### The queue, unchanged
+
+1. **C3** — two refactors (the stream generalised to both endpoints; the
+   transcript accumulating proposals), then the panel, with Milo built in.
+2. **React #418** at `/app/calendar`, 390px, as its own small PR.
+3. **PR D** — long-form YouTube, including the add-on card on `/pricing`.
+4. **PR E** — the remaining motion.
+
+---
+
 ## Handoff — 15 November 2026, late evening (C3 groundwork; the panel is next)
 
 **Branch** `v4/site-and-metrics` · **last feature commit** `bb6cf97`, with the
@@ -1977,18 +2043,37 @@ E. **The written IP assignment** remains the single gate on the whole
 Both have lead time, which is why they are here now rather than when the PR
 begins. Neither blocks anything shipped so far.
 
-F. **An Anthropic API key as `ANTHROPIC_API_KEY`**, for **PR C** (the
-   co-pilot). The plan is that it is server-side only, behind an adapter that
-   returns canned responses when the variable is missing — so PR C can be
-   built, reviewed and previewed without it, and the key only decides whether
-   the preview answers for real. A spend cap per workspace is part of the
-   same PR. Nothing is spent until you set it.
+F. ~~**An Anthropic API key as `ANTHROPIC_API_KEY`**, for **PR C** (the
+   co-pilot).~~ **Done 15 November, both places.** It is in
+   `apps/web/.env.local` and on the Vercel project as a **sensitive,
+   Preview-only** variable, and the latest preview's `/api/copilot/status`
+   answers `"mode":"live"` with a corpus of 6,791 tokens **verified by a real
+   `countTokens` call** — which only a key can do, so the reading proves
+   itself. The whole of the key's story is in D60.
 
-   Worth deciding at the same time: the studio co-pilot is specified as
-   `claude-sonnet-5-5` and the website one as `claude-haiku-5-5`, on the
-   reasoning that the public-facing one only answers from our own pages. If
-   you would rather both were the cheaper model, say so before PR C rather
-   than after.
+   Two things settled with it. The model ids in this entry were wrong
+   (`claude-sonnet-5-5`, `claude-haiku-5-5`); 18 §0 corrected them to
+   `claude-sonnet-5` and `claude-haiku-4-5`, which is what ships. And the tier
+   split held: `pnpm test:copilot-live` puts the real Haiku 4.5 through all
+   four refusal categories and it refuses all four, so 18 §9's fallback —
+   moving the website bot to Sonnet 5 rather than loosening the refusals — is
+   not needed. Re-run that script if the refusals are ever doubted.
+
+H. **Set a monthly spend limit in the Anthropic console.** The in-app cap is
+   real — `$20` per workspace, enforced from a token count *before* the call,
+   and `stops-requests.test.ts` proves the completion endpoint is never
+   reached once it trips — but it lives in **process memory**. On Vercel each
+   function instance keeps its own ledger, so N instances can each spend up to
+   the cap, and a cold start begins at zero. The per-request ceiling
+   (`$0.50`) is what survives that, not the month's total.
+
+   A limit in the console is the only ceiling that cannot be walked around by
+   starting a new process. It costs nothing to set and is the one control that
+   is outside this repo's reach. The durable fix on our side is a Supabase row
+   instead of the `Map`, which waits on Needs Vlad A.
+
+   For scale: the live check is six questions and costs **$0.0111**, with 97%
+   of its input tokens served from the cached prefix.
 
 G. **A YouTube API audit, and the thing to know is that uploads stay private
    until it passes.** For **PR D** (the long-form add-on). Google's audit is

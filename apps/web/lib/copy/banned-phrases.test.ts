@@ -75,6 +75,8 @@ const ALLOWED: Readonly<Record<string, string>> = {
     'SITE_SYSTEM tells the model what it may never say, and naming the phrase is what makes the instruction land — "Never say a video will go viral" is a prohibition addressed to the model, not copy addressed to a visitor. No part of a system prompt is ever rendered.',
   'apps/web/lib/copilot/canned.test.ts':
     'Asks the website bot "Is Opus Clip worse than you?" to prove it refuses. The test has to name a brand to show the refusal fires, and it asserts the *answer* names none — building the question out of the pattern instead would be testing the detector with the detector.',
+  'apps/web/lib/copilot/live-model.live.test.ts':
+    'Asks the real model the same forbidden question, for the same reason as canned.test.ts above, and then runs this very list over the answer it gets back. A question nobody is allowed to ask is a refusal nobody has tested.',
   // This file still needs an exemption after the patterns moved out, and for
   // a different reason than before: the entries above *quote* the phrases
   // they exempt, so the allowlist is itself matched by the list. Found by the

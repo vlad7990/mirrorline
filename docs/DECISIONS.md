@@ -3831,3 +3831,193 @@ answered, the half that cannot be and is named, the no-repeat case, the studio
 surface, and the single question being untouched by any of it. e2e unchanged
 at 311 and the twenty co-pilot specs still green. Lint, typecheck, build and
 licence-check green.
+
+## 2026-11-16 · D60 · The key is live on the preview, the cap stops the call rather than the answer, and the ceiling that matters is not ours
+
+### The preview was already live, and the proof is in a number nobody set
+
+Vlad asked whether the latest preview's `/api/copilot/status` reports live, and
+said that if it still reported sample then the Vercel variable or the redeploy
+was missing. It reports **live**. Three readings agree, which matters because
+only one of them could have been faked by a bad default:
+
+- the Vercel project carries `ANTHROPIC_API_KEY` as a **sensitive,
+  Preview-only** variable, created 21:35 and updated 21:48 on 15 November
+- the latest preview at `c641ecd` answers `"mode":"live"`
+- the corpus reads **6,791 tokens** with `"verifiedByRealCount":true`
+
+The third is the one that settles it. Without a key, `corpusCacheVerdict`
+falls back to `corpusFloorTokens` — a pessimistic character estimate, 4,580 on
+this corpus — and says so. A figure of 6,791 can only have come from
+`messages.countTokens`, which is a network call that needs a key. So the
+status endpoint is not merely echoing an environment variable it was handed;
+it has been to the API and back. **A mode flag that reads its own input proves
+nothing; a mode flag that had to spend a request to answer proves itself.**
+That is worth keeping in mind for the next status endpoint.
+
+No redeploy was needed in the end: the variable landed before the `c641ecd`
+build, so the newest preview already had it.
+
+### Hermetic by default, live on purpose: a second config rather than a flag
+
+The suite stays free. `playwright.config.ts` pins `ANTHROPIC_API_KEY: ''` for
+the server it starts, and on 15 November it had to, because a run before that
+pin existed made real calls nine hundred tests deep. The lesson there was not
+"be careful with the key"; it was that **a suite which can find a key will
+eventually use it**, and no amount of care survives a thousand runs.
+
+So `pnpm test:copilot-live` is its own config (`vitest.live.config.ts`), its
+own filename convention (`*.live.test.ts`, excluded from `vitest.config.ts`)
+and its own env loader (`vitest.live.setup.ts`, which reads `.env.local` the
+way Next does and is wired into nothing else). A `--live` flag on the existing
+runner would have been less code and would have put the key one typo away from
+the hermetic path.
+
+`vitest.live.setup.ts` never overwrites an exported value, including an
+exported empty one. That is Next's own precedence and it keeps
+`ANTHROPIC_API_KEY='' pnpm test:copilot-live` an honest way to prove the runner
+refuses to run without a key — which it does, in a sentence that says what to
+do about it rather than a stack trace.
+
+### What a live test may assert, and what it may not
+
+Model text varies, so an assertion on phrasing fails on a rewrite and passes
+on a broken refusal — the worst pair of properties a test can have. Three
+things here are objective instead:
+
+1. **`findBannedClaims` over the generated answer.** 18 §3.2's last line asks
+   for exactly this and it is the reason the patterns moved out of their test
+   into `banned-phrases.ts` on 15 November. The list that sweeps our source
+   now sweeps the model's output, unchanged.
+2. **Citations, which are already validated.** `citationsFromText` matches
+   each `[source: /route]` against `SITE_CORPUS` and drops anything it cannot
+   find, so a citation event is proof of a real route rather than of a
+   plausible one.
+3. **The absence of an answer the model certainly knows.** The out-of-corpus
+   question asks for the capital of Mongolia; the assertion is that
+   "Ulaanbaatar" does not appear. Everything else on this surface rests on
+   that boundary holding, and this is the only way to see it hold.
+
+**Haiku 4.5 refused all four categories.** 18 §9 flagged, before the PR rather
+than after, that if refusal quality did not hold the honest fix was to move
+the website bot to Sonnet 5 rather than to loosen the refusals. It held, so
+the tier split stands and the cheaper model keeps the public surface.
+
+One assertion is deliberately softer than it looks. The guarantee test does
+not forbid the number `10,000` — repeating a visitor's question back is fine —
+it forbids the number next to a promise verb. A test that banned the figure
+would have failed on a perfectly good refusal.
+
+### The cap stopped the answer; it had not been shown to stop the call
+
+Vlad asked for proof that the cap and the rate limit "actually stop requests".
+Re-reading what existed, they were proven to return the right **verdict** and
+nothing more: `spend.test.ts` asserts `checkSpend` returns `allowed: false`,
+`respond.test.ts` asserts `checkRate` does the same. **A limiter that decides
+correctly and then calls anyway passes both of those files and still spends
+the money.** Nothing in the suite would have noticed.
+
+`stops-requests.test.ts` is the missing half. It stubs `globalThis.fetch`,
+records every URL the SDK reaches for, and asserts on the absence of the one
+that bills — with a fake key and a `$0.0001` cap, so the adapter is on the
+live path with nothing real to reach. Four cases: the website surface, the
+ledger (a refused call must not be *recorded* as a call, or the cap tightens
+every time it holds), the studio surface, and the rate limit.
+
+Two things the writing of it turned up:
+
+**The token count happens before the cap check, and that is correct.** The cap
+is enforced from a real `countTokens`, so one request does go out before a
+refusal — a free one. The test asserts `count_tokens` *was* called and the
+completion endpoint was not, rather than asserting silence, because asserting
+silence would have been asserting the wrong thing and would have failed.
+
+**The rate limit is stricter than the cap, and the test says so.** A
+rate-limited question makes **no** request at all, not even the count, because
+`checkRate` runs in `respond` before `askCopilot` is entered. That is the
+argument for the limiter living in the route handler rather than in the
+adapter, and it was not written down anywhere until now.
+
+**The SDK captures `fetch` at construction** (`client.d.ts`: `private fetch`),
+so `resetClient()` has to run before the stub is installed. A stub installed
+after a memoised client is a stub the client never sees, and the test would
+have made real calls to a real endpoint with a fake key — failing on a 401,
+which looks like a different bug entirely.
+
+### `vi.stubEnv`, because an existing gate could not tell a write from a read
+
+The first draft of that test assigned `process.env.ANTHROPIC_API_KEY` directly
+and failed `server-only.test.ts`'s "reads the API key in one place and nowhere
+else", which sweeps for the text `env.ANTHROPIC_API_KEY`. The sweep was right
+to fire and cannot be made cleverer: the rule it protects — mode is decided in
+`adapter.ts` and nowhere else — is about the string appearing at all.
+
+Dodging it with a computed property name would have been obfuscation to beat a
+gate. `vi.stubEnv('ANTHROPIC_API_KEY', …)` is the idiomatic form, restores
+itself, and does not contain the matched text. **When a gate fires on correct
+code, the fix is usually a better way to write the code.** That is the second
+time this list has earned its keep this way; the first was the allowlist entry
+that quoted the phrases it exempted.
+
+The live test needed a banned-phrase exemption for the same reason
+`canned.test.ts` already had one: it asks "Is OpusClip worse than you?" in
+order to prove the answer names nobody. The phrase is the subject of the test,
+not a claim, which is precisely the case that allowlist exists for.
+
+### The eighth line, and the ceiling that is not ours to set
+
+18 §6 says the co-pilot is reported "in the Agent operations KPIs beside the
+seven agents… **an eighth line there, not a separate dashboard**". So it is
+one card below the grid on `/app/agents`, in the screen's own sentence
+("spend this month $0.00 of $20.00 in caps", from `spendSummary`), with the
+call count and the cache-read share.
+
+`copilotOperations` is a module rather than code inside the component because
+the component is a server component in `.tsx` and `vitest.config.ts` collects
+no `.tsx` under `apps/web`. **Logic that cannot be tested where it lives
+belongs somewhere it can be**, and this is the fourth time that has decided a
+file's extension in this repo (D54's rule).
+
+The share is shown as `—` when it is `null`, never as `0%`. Three states look
+the same on a careless screen and one of them needs acting on:
+
+| Reading | What it means |
+|---|---|
+| `—`, 0 calls | Nobody has asked anything. Not a cache miss. |
+| `97%` | The prefix is cached. This is the live run's real figure. |
+| `0%`, calls > 0 | The prefix is being rebuilt every time. **Act.** |
+
+The third has no error attached to it anywhere: the answers are correct and
+the bill is several times its proper size. A screen that rendered `null` as
+zero would have made the healthy state and the broken one identical.
+
+**And the honest part. The in-app cap is in process memory**, which the
+`spend.ts` header has said since C1 and which is worth restating now that the
+key is live: on Vercel each function instance keeps its own ledger, a cold
+start begins at zero, and N instances can each spend up to `$20`. The
+per-request ceiling of `$0.50` survives that; the month's total does not. So
+"Set a monthly spend limit in the Anthropic console" is now **Needs Vlad H**,
+because it is the only ceiling that cannot be walked around by starting a new
+process, and the Supabase-row fix on our side waits on Needs Vlad A.
+
+### Measurements
+
+Unit **734**, up 11 from 723: four in `stops-requests.test.ts` and seven in
+`operations.test.ts`. The live script is **7 tests, 6 calls, $0.0111 a run**,
+with **97% of its input tokens served from the cached prefix** — which is the
+number 18 §6 asks to be watched, read for the first time against a real
+response rather than asserted against a fixture. Three runs were made in the
+writing of it, about **$0.033** in total, the first of which lost its cost
+line to Vitest's console interception and is why the summary now goes to
+`process.stderr`.
+
+Lint, typecheck, build and licence-check green; 432 packages, GSAP scope
+clean. No screenshots and no Lighthouse: `/app/agents` is behind the studio
+and is not a tracked marketing page, and nothing else changed visually.
+
+**The repo hook noted at "Needs Vlad" item 1 cost throughput again**, and the
+shape of it is now clear enough to be worth recording: `gateguard-fact-force`
+blocks the *first* write to each new path regardless of whether the four facts
+were already recited in the same message, so every new file and every first
+edit of a file costs two round trips rather than one. Fourteen files in this
+PR, fourteen extra turns. The settings entry at that item still fixes it.

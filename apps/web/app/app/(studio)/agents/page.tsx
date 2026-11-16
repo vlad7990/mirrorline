@@ -5,6 +5,7 @@ import { Button, PageHeader } from '@mirrorline/ui'
 
 import { AgentLoop } from '@/components/agents/agent-loop'
 import { AgentsBoard } from '@/components/agents/agents-board'
+import { CopilotOperations } from '@/components/agents/copilot-operations'
 
 /**
  * S8 · Agents — "make the AI team visible and trustworthy"
@@ -40,6 +41,10 @@ export default function AgentsPage() {
 
       <AgentLoop />
       <AgentsBoard />
+
+      {/* 18 §6: the co-pilot is "an eighth line there, not a separate
+          dashboard". Below the seven, in the same words, on the same screen. */}
+      <CopilotOperations />
 
       <Button asChild variant="tertiary" className="self-start px-0">
         <Link href="/app/home">Back to the start of the demo</Link>

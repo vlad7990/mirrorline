@@ -15,6 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:copilot-live": "vitest run --config vitest.live.config.ts",
     "screenshots": "playwright test --project=screenshots",
     "licence-check": "node scripts/licence-check.mjs",
     "design:lint": "npx --yes @google/design.md lint DESIGN.md"

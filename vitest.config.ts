@@ -23,6 +23,10 @@ export default defineConfig({
       // under bare `node` with no build step, so their tests are .mjs too.
       'scripts/**/*.test.mjs',
     ],
-    exclude: ['**/node_modules/**', 'e2e/**'],
+    // `*.live.test.ts` calls the real model and costs real money. It has its
+    // own config and its own script (`pnpm test:copilot-live`) so that this
+    // suite stays free, hermetic and runnable in CI. Excluded here rather
+    // than named out of `include`, because `apps/web/**/*.test.ts` matches it.
+    exclude: ['**/node_modules/**', 'e2e/**', '**/*.live.test.ts'],
   },
 });
