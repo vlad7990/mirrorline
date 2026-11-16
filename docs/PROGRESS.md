@@ -22,6 +22,16 @@ importers at all** and is dead code. I have not deleted it, because the
 working rules say not to remove files I did not create — it is a one-line
 call for whoever wants it gone.
 
+**Preview:** https://mirrorline-cj6f38e2t-vn-mn-product-group.vercel.app —
+built from `6f8172a` by the push. 302 behind deployment protection as always;
+open it signed in to the team or mint a share link. Nothing promoted.
+
+What to look at: **/legal/cookies** for the reading layout — contents down
+the left, a date that says 9 November 2026, and nothing at the foot trying to
+sell you anything. Then **/trust**, where the Originality Gate now runs on a
+real remake with its 30% limit stated, and the four-hop data diagram sits
+under it. Then **/contact**, which has a closing block for the first time.
+
 ### Read this before touching home-page performance again
 
 **The queue item was wrong and had been carried across four handoffs.** It
