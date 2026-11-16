@@ -8,7 +8,17 @@
 
 ## Handoff — 16 November 2026, late evening (home is 91, and it was never the fonts on their own)
 
-**Branch** `v4/site-and-metrics` · **last commit** below. Nothing promoted.
+**Branch** `v4/site-and-metrics` · **last commit** `dec4cff` · pushed. Clean
+tree. Nothing promoted.
+
+**Preview:** https://mirrorline-lf7b96vej-vn-mn-product-group.vercel.app —
+built from `dec4cff` by the push. 302 behind deployment protection as always;
+open it signed in to the team or mint a share link.
+
+What to look at: **the home page on a phone**, which is the whole PR and
+should look exactly as it did. Then **the cut wall** — scroll to it and the
+twelve frames should fill in as you arrive rather than being there already,
+which is the eight points. Then **/legal/privacy**, for the contents list.
 
 **The home page is at 91** (Lighthouse mobile, median of three, flat triplet),
 from 80. The gate 17 §5 sets is ≥ 90, and every page on the site now clears it.
