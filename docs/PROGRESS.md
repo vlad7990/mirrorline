@@ -6,6 +6,69 @@
 
 ---
 
+## Handoff — 16 November 2026, late afternoon (F6a and F6b are in; four of the eleven are on the kit, and one ★ was wrong)
+
+**Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.
+Nothing promoted.
+
+**Four of the eleven are off the old kit**: /businesses, /individuals,
+/agents, /trust. The F6a handoff below has the hero decision (D69) and is
+still the thing to read first.
+
+### The ★ I wrote in the morning was wrong, and building it is how I found out
+
+19 v3 ★3 asked /agents to reuse home's scroll-lit hand-off spine. I wrote that
+★ from 19's own table and it was wrong in a way no amount of re-reading would
+have shown.
+
+**On home that spine *is* the introduction to the seven agents. On /agents the
+cards above it already are.** Built and screenshotted, it put the seven agents
+on the page a second time and took it to **10,355px** against §Shared rules'
+4–8 screens. A section that repeats the section above it is not a visual; it
+is a duplicate, and "a visual in every second section" is not satisfied by
+saying the same thing twice with motion on it.
+
+The ★ is struck in v3 with the measurement beside it, and the e2e spec now
+asserts the duplicate **has not come back** rather than asserting it exists
+(D70). `GATE_AGENT_ID` went into `agents.ts` to be shared and came straight
+back out — with the spine gone, only home uses it.
+
+### What is genuinely done, and what is not
+
+- **/agents:** kit hero, and the **sample activity log** (★4) that the mock
+  data has carried since day one and no public page had ever shown. Its cost
+  column was gold and failed axe on contrast on the first run; it is
+  `text-text` now, and the figure is a fact rather than an accent anyway.
+- **/trust: on the kit with three ★ still open** — the Originality Gate
+  walkthrough, the AI label on a reel, the data diagram. **It is not done**,
+  and 19 v3 says so on the page's own entry. It is 4,111px of two long text
+  sections between the hero and the close; those three ★ are what break it up.
+- **/agents keeps three `<video>` against 19 v2's one.** They are the three
+  cuts the gate held, with their status chips — the subject of the panel, and
+  below the fold where D50 does not apply. The exception is in the e2e spec
+  with a reason the test length-checks, which is D68's device.
+
+### Checks
+
+Unit **785**. The F6 spec is **24 assertions**, all green. Axe 0
+serious/critical on all four pages in both themes. Lint, typecheck, build and
+licence-check green. Sixteen reference screenshots regenerated.
+
+### The queue
+
+1. **/trust's three open ★** — the smallest honest next step, and the page
+   that most needs it.
+2. **F6c** — `/niche-scan/sample`, `/about`, `/contact`, `/faq`, `/changelog`.
+   The /faq co-pilot link v2 left out is owed; C2 shipped it.
+3. **F6d** — `/legal/*` and `/accessibility`: reading layout, sticky contents,
+   no reels and no closing CTA.
+4. **Home-page performance** — still unmeasured, still at 80.
+
+**Offsets 0, 3, 6 and 9 are taken** in `PAGE_HERO_FRAMES`; a test fails on a
+repeat, and twelve frames means the next page wants 1, 2, 4 or 5.
+
+---
+
 ## Handoff — 16 November 2026, afternoon (F6a is in: the kit has a second hero, and two of the eleven are off the old kit)
 
 **Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.

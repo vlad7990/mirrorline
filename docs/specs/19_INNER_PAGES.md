@@ -301,18 +301,41 @@ is nowhere to add one out of habit.
 
 1. ★ Frame-wall hero, labelled.
 2. ★ One card per agent: icon, job, spend cap, the metric it owns.
-3. ★ The hand-off order as a scroll-lit sequence, reusing home's.
-4. ★ A sample activity log, labelled as sample.
+3. ~~★ The hand-off order as a scroll-lit sequence, reusing home's.~~
+   **Struck the same day it was written, by building it.** 19's table asks
+   this page to "reuse the scroll-lit list from home for the hand-off order",
+   and on home that list *is* the introduction to the seven agents. Here the
+   cards above already are. Built, the spine put the seven agents on the page
+   a second time and took it to **10,355px** against §Shared rules' 4–8
+   screens at 1440×900. The order is carried by the `<ol>` the cards sit in,
+   which is also what assistive technology reads. **A section that repeats
+   the section above it is not a visual; it is a duplicate.**
+4. ★ A sample activity log, labelled as sample, with a cost where there is a
+   cost and an em dash where there is not.
 5. ★ Page-specific final CTA.
+
+**/agents carries three `<video>` elements against 19 v2's one**, and they
+are the three cuts the gate actually held, each with its status chip and
+reason. They are the subject of that panel rather than decoration, so they
+cannot become hover-loop stills the way a reel strip can, and they sit well
+below the fold where D50's hero-video measurement does not apply. The
+exception is written down in `e2e/inner-pages-f6.spec.ts` with a reason the
+test length-checks — the `youtube-claims.test.ts` device. Revisit if /agents
+ever joins the Lighthouse gate.
 
 ### ★ /trust (F6b)
 
-1. ★ Frame-wall hero, labelled.
-2. ★ The rules as icon cards, allowed beside never.
-3. ★ An Originality Gate walkthrough, source beside remake.
-4. ★ An AI label shown on a reel, as the client sees it.
-5. ★ "Where your data goes" as a diagram rather than a paragraph.
-6. ★ Page-specific final CTA.
+1. ★ Frame-wall hero, labelled. **Done, F6b.**
+2. ★ The rules as cards, allowed beside never. **Already existed.**
+3. ★ An Originality Gate walkthrough, source beside remake. **Open.**
+4. ★ An AI label shown on a reel, as the client sees it. **Open.**
+5. ★ "Where your data goes" as a diagram rather than a paragraph. **Open.**
+6. ★ Page-specific final CTA. **Done, F6b.**
+
+**F6b put /trust on the kit and left three ★ open**, which is a smaller claim
+than "F6b did /trust". The page is 4,111px and reads as two long text
+sections between the hero and the close — ★3–5 are exactly what would break
+that up, and they are the next thing this page needs rather than a nicety.
 
 ### ★ /niche-scan/sample, /about, /contact (F6c)
 

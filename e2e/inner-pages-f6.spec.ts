@@ -106,3 +106,85 @@ for (const audience of AUDIENCE_PAGES) {
     })
   })
 }
+
+/**
+ * Every page F6 moves onto the kit, whatever else it carries.
+ *
+ * `videos` is the page's ceiling, and anything above 19 v2's one carries a
+ * written reason — the device `youtube-claims.test.ts` uses, for the same
+ * argument: an exception a reader can see is a different thing from a rule
+ * quietly relaxed. A reason short enough to be a shrug is not a reason, so
+ * the test measures it.
+ */
+const KIT_PAGES = [
+  { path: '/businesses', videos: 1 },
+  { path: '/individuals', videos: 1 },
+  {
+    path: '/agents',
+    videos: 3,
+    reason:
+      'The gate panel shows the three cuts Compliance actually held, each with its own status chip and reason. They are the subject of the section rather than decoration, so they cannot become a hover-loop still the way a reel strip can — and they sit well below the fold, where D50’s hero-video measurement does not apply. Revisit if /agents ever joins the Lighthouse gate.',
+  },
+  { path: '/trust', videos: 1 },
+] as const
+
+for (const { path, videos, ...rest } of KIT_PAGES) {
+  test.describe(`${path} · the kit`, () => {
+    test('has the frame-wall hero and its label', async ({ page }) => {
+      await page.goto(path)
+      const hero = page.locator('main section').first()
+
+      await expect(hero).toContainText('AI-generated samples of our own output')
+      await expect(hero.getByText('AI-generated sample').first()).toBeVisible()
+    })
+
+    test('holds the per-page image budget', async ({ page }) => {
+      await page.goto(path)
+
+      await expect(page.locator('main img:not([loading="lazy"])')).toHaveCount(1)
+      expect(await page.locator('main img[loading="lazy"]').count()).toBeLessThanOrEqual(12)
+      expect(await page.locator('main video').count()).toBeLessThanOrEqual(videos)
+
+      // A page over 19 v2's one video owes an explanation, and one long
+      // enough to have been thought about.
+      const reason = 'reason' in rest ? rest.reason : ''
+      if (videos > 1) expect(reason.length).toBeGreaterThan(80)
+    })
+
+    test('closes on its own words, with the terms appended from one place', async ({ page }) => {
+      await page.goto(path)
+
+      await expect(page.locator('main')).not.toContainText('Record once. Show up everywhere.')
+      await expect(page.locator('main')).toContainText('$750')
+    })
+  })
+}
+
+test.describe('/agents', () => {
+  test('carries the hand-off order once, in a list, and not twice', async ({ page }) => {
+    await page.goto('/agents')
+    const section = await sectionById(page, 'agents-heading')
+
+    // 19 v3 ★3 asked for home's scroll-lit spine here and was struck the day
+    // it was written: the cards below already introduce the seven in order,
+    // so the spine made the page the same seven agents twice and 10,355px
+    // long. The order lives in the <ol>, which is what assistive technology
+    // reads anyway — and this asserts the duplicate has not come back.
+    await expect(section.locator('ol')).toHaveCount(1)
+    await expect(page.locator('main [data-agent-spine-fill]')).toHaveCount(0)
+    await expect(section).toContainText('Compliance')
+  })
+
+  test('shows a day of the log, with costs where there are costs', async ({ page }) => {
+    await page.goto('/agents')
+    const section = await sectionById(page, 'log-heading')
+
+    // ★4, and the honest half: a step that only decides shows an em dash
+    // rather than a made-up figure, and the whole thing says it is sample.
+    const entries = section.locator('li')
+    expect(await entries.count()).toBeGreaterThan(4)
+    await expect(section).toContainText('Sample data')
+    await expect(section.getByText('—').first()).toBeVisible()
+    await expect(section.getByText(/^\$\d/).first()).toBeVisible()
+  })
+})

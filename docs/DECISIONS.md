@@ -5079,3 +5079,57 @@ Unit **785**, up 3: distinct wall offsets, every wall three frames that exist,
 and no page holding both kinds of hero. Ten new Playwright assertions in
 `e2e/inner-pages-f6.spec.ts`. Lint, typecheck, build and licence-check green.
 Axe: 0 serious or critical on both pages in both themes.
+
+---
+
+## 2026-11-16 · D70 · A ★ I wrote in the morning was wrong by the afternoon, and building it is how I found out
+
+**19 v3 ★3 asked /agents to reuse the scroll-lit hand-off spine from home.**
+I wrote that ★ at the start of F6, from 19's own table — *"reuse the
+scroll-lit list from home for the hand-off order"* — and it was wrong, in a
+way no amount of reading would have shown.
+
+On the home page that spine **is** the introduction to the seven agents; it is
+the first and only place a reader meets them. On /agents the cards above it
+already are. Built and screenshotted, the section put the seven agents on the
+page a second time and took it from roughly four screens to **10,355px**,
+against §Shared rules' "4 to 8 screens at 1440×900".
+
+**A section that repeats the section above it is not a visual, it is a
+duplicate** — and 19's "visual in every second section" rule exists to stop a
+page reading as documentation, not to be satisfied by saying the same thing
+twice with motion on it.
+
+The order is carried by the `<ol>` the cards sit in, which is also what
+assistive technology reads. The ★ is struck in v3 with the measurement beside
+it, and `e2e/inner-pages-f6.spec.ts` now asserts the duplicate **has not come
+back** rather than asserting it exists.
+
+Two smaller things fell out of it:
+
+- **`GATE_AGENT_ID` went into `agents.ts` and came back out.** I moved it to
+  share it between the two pages; with the spine gone only home uses it, and a
+  constant exported for one caller is speculative generality.
+- **The log's cost column was gold and failed axe on contrast**, seriously,
+  on the first run. It is `text-text` now. The figure is a fact rather than an
+  accent, so it did not want the gold anyway.
+
+### What /agents and /trust actually got
+
+Both are on the F1 kit: frame-wall hero with a labelled inset, and each page's
+own closing CTA instead of the block every page shared. /agents also gained
+the sample activity log (★4) — which the mock data had carried since day one
+and no public page had ever shown.
+
+**/trust is on the kit with three ★ still open** (the Originality Gate
+walkthrough, the AI label on a reel, the data diagram), and the handoff says
+so rather than calling the page done. It is 4,111px of two long text sections
+between the hero and the close, and those three ★ are what would break it up.
+
+**/agents keeps three `<video>` elements against 19 v2's one.** They are the
+three cuts the gate actually held, each with its status chip and reason —
+the subject of the panel rather than decoration, and well below the fold
+where D50's hero-video measurement does not apply. The exception is written
+into the e2e spec with a reason the test length-checks, which is D68's
+`youtube-claims.test.ts` device: an exception a reader can see is a different
+thing from a rule quietly relaxed.

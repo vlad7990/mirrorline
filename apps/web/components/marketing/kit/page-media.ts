@@ -204,6 +204,8 @@ export interface PageHeroFrameSet {
 export const PAGE_HERO_FRAMES = {
   businesses: { offset: 0, subject: 'a baker, a mechanic and a man on a studio mat' },
   individuals: { offset: 3, subject: 'an empty lit room, a parcel being opened and a florist' },
+  agents: { offset: 6, subject: 'a florist, a desk piece to camera and a shopkeeper' },
+  trust: { offset: 9, subject: 'a hand pouring coffee, hands sanding wood and a bike repair' },
 } as const satisfies Record<string, PageHeroFrameSet>
 
 export type PageHeroFrameKey = keyof typeof PAGE_HERO_FRAMES

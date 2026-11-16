@@ -92,6 +92,18 @@ export const PAGE_CTAS = {
     lead: 'The Niche Scan is what learns it, and it runs before anyone signs anything. Two weeks is long enough to see whether what comes back is worth posting:',
     next: { href: '/niche-scan', label: 'Start the scan' },
   },
+  agents: {
+    title: 'Seven agents, one loop,',
+    accent: 'and a log you can read.',
+    lead: 'None of it runs without a cap you set, and none of it posts without passing the gate. The fortnight is the cheapest way to watch it work on your own account:',
+    next: { href: '/trust', label: 'Our rules' },
+  },
+  trust: {
+    title: 'Everything above',
+    accent: 'is a rule, not a promise.',
+    lead: 'Each one is something the product enforces rather than something we intend — which is the only kind worth reading before you hand over an account:',
+    next: { href: '/agents', label: 'The agents' },
+  },
   individuals: {
     title: 'One account, posted properly,',
     accent: 'for a fortnight.',

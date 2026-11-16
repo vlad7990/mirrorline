@@ -12,9 +12,14 @@ import { AiLabel, Card, VideoThumb, ViewerPanel } from '@mirrorline/ui'
 import type { Metadata } from 'next'
 import * as React from 'react'
 
-import { PageHero } from '@/components/marketing/page-hero'
+import { HeroInset, InsetCycle } from '@/components/marketing/kit/hero-inset'
+import { PAGE_CTAS, PageCta } from '@/components/marketing/kit/page-cta'
+import { PageHeroFrames } from '@/components/marketing/kit/page-hero-frames'
+import { PAGE_HERO_FRAMES, allocateFrames } from '@/components/marketing/kit/page-media'
 import { SampleDataLabel, Section, SectionHeading } from '@/components/marketing/primitives'
-import { SiteCta } from '@/components/marketing/site-cta'
+
+/** Three for the wall, three for the corner card. Offset 9 belongs to /trust. */
+const [WALL_FRAMES = [], INSET_FRAMES = []] = allocateFrames([3, 3], PAGE_HERO_FRAMES.trust.offset)
 
 
 export const metadata: Metadata = {
@@ -121,7 +126,8 @@ export default function TrustPage() {
       {/* The headline was thirteen words, which is four lines at the size a
           public page wants. The clause it lost opens the lead instead, so
           nothing in the argument went missing. */}
-      <PageHero
+      <PageHeroFrames
+        eyebrow="Our rules"
         title="The rules we work by"
         lead={
           <>
@@ -131,14 +137,16 @@ export default function TrustPage() {
             telling you something.
           </>
         }
-        shot="calendar-16x10"
-        shotAlt="The approvals queue: a scheduled post with its AI label locked on and the reason it cannot be removed."
-        shotCaption="The approvals queue, on sample data from a fictional demo client."
+        frames={WALL_FRAMES}
         index={RULES.map((rule, position) => ({
           number: String(position + 1).padStart(2, '0'),
           title: rule.title,
         }))}
-        marginNote="seven rules · built in, not bolted on"
+        inset={
+          <HeroInset caption="Three that passed the gate, label and all">
+            <InsetCycle frames={INSET_FRAMES} />
+          </HeroInset>
+        }
       />
 
       <Section className="band-snow" aria-labelledby="rules-heading">
@@ -257,7 +265,7 @@ export default function TrustPage() {
         </p>
       </Section>
 
-      <SiteCta next={{ href: '/pricing', label: 'Pricing' }} />
+      <PageCta cta={PAGE_CTAS.trust} />
     </>
   )
 }
