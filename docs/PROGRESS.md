@@ -6,6 +6,83 @@
 
 ---
 
+## Handoff — 16 November 2026, night (Milo is large, always there, and says hello once a visit)
+
+**Branch** `v4/site-and-metrics` · **last commit** below. Nothing promoted.
+
+**Milo is the launcher now**, not a detail inside a gold pill: 112px on a
+desktop, 88px on a tablet, 72px on a phone, with a gold ring, the resting
+float he already had, and "Ask Milo" beside him where there is room. He is on
+**every public page from the first paint**, before any cookie choice — which
+**reverses 18 §3.3** (D74). Vlad's call, and the right one: the rule was
+written to keep a second floating thing off a consent prompt, and what it
+actually did was remove the assistant from the first screen of every first
+visit.
+
+**The greeting** arrives three seconds in, stays six, waves for the first
+900ms of it, and happens **once per visit** — `sessionStorage`, so a reload
+does not repeat it and a new tab does. It is dismissible, it is static under
+reduced motion, and it never appears on `/legal/*`, where the launcher stays
+but the bubble would be reading over somebody's shoulder.
+
+### Three bugs the big mascot found, all of them mine
+
+1. **The launcher ate the panel.** `.milo-launcher`'s `display: inline-flex`
+   beat Tailwind's `hidden` on source order, so a 112px Milo stayed laid out
+   over the open chat and swallowed every click on the Ask button. **Seven
+   existing e2e tests turned into 30-second timeouts** — the suite took 4.4
+   minutes to report what a hit-test says at once. The `hidden` attribute
+   fixes it; the dock is `pointer-events: none` now, so its empty gaps cannot
+   eat anything either.
+2. **The greeting landed on the open chat**, because three seconds is long
+   enough to have opened it first. The timer reads the open state before it
+   speaks.
+3. **Milo cost 0.005 of CLS.** The cookie banner publishes its height after
+   hydration and Milo stepped up — and a fixed element changing `bottom` is a
+   layout shift like any other. The two movable terms are a `translateY` now.
+   CLS is 0 again on all four gated pages.
+
+### Lighthouse, mobile, median of three, after
+
+| Page | Before | After | CLS | LCP element |
+|---|---|---|---|---|
+| `/` | 91 | **90** | 0 | hero image |
+| `/product` | 90 (D66) | **91** | 0 | hero image |
+| `/how-it-works` | 90 (D66) | **92** | 0 | hero image |
+| `/pricing` | 90 (D66) | **92** | 0 | hero image |
+
+Home pays one point for the mascot's own request — 11.2 KB at `Low` priority,
+the 224px asset Lighthouse's 1.75 DPR emulation picks. **Milo is not the LCP
+element on any page**, read off the report rather than assumed (D73).
+
+### What to look at on the preview
+
+**Any page at 390px**: Milo bottom-right, 16px from the edges, above the
+cookie banner rather than under it, with the AI chip on his chest. Wait three
+seconds for the bubble. Then **scroll to the plan buttons on /pricing** — he
+steps up off them rather than sitting on them, which is `useCtaClearance`
+measuring both rectangles rather than guessing at a safe offset. Then
+**/legal/privacy**: he is there, and he says nothing.
+
+### Checks
+
+Unit **797**, up 12 (the greeting rules, including storage that throws and
+storage that is absent). The site co-pilot spec is **20 tests**, up 13: the
+launcher in the server's own HTML, present before any cookie choice, after a
+reload, after either answer, above the banner, on a legal page without a
+bubble; the greeting once a visit, dismissible, again in a new tab; and the
+three sizes with their edge gaps. Lint, typecheck, build and licence-check
+green.
+
+### The queue, unchanged from the last handoff
+
+1. **`/resources/[slug]` accessibility 96.** One page, never audited.
+2. **The axe gate's severity floor** — `heading-order` passed it yesterday.
+3. **`/legal/privacy`'s LCP element is the cookie banner**, a fixed overlay
+   rather than page content.
+
+---
+
 ## Handoff — 16 November 2026, late evening (home is 91, and it was never the fonts on their own)
 
 **Branch** `v4/site-and-metrics` · **last commit** `dec4cff` · pushed. Clean

@@ -79,8 +79,15 @@ const STATES = ['idle', 'greeting', 'thinking', 'answering', 'declined']
 
 const AVATAR_SOURCE = 'milo-avatar.png'
 
-/** 2× the display sizes: 32px in a panel header, 56px on the launcher. */
-const AVATAR_SIZES = [64, 112]
+/**
+ * 2× every display size: 32px in a panel header, and the launcher's three —
+ * 72px on a phone, 88px on a tablet, 112px from 1024px up.
+ *
+ * 224 exists for the largest of those. Milo *is* the launcher now rather than
+ * a detail inside a pill, and a 112px asset drawn at 112px is soft on every
+ * retina screen it meets.
+ */
+const AVATAR_SIZES = [64, 112, 224]
 
 /** 2× a ~180px display in the chat empty state, onboarding and /about. */
 const FULL_WIDTH = 360

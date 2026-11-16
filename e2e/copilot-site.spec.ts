@@ -5,8 +5,10 @@
  * browser can show is the conditions 18 §3.3 puts on the surface itself, each
  * of which is invisible to a unit test and to a screenshot:
  *
- * - it is not there at all until the cookie banner has been answered;
+ * - it is there from the first paint, before any cookie choice (D74 — this
+ *   used to be the opposite, and the tests below are the record of that);
  * - it says AI on the launcher and in the panel header;
+ * - it greets once a visit, three seconds in, and never on a legal page;
  * - the transcript dies with the tab, and nothing is stored;
  * - a refusal arrives as an answer and a person, not as a failure.
  *
@@ -50,25 +52,168 @@ async function ask(page: Page, question: string) {
   await panel(page).getByRole('button', { name: 'Ask', exact: true }).click()
 }
 
-test.describe('the launcher waits for the consent banner', () => {
-  test('is absent while the banner is up, and arrives when it is answered', async ({ page }) => {
+/**
+ * Milo is always there (D74), which reverses what §3.3 asked for.
+ *
+ * These are the assertions that would have failed under the old rule, pointed
+ * at what was wrong with it: the launcher used to be absent from the first
+ * screen of every first visit.
+ */
+test.describe('the launcher is always there', () => {
+  test('is on the page before any cookie choice is made', async ({ page }) => {
     await page.goto('/')
 
-    // §3.3: "a second floating thing over a consent prompt is a dark
-    // pattern". The banner is up on a first visit, so nothing else may be.
+    // The banner is up — and so is Milo, above it rather than instead of it.
     await expect(page.getByRole('dialog', { name: 'We are not tracking you' })).toBeVisible()
-    await expect(launcher(page)).toHaveCount(0)
-
-    await dismissBanner(page)
     await expect(launcher(page)).toBeVisible()
   })
 
-  test('stays available on the next page, because the choice is remembered', async ({ page }) => {
-    await page.goto('/')
-    await dismissBanner(page)
+  test('is in the server’s own HTML, not painted in by an effect', async ({ request }) => {
+    // A fetch of the document itself. The old gate read a stored choice in an
+    // effect, which meant the launcher could not exist until React had run.
+    // "From the first paint" has to mean the markup.
+    const html = await (await request.get('/')).text()
+    expect(html).toContain('data-milo-launcher')
+    expect(html).toContain('Ask Milo about Mirrorline — AI assistant')
+  })
 
+  test('is still there after a reload, and after a choice either way', async ({ page }) => {
+    await page.goto('/')
+    await expect(launcher(page)).toBeVisible()
+
+    await page.reload()
+    await expect(launcher(page)).toBeVisible()
+
+    // Decline, deliberately: the stricter answer must not remove him either.
+    await dismissBanner(page)
+    await expect(launcher(page)).toBeVisible()
+
+    await page.reload()
+    await expect(launcher(page)).toBeVisible()
+  })
+
+  test('is on a legal page too, where only the greeting stays away', async ({ page }) => {
+    await page.goto('/legal/privacy')
+    await expect(launcher(page)).toBeVisible()
+    await page.waitForTimeout(4_500)
+    await expect(page.locator('[data-milo-greeting]')).toHaveCount(0)
+  })
+
+  test('rides above the cookie banner rather than under it', async ({ page }) => {
+    await page.goto('/')
+    const banner = page.getByRole('dialog', { name: 'We are not tracking you' })
+    await expect(banner).toBeVisible()
+
+    const dock = await page.locator('[data-milo-dock]').boundingBox()
+    const bar = await banner.boundingBox()
+    expect(dock).not.toBeNull()
+    expect(bar).not.toBeNull()
+
+    // Clear of its top edge, not merely painted over it: a mascot sitting on
+    // the consent buttons is the dark pattern §3.3 worried about, and
+    // z-index alone would produce exactly that.
+    expect(dock!.y + dock!.height).toBeLessThanOrEqual(bar!.y + 1)
+  })
+})
+
+test.describe('the greeting', () => {
+  test('arrives once, and not again on the next page of the same visit', async ({ page }) => {
+    await page.goto('/')
+
+    // Nothing at first: the bubble is three seconds out, and a greeting that
+    // is already there when the page paints is a banner, not a hello.
+    await expect(page.locator('[data-milo-greeting]')).toHaveCount(0)
+    await expect(page.locator('[data-milo-greeting]')).toBeVisible({ timeout: 8_000 })
+    await expect(page.locator('[data-milo-greeting]')).toContainText('ask me anything about')
+
+    // Six seconds, then it withdraws on its own.
+    await expect(page.locator('[data-milo-greeting]')).toHaveCount(0, { timeout: 12_000 })
+
+    // The second page of the same visit gets no second hello.
     await page.goto('/pricing')
     await expect(launcher(page)).toBeVisible()
+    await page.waitForTimeout(5_000)
+    await expect(page.locator('[data-milo-greeting]')).toHaveCount(0)
+  })
+
+  test('can be dismissed, and stays dismissed', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('[data-milo-greeting]')).toBeVisible({ timeout: 8_000 })
+
+    await page.getByRole('button', { name: /Dismiss Milo/ }).click()
+    await expect(page.locator('[data-milo-greeting]')).toHaveCount(0)
+
+    // And it does not return for the rest of the time it was given.
+    await page.waitForTimeout(2_500)
+    await expect(page.locator('[data-milo-greeting]')).toHaveCount(0)
+  })
+
+  test('is a new visit in a new tab, so he says hello again', async ({ browser }) => {
+    // The lifetime rule in one test: a greeting is per visit, and a fresh
+    // context is a fresh visit. If this ever starts failing, the flag has
+    // been moved to `localStorage` and Milo has gone quiet for good.
+    for (const _visit of [1, 2]) {
+      const context = await browser.newContext()
+      const page = await context.newPage()
+      await page.goto('/')
+      await expect(page.locator('[data-milo-greeting]')).toBeVisible({ timeout: 8_000 })
+      await context.close()
+    }
+  })
+})
+
+test.describe('the size, and the room around him', () => {
+  const CASES = [
+    { width: 1440, face: 112, gap: 24, label: true },
+    { width: 390, face: 72, gap: 16, label: false },
+  ] as const
+
+  for (const { width, face, gap, label } of CASES) {
+    test(`is ${face}px at ${width}px, ${gap}px from the edge`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto('/')
+      // Answered first, so the banner's height is not part of the offset
+      // being measured here.
+      await dismissBanner(page)
+
+      const box = await page.locator('.milo-launcher-face').boundingBox()
+      expect(box).not.toBeNull()
+      expect(Math.round(box!.width)).toBe(face)
+
+      const dock = await page.locator('[data-milo-dock]').boundingBox()
+      expect(Math.round(width - (dock!.x + dock!.width))).toBe(gap)
+
+      // The words are a desktop affordance. At 390 the accessible name is the
+      // only label, which is why it carries the whole sentence.
+      const words = page.locator('.milo-launcher-label')
+      if (label) await expect(words).toBeVisible()
+      else await expect(words).toBeHidden()
+    })
+  }
+
+  test('steps up off a primary CTA at 390px rather than sitting on it', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/pricing')
+    await dismissBanner(page)
+
+    // The plan buttons are full-width here, so scrolling one to the foot of
+    // the screen puts it exactly where Milo is anchored.
+    const cta = page.locator('[data-primary-cta]').first()
+    await cta.scrollIntoViewIfNeeded()
+    await page.mouse.wheel(0, 240)
+    await page.waitForTimeout(500)
+
+    const dock = await page.locator('[data-milo-dock]').boundingBox()
+    const button = await cta.boundingBox()
+    expect(dock).not.toBeNull()
+    expect(button).not.toBeNull()
+
+    const overlaps =
+      dock!.x < button!.x + button!.width &&
+      dock!.x + dock!.width > button!.x &&
+      dock!.y < button!.y + button!.height &&
+      dock!.y + dock!.height > button!.y
+    expect(overlaps).toBe(false)
   })
 })
 

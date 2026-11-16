@@ -3,16 +3,23 @@
 /**
  * The website co-pilot, mounted once per public page.
  *
- * It owns three things and delegates everything else: whether the launcher is
- * allowed to exist, whether the panel is open, and the transcript.
+ * It owns three things and delegates everything else: when Milo waves, whether
+ * the panel is open, and the transcript.
  *
- * ## The consent gate
+ * ## There is no consent gate any more, and that is a reversal
  *
- * 18 §3.3: the launcher is "not shown until the cookie banner is dismissed",
- * because a second floating thing over a consent prompt is a dark pattern.
- * `useCookieConsent()` is the same state the banner itself renders from, so
- * the two cannot drift apart — one of them is visible at a time because they
- * read one answer, not because two effects happen to agree.
+ * 18 §3.3 said the launcher was "not shown until the cookie banner is
+ * dismissed", on the reasoning that a second floating thing over a consent
+ * prompt is a dark pattern. **D74 overrides it**: a dark pattern is something
+ * that pushes a decision, and Milo asks for nothing, sets nothing and reads
+ * nothing about the visitor. What the old rule actually produced was an
+ * assistant missing from the first screen of every first visit — the one
+ * screen where somebody is still deciding whether to ask anybody anything.
+ *
+ * So he renders on the server, is in the first paint, and the banner's answer
+ * changes only *where* he sits: `--cookie-banner-height` lifts him above it
+ * while it is up. That layering is in `globals.css`, deliberately, because the
+ * two are now on screen together.
  *
  * ## The transcript dies with the tab
  *
@@ -28,45 +35,46 @@
  * is nothing left to render it into.
  */
 
+import { usePathname } from 'next/navigation'
 import * as React from 'react'
 
 import { CopilotLauncher } from '@/components/marketing/copilot/copilot-launcher'
 import { CopilotPanel } from '@/components/marketing/copilot/copilot-panel'
-import { useCookieConsent } from '@/lib/consent/cookie-consent-context'
 import type { CopilotMode } from '@/lib/copilot/canned'
 import { SITE_COPILOT_COPY } from '@/lib/copilot/site-copilot-copy'
 import { readCopilotMode, streamCopilotAnswer } from '@/lib/copilot/stream'
 import { type Exchange, applyEvent, failExchange, startExchange } from '@/lib/copilot/transcript'
+import {
+  GREETING_DELAY_MS,
+  GREETING_VISIBLE_MS,
+  GREETING_WAVE_MS,
+  markGreeted,
+  shouldGreet,
+} from '@/lib/mascot/greeting'
 import { type MiloState, miloStateFor } from '@/lib/mascot/milo'
 
-/**
- * Has Milo already waved in this tab?
- *
- * Module scope rather than state, because "once per session" has to survive
- * the component unmounting — this is mounted per page by the marketing
- * layout, so a visitor walking from `/pricing` to `/product` would otherwise
- * be waved at on every page. Module scope dies with the tab, which is exactly
- * the lifetime §3.3 gives the transcript: nothing is stored, and a reload is
- * a new session.
- */
-let hasGreetedThisSession = false
-
-/** How long the wave lasts before Milo settles. Matches the CSS keyframe. */
-const GREETING_MS = 900
-
 export function SiteCopilot() {
-  const { isResolved, hasChosen } = useCookieConsent()
+  const pathname = usePathname()
   const [isOpen, setIsOpen] = React.useState(false)
   const [exchanges, setExchanges] = React.useState<readonly Exchange[]>([])
   const [mode, setMode] = React.useState<CopilotMode | null>(null)
   const [isAsking, setIsAsking] = React.useState(false)
   const [miloState, setMiloState] = React.useState<MiloState>('idle')
+  const [isGreeting, setIsGreeting] = React.useState(false)
 
   const panelId = `${React.useId()}-copilot`
   const launcherRef = React.useRef<HTMLButtonElement>(null)
   const abortRef = React.useRef<AbortController | null>(null)
   const isMountedRef = React.useRef(true)
   const askedCountRef = React.useRef(0)
+  /**
+   * What the greeting timer reads to find out whether the panel is open.
+   *
+   * A timer that fires three seconds after the page loaded cannot see state
+   * any other way, and this is the one piece of state it must respect: the
+   * bubble must never land on an open conversation.
+   */
+  const isOpenRef = React.useRef(false)
 
   React.useEffect(() => {
     isMountedRef.current = true
@@ -96,27 +104,75 @@ export function SiteCopilot() {
   }, [isOpen, mode])
 
   /**
-   * The wave, once, when the launcher first appears.
+   * The hello: three seconds in, six seconds long, once a visit.
    *
-   * Gated on `hasChosen` rather than on mount: until the cookie banner is
-   * answered there is no launcher (§3.3), so greeting then would spend the
-   * one wave on a button nobody can see. The timer settles Milo back to
-   * `idle` so the resting float takes over — and it is cleared on unmount,
-   * because a navigation mid-wave would otherwise set state on a gone
-   * component.
+   * Three timers rather than one, because the three things end at different
+   * moments and each has its own reason. The wave stops at 900ms — a mascot
+   * still waving when the bubble closes reads as a loop. The bubble stays the
+   * full six seconds, which is the time to notice it, read eight words and
+   * decide to ignore them.
+   *
+   * **The session is marked when the bubble appears, not when it is
+   * scheduled.** A visitor who navigates at second two should still be
+   * greeted on the page they land on, rather than having spent their one
+   * greeting on a page that never showed it.
+   *
+   * `shouldGreet` is also what keeps him quiet on `/legal/*` — see the rules
+   * in `lib/mascot/greeting.ts`. The launcher stays there either way.
    */
   React.useEffect(() => {
-    if (!isResolved || !hasChosen || hasGreetedThisSession) return undefined
+    const storage = typeof window === 'undefined' ? null : window.sessionStorage
+    if (!shouldGreet(storage, pathname)) return undefined
 
-    hasGreetedThisSession = true
-    setMiloState('greeting')
+    const timers: number[] = []
 
-    const settle = window.setTimeout(() => {
-      if (isMountedRef.current) setMiloState('idle')
-    }, GREETING_MS)
+    timers.push(
+      window.setTimeout(() => {
+        if (!isMountedRef.current) return
 
-    return () => window.clearTimeout(settle)
-  }, [isResolved, hasChosen])
+        // **Not over an open panel.** The bubble is anchored to the dock, the
+        // dock sits above the panel, and three seconds is exactly long enough
+        // for somebody to have opened the chat first — which put a greeting
+        // on top of the conversation it was inviting, swallowing clicks on
+        // the Ask button underneath. Somebody reading the panel has already
+        // done what the greeting asks, so the session is marked and the wave
+        // is spent.
+        markGreeted(storage)
+        if (isOpenRef.current) return
+
+        setIsGreeting(true)
+        setMiloState('greeting')
+
+        timers.push(
+          window.setTimeout(() => {
+            if (isMountedRef.current) setMiloState('idle')
+          }, GREETING_WAVE_MS),
+        )
+
+        timers.push(
+          window.setTimeout(() => {
+            if (isMountedRef.current) setIsGreeting(false)
+          }, GREETING_VISIBLE_MS),
+        )
+      }, GREETING_DELAY_MS),
+    )
+
+    return () => {
+      for (const timer of timers) window.clearTimeout(timer)
+    }
+  }, [pathname])
+
+  /**
+   * Opening the panel takes the bubble with it.
+   *
+   * Somebody who clicks Milo has done the thing the greeting was asking for,
+   * and leaving it hanging beside an open chat is the assistant repeating
+   * itself.
+   */
+  React.useEffect(() => {
+    isOpenRef.current = isOpen
+    if (isOpen) setIsGreeting(false)
+  }, [isOpen])
 
   const update = React.useCallback((id: string, change: (exchange: Exchange) => Exchange) => {
     if (!isMountedRef.current) return
@@ -199,10 +255,9 @@ export function SiteCopilot() {
     setIsOpen(false)
   }, [])
 
-  // Nothing at all until the banner has been answered — and nothing during
-  // the first render either, while the stored choice is still unread.
-  if (!isResolved || !hasChosen) return null
-
+  // No early return: the launcher is part of every page's first paint, on the
+  // server, before any effect has run and whatever the cookie banner is doing
+  // (D74). There is no state in which Milo is absent.
   return (
     <>
       <CopilotLauncher
@@ -210,6 +265,8 @@ export function SiteCopilot() {
         isOpen={isOpen}
         panelId={panelId}
         miloState={miloState}
+        isGreeting={isGreeting}
+        onDismissGreeting={() => setIsGreeting(false)}
         onOpen={() => setIsOpen(true)}
       />
       {isOpen ? (

@@ -49,7 +49,7 @@ export function SiteCta({ next }: SiteCtaProps) {
         </p>
 
         <div className="flex flex-col gap-3 sm:flex-row">
-          <LeadDialogButton intent="pilot" variant="gold" size="lg" />
+          <LeadDialogButton isPrimaryCta intent="pilot" variant="gold" size="lg" />
           <LeadDialogButton intent="demo" variant="secondary" size="lg" />
         </div>
 

@@ -36,6 +36,20 @@ export const SITE_COPILOT_COPY = {
   closeLabel: 'Close the assistant',
 
   /**
+   * The bubble, once a visit, three seconds in.
+   *
+   * It offers and it does not promise: "about Mirrorline" names the subject,
+   * which is the same limit `grounding` states — this assistant answers from
+   * our own pages. "Ask me anything", unqualified, is the sentence a refusal
+   * later contradicts.
+   *
+   * No exclamation mark: 02's voice is plain, and a mascot shouting hello at
+   * someone three seconds into reading is the register we are avoiding.
+   */
+  greeting: "Hi, I'm Milo — ask me anything about Mirrorline",
+  greetingDismiss: 'Dismiss Milo’s greeting',
+
+  /**
    * The header line. It states the limit before the first question rather
    * than after a disappointing answer: §3.1 is that this bot answers from our
    * own published pages or not at all.

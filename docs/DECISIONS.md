@@ -5385,3 +5385,100 @@ touches them. The F6 pages were measured for the first time in this PR and are
 tabled in `docs/PROGRESS.md`; anything under 90 there is recorded rather than
 fixed, because a page that has never been measured is a different piece of
 work from a page that has regressed.
+
+---
+
+## 2026-11-16 · D74 · Milo stops waiting for permission to exist, and three bugs only a 112px mascot could have found
+
+Vlad's brief: Milo large, Milo always there, Milo says hello once a visit. The
+interesting half is what it overrides, and what it broke.
+
+### The consent gate is reversed, and 18 §3.3 is wrong rather than bent
+
+§3.3 said the launcher is "not shown until the cookie banner is dismissed",
+reasoning that a second floating thing over a consent prompt is a dark
+pattern. **That reasoning does not survive contact with what the thing is.** A
+dark pattern pushes a decision; Milo asks for nothing, sets nothing, reads
+nothing about the visitor, and the banner's own buttons are never covered — he
+rides above it, which is now asserted rather than assumed.
+
+What the rule produced instead was an assistant missing from the first screen
+of every first visit: the one screen where somebody is still deciding whether
+to ask anybody anything. **A rule written to protect a decision was costing
+the only moment it mattered.** Vlad's call, and the right one.
+
+So the launcher is server-rendered and in the first paint. A test fetches the
+HTML and greps it rather than asking a browser, because "from the first paint"
+is a claim about markup: the old gate read a stored choice in an effect, which
+meant the launcher could not exist until React had run.
+
+### The greeting remembers one character, and that is not a consent question
+
+"Once per visit, every visit" has to survive a reload, and module scope does
+not. `sessionStorage` holds `mirrorline:milo-greeted = 1` — not an identifier,
+not shared, gone when the tab closes. §3.3's promise is about the transcript
+and about tracking; neither is weakened by a flag that says a bubble has been
+shown. The rules live in `lib/mascot/greeting.ts` as pure functions over an
+injected storage, which is how the two branches nobody can click — storage
+that throws, storage that is absent — are tested at all. Both answer "greet
+again": a greeting shown twice is a smaller failure than one never shown.
+
+**Not on `/legal/*`.** The launcher stays; the bubble does not. Those pages are
+read by someone checking what we do with their data, and a cartoon leaning in
+to chat over the terms is the wrong instinct.
+
+### Three bugs, and each was invisible until the mascot got big
+
+**1. The launcher ate the panel.** `.milo-launcher { display: inline-flex }`
+and Tailwind's `hidden` are both one class, so source order decides, and mine
+came last. The launcher stayed laid out under the open panel, a 112px mascot
+sat over the Ask button, and every click on it was swallowed. Seven e2e tests
+went from passing to a 30-second timeout each — the suite took 4.4 minutes to
+report what one hit-test says instantly. Fixed with the `hidden` *attribute*
+and a rule that answers it by name; the dock is `pointer-events: none` now
+with its children opting back in, so the empty gap between the label and the
+mascot cannot swallow anything either.
+
+**2. The greeting landed on the open chat.** The bubble is anchored to the
+dock, the dock sits above the panel, and three seconds is exactly long enough
+for somebody to have opened the chat first. The timer reads an `isOpen` ref
+before it speaks — and marks the session greeted anyway, because somebody
+reading the panel has already done what the greeting was asking for.
+
+**3. Milo cost 0.005 of CLS, written into `bottom`.** Four terms decide where
+he stands: the edge gap, the safe area, the cookie banner's height and a CTA
+lift. Two of them change *after* the page has painted — the banner publishes
+its height a moment after hydration — and a fixed element changing `bottom` is
+a layout shift like any other. Those two are a `translateY` now, which moves
+no layout and animates on the compositor. **CLS is back to 0 on all four
+gated pages.**
+
+### What it costs, measured
+
+Home **91 → 90**, flat triplets either side; `/product` 91, `/how-it-works` 92,
+`/pricing` 92. The gate is ≥ 90 and all four hold it. The point is the mascot's
+own request: 11.2 KB at `Low` priority, which Lighthouse's 1.75 DPR emulation
+takes from the new 224px asset. **Milo is not the LCP element on any of them**
+— that is still the hero image, read off the report rather than assumed, which
+is the whole lesson of D73.
+
+### The AI label moved, and nearly disappeared
+
+§3.3 wants the label **on the launcher**, and the gold pill that used to carry
+it is gone. My first version left it only in the accessible name — which is
+exactly the disclaimer-nobody-sees that rule exists to prevent, and it would
+have left a sighted visitor with a cartoon face and no statement of what it
+is. It is a chip on the mascot now, visible at all three sizes including the
+72px phone, where the "Ask Milo" words are not. The assertion that caught it
+was already in the suite, which is the argument for writing that kind of test
+against the rule rather than against the markup.
+
+### The one thing measured rather than designed
+
+"Must not cover the primary CTA buttons at 390px — move up if it would" cannot
+be satisfied by a fixed offset: the buttons are full-width on a phone and
+arrive under the corner as you scroll. `useCtaClearance` reads both rectangles
+on a `requestAnimationFrame` and lifts Milo past the highest offender. The
+marker is `data-primary-cta` on four components rather than a list of class
+names, because "primary CTA" is a fact about intent — `variant="gold"` is also
+on a hero link nothing ever covers.

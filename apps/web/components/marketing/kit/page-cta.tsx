@@ -72,7 +72,7 @@ export function PageCta({ cta }: PageCtaProps) {
               span adds no layout of its own: `inline-flex` around a single
               child is that child's own box. */}
           <span className="relative inline-flex">
-            <LeadDialogButton intent="pilot" variant="gold" size="lg" />
+            <LeadDialogButton isPrimaryCta intent="pilot" variant="gold" size="lg" />
             <span
               aria-hidden="true"
               className="cta-sweep-band pointer-events-none absolute inset-0 overflow-hidden"

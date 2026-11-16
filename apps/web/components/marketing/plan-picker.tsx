@@ -154,6 +154,7 @@ export function PlanPicker({ tiers, actions }: PlanPickerProps) {
 
                 <div className="relative mt-auto flex flex-col gap-2 pt-2">
                   <LeadDialogButton
+                    isPrimaryCta
                     intent={tier.id === 'pilot' || tier.id === 'creator' ? 'pilot' : 'demo'}
                     variant={tier.isSuggested ? 'gold' : 'secondary'}
                     size="lg"

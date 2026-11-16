@@ -1,86 +1,114 @@
 'use client'
 
 /**
- * The one small launcher, bottom-right (18 §1).
+ * Milo, bottom-right, on every public page — and he *is* the button.
  *
- * **It is labelled AI on its face**, not in a tooltip and not in a footer:
- * §3.3 asks for the label on the launcher and in the panel header, and a
- * badge that only a hover reveals is the version of that rule which does not
- * count.
+ * He used to be a 48px detail inside a gold pill that carried the words. The
+ * pill is gone: the character is the affordance now, 112px on a desktop, and
+ * the words are a small label beside him where there is room for one.
  *
- * Whether it renders at all is decided above it — `site-copilot.tsx` holds
- * the consent gate — so this component stays a button and nothing more.
+ * **It is still labelled AI** (18 §3.3, which asks for the label on the
+ * launcher and in the panel header). The label moved from a badge on the pill
+ * into the button's accessible name — "Ask Milo about Mirrorline — AI
+ * assistant" — and the panel header still carries it in writing. A picture of
+ * a character with no text beside it is exactly the case that name exists for.
+ *
+ * ## Four things decide where he sits, and they add up
+ *
+ * `bottom` is one `calc`, and each term is a rule from the brief:
+ *
+ *   - **the gap** — 24px from the edges on a desktop, 16px on a phone;
+ *   - **the safe area** — `env(safe-area-inset-bottom)`, so he clears the
+ *     home indicator and the mobile browser's bottom bar;
+ *   - **the cookie banner** — `--cookie-banner-height`, published by the
+ *     banner itself while it is up, so Milo rides above it rather than under
+ *     it. He is no longer hidden behind the consent decision (D74), so the
+ *     two are on screen together and the layering has to be deliberate;
+ *   - **a CTA in the way** — `--milo-cta-lift`, from `useCtaClearance`.
+ *
+ * Two of those are pure CSS, which is why they survive a page whose
+ * JavaScript has not arrived: the launcher is server-rendered and in the first
+ * paint, and only the last two can move it afterwards.
  */
 
-import { Button, cn } from '@mirrorline/ui'
+import { cn } from '@mirrorline/ui'
 import * as React from 'react'
 
 import { MiloAvatar } from '@/components/mascot/milo-avatar'
+import { MiloGreeting } from '@/components/marketing/copilot/milo-greeting'
+import { useCtaClearance } from '@/components/marketing/copilot/use-cta-clearance'
 import { AI_TAG, SITE_COPILOT_COPY } from '@/lib/copilot/site-copilot-copy'
 import type { MiloState } from '@/lib/mascot/milo'
-
-/**
- * The launcher's Milo: head and shoulders, from the 112px asset.
- *
- * Tried at 28 first, sized to the button's text, and it was a dark smudge —
- * the character is detailed enough that below about 40px the face stops
- * reading at all. 48 inside a 60px pill is the brief's 56 minus the padding
- * that keeps the pill's own rounding off his corners, and it still draws the
- * 112px asset, which is what the 2× rule is for.
- */
-const MILO_SIZE = 48
-
-/** Tall enough that the pill never crops the mascot inside it. */
-const LAUNCHER_HEIGHT = 'min-h-[3.75rem]'
 
 export interface CopilotLauncherProps {
   readonly isOpen: boolean
   readonly panelId: string
   /**
-   * `greeting` on the first mount of a session, `idle` afterwards.
+   * `greeting` while he waves, `idle` the rest of the time, and whatever the
+   * co-pilot's stream is doing once a question is in flight.
    *
-   * Decided above, in `site-copilot.tsx`, because "once per session" is a
-   * fact about the session rather than about this button — and this button is
-   * hidden and shown again every time the panel opens and closes.
+   * Decided above, in `site-copilot.tsx`, because "once per visit" is a fact
+   * about the visit rather than about this button — and this button is hidden
+   * and shown again every time the panel opens and closes.
    */
   readonly miloState: MiloState
+  /** Whether the speech bubble is showing. Also owned above. */
+  readonly isGreeting: boolean
+  readonly onDismissGreeting: () => void
   readonly onOpen: () => void
 }
 
 export const CopilotLauncher = React.forwardRef<HTMLButtonElement, CopilotLauncherProps>(
-  function CopilotLauncher({ isOpen, panelId, miloState, onOpen }, ref) {
+  function CopilotLauncher(
+    { isOpen, panelId, miloState, isGreeting, onDismissGreeting, onOpen },
+    ref,
+  ) {
+    const dockRef = React.useRef<HTMLDivElement>(null)
+    useCtaClearance(dockRef)
+
     return (
-      <div className="fixed bottom-5 right-5 z-40 print:hidden sm:bottom-7 sm:right-7">
-        <Button
+      <div ref={dockRef} className="milo-dock print:hidden" data-milo-dock="true">
+        {isGreeting ? <MiloGreeting onDismiss={onDismissGreeting} /> : null}
+
+        <button
           ref={ref}
           type="button"
-          variant="gold"
           onClick={onOpen}
           aria-expanded={isOpen}
           aria-controls={panelId}
           aria-label={SITE_COPILOT_COPY.launcherAria}
-          className={cn(
-            // The pill hugs Milo on the left and keeps its usual breathing
-            // room around the words on the right.
-            'h-auto gap-2.5 py-1.5 pl-1.5 pr-5 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.65)]',
-            LAUNCHER_HEIGHT,
-            isOpen && 'hidden',
-          )}
+          data-milo-launcher="true"
+          /* The attribute, not a `hidden` class. `.milo-launcher` sets
+             `display: inline-flex` in `globals.css`, and against a Tailwind
+             utility of equal specificity source order decides — which it won
+             silently, leaving a 112px mascot sitting over the open panel and
+             swallowing every click on the Ask button beneath it. The
+             attribute is also the honest one: it takes the button out of the
+             accessibility tree while the panel it opens is already open. */
+          hidden={isOpen}
+          className={cn('milo-launcher')}
         >
           {/* `aria-hidden`, because the button's own label already says who
               this is. Without it a screen reader reads the mascot's alt text
               and then the label, and announces Milo twice. */}
-          <span aria-hidden="true" className="contents">
-            <MiloAvatar state={miloState} size={MILO_SIZE} />
+          <span aria-hidden="true" className="milo-launcher-face">
+            <MiloAvatar responsive state={miloState} className="milo-launcher-image" />
+            {/* 18 §3.3 wants the AI label **on the launcher**, and the pill
+                that used to carry it is gone. It cannot live only in the
+                accessible name: that is the "disclaimer nobody sees" the rule
+                exists to prevent, and it would leave a sighted visitor with a
+                cartoon face and no statement of what it is. A chip on the
+                mascot is visible at all three sizes, including the 72px phone
+                where the "Ask Milo" label is not. */}
+            <span className="milo-launcher-tag">{AI_TAG}</span>
           </span>
-          <span
-            aria-hidden="true"
-            className="rounded-full bg-ink-900/90 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-on-ink-900"
-          >
-            {AI_TAG}
+
+          {/* Desktop only: at 390px the words would cost a third of the
+              screen's width to say what the accessible name already says. */}
+          <span aria-hidden="true" className="milo-launcher-label">
+            {SITE_COPILOT_COPY.launcherLabel}
           </span>
-          {SITE_COPILOT_COPY.launcherLabel}
-        </Button>
+        </button>
       </div>
     )
   },

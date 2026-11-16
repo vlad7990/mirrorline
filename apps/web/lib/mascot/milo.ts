@@ -37,8 +37,11 @@ export const MILO_STATES = ['idle', 'greeting', 'thinking', 'answering', 'declin
 
 export type MiloState = (typeof MILO_STATES)[number]
 
-/** The two avatar widths the build produces: 2× a 32px and a 56px display. */
-export const MILO_AVATAR_SIZES = [64, 112] as const
+/**
+ * The avatar widths the build produces, each 2× a display size: a 32px panel
+ * header, and the launcher's 72 / 88 / 112.
+ */
+export const MILO_AVATAR_SIZES = [64, 112, 224] as const
 
 export type MiloAvatarSize = (typeof MILO_AVATAR_SIZES)[number]
 
@@ -79,6 +82,7 @@ function art(avatarSlug: string, fullSlug: string, isPlaceholder: boolean, alt: 
     avatars: {
       64: `${BASE}/milo-${avatarSlug}-avatar-64.webp`,
       112: `${BASE}/milo-${avatarSlug}-avatar-112.webp`,
+      224: `${BASE}/milo-${avatarSlug}-avatar-224.webp`,
     },
     full: `${BASE}/milo-${fullSlug}-full-${MILO_FULL_WIDTH}.webp`,
     isPlaceholder,

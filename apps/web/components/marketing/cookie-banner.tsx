@@ -19,25 +19,66 @@
  * necessary record of a preference and the one category needing no consent.
  *
  * The storage moved to `lib/consent/cookie-consent.ts` when the co-pilot
- * launcher became a second reader of the same answer (18 §3.3): the launcher
- * may not appear until this banner is gone, and a rule two components depend
- * on should not stay private to one of them.
+ * launcher became a second reader of the same answer (18 §3.3). **The
+ * launcher no longer waits on it** (D74) — Milo is on every page from the
+ * first paint — so what the two share now is screen rather than state: this
+ * banner publishes its own height, and Milo adds it to his offset so he rides
+ * above the banner rather than under it.
  */
 
 import { Button, cn } from '@mirrorline/ui'
 import Link from 'next/link'
+import * as React from 'react'
 
 import { useCookieConsent } from '@/lib/consent/cookie-consent-context'
+
+/** What Milo reads to stay clear of this banner. Removed when it goes. */
+const BANNER_HEIGHT_PROPERTY = '--cookie-banner-height'
 
 export function CookieBanner() {
   // Hidden on the server and on the first client render, so the markup
   // matches and hydration cannot mismatch. The provider's effect decides.
   const { isResolved, hasChosen, choose } = useCookieConsent()
+  const bannerRef = React.useRef<HTMLDivElement>(null)
+
+  /**
+   * Publish the height while this is up, and take it back when it goes.
+   *
+   * A `ResizeObserver` rather than a single measurement, because the banner
+   * is two rows on a phone and one on a desktop and it reflows as the text
+   * does. A stale number here would park Milo in mid-air.
+   *
+   * The effect runs on every change of the two flags, so the property is
+   * written when the banner mounts and removed the moment a choice is made —
+   * the same answer, from the same state, as the banner's own disappearance.
+   */
+  React.useEffect(() => {
+    const element = bannerRef.current
+    const root = document.documentElement
+    if (!element) {
+      root.style.removeProperty(BANNER_HEIGHT_PROPERTY)
+      return undefined
+    }
+
+    const publish = () => {
+      root.style.setProperty(BANNER_HEIGHT_PROPERTY, `${Math.round(element.offsetHeight)}px`)
+    }
+
+    publish()
+    const observer = new ResizeObserver(publish)
+    observer.observe(element)
+
+    return () => {
+      observer.disconnect()
+      root.style.removeProperty(BANNER_HEIGHT_PROPERTY)
+    }
+  }, [isResolved, hasChosen])
 
   if (!isResolved || hasChosen) return null
 
   return (
     <div
+      ref={bannerRef}
       role="dialog"
       aria-modal="false"
       aria-labelledby="cookie-heading"

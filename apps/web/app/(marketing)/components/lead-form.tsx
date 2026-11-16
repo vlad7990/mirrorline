@@ -79,6 +79,14 @@ export interface LeadDialogButtonProps {
   size?: 'lg' | 'md'
   fullWidth?: boolean
   className?: string
+  /**
+   * Mark this as a button Milo must not sit on.
+   *
+   * Set it on the conversion button in a closing CTA band, not on every
+   * instance: it is what `useCtaClearance` looks for, and marking a button
+   * nobody scrolls past simply makes the mascot step aside for nothing.
+   */
+  isPrimaryCta?: boolean
   /** Overrides the default button label. */
   children?: React.ReactNode
 }
@@ -90,6 +98,7 @@ export function LeadDialogButton({
   size,
   fullWidth = false,
   className,
+  isPrimaryCta = false,
   children,
 }: LeadDialogButtonProps) {
   const [open, setOpen] = React.useState(false)
@@ -104,6 +113,7 @@ export function LeadDialogButton({
         /* DESIGN.md "Motion — Press": the one press affordance, on fine
            pointers only, dropped under prefers-reduced-motion. */
         className={cn('press', className)}
+        data-primary-cta={isPrimaryCta ? '' : undefined}
         onClick={() => setOpen(true)}
       >
         {children ?? copy.buttonLabel}
