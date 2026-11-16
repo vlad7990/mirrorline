@@ -6,6 +6,56 @@
 
 ---
 
+## Handoff — 15 November 2026, late evening (C3 groundwork; the panel is next)
+
+**Branch** `v4/site-and-metrics` · **last commit** `bb6cf97`, with this handoff
+on top · clean tree.
+**Preview:** https://mirrorline-7f7ykjfmg-vn-mn-product-group.vercel.app — 302
+at the edge behind deployment protection, sample mode (the key is local only).
+
+**Pick up at the C3 panel itself.** The answering half of the studio co-pilot
+is done and tested; what is left is the screen.
+
+### What this commit shipped
+
+Vlad's co-pilot note, fixed before the panel is built on top of it: **a
+message with two questions in it now gets both answered**, or is told which
+half is not being answered and handed to a person. "Can you guarantee 10,000
+followers? And how much is Creator?" returns the guarantee refusal *and* the
+Creator price, with `/pricing` cited. Six unit tests; D59 has the reasoning,
+including why "and" splits conservatively and why a question naming one of our
+plans now reads the price list directly.
+
+### What C3 still needs, in the order it will want doing
+
+1. **A studio stream.** `lib/copilot/site-stream.ts` is the browser half and
+   is hard-coded to `/api/copilot/site`. Generalise it — one reader, two
+   endpoints — rather than copying it. `readSiteMode` is already
+   surface-agnostic and should lose the "site" in its name when it moves.
+2. **Keep proposals in the transcript.** `transcript.ts` deliberately *drops*
+   `proposal` events, because the website has no Approve button. The studio
+   does: that branch becomes "accumulate", and the website panel simply
+   renders nothing for them. The test asserting the drop should become a test
+   asserting the website never receives one from the server.
+3. **The panel.** ⌘K from anywhere in `/app/*`, Escape closes, focus-trapped
+   dialog under `xl` and an inline aside above it — 18 §2.4 says to copy the
+   calendar's post-panel split so the studio has one answer to "where does the
+   detail go". C2's focus-restoration lesson applies: the trigger may be
+   hidden when the panel is open, and `focus()` on a hidden element silently
+   does nothing, so restore in an effect.
+4. **Approve and Dismiss.** `requiresApproval` is typed as the literal `true`
+   and proposals carry no handler by design (D56). The screen that performs
+   the move is the calendar's existing PR7 reschedule; wire Approve to that,
+   and keep "nothing ran until Approve" as a test rather than a promise.
+
+### Checks on this commit
+
+Unit **723** (up 6 from 717), e2e **311** unchanged, the twenty co-pilot specs
+green. Lint, typecheck, build and licence-check green; 432 packages, GSAP
+scope clean. No screenshots and no Lighthouse: this commit changes no page.
+
+---
+
 ## Handoff — 15 November 2026, evening (PR G, the gap-fill; C3 is next)
 
 **Branch** `v4/site-and-metrics` · **last commit** `5032853`, with this handoff
