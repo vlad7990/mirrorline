@@ -10,9 +10,24 @@
 
 import { describe, expect, test } from 'vitest'
 
-import type { CopilotAnswer } from './canned'
+import type { CopilotAnswer, Proposal } from './canned'
 import type { CopilotEvent } from './events'
-import { applyEvent, applyEvents, failExchange, startExchange } from './transcript'
+import {
+  applyEvent,
+  applyEvents,
+  decideProposal,
+  failExchange,
+  openProposals,
+  startExchange,
+} from './transcript'
+
+/** One proposal, shared by the tests below so identity assertions can be made. */
+const MOVE_POST: Proposal = {
+  kind: 'move-post',
+  summary: 'Move Thursday’s post to Tuesday',
+  detail: 'The Thursday slot moves to Tuesday at 09:00.',
+  requiresApproval: true,
+}
 
 function answer(parts: Partial<CopilotAnswer> = {}): CopilotAnswer {
   return {
@@ -150,22 +165,83 @@ describe('citations', () => {
   })
 })
 
-describe('what the website surface will not render', () => {
-  test('a proposal is dropped, because this surface has no Approve button', () => {
-    // 18 §1: the website co-pilot may answer, cite and hand off. A proposal
-    // card with nothing behind it would be the auto-approve shape §2.3
-    // forbids, drawn on a page that cannot execute anything.
-    const withProposal = applyEvent(GROWTH, {
-      type: 'proposal',
-      proposal: {
-        kind: 'move-post',
-        summary: 'Move Thursday’s post to Tuesday',
-        detail: 'The Thursday slot moves to Tuesday at 09:00.',
-        requiresApproval: true,
-      },
-    })
+describe('proposals are kept, and the decision is kept with them', () => {
+  test('a proposal event is accumulated rather than dropped', () => {
+    // This assertion used to be the opposite. The drop was protecting the
+    // website from something the server does not send it — which is now held
+    // on the server, in `canned.test.ts` — at the cost of the studio having
+    // to keep its own transcript. 18 §2.4 wants one answer to "where does
+    // the detail go", and two reducers is not one answer.
+    const proposed = applyEvent(GROWTH, { type: 'proposal', proposal: MOVE_POST })
 
-    expect(withProposal).toEqual(GROWTH)
+    expect(proposed.proposals).toEqual([{ proposal: MOVE_POST, decision: null }])
+    // Untouched: the proposal is not an answer and does not finish one.
+    expect(proposed.status).toBe('streaming')
+  })
+
+  test('the same proposal arriving twice is one card, not two Approve buttons', () => {
+    // The stream sends each proposal as its own event and `done` repeats all
+    // of them, so this is the ordinary path rather than an edge case. Two
+    // Approve buttons for one move is the worst duplicate on this surface.
+    const twice = applyEvents(GROWTH, [
+      { type: 'proposal', proposal: MOVE_POST },
+      done({ proposals: [MOVE_POST] }),
+    ])
+
+    expect(twice.proposals).toHaveLength(1)
+  })
+
+  test('a decision is recorded, and the proposal itself is never rewritten', () => {
+    const proposed = applyEvent(GROWTH, { type: 'proposal', proposal: MOVE_POST })
+    const approved = decideProposal(proposed, 0, 'approved')
+
+    expect(approved.proposals[0]?.decision).toBe('approved')
+    // `requiresApproval` is the literal `true` and carries no handler by
+    // design (D56). The decision sits beside the proposal, never inside it.
+    expect(approved.proposals[0]?.proposal).toBe(MOVE_POST)
+    expect(openProposals(approved)).toEqual([])
+  })
+
+  test('a decided proposal cannot be decided again, and says so by identity', () => {
+    const proposed = applyEvent(GROWTH, { type: 'proposal', proposal: MOVE_POST })
+    const approved = decideProposal(proposed, 0, 'approved')
+
+    // The same object back, not an equal one. This is how the panel knows not
+    // to perform the move a second time: a double-click, a duplicated event
+    // or a re-render all land here and all get the unchanged exchange.
+    expect(decideProposal(approved, 0, 'approved')).toBe(approved)
+    expect(decideProposal(approved, 0, 'dismissed')).toBe(approved)
+    expect(approved.proposals[0]?.decision).toBe('approved')
+  })
+
+  test('an index that does not exist changes nothing', () => {
+    expect(decideProposal(GROWTH, 0, 'approved')).toBe(GROWTH)
+    expect(decideProposal(GROWTH, -1, 'approved')).toBe(GROWTH)
+  })
+
+  test('a repeat does not reset a decision the person already made', () => {
+    const dismissed = decideProposal(
+      applyEvent(GROWTH, { type: 'proposal', proposal: MOVE_POST }),
+      0,
+      'dismissed',
+    )
+
+    // `done` re-sends every proposal. A dismissed one must not come back
+    // asking again.
+    const after = applyEvent(dismissed, done({ proposals: [MOVE_POST] }))
+
+    expect(after.proposals).toHaveLength(1)
+    expect(after.proposals[0]?.decision).toBe('dismissed')
+  })
+
+  test('the website is handed none, so its array stays empty', () => {
+    // Not because the reducer drops them — it no longer does — but because
+    // the server sends the site surface no proposals at all. The assertion
+    // that this is true of every canned site answer is in `canned.test.ts`,
+    // which is where a claim about what the server sends belongs.
+    const answered = applyEvent(GROWTH, done())
+
+    expect(answered.proposals).toEqual([])
   })
 })
 

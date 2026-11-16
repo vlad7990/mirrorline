@@ -244,6 +244,30 @@ describe('proposals are inert', () => {
     expect(cannedStudioAnswer('Why was this video held?').proposals).toEqual([])
     expect(cannedSiteAnswer('What does the Pilot plan include?').proposals).toEqual([])
   })
+
+  test('the website surface is never sent a proposal, whatever it is asked', () => {
+    // 18 §1: the website co-pilot may answer, cite and hand off, and nothing
+    // else. **This is where that rule lives now.** `transcript.ts` used to
+    // enforce it by dropping `proposal` events client-side, which the studio
+    // panel then could not use — so the rule moved to the server, where a
+    // claim about what we send belongs, and the reducer became
+    // surface-agnostic. If this test ever fails, the website panel is being
+    // handed a card with an Approve button and nothing behind it.
+    const questions = [
+      'What does the Pilot plan include?',
+      'Can you move my Thursday post to Tuesday?',
+      'Can you pause posting on my Instagram account?',
+      'Can you swap this to a different format?',
+      'Will I get 10,000 followers?',
+      'What is the capital of Mongolia?',
+      '',
+      'move pause swap',
+    ]
+
+    for (const question of questions) {
+      expect(cannedSiteAnswer(question).proposals, question).toEqual([])
+    }
+  })
 })
 
 describe('retrieval', () => {

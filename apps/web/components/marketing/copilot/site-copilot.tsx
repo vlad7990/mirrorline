@@ -35,7 +35,7 @@ import { CopilotPanel } from '@/components/marketing/copilot/copilot-panel'
 import { useCookieConsent } from '@/lib/consent/cookie-consent-context'
 import type { CopilotMode } from '@/lib/copilot/canned'
 import { SITE_COPILOT_COPY } from '@/lib/copilot/site-copilot-copy'
-import { readSiteMode, streamSiteAnswer } from '@/lib/copilot/site-stream'
+import { readCopilotMode, streamCopilotAnswer } from '@/lib/copilot/stream'
 import { type Exchange, applyEvent, failExchange, startExchange } from '@/lib/copilot/transcript'
 
 export function SiteCopilot() {
@@ -69,7 +69,7 @@ export function SiteCopilot() {
     if (!isOpen || mode !== null) return undefined
 
     let isCurrent = true
-    void readSiteMode().then((next) => {
+    void readCopilotMode().then((next) => {
       if (isCurrent && isMountedRef.current) setMode(next)
     })
 
@@ -99,7 +99,15 @@ export function SiteCopilot() {
       abortRef.current = controller
 
       try {
-        for await (const event of streamSiteAnswer({ question, signal: controller.signal })) {
+        for await (const event of streamCopilotAnswer({
+          surface: 'site',
+          question,
+          // The reader says nothing in its own voice: the words for a failed
+          // request come from here, which is what lets the studio pass its
+          // own without the two surfaces sharing prose.
+          copy: SITE_COPILOT_COPY,
+          signal: controller.signal,
+        })) {
           update(id, (exchange) => applyEvent(exchange, event))
         }
 
