@@ -38,16 +38,16 @@
 import { YOUTUBE_PRIVATE_UNTIL_APPROVED } from '@/lib/copy/platform-limits'
 
 /** The price, exactly as 09 §11 writes it. */
-export const ADDON_PRICE = '$400'
+export const ADDON_PRICE = '$600'
 
 /** The same figure as a number, so a test can hold the two together. */
-export const ADDON_PRICE_USD = 400
+export const ADDON_PRICE_USD = 600
 
 /** What the price buys. Never "per video": 09 §10 rules out per-unit charges. */
 export const ADDON_PERIOD = 'a month, on top of any monthly plan'
 
-/** How many long videos a month. 09 §11. */
-export const ADDON_VIDEOS_PER_MONTH = 4
+/** How many episodes a month. 09 §11. */
+export const ADDON_EPISODES_PER_MONTH = 2
 
 export const ADDON_NAME = 'Long-form YouTube'
 
@@ -86,9 +86,14 @@ export interface AddonFact {
  */
 export const ADDON_FACTS: readonly AddonFact[] = [
   {
-    label: 'Four long videos a month',
+    label: 'Two episodes a month',
     detail:
-      'One a week, cut from the recordings you already send us. Titled, chaptered and given a thumbnail.',
+      'Cut from the recordings you already send us, then titled, chaptered and given a thumbnail.',
+  },
+  {
+    label: 'One of them is already in Scale',
+    detail:
+      'Scale includes an episode a month, so there the add-on takes you from one to two rather than from none to two. On every other plan it is both of them.',
   },
   {
     label: 'The shorts get somewhere to point',

@@ -4919,3 +4919,92 @@ GSAP scope clean, and no dependency added.
 written for an agent and `docs/PROGRESS.md` is a handoff log; neither answered
 "how do I run this", and the one thing this PR most needs to be discoverable
 is a table of which commands can spend money.
+
+---
+
+## 2026-11-16 · D68 · Two corrections from Vlad, and the second one was a true sentence that made a silence look deliberate
+
+Both land together because both are the same kind of defect: copy that passed
+every check and was wrong about the world.
+
+### The add-on is $600 for 2 episodes, and Scale already includes one
+
+D64 wrote **$400/mo for 4 long videos**, recorded it explicitly as my
+judgement rather than a transcription, and flagged it for confirmation as
+"Needs Vlad M". The confirmation changed it: **$600 a month for 2 episodes**.
+
+**The part M did not think to ask about is the more interesting one.** Scale
+already includes one episode a month. So on Scale the add-on is an *upgrade* —
+one episode becomes two — and the first version would have sold a Scale
+account something it already partly had. Nothing in the flagged question
+would have surfaced that, because the question was "is $400 right?" rather
+than "is this the whole shape?". **A figure flagged for confirmation is not
+the same as a design flagged for confirmation**, and it was the design that
+was wrong.
+
+The Scale plan card now says so, and the add-on card carries "One of them is
+already in Scale" in its own feature list rather than in a footnote.
+
+### Our YouTube app has no approved upload scope either
+
+Vlad's answer to the second half of M: **no**, and the submission has not been
+made. PR D raised the possibility in 09 §11 and declined to rewrite nine pages
+on an assumption. The assumption is now a fact, so the sweep happened.
+
+**The defect was not a false sentence anywhere.** Every page said something
+true: posts go out through the official APIs of Instagram, TikTok and YouTube.
+Six of them also carried TikTok's private-until-audited caveat. None mentioned
+YouTube's identical limit — not because anyone decided YouTube was different,
+but because TikTok's limit was known when the copy was written and YouTube's
+had not been asked about.
+
+**That is worse than having said nothing about either**, and it is worth being
+precise about why. A page that qualifies one platform and stays silent about
+the one standing beside it does not read as incomplete; it reads as
+*deliberate*. The TikTok caveat is what made the YouTube silence into a claim.
+
+Eight surfaces corrected: the calendar legend, `/product`'s publishing
+section, the Publisher agent's limit, the home page's publishing line, the
+FAQ, `/trust`, `/metrics`, `/agents`, `/sign-up`, the pricing FAQ and the
+Scale plan card. The calendar legend is the one that mattered most — it draws
+**three platform rows** and qualified one of them, so the screen a client sees
+every day was one third honest about its own grid.
+
+### The guard is a sweep, and it is the inverse of the banned-phrase one
+
+`banned-phrases.test.ts` sweeps for claims we must **not** make.
+`youtube-claims.test.ts` is the opposite: a file that names YouTube *and* a
+publishing verb must also carry the caveat. It needed its own file — a
+required caveat expressed as a banned pattern would invert the meaning of the
+module it lived in.
+
+Three things make it a guard rather than decoration:
+
+1. **It asserts it reached real files** (>100, including `week-grid.tsx`).
+   D55's theme-key typo is the precedent: a sweep that reads nothing passes
+   exactly like a sweep that reads everything.
+2. **Every allowlisted file carries a written reason**, and a test fails if a
+   reason is shorter than a sentence or the file has been deleted. The
+   allowlist is for files where YouTube is a *source* of footage or a filter
+   label — the opposite direction to publishing — not for files that are
+   inconvenient.
+3. **The one entry that rests on composition is verified.** `/pricing`'s page
+   names YouTube only in its own doc comment and carries the caveat through
+   `<LongFormAddon />`. An excuse of the form "a component it renders says it"
+   would wave through any page, so a separate test asserts that page really
+   does render the card. Remove the card and the excuse goes red rather than
+   the sweep going quiet.
+
+It found **six** files on its first run, five of them real gaps I had missed
+by hand — `/agents`, `/sign-up`, the pricing FAQ, the Scale chip and
+`/trust` — after I had already swept what I believed was the whole list. The
+sixth was a regex of mine too narrow to match `/trust`'s own phrasing.
+
+**"Needs Vlad G" stays open.** The audit still has to be submitted and passed;
+what changed is only that the site now says so everywhere it claims to post.
+
+### Measurements
+
+Unit **782**, up 5: four on the sweep and its allowlist, one on the legend
+covering every platform the grid draws. Lint, typecheck, build and
+licence-check green; 432 packages, GSAP scope clean.

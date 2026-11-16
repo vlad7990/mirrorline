@@ -51,8 +51,8 @@ export const PUBLISHING_DESTINATIONS: readonly PublishingDestination[] = [
     id: 'youtube',
     platform: 'YouTube Shorts',
     how: 'Official YouTube Data API',
-    status: 'official-api',
-    note: 'Uploaded to your channel, with the description and the links you approved.',
+    status: 'audit-pending',
+    note: 'Uploaded to your channel, with the description and the links you approved. Uploads stay private until YouTube approves our app — you will see them; nobody else will until that clears.',
   },
 ]
 

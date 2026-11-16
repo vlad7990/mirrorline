@@ -72,7 +72,7 @@ const CLIENT_STEPS: readonly ClientStep[] = [
   {
     id: 'schedule',
     title: 'Schedule',
-    line: 'Approved videos land on a calendar across Instagram, TikTok and YouTube Shorts. You can move or cancel any of them.',
+    line: 'Approved videos land on a calendar across Instagram, TikTok and YouTube Shorts. You can move or cancel any of them. TikTok posts and YouTube uploads stay private until those platforms have approved our app.',
     Icon: CalendarDays,
   },
   {

@@ -109,7 +109,7 @@ export const PUBLIC_AGENTS: readonly PublicAgent[] = [
     short: 'Posts to the accounts you connected, through the official APIs.',
     does: 'Puts approved posts out several times a day at the times that have worked for your audience, through the Instagram, TikTok and YouTube APIs, and records the platform ID of each post.',
     limit:
-      'Accounts you own and connected, only. It starts at one to three posts a day per platform, far below what the platforms allow. TikTok posts stay private until our app is audited.',
+      'Accounts you own and connected, only. It starts at one to three posts a day per platform, far below what the platforms allow. TikTok posts and YouTube uploads both stay private until those platforms have approved our app.',
     inLoop:
       'The end of the outward journey. Its published posts become the Performance Analyst’s input.',
     metric:

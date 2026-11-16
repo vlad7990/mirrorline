@@ -18,6 +18,7 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 
 import {
+  BOTH_PRIVATE_UNTIL_APPROVED,
   TIKTOK_PRIVATE_UNTIL_APPROVED,
   YOUTUBE_PRIVATE_UNTIL_APPROVED,
   privateUntilApproved,
@@ -46,17 +47,27 @@ describe('privateUntilApproved', () => {
     expect(sentence).not.toMatch(/soon|shortly|temporar|currently|at the moment/i)
   })
 
-  test('the calendar legend renders the shared constant rather than its own copy', () => {
+  test('the calendar legend renders a shared constant rather than its own copy', () => {
     // Arrange: the guard that makes the first test mean anything. A legend
     // that reverts to an inline string keeps every other assertion green.
     const weekGrid = readFileSync(join(__dirname, '../../components/calendar/week-grid.tsx'), 'utf8')
 
     // Assert: it imports the constant and renders it...
-    expect(weekGrid).toContain('TIKTOK_PRIVATE_UNTIL_APPROVED')
-    expect(weekGrid).toContain('{TIKTOK_PRIVATE_UNTIL_APPROVED}')
+    expect(weekGrid).toContain('BOTH_PRIVATE_UNTIL_APPROVED')
+    expect(weekGrid).toContain('{BOTH_PRIVATE_UNTIL_APPROVED}')
 
-    // ...and no longer carries the claim as a literal. The comment above the
-    // span names the platform, so this looks for the claim rather than a word.
+    // ...and carries neither claim as a literal.
     expect(weekGrid).not.toContain('TikTok posts stay private')
+    expect(weekGrid).not.toContain('YouTube uploads stay private')
+  })
+
+  test('the legend covers every platform the grid has a row for', () => {
+    // The correction of 16 November. The legend named TikTok alone while the
+    // grid drew three platform rows, so the calendar qualified one third of
+    // its own claim. Vlad confirmed our YouTube app has no approved upload
+    // scope either.
+    expect(BOTH_PRIVATE_UNTIL_APPROVED).toMatch(/TikTok/)
+    expect(BOTH_PRIVATE_UNTIL_APPROVED).toMatch(/YouTube/)
+    expect(BOTH_PRIVATE_UNTIL_APPROVED).toMatch(/stay private/)
   })
 })

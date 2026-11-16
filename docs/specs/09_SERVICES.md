@@ -156,7 +156,7 @@ Prices in US dollars. "Best for" comes from the account types in 13 §1.
 |---|---|---|---|
 | **Pilot** | **$750** | 2 weeks. 12 videos, scheduling, the Niche Scan and one full report. The paid trial — not a subscription. | A business trying us before committing, on a new or an existing account |
 | **Growth** | **$1,500/mo** | 90 posts a month, 2 remakes a week, 3 platforms, the weekly ledger | A business with an existing account that posts rarely or generically |
-| **Scale** | **$3,000/mo** | 180 posts a month, daily remakes, a monthly strategy call, and the portfolio view across several brands | A business running more than one brand or account, or pushing volume |
+| **Scale** | **$3,000/mo** | 180 posts a month, daily remakes, a monthly strategy call, the portfolio view across several brands, and **one long-form YouTube episode a month** | A business running more than one brand or account, or pushing volume |
 | **Creator** | **$499/mo** | ~40 posts a month, 1 remake a week, 2 platforms | An individual — creator, expert or personal brand — with footage and an audience |
 | **Studio** | **$79/mo** | **Waitlist now.** From month 2: 60 posts and 4 created videos a month | An individual starting an account from zero |
 
@@ -173,7 +173,17 @@ price is written down, and **it is not open yet either.**
 
 | Add-on | Price | Includes | Best for |
 |---|---|---|---|
-| **Long-form YouTube** | **$400/mo**, on top of any monthly plan | **Waitlist now.** 4 long videos a month, published to the client's own YouTube channel — the same recordings the shorts are already cut from — edited, titled, chaptered and given a thumbnail | An account that already sends us its own long recordings and wants the shorts to have somewhere to point |
+| **Long-form YouTube** | **$600/mo**, on top of any monthly plan | **Waitlist now.** 2 episodes a month, published to the client's own YouTube channel — the same recordings the shorts are already cut from — edited, titled, chaptered and given a thumbnail | An account that already sends us its own long recordings and wants the shorts to have somewhere to point |
+
+**Corrected by Vlad, 16 November.** The first version of this row read
+$400/mo for 4 long videos, which was my figure and not his — D64 recorded it
+as a judgement and flagged it for confirmation, and the confirmation changed
+it. It is **$600 a month for 2 episodes**.
+
+**Scale already includes one episode a month**, which the first version
+missed entirely. So on Scale the add-on is an *upgrade* rather than a
+purchase — one episode becomes two — and nothing on the site may sell it to a
+Scale account as though they had none.
 
 **It only works on the "you send" path** (§1), and that is a real limit rather
 than a soft one. It needs the client's own long recording. A remake copies a

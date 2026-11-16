@@ -49,3 +49,21 @@ export const TIKTOK_PRIVATE_UNTIL_APPROVED = privateUntilApproved('TikTok')
  * and ours has not started it — `docs/PROGRESS.md`, "Needs Vlad G".
  */
 export const YOUTUBE_PRIVATE_UNTIL_APPROVED = privateUntilApproved('YouTube')
+
+/**
+ * Both, for the places that make one posting claim covering every platform.
+ *
+ * Vlad confirmed on 16 November that our YouTube app does **not** hold an
+ * approved upload scope. Until this, the site said the awkward thing about
+ * TikTok and left YouTube alone — not because anyone decided YouTube was
+ * different, but because TikTok's limit was known when the copy was written
+ * and YouTube's was not yet asked about. A caveat that is accurate about one
+ * platform and silent about an identical limit on another is the shape of a
+ * claim somebody finds out about later.
+ *
+ * The calendar legend, the home page's publishing line, the FAQ, `/trust` and
+ * `/metrics` each make a single claim about "Instagram, TikTok and YouTube",
+ * so each takes this rather than two sentences.
+ */
+export const BOTH_PRIVATE_UNTIL_APPROVED =
+  'TikTok posts and YouTube uploads stay private until those platforms have approved our app.'

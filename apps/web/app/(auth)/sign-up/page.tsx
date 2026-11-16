@@ -47,7 +47,7 @@ const STEPS: readonly OnboardingStep[] = [
   {
     id: 'accounts',
     title: 'Connect your own accounts',
-    line: 'Instagram, TikTok and YouTube, through their official APIs. You can disconnect any of them at any time.',
+    line: 'Instagram, TikTok and YouTube, through their official APIs. You can disconnect any of them at any time. TikTok posts and YouTube uploads stay private until those platforms have approved our app.',
   },
   {
     id: 'upload',

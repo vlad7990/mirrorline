@@ -90,7 +90,7 @@ test.describe('/pricing', () => {
     // written down; this asserts the page renders that figure rather than a
     // second one typed here.
     await expect(section.getByRole('heading', { name: 'Long-form YouTube' })).toBeVisible()
-    await expect(section.getByText('$400', { exact: true })).toBeVisible()
+    await expect(section.getByText('$600', { exact: true })).toBeVisible()
 
     // The honest half, which is the whole reason 19 v2's objection no longer
     // applies — asserted word for word, because a paraphrase is the failure

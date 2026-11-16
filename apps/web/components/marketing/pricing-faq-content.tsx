@@ -73,7 +73,8 @@ export const PRICING_FAQ: readonly FaqItem[] = [
         </p>
         <p className="m-0">
           Long-form YouTube is not a plan yet. We will not sell it before the platform audit it
-          needs has passed.
+          needs has passed — until then YouTube uploads stay private, which is true of the Shorts we
+          already post for you as well.
         </p>
       </>
     ),

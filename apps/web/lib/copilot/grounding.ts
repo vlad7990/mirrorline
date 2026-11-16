@@ -82,12 +82,12 @@ import {
   SCAN_STEPS,
 } from '@/components/marketing/home/problem-content'
 import {
+  ADDON_EPISODES_PER_MONTH,
   ADDON_FACTS,
   ADDON_NAME,
   ADDON_PERIOD,
   ADDON_PRICE,
   ADDON_SUMMARY,
-  ADDON_VIDEOS_PER_MONTH,
   PRIVATE_UNTIL_APPROVED,
   WAITLIST_LABEL,
   WHY_NOT_OPEN,
@@ -146,13 +146,13 @@ function plansSection(): CorpusSection {
    *
    * The limit sits in the same chunk as the price for the reason it sits in
    * the same card: retrieval can return a chunk without its neighbours, and a
-   * chunk reading "$400 a month" with the audit caveat one chunk away is how
+   * chunk reading "$600 a month" with the audit caveat one chunk away is how
    * the bot ends up quoting a price for something nobody can buy.
    */
   const addon = [
     `Add-on: ${ADDON_NAME} — ${ADDON_PRICE} ${ADDON_PERIOD}`,
     `  What it is: ${ADDON_SUMMARY}`,
-    `  Volume: ${ADDON_VIDEOS_PER_MONTH} long videos a month.`,
+    `  Volume: ${ADDON_EPISODES_PER_MONTH} episodes a month; Scale already includes one.`,
     `  Not open yet — ${WAITLIST_LABEL} only, and there is nothing to pay. ${PRIVATE_UNTIL_APPROVED} ${WHY_NOT_OPEN}`,
     `  ${ADDON_FACTS.map((fact) => `${fact.label}: ${fact.detail}`).join(' ')}`,
   ].join('\n')

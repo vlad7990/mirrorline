@@ -22,7 +22,7 @@ import {
   ADDON_PRICE,
   ADDON_PRICE_USD,
   ADDON_SUMMARY,
-  ADDON_VIDEOS_PER_MONTH,
+  ADDON_EPISODES_PER_MONTH,
   PRIVATE_UNTIL_APPROVED,
   WAITLIST_LABEL,
   WHY_NOT_OPEN,
@@ -101,7 +101,7 @@ describe('the long-form YouTube add-on', () => {
     // The figure in the prose and the figure a caption could render are the
     // same one. `postsInPeriod` has the identical arrangement on the plans,
     // and for the identical reason: a sentence should not be load-bearing.
-    expect(ADDON_VIDEOS_PER_MONTH).toBe(4)
-    expect(ADDON_FACTS[0]?.label).toContain('Four')
+    expect(ADDON_EPISODES_PER_MONTH).toBe(2)
+    expect(ADDON_FACTS[0]?.label).toContain('Two')
   })
 })

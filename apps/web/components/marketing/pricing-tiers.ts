@@ -105,6 +105,7 @@ export const PRICING_TIERS: readonly PricingTier[] = [
       'A/B hooks',
       'Monthly strategy call',
       'Portfolio view across brands',
+      'One long-form YouTube episode a month — private until YouTube approves our app',
     ],
     postsInPeriod: 180,
     isSuggested: false,

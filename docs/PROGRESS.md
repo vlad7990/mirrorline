@@ -6,6 +6,75 @@
 
 ---
 
+## Handoff — 16 November 2026, night (both corrections are in; home-page performance is next)
+
+**Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.
+Nothing promoted.
+
+Two corrections from Vlad, and both were the same kind of defect: copy that
+passed every check and was wrong about the world.
+
+### The add-on is $600 for 2 episodes, and Scale already includes one
+
+D64 wrote $400 for 4 long videos, recorded it as **my judgement** rather than
+a transcription, and flagged it as "Needs Vlad M". The answer changed it.
+
+**The part the flagged question did not cover is the one worth remembering.**
+Scale already includes an episode a month, so on Scale the add-on is an
+*upgrade* — one becomes two — and the first version would have sold a Scale
+account something it already partly had. The question asked was "is $400
+right?", not "is this the right shape", and it was the shape that was wrong.
+**A figure flagged for confirmation is not a design flagged for
+confirmation.**
+
+### Our YouTube app has no approved upload scope, and the silence was the bug
+
+**No page said anything false.** Every one said something true: posts go out
+through the official APIs of Instagram, TikTok and YouTube. Six also carried
+TikTok's private-until-audited caveat. None mentioned YouTube's identical
+limit.
+
+**That is worse than having said nothing about either.** A page that qualifies
+one platform and stays silent about the one beside it does not read as
+incomplete — it reads as deliberate. The TikTok caveat is what turned the
+YouTube silence into a claim.
+
+Corrected on the calendar legend, `/product`'s publishing section, the
+Publisher agent's limit, the home publishing line, the FAQ, `/trust`,
+`/metrics`, `/agents`, `/sign-up`, the pricing FAQ and the Scale plan card.
+**The legend mattered most**: it draws three platform rows and qualified one
+of them, so the screen a client sees daily was a third honest about its own
+grid.
+
+**The guard is `youtube-claims.test.ts`** — the inverse of the banned-phrase
+sweep. A file naming YouTube *and* a publishing verb must carry the caveat. It
+asserts it reached real files (D55's theme-key lesson), every allowlist entry
+carries a written reason that a test length-checks, and the single entry
+resting on composition (`/pricing` renders `<LongFormAddon />`) is itself
+verified, so removing the card goes red rather than quiet.
+
+**It found six files on its first run**, five of them real gaps I had missed
+by hand after believing I had swept the whole list.
+
+**"Needs Vlad G" stays open** — the audit still has to be submitted and
+passed. M is closed.
+
+### Checks
+
+Unit **782** (up 5). Lint, typecheck, build and licence-check green; 432
+packages, GSAP scope clean.
+
+### The queue
+
+1. **Home-page performance** — `reel-backdrop.tsx` asks the optimiser for
+   `w=3840` re-encodes of 640px-wide sources. Lighthouse the home page on the
+   same three-run method; target mobile ≥ 90. It has never been measured and
+   last sat at 80.
+2. **F6** — the eleven pages still on the old kit onto the F1 kit, same rules
+   as F1–F5.
+
+---
+
 ## Handoff — 16 November 2026, evening (the dev server is pinned; the corrections are next)
 
 **Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.
@@ -2706,8 +2775,16 @@ L. **Optional, later: a Rive file from a designer.** The five states are
    changes. Worth it only if the mascot earns its place first — the CSS
    version costs 47 KB and no new dependency.
 
-M. **Two YouTube questions, both from PR D, and the second one is the bigger
-   of the two.**
+M. ~~**Two YouTube questions, both from PR D.**~~ **Answered 16 November,
+   and both answers changed the site.** The add-on is **$600 a month for 2
+   episodes**, not $400 for 4 — and **Scale already includes one episode a
+   month**, which the flagged question had not thought to ask and which
+   nothing would have surfaced. Our YouTube app **does not** hold an approved
+   upload scope, so every page claiming to post there now carries the same
+   caveat TikTok has, held by a sweep (`youtube-claims.test.ts`). D68 has
+   both. **G stays open**: the audit still has to be submitted and passed.
+
+   The original question, kept because the second half of it is the lesson:
 
    1. **Confirm $400 a month for the long-form add-on**, or give me the
       figure you want. 09 §11 is the one place a price is written down, so a

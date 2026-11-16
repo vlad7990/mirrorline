@@ -188,7 +188,7 @@ export const FEATURE_TABS: readonly FeatureTab[] = [
     description: 'Several posts a day, to accounts you own.',
     headline: 'To your accounts,',
     headlineAccent: 'through the front door.',
-    body: 'Several posts a day on Instagram, TikTok and YouTube Shorts, through the official APIs, to accounts you connect and can disconnect without asking us. Approve each post, or let them go after 24 hours.',
+    body: 'Several posts a day on Instagram, TikTok and YouTube Shorts, through the official APIs, to accounts you connect and can disconnect without asking us. Approve each post, or let them go after 24 hours. TikTok posts and YouTube uploads stay private until those platforms have approved our app.',
     stat: 'Growth plan · 21 posts a week',
     stage: {
       kind: 'publish',

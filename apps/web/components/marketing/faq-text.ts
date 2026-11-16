@@ -55,7 +55,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     question: 'Do you post for me?',
     answer: [
       [
-        'Yes, once you approve. The Publisher puts approved posts out through the official APIs of Instagram, TikTok and YouTube, at the times that have worked for your audience.',
+        'Yes, once you approve. The Publisher puts approved posts out through the official APIs of Instagram, TikTok and YouTube, at the times that have worked for your audience. TikTok posts and YouTube uploads stay private until those platforms have approved our app — you will see them on the account; nobody else will until that clears.',
       ],
       [
         'You can leave every post on manual approval, or turn auto-approve on yourself. Nothing is posted on your behalf until you choose one.',

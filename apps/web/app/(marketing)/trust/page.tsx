@@ -85,7 +85,7 @@ const RULES: readonly Rule[] = [
     title: 'Official platform APIs only',
     paragraphs: [
       'Posts go out through the Instagram, TikTok and YouTube APIs, to accounts you connected yourself and can disconnect yourself, at any time, without asking us.',
-      'No device automation, no app clones, no proxies, no bought or borrowed accounts, no scraping. We start well below the platforms’ posting limits and stay there. While our TikTok app is still being reviewed, TikTok posts stay private.',
+      'No device automation, no app clones, no proxies, no bought or borrowed accounts, no scraping. We start well below the platforms’ posting limits and stay there. While our TikTok and YouTube apps are still being reviewed, TikTok posts and YouTube uploads stay private.',
     ],
   },
   {

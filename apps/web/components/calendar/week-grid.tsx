@@ -18,7 +18,7 @@ import type { PostStatus, ScheduledPost, WeekSchedule } from '@mirrorline/mock'
 import { cn } from '@mirrorline/ui'
 import type * as React from 'react'
 
-import { TIKTOK_PRIVATE_UNTIL_APPROVED } from '@/lib/copy/platform-limits'
+import { BOTH_PRIVATE_UNTIL_APPROVED } from '@/lib/copy/platform-limits'
 import { PostChip, STATUS_SWATCH_CLASS, statusWord } from './post-chip'
 import { type ChipDragStart, type ChipDragState, DROP_CELL_ATTRIBUTE } from './use-chip-drag'
 
@@ -153,10 +153,12 @@ export function WeekGrid({
           </span>
         ))}
         {/* 02_BRAND_AND_VOICE: say the limit plainly rather than hide it.
-            The sentence moved to `lib/copy/platform-limits.ts` in PR D, which
-            shows the YouTube version of it on /pricing. Both are built from
-            one template, so "the same words" survives a rewrite of either. */}
-        <span>{TIKTOK_PRIVATE_UNTIL_APPROVED}</span>
+            The sentence moved to `lib/copy/platform-limits.ts` in PR D. It
+            named TikTok alone until Vlad confirmed on 16 November that our
+            YouTube app has no approved upload scope either — the grid shows
+            three platform rows, so a legend qualifying one of them was the
+            calendar's own claim being half true. */}
+        <span>{BOTH_PRIVATE_UNTIL_APPROVED}</span>
       </div>
     </div>
   )

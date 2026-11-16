@@ -155,7 +155,7 @@ const HONESTY_RULES: readonly HonestyRule[] = [
   {
     id: 'limits',
     title: 'Platform limits are stated, not hidden',
-    body: 'TikTok posts stay private until our app is audited, so the dashboard says that where it matters rather than reporting a reach of nothing.',
+    body: 'TikTok posts and YouTube uploads stay private until those platforms have approved our app, so the dashboard says that where it matters rather than reporting a reach of nothing.',
   },
   {
     id: 'bad-weeks',
