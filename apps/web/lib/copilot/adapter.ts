@@ -96,8 +96,32 @@ export const STUDIO_MAX_TOKENS = 8_000
  */
 export const STUDIO_EFFORT = 'medium' as const
 
-/** Live when a key exists, sample when it does not. */
+/**
+ * Set by `pnpm dev` to pin the dev server to sample mode.
+ *
+ * The third door, and the one nothing closed until now. The e2e suite pins
+ * the key empty and `pnpm test:copilot-live` is opt-in by construction, but
+ * `pnpm dev` read `.env.local` like any other Next process and answered from
+ * the live model — which spent a few tenths of a cent during a screenshot run
+ * before anyone noticed.
+ *
+ * **It had to be a flag rather than an unset variable.** Next loads
+ * `.env.local` itself, after the process has started, so a wrapper that
+ * deleted `ANTHROPIC_API_KEY` before spawning would have it put straight back
+ * a moment later. The only thing that survives that is a signal the app
+ * itself honours.
+ *
+ * **And it is an opt-out rather than an opt-in**, which is the less obvious
+ * half. Requiring an explicit "go live" would have changed the preview and
+ * production, where a key being present *is* the intent — the Vercel preview
+ * answers live on purpose (D60). This fires only where `pnpm dev` sets it.
+ */
+export const SAMPLE_FLAG = 'MIRRORLINE_COPILOT_SAMPLE'
+
+/** Live when a key exists, sample when it does not — or when pinned. */
 export function copilotMode(env: EnvLike = process.env): CopilotMode {
+  // An explicit "do not spend" outranks a key being present.
+  if (env[SAMPLE_FLAG]?.trim() === '1') return 'sample'
   const key = env.ANTHROPIC_API_KEY?.trim()
   return key ? 'live' : 'sample'
 }

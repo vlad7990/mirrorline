@@ -6,6 +6,75 @@
 
 ---
 
+## Handoff — 16 November 2026, evening (the dev server is pinned; the corrections are next)
+
+**Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.
+Nothing promoted.
+
+**`pnpm dev` can no longer spend money.** The third door is shut, and the
+repo has a README for the first time.
+
+| Command | Answers from | Costs money |
+|---|---|---|
+| `pnpm dev` | sample fixtures | no |
+| `pnpm dev:live` | the real API | **yes** |
+| `pnpm test:copilot-live` | the real API | **yes**, ~$0.011 a run |
+| `pnpm test:e2e` | sample fixtures | no |
+
+**Unsetting the key cannot work, and that is why this took a flag.** Next
+loads `.env.local` itself, after the process has started, so a wrapper that
+deleted `ANTHROPIC_API_KEY` before spawning would have it back a moment later.
+`copilotMode()` honours `MIRRORLINE_COPILOT_SAMPLE` instead, and `pnpm dev`
+sets it. It is an **opt-out**, so previews and production are untouched — they
+answer live when a key is present, which is the intent there (D60).
+
+**The launcher exists for the banner.** It prints which mode it is in before
+the server starts. The hole was never that `pnpm dev` *could* spend; it was
+that it could spend without anyone knowing, and a flag nobody sees is the same
+hole with a longer name.
+
+**Verified end to end, not just in a unit test.** Against a `.env.local` that
+really does hold a key, `pnpm dev` reports `"mode":"sample"` **and**
+`"verifiedByRealCount":false` — D60's own live proof read backwards. That
+field is true only when the corpus size came from a real `countTokens` call,
+so reading false with a key present means the server did not make even the
+free counting request.
+
+### Step 1, reported (it was owed from an earlier session)
+
+- **The preview is live.** `mirrorline-afc8t61ik…` (`140b024`) answers
+  `"mode":"live"`, Haiku 4.5 on the site and Sonnet 5 in the studio, corpus
+  7,060 tokens with `verifiedByRealCount:true`. Cap **$20/month** per
+  workspace; both workspaces read **$0.00, 0 calls** this month.
+- **`pnpm test:copilot-live` passes** — 7 tests, 6 calls, **$0.0111 a run**,
+  97% of input tokens served from the cached prefix. Three runs while it was
+  written, ≈ **$0.033** total. *Quoted from D60; not re-run today.*
+- **The cap and the rate limit stop the call, not just the answer.**
+  `stops-requests.test.ts` stubs `fetch` and asserts the billing endpoint is
+  never reached. Two details worth keeping: the token count happens *before*
+  the cap check, so one **free** request goes out and the completion is
+  refused; and the rate limit is stricter — a rate-limited question makes no
+  request at all, because `checkRate` runs in `respond` before `askCopilot`.
+
+### Checks
+
+Unit **777** (up 2), e2e unchanged — the suite already pinned the key empty,
+so it was never the door at risk. Lint, typecheck, build and licence-check
+green; 432 packages, no dependency added.
+
+### The queue
+
+1. **Corrections** — the add-on is **$600/month for 2 episodes, with 1
+   episode a month included in Scale**, not $400; and our YouTube app does
+   **not** hold an approved upload scope, so every page mentioning YouTube or
+   Shorts owes the same caveat TikTok already carries.
+2. **Home-page performance** — `reel-backdrop.tsx` asks the optimiser for
+   `w=3840` re-encodes of 640px sources. Lighthouse the home page on the same
+   three-run method, target mobile ≥ 90.
+3. **F6** — the eleven pages still on the old kit, onto the F1 kit.
+
+---
+
 ## Handoff — 16 November 2026, evening (E2 is in; 17's motion plan is finished and all three pages hold 90)
 
 **Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.

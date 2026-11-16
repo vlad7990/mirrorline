@@ -29,6 +29,7 @@ import {
   STUDIO_SYSTEM,
   askCopilot,
   citationsFromText,
+  SAMPLE_FLAG,
   copilotMode,
   corpusCacheVerdict,
   parseProposal,
@@ -75,6 +76,23 @@ describe('which mode we are in', () => {
     // question rather than a labelled sample answer.
     expect(copilotMode({ ANTHROPIC_API_KEY: '' })).toBe('sample')
     expect(copilotMode({ ANTHROPIC_API_KEY: '   ' })).toBe('sample')
+  })
+
+  test('the dev pin beats a real key, which is the whole point of it', () => {
+    // `pnpm dev` sets this. Without the assertion the pin is a convention,
+    // and a convention is exactly what the dev server already had: it read
+    // `.env.local` like any other Next process and answered from the live
+    // model during a screenshot run.
+    expect(copilotMode({ ...WITH_KEY, [SAMPLE_FLAG]: '1' })).toBe('sample')
+  })
+
+  test('only an exact "1" pins it, so a stray value cannot silently mute the model', () => {
+    // The opposite failure, and the reason the check is `=== '1'` rather
+    // than truthiness: a half-set flag that leaves a preview answering from
+    // fixtures while reporting nothing unusual.
+    expect(copilotMode({ ...WITH_KEY, [SAMPLE_FLAG]: '0' })).toBe('live')
+    expect(copilotMode({ ...WITH_KEY, [SAMPLE_FLAG]: 'true' })).toBe('live')
+    expect(copilotMode({ ...WITH_KEY, [SAMPLE_FLAG]: '' })).toBe('live')
   })
 })
 

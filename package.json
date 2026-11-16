@@ -7,7 +7,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "pnpm --filter @mirrorline/web dev",
+    "dev": "node scripts/dev.mjs",
+    "dev:live": "node scripts/dev.mjs --live",
     "build": "pnpm --filter @mirrorline/web build",
     "start": "pnpm --filter @mirrorline/web start",
     "lint": "pnpm --filter @mirrorline/web lint",

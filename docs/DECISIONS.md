@@ -4843,3 +4843,79 @@ Lighthouse mobile, medians of three: **/product 90, /how-it-works 90,
 /pricing 90** — accessibility 100, best practices 96, SEO 100 on all three.
 The gate 17 §5 and 19 set is met on every page it names, for the first time
 since the co-pilot landed.
+
+---
+
+## 2026-11-16 · D67 · The third door is shut: `pnpm dev` cannot spend, and the proof is a field that reads false
+
+The hole has been in the handoff since Milo landed. Three ways to reach a paid
+API, two of them deliberate about it: the e2e suite pins `ANTHROPIC_API_KEY`
+empty, `pnpm test:copilot-live` is opt-in by construction, **and `pnpm dev`
+read `.env.local` like any other Next process and answered from the live
+model.** It spent a few tenths of a cent during a screenshot run before anyone
+noticed, which is the cheap version of this bug rather than evidence it is
+cheap.
+
+### A flag, because unsetting the variable cannot work
+
+The obvious fix is a wrapper that deletes `ANTHROPIC_API_KEY` before spawning
+Next. It does nothing: **Next loads `.env.local` itself**, after the process
+has started, so the key is put straight back. Anything that lives outside the
+app loses this argument.
+
+So the pin is a signal the app honours. `copilotMode()` gains one branch above
+the key check, reading `MIRRORLINE_COPILOT_SAMPLE`, and `pnpm dev` sets it.
+
+**It is an opt-out rather than an opt-in, and that is the half worth
+defending.** Requiring an explicit "go live" would have changed the preview
+and production, where a key being present *is* the intent — the Vercel preview
+answers live on purpose (D60) and should not need a second variable to keep
+doing so. An opt-out touches exactly one command.
+
+**And it must be exactly `'1'`, not truthiness.** The failure guarded there is
+the opposite one: a half-set flag leaving a preview answering from fixtures
+while reporting nothing unusual. `'0'`, `'true'` and `''` all stay live, and a
+test says so.
+
+### The launcher exists for the banner, not for the variable
+
+`MIRRORLINE_COPILOT_SAMPLE=1 next dev` is one line and breaks on Windows
+`cmd`. `scripts/dev.mjs` is portable and needs no dependency — but the reason
+it is worth a file is the line it prints before the server starts:
+
+    co-pilot: sample. The key in .env.local is ignored and nothing can spend.
+    Run `pnpm dev:live` if you mean to call the real model.
+
+**The hole was never that `pnpm dev` could spend. It was that it could spend
+without anyone knowing**, and a flag nobody sees is the same hole with a
+longer name. `pnpm dev:live` prints the opposite warning.
+
+### The verification is the status endpoint disagreeing with itself
+
+A unit test proves `copilotMode` returns `'sample'`. That is not proof the
+server does not call the API — it is the same gap D60 found in the spend cap,
+where a limiter returned the right verdict and the call went out anyway.
+
+So the check was run end to end, against a `.env.local` that **does** hold a
+real key. `pnpm dev` then reports:
+
+    "mode":"sample"   "verifiedByRealCount":false
+
+The second field is the one that settles it, and it is D60's own proof read
+backwards. `verifiedByRealCount` is true only when the corpus size came from
+`messages.countTokens` — a network call needing a key. D60 used a reading of
+**true** to prove the preview had been to the API and back. Here it reads
+**false**, with a key sitting in `.env.local`: the server did not make even
+the free counting request, so it cannot have made a billed one.
+
+### Measurements
+
+Unit **777**, up 2: the pin beats a real key, and only an exact `'1'` pins.
+e2e unchanged — the suite already pinned the key empty, so it was never the
+door at risk. Lint, typecheck, build and licence-check green; 432 packages,
+GSAP scope clean, and no dependency added.
+
+**The repo gained a README**, because it did not have one. `CLAUDE.md` is
+written for an agent and `docs/PROGRESS.md` is a handoff log; neither answered
+"how do I run this", and the one thing this PR most needs to be discoverable
+is a table of which commands can spend money.
