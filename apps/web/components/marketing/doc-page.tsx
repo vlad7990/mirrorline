@@ -30,6 +30,7 @@
 
 import * as React from 'react'
 
+import { DocContents } from './doc-contents'
 import { DraftNotice, Prose, Section, SectionHeading } from './primitives'
 
 export interface DocSection {
@@ -96,44 +97,21 @@ export function DocPage({ content }: { content: DocPageContent }) {
         </p>
 
         {/* The contents, beside the document on a wide screen and above it on
-            a phone.
-
-            `position: sticky` inside a grid column rather than a floated
-            box: the column is as tall as the prose, so the list can follow
-            the reader down it without any JavaScript measuring anything.
-            At one column it simply scrolls away above the text, which is the
+            a phone. Sticky here because the list has a column of its own: at
+            one column it simply scrolls away above the text, which is the
             right behaviour on a screen with no room to spare.
 
-            A <nav> with its own label, because a page with a second set of
-            links needs to say what they are — otherwise a screen reader
-            meets two unlabelled navigations and has to read both to find
-            out which is which. */}
+            `DocContents` is shared with `/legal/privacy` and `/legal/terms`,
+            which are bespoke layouts this component never reached. */}
         <div className="grid gap-10 lg:grid-cols-12">
-          <nav aria-labelledby="toc-heading" className="lg:col-span-4">
-            <div className="lg:sticky lg:top-24">
-              <h3
-                id="toc-heading"
-                className="m-0 mb-3 font-heading text-caption uppercase tracking-wide text-text-muted"
-              >
-                On this page
-              </h3>
-              <ol className="m-0 flex list-none flex-col gap-2 p-0">
-                {content.sections.map((section, position) => (
-                  <li key={section.id} className="flex gap-3">
-                    <span className="machine text-mono text-text-muted">
-                      {String(position + 1).padStart(2, '0')}
-                    </span>
-                    <a
-                      href={`#${section.id}-heading`}
-                      className="text-meta text-text underline-offset-4 hover:underline"
-                    >
-                      {section.title}
-                    </a>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </nav>
+          <DocContents
+            className="lg:col-span-4"
+            sticky
+            items={content.sections.map((section) => ({
+              href: `#${section.id}-heading`,
+              title: section.title,
+            }))}
+          />
 
           <div className="flex flex-col gap-10 lg:col-span-8">
           {content.sections.map((section, position) => (

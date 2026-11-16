@@ -243,6 +243,11 @@ const DOC_PAGES = [
   '/legal/ai-use',
   '/legal/cancellation-refunds',
   '/legal/cookies',
+  // Bespoke layouts rather than `DocPage` consumers, so F6d never reached
+  // them. They share the contents list now, and share these assertions with
+  // it: that list is exactly the thing that could drift between two shapes.
+  '/legal/privacy',
+  '/legal/terms',
 ] as const
 
 for (const path of DOC_PAGES) {

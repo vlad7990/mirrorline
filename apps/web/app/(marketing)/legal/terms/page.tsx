@@ -7,6 +7,7 @@
 
 import type { Metadata } from 'next'
 
+import { DocContents } from '@/components/marketing/doc-contents'
 import { DraftNotice, Prose, Section } from '@/components/marketing/primitives'
 
 export const metadata: Metadata = {
@@ -104,6 +105,13 @@ export default function TermsPage() {
         </div>
 
         <DraftNotice documentName="terms" />
+
+        {/* See the note on `/legal/privacy`: the same list, the same reason,
+            and the same single column — so not sticky. */}
+        <DocContents
+          headingLevel={2}
+          items={SECTIONS.map((section) => ({ href: `#${section.id}`, title: section.heading }))}
+        />
 
         {SECTIONS.map((section) => (
           <section key={section.id} aria-labelledby={section.id} className="flex flex-col gap-3">

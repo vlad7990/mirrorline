@@ -9,6 +9,7 @@
 
 import type { Metadata } from 'next'
 
+import { DocContents } from '@/components/marketing/doc-contents'
 import { DraftNotice, Prose, Section } from '@/components/marketing/primitives'
 
 export const metadata: Metadata = {
@@ -115,6 +116,17 @@ export default function PrivacyPage() {
         </div>
 
         <DraftNotice documentName="privacy notice" />
+
+        {/* The contents list the `DocPage` group gained in F6d. This page is a
+            bespoke layout rather than a `DocPage` consumer, so that port never
+            reached it — and of every document on the site this is the one a
+            reader is most likely to open looking for one paragraph. Not
+            sticky: there is a single 68ch column here, and a list that pinned
+            itself would sit over the text it points at. */}
+        <DocContents
+          headingLevel={2}
+          items={SECTIONS.map((section) => ({ href: `#${section.id}`, title: section.heading }))}
+        />
 
         {SECTIONS.map((section) => (
           <section key={section.id} aria-labelledby={section.id} className="flex flex-col gap-3">

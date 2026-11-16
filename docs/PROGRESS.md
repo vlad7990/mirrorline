@@ -6,6 +6,140 @@
 
 ---
 
+## Handoff — 16 November 2026, late evening (home is 91, and it was never the fonts on their own)
+
+**Branch** `v4/site-and-metrics` · **last commit** below. Nothing promoted.
+
+**The home page is at 91** (Lighthouse mobile, median of three, flat triplet),
+from 80. The gate 17 §5 sets is ≥ 90, and every page on the site now clears it.
+
+**It is not the font-strategy PR it was scoped as.** D71 named 184 KB of
+webfonts as the cause. The fonts were worth three of the eleven points; the
+other eight came from **twelve video posters nobody had counted** — 917 KB of
+the 1,467 KB the page downloaded. `ReelMedia` fed `posterSrc` to the `<video
+poster>` attribute, and a poster cannot be lazy, optimised or deferred: the
+browser fetches it full-size the moment the element parses, several screens
+above where anyone would see it. The still now sits *behind* the player as an
+ordinary lazy `<img>` — `ReelStill`, which already existed. The page is 573 KB.
+
+**Read D73 before the next performance round, for one finding in particular.**
+Lighthouse's `lcp-discovery-insight` and `lcp-breakdown-insight` audits name a
+*different element* than the `largest-contentful-paint` metric does. On this
+page they pointed at a hero float card that is `display: none` on mobile and
+has a 0×0 box — and that is the element D71 made eager, for a measured loss.
+The metric's own audit, and a `PerformanceObserver` at 412×823, both name the
+hero backdrop image. **Two independent observers of the rendered page, or it
+is not an LCP element.**
+
+### What was kept, and what measured nothing
+
+| Lever | Median of 3 | Kept |
+|---|---|---|
+| baseline | 80 | — |
+| `fetchpriority="high"` on the LCP image | 80 | no |
+| posters lazy instead of `poster=` | 88 | yes |
+| Geist Mono stops preloading | 88 (−76 ms LCP every run) | yes |
+| the three faces subset, 183 KB → 124 KB | **91** | yes |
+| sans + mono instanced to wght 400–700 | 91, and the only scattered triplet | no |
+
+`fetchpriority` has now been tried three times (D65, D66, here) and measured
+nothing three times. The page is not waiting on priority; it is waiting on
+bytes. **There is no fourth attempt worth making.**
+
+**`app/fonts.ts` is new and owns the three faces**, because `geist`'s exports
+preload all three and expose no way to stop it. **`scripts/subset-fonts.mjs`
+must be re-run after any `geist` bump** — the subsets are committed, so a stale
+one would ship silently. Sans keeps Cyrillic and Greek (it is the face
+user-entered text renders in); serif and mono are Latin, because they only
+ever render our own copy.
+
+### Proof of no visual change, and the honest caveat
+
+The committed references could not serve as the "before": only 44 of the 201
+were regenerated last session, so the rest carry drift from earlier PRs. Both
+sides were taken here instead — six screens × two widths × both themes, from a
+build of HEAD and a build of this branch.
+
+**No page changed height.** Text metrics, wraps and positions are identical;
+CLS is 0 everywhere, before and after.
+
+**What does differ: 0.2–1.3% of pixels, on anti-aliased text edges.** A woff2
+subset re-encodes the outlines, so the rasteriser rounds a few edge pixels
+differently. Every metric in the font is identical (unitsPerEm, both
+ascenders, cap height, `gasp`); only the `meta` table is dropped. At 3× zoom
+the two are indistinguishable and the line breaks match character for
+character. It is invisible, and it is not nothing: **pixel-exact comparison
+against older references no longer holds.** All 201 were regenerated here.
+
+### Lighthouse, mobile, median of three, every page that had never been measured
+
+Warm-up first: the first visit to a route pays for the render and for every
+image size the optimiser has not encoded, and that lands entirely on run 1 —
+which is how `/businesses` produced 92, 87, 87 and then 92, 92, 92, 92, 92.
+Pages marked ⁵ were re-measured over five runs after a scattered triplet.
+
+| Page | Median | LCP | CLS | a11y |
+|---|---|---|---|---|
+| `/accessibility` | **100** | 0.9 s | 0 | 100 |
+| `/legal/acceptable-use` | **100** | 0.9 s | 0 | 100 |
+| `/legal/ai-use` | **100** | 0.9 s | 0 | 100 |
+| `/legal/cancellation-refunds` | **100** | 0.9 s | 0 | 100 |
+| `/legal/cookies` | **100** | 0.9 s | 0 | 100 |
+| `/faq` ⁵ | **94** | 3.1 s | 0 | 100 |
+| `/contact` ⁵ | **94** | 3.9 s | 0 | 100 |
+| `/niche-scan` | **94** | 3.2 s | 0 | 100 |
+| `/about` | **93** | 3.5 s | 0 | 100 |
+| `/metrics` | **93** | 3.2 s | 0 | 100 |
+| `/agents` | **92** | 3.3 s | 0 | 100 |
+| `/businesses` ⁵ | **92** | 4.1 s | 0 | 100 |
+| `/changelog` | **92** | 4.1 s | 0 | 100 |
+| `/individuals` | **92** | 3.3 s | 0 | 100 |
+| `/niche-scan/sample` | **92** | 4.3 s | 0 | 100 |
+| `/resources/originality-rules-2026` | **92** | 3.4 s | 0 | 96 ★ |
+| `/trust` | **92** | 3.4 s | 0 | 100 |
+| `/` (home) | **91** | 3.5 s | 0 | 100 |
+| `/compare` | **90** | 4.0 s | 0 | 100 |
+| `/legal/privacy` | **90** | 3.6 s | 0 | 100 |
+| `/legal/terms` | **90** | 3.6 s | 0 | 100 |
+| `/resources` | **90** | 3.6 s | 0 | 100 |
+
+**Nothing is under 90.** `/product`, `/how-it-works` and `/pricing` were
+already measured at 90 (D66) and are untouched by this work.
+
+★ **`/resources/[slug]` is at accessibility 96 and nobody has looked at it.**
+Not touched here, and not a performance item. It is the one number in this
+table that is not what it should be.
+
+### The two cleanups
+
+**`page-hero.tsx` is deleted.** It had no importers left after F6.
+
+**`/legal/privacy` and `/legal/terms` have a contents list**, sharing
+`DocContents` with the five `DocPage` documents rather than growing a third
+copy. Both are in `inner-pages-f6.spec.ts`'s reading-page group now, so the
+same assertions hold them.
+
+**One of those two found a bug of its own, and it is worth repeating.** The
+first version used an `h3`, as `DocPage` does — but `DocPage` has an `sr-only`
+`h2` above it and these pages do not, so `h1 → h3` skipped a level. **The axe
+gate passed it**: `heading-order` is a *moderate* violation and the gate fails
+on serious and critical. Lighthouse caught it, as accessibility 98 on both
+pages. Fixed with a heading-level prop; both are back to 100. Worth knowing
+that our accessibility gate has a severity floor, and that real violations
+live under it.
+
+### The queue
+
+1. **`/resources/[slug]` accessibility 96.** One page, never audited.
+2. **The axe gate's severity floor.** `heading-order` got through it today.
+   Either the gate should fail on moderate too, or it should say out loud what
+   it is choosing not to see.
+3. **`/legal/privacy`'s LCP element is the cookie banner** (`div.fixed > … >
+   p.m-0`), a fixed overlay rather than page content. Harmless at 90, and a
+   strange thing for the metric to be measuring.
+
+---
+
 ## Handoff — 16 November 2026, evening (F6 is finished — all eleven; and the home-page queue item was a false diagnosis)
 
 **Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.

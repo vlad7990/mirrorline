@@ -5248,3 +5248,140 @@ section.
 because the page looked complete. It has one now, and the sentence is the
 only honest thing to say at the foot of a contact page: the scan answers most
 of what people write in to ask, and answers it about their own account.
+
+---
+
+## 2026-11-16 · D73 · The home page reaches 91, and the fourth diagnosis of it was the first one measured against the rendered page
+
+The font-strategy PR D71 scoped. It is not a font-strategy PR: two thirds of
+the win came from twelve video posters, and the fonts were worth three points
+on top. What the round turns on is that **the LCP element had never been
+identified on the rendered mobile page until now**.
+
+### Four diagnoses, and the first three were written from reading
+
+| # | Where | The claim | What it was |
+|---|---|---|---|
+| 1 | four handoffs | `reel-backdrop.tsx` asks for `w=3840` re-encodes | Read from the file. D71 counted the requests: zero. |
+| 2 | D71 | the first hero float card should be eager | `.hero-float` is `display: none` below 64rem. Measured worse, 80 → 76. |
+| 3 | D71 | 184 KB of webfonts is what LCP waits on | Right about the mechanism, wrong about the element. |
+| 4 | here | the LCP element is the hero backdrop image | A `PerformanceObserver` at 412×823, agreed with by Lighthouse's own LCP audit. |
+
+Diagnosis 2 has a specific origin worth naming, because it is a trap anyone
+would fall into twice. **Lighthouse's `lcp-discovery-insight` and
+`lcp-breakdown-insight` audits name a different node than the
+`largest-contentful-paint` metric does.** On this page those insights point at
+`ul.hero-floats > li.hero-float > img.hero-float-image`, complete with a
+180×320 bounding box — for an element whose computed `display` is `none` and
+whose box is 0×0. That is the element D71 made eager. The metric's own audit
+names `section.band-ink > div.pointer-events-none > img.object-cover`, the
+backdrop, which is also what a `PerformanceObserver` in a real 412-wide
+context reports.
+
+**So the rule is not "measure on mobile", which D65 already said. It is that
+the LCP element is a property of the rendered page, and the only trustworthy
+reading of it comes from the page itself.** Two independent observers agreeing
+is what made this one safe to act on.
+
+### What the number is bound by, which is not what it looks like
+
+Served from localhost, every request finishes inside 126 ms, so the *observed*
+LCP is 122 ms. Lighthouse's simulated LCP is 5,332 ms. The simulation stretches
+a page that loaded instantly across a throttled connection, and when
+everything arrives at once there is nothing to distinguish the LCP paint from
+the end of the page load. **In this setup LCP is, to within rounding, the
+simulated time to download the whole page.** That one fact predicts every
+measurement below, and it is why a priority hint moved nothing while deleting
+bytes moved everything.
+
+The page was **1,467 KB**. Images were 917 KB of it — twelve `/reels/cut-*.webp`
+stills at 69–88 KB each.
+
+### The levers, each measured alone, three runs
+
+| Lever | Runs | Median | LCP | Kept |
+|---|---|---|---|---|
+| baseline | 80, 80, 80 | **80** | 5,332 ms | — |
+| `fetchpriority="high"` on the LCP image | 80, 80, 80 | **80** | 5,331 ms | **no** |
+| posters lazy instead of `poster=` | 88, 88, 88 | **88** | 3,986 ms | yes |
+| Geist Mono stops preloading | 88, 88, 88 | **88** | 3,910 ms | yes |
+| the three faces subset | 91, 91, 91 | **91** | 3,508 ms | yes |
+| sans and mono instanced to wght 400–700 | 91, 92, 91 | **91** | 3,4–3,500 ms | **no** |
+
+Every triplet is flat, which is D66's test for a quiet machine — and the one
+that is not flat is the one being rejected. Two stale `next-server` processes
+from an earlier session were holding ports 3123 and 3124 when this began, and
+they are also what made the first e2e run of the day fail a screenshot
+capture. Killing them came before any measurement.
+
+**`fetchpriority` is now the third time that hint has been tried and the third
+time it measured nothing** (D65, D66, here). It does what it says — the image
+moves from `Low` to `High` and the audit goes green — and the score does not
+move, because the page is not waiting on priority. It is waiting on bytes.
+There is no fourth attempt worth making.
+
+**The posters are the finding.** `ReelMedia` passed `posterSrc` to the
+`<video poster>` attribute, and a poster cannot be lazy, cannot be optimised
+and cannot be deferred: the browser fetches it at full size the moment the
+element parses. Twelve of them, several screens below the fold, for a wall
+nobody has scrolled to yet. `ReelStill` — which already existed, for cuts with
+no video — draws the same frame in the same box with `loading="lazy"`, so the
+fix was to put the still *behind* the player rather than inside it. The page
+went from 1,467 KB to 573 KB. **`@mirrorline/ui` was not touched**: the change
+is in `cut-media.tsx`, the one place every surface composes a frame.
+
+**The fonts were worth three points, and they are the half D71 predicted.**
+`geist`'s own exports preload all three faces and the package exposes no way
+to stop it — which D66 established and then over-read as "re-declaring means
+pinning a path inside `node_modules/.pnpm/geist@…`". It does not:
+`apps/web/node_modules/geist` is an ordinary symlink. `app/fonts.ts` now holds
+the three `localFont` calls, with the same variable names, weights and
+fallback metrics, so nothing changes about how the site looks — only when each
+face is fetched and how many characters it carries.
+
+Two things came out of that file:
+
+- **Mono does not preload.** Nothing in the first mobile screen is set in it:
+  `.hero-inset` and `.hero-floats` are `display: none` below 64rem, so the
+  first mono character on a phone is several screens down. Dropping its
+  preload took 70 KB out of the high-priority queue in front of the LCP image
+  and bought 76 ms on every run. **It did not move the score**, and it is kept
+  anyway — a consistent improvement in the metric the gate is bound by, at no
+  risk, is not noise.
+- **The faces are subset** by `scripts/subset-fonts.mjs`: 183 KB → 124 KB.
+
+**Sans keeps Cyrillic and Greek; serif and mono do not** — and that line is a
+product decision rather than a byte count. Sans is the face user-entered text
+renders in, and we serve any business or individual in any industry, so a
+workspace name we did not write has to have glyphs. The serif is display
+headings we write; the mono is figures, timings, ids and percentages. Latin
+covers both completely. Keeping the wider coverage in sans costs 11 KB against
+stripping it, which is the cheapest 11 KB in this PR.
+
+The subsets are committed, so **`node scripts/subset-fonts.mjs` has to run
+after any `geist` bump** or the old outlines keep shipping. That is the one
+maintenance debt this PR adds, and it is written at the top of both files.
+
+**Weight instancing was rejected, and it is the interesting rejection.**
+Nothing on the site asks for a weight outside 400–700, so clamping the axis is
+safe and saves a further 25 KB. Its triplet was 91, 92, 91 against a flat
+91, 91, 91 — the same median, and the only scattered triplet of the day. A
+permanent narrowing of what the type system can express, in exchange for a
+point that did not appear, is a bad trade. Reverted.
+
+### CLS stayed 0, and the reason was already in the file
+
+Every face is `font-display: swap`, and Next synthesises a size-adjusted
+fallback for the two that matter — `geistSans Fallback` from Arial with
+`ascent-override: 94.56%` and `size-adjust: 106.28%`, `geistSerifRegular
+Fallback` from Times New Roman at `114.41%`. The headline re-paints when the
+serif lands without moving anything beneath it. CLS is 0 in every run above,
+before and after.
+
+### What this does not fix
+
+`/product`, `/how-it-works` and `/pricing` were already at 90 and none of this
+touches them. The F6 pages were measured for the first time in this PR and are
+tabled in `docs/PROGRESS.md`; anything under 90 there is recorded rather than
+fixed, because a page that has never been measured is a different piece of
+work from a page that has regressed.
