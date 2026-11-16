@@ -26,6 +26,7 @@ import {
   cannedSiteAnswer,
   cannedStudioAnswer,
   keywords,
+  questionParts,
   retrieve,
 } from './canned'
 
@@ -272,5 +273,81 @@ describe('every canned answer is labelled a sample', () => {
     // forget to say it — non-negotiable 7 and §7's no-key row.
     expect(cannedSiteAnswer('What does Growth include?').mode).toBe('sample')
     expect(cannedStudioAnswer('How many posts published?').mode).toBe('sample')
+  })
+})
+
+describe('two questions in one message', () => {
+  // Found in review: "guarantee 10k followers? and how much is Creator?"
+  // answered the first half and silently dropped the second. A bot that
+  // answers the comfortable half of a question and ignores the rest reads as
+  // evasion, which is the opposite of what §3.2's refusals are for.
+  const MIXED = 'Can you guarantee 10,000 followers? And how much is Creator?'
+
+  test('splits on a question mark, and on "and" only when a question follows', () => {
+    expect(questionParts(MIXED)).toEqual([
+      'Can you guarantee 10,000 followers',
+      'And how much is Creator',
+    ])
+
+    // "leads and bookings" is one question. Splitting it would leave two
+    // halves that retrieve nothing.
+    expect(questionParts('Do you report leads and bookings per post?')).toEqual([
+      'Do you report leads and bookings per post',
+    ])
+  })
+
+  test('answers both halves: the refusal, and then the price', () => {
+    const answer = cannedAnswer('site', MIXED)
+
+    // The refusal still happens, and is still categorised as one.
+    expect(answer.refusal).toBe('guarantee')
+    expect(answer.text).toContain('Nobody can honestly promise you a follower count')
+
+    // And the second half is answered rather than dropped.
+    expect(answer.text).toContain('On the other half of your question')
+    expect(answer.text).toContain('Creator')
+    expect(answer.citations.some((citation) => citation.href === '/pricing')).toBe(true)
+  })
+
+  test('names the half it cannot answer, and hands that half to a person', () => {
+    const answer = cannedAnswer(
+      'site',
+      'What does the Growth plan include? And can you design my logo?',
+    )
+
+    expect(answer.text).toContain('On the other half of your question')
+    expect(answer.text).toContain('logo')
+    expect(answer.refusal).toBe('outside-corpus')
+    expect(answer.handoff).not.toBeNull()
+  })
+
+  test('does not repeat itself when both halves have the same answer', () => {
+    const answer = cannedAnswer(
+      'site',
+      'What does the Growth plan include? And what does Scale include?',
+    )
+
+    const mentions = answer.text.split('On the other half').length - 1
+    expect(mentions).toBeLessThanOrEqual(1)
+  })
+
+  test('the studio surface gets the same treatment', () => {
+    const answer = cannedAnswer(
+      'studio',
+      'How many posts went out this week? And what will revenue be next quarter?',
+    )
+
+    // The forecast half is refused rather than answered with a measurement,
+    // which is the bug D56 found in the single-question path.
+    expect(answer.text).toContain('On the other half of your question')
+    expect(answer.refusal).toBe('forecast')
+  })
+
+  test('a single question is untouched by any of this', () => {
+    const single = cannedSiteAnswer('What does the Growth plan include every month?')
+    const throughComposer = cannedAnswer('site', 'What does the Growth plan include every month?')
+
+    expect(throughComposer.text).toBe(single.text)
+    expect(throughComposer.citations).toEqual(single.citations)
   })
 })

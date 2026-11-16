@@ -3794,3 +3794,40 @@ themes. Lighthouse mobile, medians of three: **/product 89, /how-it-works 91,
 /pricing 90, /metrics 91**, accessibility 100 on all four — unchanged from
 D57's measurements, including on `/product`, which gained three lazy phone
 frames and did not move.
+
+## 2026-11-15 · D59 · Two questions in one message, and the plan name that retrieval could not see
+
+Vlad's review of the co-pilot: "guarantee 10k followers? and how much is
+Creator?" answered the first half and dropped the second. Groundwork for C3,
+fixed in the canned path where both surfaces share it.
+
+**Splitting is conservative on purpose.** A question mark is a reliable
+boundary; "and" is not — "do you report leads and bookings per post" is one
+question, and splitting it leaves two halves that retrieve nothing. So "and"
+splits only when what follows opens with an interrogative or a modal and has
+at least three words. Three parts at most: a message with five questions gets
+the first two answered and a handoff, which beats five sentences of nothing.
+
+**A refusal anywhere in the reply keeps the reply a refusal.** The composed
+answer takes `primary.refusal ?? secondary.refusal`, so a message that mixes
+a price question with a guarantee still reports `refusal: 'guarantee'` and
+§8's tests still see the thing they guard. The second half is appended with
+the question quoted back — "On the other half of your question — … —" — so
+the visitor can see which part is being answered, and which is being handed
+to a person.
+
+**The second half is usually short, which found a real retrieval gap.**
+"How much is Creator" has one word retrieval can use, and the corpus needs
+two, so it fell through to "I cannot answer that from our pages" — about a
+plan whose price is on the page it would have cited. A question naming one of
+our own plans is now answered from `pricing-tiers.ts` directly, word-boundary
+matched so "Scale" the plan is found and "scale up" is not. It reads the
+price list rather than restating it (D38: one place a price is written down).
+
+### Measurements
+
+Unit tests **723**, up 6 from 717 — six cases covering the split, both halves
+answered, the half that cannot be and is named, the no-repeat case, the studio
+surface, and the single question being untouched by any of it. e2e unchanged
+at 311 and the twenty co-pilot specs still green. Lint, typecheck, build and
+licence-check green.

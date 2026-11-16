@@ -35,6 +35,8 @@
  *   success state and the tests treat as one.
  */
 
+import { PRICING_TIERS, type PricingTier } from '@/components/marketing/pricing-tiers'
+
 import { BANNED_PATTERNS } from '../copy/banned-phrases'
 
 import { SITE_CORPUS, STUDIO_FACTS, type CorpusSection, type StudioFact } from './grounding'
@@ -283,6 +285,21 @@ export function retrieve(question: string): Hit | null {
   return best
 }
 
+/**
+ * The plan a question names, if it names one.
+ *
+ * Word-boundary matched against the plan names we publish, so "Scale" the
+ * plan is found and "scale up" is not. The figures come from
+ * `pricing-tiers.ts`, which is the one place a price is written down (D38) —
+ * this reads them, it does not restate them.
+ */
+function planNamed(question: string): PricingTier | null {
+  const asked = question.toLowerCase()
+  return (
+    PRICING_TIERS.find((tier) => new RegExp(`\\b${tier.name.toLowerCase()}\\b`).test(asked)) ?? null
+  )
+}
+
 function citationFor(section: CorpusSection): Citation {
   return { label: section.heading, href: section.route }
 }
@@ -338,6 +355,22 @@ export function cannedSiteAnswer(question: string): CopilotAnswer {
 
   const hit = retrieve(question)
   if (!hit) {
+    // Retrieval needs two matching words, and "how much is Creator" only has
+    // one that counts. A plan name is a thing we hold exactly, though, so a
+    // question that names one is answered from the price list rather than
+    // handed to a person — found by the multi-part tests, where the second
+    // half of a question is usually this short.
+    const plan = planNamed(question)
+    if (plan) {
+      return siteAnswer({
+        text: `${plan.name} is ${plan.price} ${plan.period}. ${plan.summary}`,
+        citations: [{ label: 'The plans and what they cost', href: '/pricing' }],
+        proposals: [],
+        refusal: null,
+        handoff: null,
+      })
+    }
+
     return siteAnswer({
       text: 'That is not something I can answer from our own pages, and I am not going to guess at it. I only read what we have published. A person can answer it properly — the Niche Scan is the quickest way to get one looking at your account.',
       citations: [],
@@ -526,7 +559,107 @@ export function cannedStudioAnswer(question: string): CopilotAnswer {
   })
 }
 
+/* -------------------------------------------------------------------------- */
+/* Two questions in one message                                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The separate questions inside one message.
+ *
+ * People do not ask one thing at a time. "Can you guarantee 10k followers?
+ * And how much is Creator?" is two questions with different answers — a
+ * refusal and a price — and answering only the first leaves the visitor
+ * thinking we dodged the second.
+ *
+ * **Splitting is deliberately conservative.** A question mark is a reliable
+ * boundary; the word "and" is not — "leads and bookings" is one question, and
+ * splitting it would produce two halves that retrieve nothing. So "and" only
+ * splits when what follows announces itself as a question: it opens with an
+ * interrogative or a modal, and it has enough words to retrieve against.
+ *
+ * Three parts at most. A message with five questions in it gets the first two
+ * answered properly and a handoff, which is a better outcome than five
+ * sentences of nothing.
+ */
+const QUESTION_OPENER =
+  /^(?:and\s+)?(?:how|what|when|where|which|who|why|can|could|do|does|did|will|would|should|is|are|am)\b/i
+
+/** Enough words that retrieval has something to work with. */
+const MINIMUM_PART_WORDS = 3
+
+const MAXIMUM_PARTS = 3
+
+export function questionParts(question: string): readonly string[] {
+  const bySentence = question
+    .split(/[?;]+/)
+    .map((part) => part.trim())
+    .filter((part) => part.split(/\s+/).filter(Boolean).length >= MINIMUM_PART_WORDS)
+
+  const parts = bySentence.length > 0 ? bySentence : [question.trim()]
+
+  // One sentence can still be two questions: "…followers and how much is
+  // Creator". Only split where the second half announces itself.
+  const split = parts.flatMap((part) => {
+    const match = part.match(/^(.*?[^,\s])\s*,?\s+and\s+(.+)$/i)
+    if (!match) return [part]
+
+    const [, first = '', second = ''] = match
+    const isSecondAQuestion =
+      QUESTION_OPENER.test(second) && second.split(/\s+/).filter(Boolean).length >= MINIMUM_PART_WORDS
+    const isFirstLongEnough = first.split(/\s+/).filter(Boolean).length >= MINIMUM_PART_WORDS
+
+    return isSecondAQuestion && isFirstLongEnough ? [first, second] : [part]
+  })
+
+  return split.slice(0, MAXIMUM_PARTS)
+}
+
+/** Two answers are the same answer when they refuse alike and cite alike. */
+function isSameAnswer(first: CopilotAnswer, second: CopilotAnswer): boolean {
+  if (first.refusal !== second.refusal) return false
+  return first.citations[0]?.href === second.citations[0]?.href
+}
+
+/**
+ * Answer the second question too, or say plainly which one has not been.
+ *
+ * 18 §3.1 and §3.2: an answer may be a refusal and a handoff, and both are
+ * success states — what is *not* allowed is leaving half a question on the
+ * floor without saying so. Where the second part has its own answer in the
+ * corpus it is given, with its own citation. Where it does not, its own
+ * "I cannot answer that from our pages" text is what gets appended, which
+ * names the part being refused and carries the handoff with it.
+ */
+function withSecondPart(
+  parts: readonly string[],
+  answerFor: (part: string) => CopilotAnswer,
+): CopilotAnswer {
+  const primary = answerFor(parts[0] ?? '')
+  const second = parts[1]
+  if (!second) return primary
+
+  const secondary = answerFor(second)
+  if (isSameAnswer(primary, secondary)) return primary
+
+  const citations = [...primary.citations]
+  for (const citation of secondary.citations) {
+    if (!citations.some((entry) => entry.href === citation.href)) citations.push(citation)
+  }
+
+  return {
+    ...primary,
+    text: `${primary.text}\n\nOn the other half of your question — “${second.trim()}” — ${secondary.text}`,
+    citations,
+    // A refusal anywhere in the reply is a refusal: the category has to
+    // survive, or §8's tests would stop seeing the thing they guard.
+    refusal: primary.refusal ?? secondary.refusal,
+    handoff: primary.handoff ?? secondary.handoff,
+    proposals: primary.proposals.length > 0 ? primary.proposals : secondary.proposals,
+  }
+}
+
 /** Whichever surface asked. */
 export function cannedAnswer(surface: CopilotSurface, question: string): CopilotAnswer {
-  return surface === 'site' ? cannedSiteAnswer(question) : cannedStudioAnswer(question)
+  const answerFor = surface === 'site' ? cannedSiteAnswer : cannedStudioAnswer
+  return withSecondPart(questionParts(question), answerFor)
 }
