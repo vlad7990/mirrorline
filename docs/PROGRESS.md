@@ -6,6 +6,83 @@
 
 ---
 
+## Handoff — 15 November 2026, evening (PR G, the gap-fill; C3 is next)
+
+**Branch** `v4/site-and-metrics` · **last commit** `5032853`, with this handoff
+on top · clean tree.
+**Preview:** https://mirrorline-8x3766hr2-vn-mn-product-group.vercel.app — 302
+at the edge behind Vercel's deployment protection, as every preview has been.
+Sample mode: the key is local only.
+
+**Pick up at PR C3** — the studio co-pilot. Nothing below changes that queue;
+this PR was Vlad's review of four pages, and it is closed.
+
+### The ★ audit, page by page
+
+Vlad asked for every ★ in 19 v2 checked against the rendered page. **All of
+them exist.** Checked against the components and, where a spec says so, the
+e2e test that already asserts it:
+
+| Page | ★ list | Verdict |
+|---|---|---|
+| `/product` | hero · six-tab tour · eight-frame strip · Originality Gate demo · CTA | **5/5 done.** The tour's six tabs are Upload → Niche Scan → Remake → Calendar → Results → Agents, in product order |
+| `/how-it-works` | hero · three-phase spine · a visual per phase · first-week strip · CTA | **5/5 done** |
+| `/pricing` | hero · plan cards with the gold sweep · a month preview per plan · pricing FAQ · CTA | **5/5 done.** The calendar is still drawn from `postsInPeriod`, never typed |
+| `/compare` | hero · scroll-lit table · four category columns · a decision helper that can recommend against us · CTA | **5/5 done** |
+| `/metrics` | hero · goal picker · seven tiers stacked · dashboard with hotspots · honesty cards · CTA | **6/6 done** |
+| `/niche-scan` | hero · four-step stepper · preview recipe cards · trust note on sources · CTA | **5/5 done** |
+| `/resources` + article | hero · article cards · category filter · templates and glossary · consented newsletter · CTA · article template | **7/7 done** |
+| `/sign-in`, `/sign-up` | ink-and-gold look · error state · forgot-password · neutral example email · no reels and no CTA | **5/5 done** |
+
+**So the five gaps Vlad found are real, and they are not 19's.** They come
+from 16 §4 (publishing on `/product`; "no credits, cancel anytime" on
+`/pricing`), 09 §10 (the four billing promises), 11 §2 P8 (the fifteen
+minutes) and 15 (the portfolio view). 19 governs the *shape* of a page; 16
+governs what it *says*. A page can pass 19 completely and still not say what
+it does — which is exactly what happened here. D58 has the reasoning.
+
+### What this PR built
+
+| Page | Added | Not done |
+|---|---|---|
+| `/pricing` | Cost comparison against five market routes, with the published ranges and our own derived per-post figure · the four plain-billing promises, linked to the page that binds | — |
+| `/product` | Publishing section: three phone frames, official APIs, **the TikTok audit caveat under the TikTok phone** · integrations strip with two Built and two Planned · five-question product FAQ | — |
+| `/how-it-works` | "About fifteen minutes a week", itemised and summed · agents-do-the-work / people-make-the-calls · onboarding FAQ | — |
+| `/metrics` | One account beside the portfolio view, on the studio's own sample data, labelled Scale plan | — |
+| `/sign-in` | — | **"Remember me": deliberately not built.** There is no session to remember — sign-in checks nothing and says so — so the checkbox would control nothing. It is not on 19's ★ list either. It belongs with real auth; D58 explains |
+
+### Two things that changed under us
+
+**1. `ANTHROPIC_API_KEY` landed** in `apps/web/.env.local` at 21:10 today.
+"Needs Vlad F" is answered. Twelve co-pilot tests went red immediately and
+were right to: the suite asserts sample mode, the server correctly answered
+`live`, and **the run made real API calls**. `playwright.config.ts` now pins
+`ANTHROPIC_API_KEY: ''` for the server it starts, so the suite is hermetic and
+free again. Checking the live path is now a deliberate act — worth doing, and
+not by accident, nine hundred tests deep.
+
+**2. The preview is still in sample mode**, because the key is local only. If
+you want the preview answering for real, add the variable in the Vercel
+project — and know that it then spends on every question anyone asks it.
+
+### Checks on this commit
+
+Unit **717** (up 30 from 687), e2e **311** (up 8). Lint, typecheck, build and
+licence-check green; 432 packages, GSAP scope clean, no new dependency.
+
+Screenshots re-captured for the four changed pages at 1440 and 390 in both
+themes, in `docs/screens-built/`. Lighthouse mobile, medians of three:
+**/product 89, /how-it-works 91, /pricing 90, /metrics 91**, accessibility 100
+on all four — `/product` gained three lazy phone frames and did not move.
+
+### Still needs Vlad
+
+- **Should the key go on the Vercel preview?** Local only today. Sample mode
+  is still the supported path and every test runs against it.
+- **Five Higgsfield credits**, unchanged, and they matter to PR D only.
+
+---
+
 ## Handoff — 15 November 2026, midday (PR C2 shipped; C3 is next)
 
 **Branch** `v4/site-and-metrics` · **last commit** `0ef5549`, with this handoff
