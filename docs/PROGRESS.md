@@ -15,6 +15,19 @@ Nothing promoted.
 /agents, /trust. The F6a handoff below has the hero decision (D69) and is
 still the thing to read first.
 
+**Preview:** https://mirrorline-d2119hzkg-vn-mn-product-group.vercel.app —
+built from `1681a5c` by the push, so it has both F6a and F6b. It returns 302
+behind Vercel's deployment protection exactly as every previous preview has;
+open it signed in to the team or mint a share link. Nothing is promoted.
+
+What to look at: **/businesses** and **/individuals** for the frame-wall hero
+and the week strip inside each account-stage card — the strip is drawn from
+the same pair of numbers the "Cadence" line prints, so they cannot disagree.
+Then **/agents** for the activity log near the foot, which shows a cost where
+there is one and an em dash where there is not. Then **/trust**, which is on
+the kit and deliberately not finished — the two long text sections between
+the hero and the close are what its three open ★ would break up.
+
 ### The ★ I wrote in the morning was wrong, and building it is how I found out
 
 19 v3 ★3 asked /agents to reuse home's scroll-lit hand-off spine. I wrote that
