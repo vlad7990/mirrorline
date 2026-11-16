@@ -325,6 +325,67 @@
 }
 
 /* ---------------------------------------------------------------------------
+   The gold sweep across the closing CTA (17 §1 M12).
+
+   The plan sweep above answers a click, so it runs on a timer. This one
+   answers an *arrival*, so it runs on `view()` — the same scroll-driven
+   mechanism every reveal on this site already uses, and 17's own rule to
+   reach for CSS first.
+
+   **"Once" means once per arrival, not once per session**, and that is a
+   decision rather than an oversight. A view timeline is scrubbed by scroll
+   position, so scrolling back up replays it — exactly as `.reveal` and
+   `.reveal-item` do everywhere else on the page. Making it fire literally
+   once would mean an IntersectionObserver and a piece of state, for a
+   decorative shimmer on a button, on pages held to Lighthouse 90.
+
+   **The band is clipped by its own box, never by an ancestor of the button.**
+   `overflow: hidden` on a wrapper would crop the button's focus ring, and 17
+   §Accessibility is explicit that focus states are never animated away. So
+   the overlay is a *sibling* of the button: it clips its own moving band and
+   has nothing to say about the ring the button paints.
+
+   Transform only, per 17's performance budget. --------------------------- */
+.cta-sweep-band {
+  /* Present in every browser so the box is always the right shape; only the
+     moving band below is gated. `rounded-full` matches the gold variant's
+     pill in `packages/ui` — the one shape this overlay has to agree with. */
+  border-radius: 9999px;
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .cta-sweep-band::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      /* White rather than gold: the button is already a gold gradient, and a
+         gold band over it is invisible. This is the light crossing it. */
+      background: linear-gradient(
+        100deg,
+        transparent 35%,
+        rgba(255, 255, 255, 0.45) 50%,
+        transparent 65%
+      );
+      animation: mirrorline-cta-sweep linear both;
+      animation-timeline: view();
+      /* Finishes while the CTA is still arriving, so the button is at rest by
+         the time somebody has read the line above it and reached for it. */
+      animation-range: entry 25% cover 34%;
+    }
+  }
+}
+
+@keyframes mirrorline-cta-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* ---------------------------------------------------------------------------
    The website co-pilot's panel.
 
    18 §2.4: "the panel slides in; the stream types. Both drop under

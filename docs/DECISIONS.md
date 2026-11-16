@@ -4568,3 +4568,97 @@ licence-check green; 432 packages, GSAP scope clean.
 assertion caught "Flat monthly, no credits" — our own promise — which is the
 same false positive `banned-phrases.ts` solved for "never guarantees" and was
 fixed the same way.
+
+---
+
+## 2026-11-16 · D65 · PR E splits, M12 lands, and Lighthouse says /product is 89 — reproducibly, which is new
+
+### PR E is split, and the measurement is why
+
+PR E was "the remaining motion". Two of its named items turned out to be
+already built: the hover-loop reels and the `/niche-scan` stepper were listed
+as E's in `docs/PROGRESS.md`, and F1 built the first (19 v2 said it would) and
+D54 built the second after F5. What is genuinely left is **M8's additions** (a
+progress spine down the pinned agent loop, and the metric each agent owns
+appearing as its card activates) and **M12** (the gold sweep across the
+closing CTA).
+
+This PR is **E1: M12 and the Lighthouse run.** M8 is **E2**. The split follows
+C1–C3 and F1–F5, and the reason is the measurement below: the Lighthouse
+number is a gate, it came back failing on one page, and a PR that also
+rebuilt the agent loop would have made it impossible to say which change
+moved it.
+
+### M12: a scroll timeline, and "once" means once per arrival
+
+17 §1 M12 asks for "a gold light sweeps across the button once on entry, then
+rests. CSS mask animation, runs once."
+
+It runs on `animation-timeline: view()`, which is the mechanism `.reveal` and
+`.reveal-item` already use, behind the same `@supports` and
+`prefers-reduced-motion: no-preference` gates. **A view timeline is scrubbed
+by scroll position, so scrolling back up replays it.** That is not "once" in
+the strictest reading, and it is the deliberate answer: firing literally once
+needs an IntersectionObserver and a piece of state, for a decorative shimmer
+on a button, on pages held to Lighthouse 90. Every other reveal on the site
+behaves exactly this way, so the alternative would also have been the only
+thing on the page that did not.
+
+**The band is a sibling of the button, not a wrapper, and that is an
+accessibility decision rather than a styling one.** Clipping the band needs
+`overflow: hidden`, and `overflow: hidden` on an *ancestor* of the button
+crops its focus ring — which 17 §Accessibility forbids outright ("focus
+states are never animated away"). So the overlay sits beside the button,
+clips its own moving band, and has nothing to say about the ring the button
+paints. A test asserts the parent's overflow is `visible`, because the
+wrapper version looks identical on screen and quietly eats the ring.
+
+White rather than gold, because the button is already a gold gradient and a
+gold band over it is invisible. Transform only, per 17's performance budget.
+
+### Lighthouse: two pages pass, one fails, and this time it is not noise
+
+Mobile, medians of three runs, production build, against D57's method:
+
+| Page | Runs | Median | Gate |
+|---|---|---|---|
+| `/product` | 89, 89, 89 | **89** | **fails ≥ 90** |
+| `/how-it-works` | 90, 90, 90 | 90 | passes |
+| `/pricing` | 90, 90, 90 | 90 | passes |
+
+Accessibility 100, best practices 96, SEO 100 on all three.
+
+**`/pricing` did not regress**, which is the question PR D left open: it gained
+a whole section and held 90.
+
+**`/product` at 89 is the finding.** D57 measured the same 89 and reasoned it
+away, correctly at the time: the same build with that PR stashed measured
+86/90/91 — a spread of five — so one point was inside the machine's noise.
+**This run has no spread at all.** Three runs, 89 every time, on two separate
+pages' worth of comparison showing 90/90/90 with the same zero spread. A
+figure that does not move is not noise, and the honest reading is that
+`/product` is one point under the bar rather than scattered around it.
+
+It is **LCP-bound, not JavaScript-bound**: CLS 0, TBT 40 ms, FCP 1.2 s, Speed
+Index 1.2 s, and LCP 3.8 s (score 0.56) on the hero image — the one
+`priority` image the page is allowed. The only opportunity over the noise
+floor is "reduce unused JavaScript", 290 ms and 34 KB.
+
+**It is not fixed here, and it is not rounded up either.** E1 is a sweep on a
+button and a measurement; chasing a one-point LCP regression on the most
+image-heavy page in the site is its own piece of work with its own
+before-and-after, and folding it into this PR would make both unreadable.
+`docs/PROGRESS.md` carries it as the first item of E2 with the numbers above,
+so the next person starts from a measurement rather than from a suspicion.
+There is also a recorded lead for it: the home page's
+`reel-backdrop.tsx` asks the image optimiser for `w=3840` re-encodes of
+640px-wide sources, logged as "PR E or F6" — worth checking whether
+`/product` shares the pattern before anything else is tried.
+
+### Measurements
+
+Unit **771**, unchanged — M12 is CSS and a span, and its guarantees are
+properties of the rendered page rather than of a module. e2e **322**, up 2:
+the sweep's timeline and its clipping, and that it paints nothing under
+reduced motion. Lint, typecheck, build and licence-check green; 432 packages,
+GSAP scope clean.

@@ -64,7 +64,20 @@ export function PageCta({ cta }: PageCtaProps) {
         </p>
 
         <div className="flex flex-col gap-3 sm:flex-row">
-          <LeadDialogButton intent="pilot" variant="gold" size="lg" />
+          {/* 17 §1 M12: a gold light crosses the primary button as the CTA
+              arrives, then rests. The band is a *sibling* of the button
+              rather than a wrapper with `overflow: hidden`, because clipping
+              an ancestor would crop the button's focus ring — and 17
+              §Accessibility says focus states are never animated away. The
+              span adds no layout of its own: `inline-flex` around a single
+              child is that child's own box. */}
+          <span className="relative inline-flex">
+            <LeadDialogButton intent="pilot" variant="gold" size="lg" />
+            <span
+              aria-hidden="true"
+              className="cta-sweep-band pointer-events-none absolute inset-0 overflow-hidden"
+            />
+          </span>
           <LeadDialogButton intent="demo" variant="secondary" size="lg" />
         </div>
 

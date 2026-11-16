@@ -1340,3 +1340,53 @@ test('the CTA arrow answers the keyboard as well as the pointer', async ({ page 
   // Without this the whole affordance is mouse-only.
   expect(selectors.some((selector) => selector.includes(':focus-visible'))).toBe(true)
 })
+
+/* ---------------------------------------------------------------------------
+   M12 · the gold sweep across the closing CTA
+   --------------------------------------------------------------------------- */
+
+test('the CTA sweep runs on the scroll timeline and never clips the button', async ({ page }) => {
+  await page.goto('/pricing')
+
+  const band = page.locator('.cta-sweep-band')
+  await expect(band).toHaveCount(1)
+
+  // Decorative in full. A moving light that announced itself would be a
+  // screen reader reading a shimmer aloud.
+  await expect(band).toHaveAttribute('aria-hidden', 'true')
+
+  const style = await band.evaluate((element) => {
+    const after = getComputedStyle(element, '::after')
+    const box = getComputedStyle(element)
+    return {
+      animationName: after.animationName,
+      pointerEvents: box.pointerEvents,
+      overflow: box.overflow,
+      parentOverflow: getComputedStyle(element.parentElement as Element).overflow,
+    }
+  })
+
+  expect(style.animationName).toBe('mirrorline-cta-sweep')
+  // It clips its own band...
+  expect(style.overflow).toBe('hidden')
+  // ...and the button's own box does not, so the focus ring is never cropped.
+  // This is the assertion that catches somebody "simplifying" the band into a
+  // wrapper: it looks identical on screen and quietly eats the ring.
+  expect(style.parentOverflow).toBe('visible')
+  expect(style.pointerEvents).toBe('none')
+})
+
+test('under reduced motion the CTA button carries no sweep at all', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/pricing')
+
+  // 17 §5: every animated section shows its final state. This one's final
+  // state is a button with nothing over it, so the band paints nothing —
+  // unlike the FAQ panel above, which has to keep its animation *named*
+  // because Radix waits on `animationend`. Nothing waits on this one.
+  const animationName = await page
+    .locator('.cta-sweep-band')
+    .evaluate((element) => getComputedStyle(element, '::after').animationName)
+
+  expect(animationName).toBe('none')
+})

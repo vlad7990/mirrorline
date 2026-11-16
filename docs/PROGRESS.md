@@ -6,6 +6,90 @@
 
 ---
 
+## Handoff — 16 November 2026, late afternoon (E1 is in; E2 is M8 and one Lighthouse point)
+
+**Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.
+Nothing promoted.
+
+**PR E is split into E1 and E2, and the measurement is why.** Two items the
+queue listed under E were already built — the hover-loop reels (F1 built them;
+19 v2 said it would) and the `/niche-scan` stepper (D54, after F5). What is
+genuinely left is **M8** and **M12**. E1 is M12 plus the Lighthouse run; E2 is
+M8 plus the one point below. They are separate because the Lighthouse number
+is a gate, it came back failing on one page, and a PR that also rebuilt the
+agent loop would make it impossible to say which change moved it.
+
+### Lighthouse, finally run — and it is not a clean pass
+
+Mobile, medians of three, production build, D57's method:
+
+| Page | Runs | Median | Gate |
+|---|---|---|---|
+| `/product` | 89, 89, 89 | **89** | **fails ≥ 90** |
+| `/how-it-works` | 90, 90, 90 | 90 | passes |
+| `/pricing` | 90, 90, 90 | 90 | passes |
+
+Accessibility 100, best practices 96, SEO 100 on all three.
+
+**`/pricing` did not regress** — it gained a whole section in PR D and held
+90, which was the open question.
+
+**`/product` at 89 is the thing to pick up.** D57 saw the same 89 and reasoned
+it away, correctly then: the build with that PR stashed measured 86/90/91, a
+spread of five, so one point was inside the noise. **This run has no spread.**
+Three runs, 89 every time, while two other pages return 90/90/90 with the same
+zero spread. A figure that does not move is not noise.
+
+It is **LCP-bound, not JavaScript-bound**: CLS 0, TBT 40 ms, FCP 1.2 s, Speed
+Index 1.2 s, LCP **3.8 s** (score 0.56) on the hero image — the one `priority`
+image the page is allowed. The only opportunity above the noise floor is
+"reduce unused JavaScript", 290 ms / 34 KB.
+
+**It is reported rather than rounded up, and rather than chased here.** There
+is a recorded lead worth trying first: the home page's `reel-backdrop.tsx`
+asks the image optimiser for `w=3840` re-encodes of 640px-wide sources (logged
+in this file as "PR E or F6"). Check whether `/product` shares the pattern
+before anything else.
+
+### What E1 shipped: M12
+
+A gold light crosses the closing CTA's primary button as the section arrives,
+then rests. Two things worth knowing before touching it:
+
+**"Once" means once per arrival, not once per session.** It runs on
+`animation-timeline: view()`, the same mechanism `.reveal` uses, so scrolling
+back up replays it. Firing literally once needs an IntersectionObserver and a
+piece of state, for a decorative shimmer, on pages held to Lighthouse 90 —
+and every other reveal on the site already behaves this way.
+
+**The band is a sibling of the button, never a wrapper.** Clipping it needs
+`overflow: hidden`, and that on an *ancestor* of the button crops its focus
+ring, which 17 §Accessibility forbids. A test asserts the parent's overflow is
+`visible`, because the wrapper version looks identical on screen and quietly
+eats the ring.
+
+### Checks
+
+Unit **771** unchanged (M12 is CSS and a span; its guarantees are properties
+of the rendered page). e2e **322**, up 2. Lint, typecheck, build and
+licence-check green; 432 packages, GSAP scope clean.
+
+### The queue
+
+1. **PR E2** — **M8**: the progress spine down the pinned agent loop, and the
+   metric each agent owns appearing as its card activates (15 §6 has the
+   metrics; `PUBLIC_AGENTS` in `components/marketing/agents.ts` does not carry
+   one yet, so this is a content change as well as a motion one). The pin
+   itself is D35 and stays.
+2. **`/product` to 90**, with a before-and-after, per the numbers above.
+3. If either leaves room: the dev server is still the one door nothing pins —
+   `pnpm dev` reads `.env.local` and answers from the live model.
+
+Needs Vlad: **G**, **H**, **I–L**, **M** (confirm $400; say whether our
+YouTube app holds an approved upload scope).
+
+---
+
 ## Handoff — 16 November 2026, afternoon (PR D is in; PR E is all that is left)
 
 **Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.
