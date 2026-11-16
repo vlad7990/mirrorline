@@ -22,7 +22,7 @@ import { onlyProject } from './helpers/project-gate'
 
 onlyProject('chromium', 'the co-pilot’s rules are behavioural; 390px is a screenshot')
 
-const LAUNCHER = 'Ask about Mirrorline — AI assistant'
+const LAUNCHER = 'Ask Milo about Mirrorline — AI assistant'
 const GUARANTEE_QUESTION = 'Will I get 10,000 followers?'
 
 async function dismissBanner(page: Page) {
@@ -37,7 +37,7 @@ function launcher(page: Page) {
 }
 
 function panel(page: Page) {
-  return page.getByRole('dialog', { name: /Ask about Mirrorline/ })
+  return page.getByRole('dialog', { name: /Ask Milo about Mirrorline/ })
 }
 
 async function openPanel(page: Page) {

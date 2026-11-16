@@ -1,0 +1,49 @@
+{
+  "states": [
+    {
+      "state": "idle",
+      "isPlaceholder": true,
+      "full": "milo-concept-v2-full-360.webp",
+      "avatars": {
+        "64": "milo-concept-v2-avatar-64.webp",
+        "112": "milo-concept-v2-avatar-112.webp"
+      }
+    },
+    {
+      "state": "greeting",
+      "isPlaceholder": false,
+      "full": "milo-greeting-full-360.webp",
+      "avatars": {
+        "64": "milo-greeting-avatar-64.webp",
+        "112": "milo-greeting-avatar-112.webp"
+      }
+    },
+    {
+      "state": "thinking",
+      "isPlaceholder": true,
+      "full": "milo-concept-v2-full-360.webp",
+      "avatars": {
+        "64": "milo-concept-v2-avatar-64.webp",
+        "112": "milo-concept-v2-avatar-112.webp"
+      }
+    },
+    {
+      "state": "answering",
+      "isPlaceholder": true,
+      "full": "milo-concept-v2-full-360.webp",
+      "avatars": {
+        "64": "milo-concept-v2-avatar-64.webp",
+        "112": "milo-concept-v2-avatar-112.webp"
+      }
+    },
+    {
+      "state": "declined",
+      "isPlaceholder": true,
+      "full": "milo-concept-v2-full-360.webp",
+      "avatars": {
+        "64": "milo-concept-v2-avatar-64.webp",
+        "112": "milo-concept-v2-avatar-112.webp"
+      }
+    }
+  ]
+}

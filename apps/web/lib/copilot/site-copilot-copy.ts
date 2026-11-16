@@ -21,10 +21,18 @@
 export const AI_TAG = 'AI'
 
 export const SITE_COPILOT_COPY = {
-  /** On the floating button, and in its accessible name. */
-  launcherLabel: 'Ask about Mirrorline',
-  launcherAria: 'Ask about Mirrorline — AI assistant',
-  panelTitle: 'Ask about Mirrorline',
+  /**
+   * On the floating button, and in its accessible name.
+   *
+   * The mascot's name is in the label because the mascot is on the button: a
+   * picture of a character beside the words "Ask about Mirrorline" leaves a
+   * screen-reader user with no idea there is a character at all. "Ask Milo
+   * about Mirrorline — AI assistant" says who, about what, and what he is, in
+   * that order, and keeps the AI label where §3.3 wants it.
+   */
+  launcherLabel: 'Ask Milo',
+  launcherAria: 'Ask Milo about Mirrorline — AI assistant',
+  panelTitle: 'Ask Milo about Mirrorline',
   closeLabel: 'Close the assistant',
 
   /**

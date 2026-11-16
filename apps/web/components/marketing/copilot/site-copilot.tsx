@@ -37,6 +37,22 @@ import type { CopilotMode } from '@/lib/copilot/canned'
 import { SITE_COPILOT_COPY } from '@/lib/copilot/site-copilot-copy'
 import { readCopilotMode, streamCopilotAnswer } from '@/lib/copilot/stream'
 import { type Exchange, applyEvent, failExchange, startExchange } from '@/lib/copilot/transcript'
+import { type MiloState, miloStateFor } from '@/lib/mascot/milo'
+
+/**
+ * Has Milo already waved in this tab?
+ *
+ * Module scope rather than state, because "once per session" has to survive
+ * the component unmounting — this is mounted per page by the marketing
+ * layout, so a visitor walking from `/pricing` to `/product` would otherwise
+ * be waved at on every page. Module scope dies with the tab, which is exactly
+ * the lifetime §3.3 gives the transcript: nothing is stored, and a reload is
+ * a new session.
+ */
+let hasGreetedThisSession = false
+
+/** How long the wave lasts before Milo settles. Matches the CSS keyframe. */
+const GREETING_MS = 900
 
 export function SiteCopilot() {
   const { isResolved, hasChosen } = useCookieConsent()
@@ -44,6 +60,7 @@ export function SiteCopilot() {
   const [exchanges, setExchanges] = React.useState<readonly Exchange[]>([])
   const [mode, setMode] = React.useState<CopilotMode | null>(null)
   const [isAsking, setIsAsking] = React.useState(false)
+  const [miloState, setMiloState] = React.useState<MiloState>('idle')
 
   const panelId = `${React.useId()}-copilot`
   const launcherRef = React.useRef<HTMLButtonElement>(null)
@@ -78,6 +95,29 @@ export function SiteCopilot() {
     }
   }, [isOpen, mode])
 
+  /**
+   * The wave, once, when the launcher first appears.
+   *
+   * Gated on `hasChosen` rather than on mount: until the cookie banner is
+   * answered there is no launcher (§3.3), so greeting then would spend the
+   * one wave on a button nobody can see. The timer settles Milo back to
+   * `idle` so the resting float takes over — and it is cleared on unmount,
+   * because a navigation mid-wave would otherwise set state on a gone
+   * component.
+   */
+  React.useEffect(() => {
+    if (!isResolved || !hasChosen || hasGreetedThisSession) return undefined
+
+    hasGreetedThisSession = true
+    setMiloState('greeting')
+
+    const settle = window.setTimeout(() => {
+      if (isMountedRef.current) setMiloState('idle')
+    }, GREETING_MS)
+
+    return () => window.clearTimeout(settle)
+  }, [isResolved, hasChosen])
+
   const update = React.useCallback((id: string, change: (exchange: Exchange) => Exchange) => {
     if (!isMountedRef.current) return
     setExchanges((current) =>
@@ -109,6 +149,13 @@ export function SiteCopilot() {
           signal: controller.signal,
         })) {
           update(id, (exchange) => applyEvent(exchange, event))
+
+          // Milo reads the same events the transcript does, rather than
+          // running a machine of his own. `null` means this event says
+          // nothing about what he is doing — a citation arriving mid-answer
+          // must not drop him out of `answering`.
+          const next = miloStateFor(event)
+          if (next && isMountedRef.current) setMiloState(next)
         }
 
         // A stream that ends without a `done` or an `error` line is a
@@ -162,6 +209,7 @@ export function SiteCopilot() {
         ref={launcherRef}
         isOpen={isOpen}
         panelId={panelId}
+        miloState={miloState}
         onOpen={() => setIsOpen(true)}
       />
       {isOpen ? (
@@ -170,6 +218,7 @@ export function SiteCopilot() {
           exchanges={exchanges}
           mode={mode}
           isAsking={isAsking}
+          miloState={miloState}
           onAsk={(question) => void ask(question)}
           onClose={close}
         />

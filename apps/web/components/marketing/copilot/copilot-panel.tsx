@@ -33,9 +33,11 @@ import Link from 'next/link'
 import * as React from 'react'
 
 import { CloseIcon } from '@/components/icons'
+import { MiloAvatar } from '@/components/mascot/milo-avatar'
 import type { CopilotMode } from '@/lib/copilot/canned'
 import { AI_TAG, SITE_COPILOT_COPY } from '@/lib/copilot/site-copilot-copy'
 import type { Exchange } from '@/lib/copilot/transcript'
+import type { MiloState } from '@/lib/mascot/milo'
 import { useReducedMotion } from '@/lib/motion/use-reduced-motion'
 
 export interface CopilotPanelProps {
@@ -44,9 +46,17 @@ export interface CopilotPanelProps {
   /** From `/api/copilot/status`. Null means we could not find out. */
   readonly mode: CopilotMode | null
   readonly isAsking: boolean
+  /** What Milo is doing, decided from the same events the transcript reads. */
+  readonly miloState: MiloState
   readonly onAsk: (question: string) => void
   readonly onClose: () => void
 }
+
+/** The header's Milo. 32px, head and shoulders, beside the title. */
+const MILO_HEADER_SIZE = 32
+
+/** The empty state's Milo. The one place on this surface he is full-length. */
+const MILO_WELCOME_SIZE = 132
 
 const CHIP_CLASS =
   'inline-flex items-center rounded-full border border-ink-line px-3 py-1 text-meta text-on-ink-muted transition-colors hover:border-gold-500 hover:text-on-ink-900'
@@ -141,7 +151,15 @@ function ExchangeView({ exchange, isReduced }: { exchange: Exchange; isReduced: 
   )
 }
 
-export function CopilotPanel({ id, exchanges, mode, isAsking, onAsk, onClose }: CopilotPanelProps) {
+export function CopilotPanel({
+  id,
+  exchanges,
+  mode,
+  isAsking,
+  miloState,
+  onAsk,
+  onClose,
+}: CopilotPanelProps) {
   const [question, setQuestion] = React.useState('')
   const inputRef = React.useRef<HTMLInputElement>(null)
   const transcriptRef = React.useRef<HTMLDivElement>(null)
@@ -183,7 +201,13 @@ export function CopilotPanel({ id, exchanges, mode, isAsking, onAsk, onClose }: 
       )}
     >
       <header className="flex items-start justify-between gap-3 border-b border-ink-line px-5 py-4">
-        <div className="flex min-w-0 flex-col gap-1">
+        {/* `aria-hidden`: the heading beside it already names him, and the
+            grounding sentence below already says what he is. */}
+        <span aria-hidden="true" className="shrink-0 pt-0.5">
+          <MiloAvatar state={miloState} size={MILO_HEADER_SIZE} />
+        </span>
+
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
           <h2 id={titleId} className="m-0 flex items-center gap-2 text-label text-on-ink-900">
             {/* §3.3: labelled AI in the panel header, in words, on screen. */}
             <span className="rounded-full border border-gold-500/60 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-gold-500">
@@ -223,6 +247,16 @@ export function CopilotPanel({ id, exchanges, mode, isAsking, onAsk, onClose }: 
       <div ref={transcriptRef} className="flex-1 overflow-y-auto px-5 py-4">
         {exchanges.length === 0 ? (
           <div className="flex flex-col gap-3">
+            {/* The one place on this surface Milo is full-length, and it is
+                lazy-loaded: nobody sees it until the panel is opened. The alt
+                text carries him here, because unlike the header there is no
+                heading beside it doing that job. */}
+            <MiloAvatar
+              state={miloState}
+              shape="full"
+              size={MILO_WELCOME_SIZE}
+              className="self-center"
+            />
             <p className="m-0 text-body text-on-ink-900">{SITE_COPILOT_COPY.emptyState}</p>
             <p className="m-0 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-on-ink-muted">
               {SITE_COPILOT_COPY.suggestionsLabel}

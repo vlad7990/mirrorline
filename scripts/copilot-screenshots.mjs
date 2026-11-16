@@ -49,13 +49,13 @@ for (const viewport of VIEWPORTS) {
   await shot('banner-no-launcher')
 
   await page.getByRole('button', { name: 'Essential only' }).click()
-  const launcher = page.getByRole('button', { name: /Ask about Mirrorline/ })
+  const launcher = page.getByRole('button', { name: /Ask Milo about Mirrorline/ })
   await launcher.waitFor()
   await shot('launcher')
 
   // 2. The panel before anything has been asked.
   await launcher.click()
-  const panel = page.getByRole('dialog', { name: /Ask about Mirrorline/ })
+  const panel = page.getByRole('dialog', { name: /Ask Milo about Mirrorline/ })
   await panel.waitFor()
   await page.waitForTimeout(SETTLE_MS)
   await shot('panel-empty')

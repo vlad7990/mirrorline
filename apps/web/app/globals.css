@@ -354,3 +354,121 @@
     transform: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Milo.
+
+   The mascot's five states, as CSS on a `data-milo-state` attribute. Image
+   swap plus transforms, which is the whole brief for now — and the reason it
+   is an attribute rather than five class names is that a Rive file replacing
+   this later drives the same five names and nothing above it changes.
+
+   Every movement is inside a no-preference block, so stillness is the default
+   rather than an animation somebody has to remember to switch off. Under
+   reduced motion Milo simply sits there, which is exactly right: he is a
+   picture, and the panel beside him carries every word that matters.
+
+   Nothing here waits on an `animationend`. A state can change mid-animation —
+   `thinking` to `answering` happens on the first token — so each one has to be
+   interruptible, and a transform that is simply replaced is.
+   --------------------------------------------------------------------------- */
+.milo {
+  /* The ink field the renders were lit for, so a slow connection shows the
+     right colour rather than a white box the size of the mascot. */
+  background-color: var(--color-ink-900);
+  /* Transforms only. Animating anything that lays out would reflow the
+     launcher it sits in, sixty times a second, for a decoration. */
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Idle: a slow rise and fall, far enough to notice and not far enough to
+     draw the eye off the page. Four seconds, because anything quicker reads
+     as impatience next to a button somebody has not pressed yet. */
+  .milo[data-milo-state='idle'] {
+    animation: mirrorline-milo-float 4s var(--ease-in-out-quint) infinite;
+  }
+
+  /* Greeting: once. The wave is in the render; this is the arrival. The
+     session-once rule is held in the component that sets the state, not here,
+     because CSS cannot know what a session is. */
+  .milo[data-milo-state='greeting'] {
+    animation: mirrorline-milo-greet 900ms var(--ease-out) 1;
+  }
+
+  /* Thinking: the soft gold pulse. A glow rather than a spinner — a spinner
+     is a progress claim, and a streamed answer has no progress to report. */
+  .milo[data-milo-state='thinking'] {
+    animation: mirrorline-milo-think 1.6s ease-in-out infinite;
+  }
+
+  /* Answering: the smallest of the four. Words are arriving beside him and
+     the mascot must not compete with them for attention. */
+  .milo[data-milo-state='answering'] {
+    animation: mirrorline-milo-answer 1.1s ease-in-out infinite;
+  }
+
+  /* Declined: a single shake of the head, then still. Not red, not an alarm
+     — 18 §3.1 calls the handoff a success state, and the expression should
+     agree with the sentence underneath it. */
+  .milo[data-milo-state='declined'] {
+    animation: mirrorline-milo-decline 520ms var(--ease-out) 1;
+  }
+}
+
+@keyframes mirrorline-milo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4%);
+  }
+}
+
+@keyframes mirrorline-milo-greet {
+  0% {
+    transform: scale(0.88) rotate(-6deg);
+  }
+  55% {
+    transform: scale(1.04) rotate(3deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes mirrorline-milo-think {
+  0%,
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-accent) 0%, transparent);
+  }
+  50% {
+    transform: translateY(-2%);
+    box-shadow: 0 0 18px 2px color-mix(in oklab, var(--color-accent) 38%, transparent);
+  }
+}
+
+@keyframes mirrorline-milo-answer {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-1.5%) scale(1.015);
+  }
+}
+
+@keyframes mirrorline-milo-decline {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-4deg);
+  }
+  75% {
+    transform: rotate(4deg);
+  }
+}
