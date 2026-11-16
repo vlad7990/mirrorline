@@ -8,13 +8,33 @@
 
 ## Handoff — 15 November 2026, late evening (C3 groundwork; the panel is next)
 
-**Branch** `v4/site-and-metrics` · **last commit** `bb6cf97`, with this handoff
-on top · clean tree.
+**Branch** `v4/site-and-metrics` · **last feature commit** `bb6cf97`, with the
+handoff commits on top · pushed. The working tree holds one untracked file,
+`docs/design/mascot/milo-greeting.png`, which is Vlad's and has been left
+exactly where it is.
 **Preview:** https://mirrorline-7f7ykjfmg-vn-mn-product-group.vercel.app — 302
 at the edge behind deployment protection, sample mode (the key is local only).
 
+**Shipped today, after C2:** **PR G**, the gap-fill across `/pricing`,
+`/product`, `/how-it-works` and `/metrics` (`5032853`, handoff `2048298`), and
+the **C3 groundwork** that makes a two-part question answer both halves
+(`bb6cf97`). Both are green, both previewed, neither promoted.
+
 **Pick up at the C3 panel itself.** The answering half of the studio co-pilot
 is done and tested; what is left is the screen.
+
+### The queue, in order
+
+1. **C3 — the studio co-pilot panel.** Two refactors first (below), then the
+   panel: ⌘K, Escape, focus trap under `xl`, Approve/Dismiss.
+2. **React #418 — `/app/calendar` at 390px.** D55 is the standing record:
+   nothing reproduced, the guard that chased it was deleted rather than left
+   passing vacuously, and the next person has to read rather than run.
+3. **PR D — long-form YouTube.** It adds the add-on card to `/pricing` that
+   19's table asks for and v2 deliberately left out ("a card for an add-on
+   whose API audit has not started would be an invented product"). Five
+   Higgsfield credits remain and they matter here.
+4. **PR E — the last of the v4 queue.**
 
 ### What this commit shipped
 
@@ -26,7 +46,7 @@ Creator price, with `/pricing` cited. Six unit tests; D59 has the reasoning,
 including why "and" splits conservatively and why a question naming one of our
 plans now reads the price list directly.
 
-### What C3 still needs, in the order it will want doing
+### C3 in detail: the two refactors first, then the panel
 
 1. **A studio stream.** `lib/copilot/site-stream.ts` is the browser half and
    is hard-coded to `/api/copilot/site`. Generalise it — one reader, two
@@ -53,6 +73,17 @@ plans now reads the price list directly.
 Unit **723** (up 6 from 717), e2e **311** unchanged, the twenty co-pilot specs
 green. Lint, typecheck, build and licence-check green; 432 packages, GSAP
 scope clean. No screenshots and no Lighthouse: this commit changes no page.
+
+### Still needs Vlad
+
+**`ANTHROPIC_API_KEY` has landed locally** — "Needs Vlad F" is answered — and
+the one open question is whether it should go on the Vercel preview too. It is
+in `apps/web/.env.local` and nowhere else, so the preview still answers in
+sample mode, and `playwright.config.ts` pins the variable empty for the server
+the suite starts so no test run can spend money. The evening handoff below has
+the whole story, including the run that spent a little before the pin existed.
+
+**Five Higgsfield credits**, unchanged, and they matter to PR D.
 
 ---
 
