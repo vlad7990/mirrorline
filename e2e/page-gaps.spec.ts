@@ -81,6 +81,34 @@ test.describe('/pricing', () => {
     const link = section.getByRole('link', { name: /cancellation and refunds/i })
     await expect(link).toHaveAttribute('href', '/legal/cancellation-refunds')
   })
+
+  test('shows the one add-on, and that it cannot be bought yet (PR D)', async ({ page }) => {
+    await page.goto('/pricing')
+    const section = await sectionById(page, 'addon-heading')
+
+    // What it is and what it costs. 09 §11 is the only place the figure is
+    // written down; this asserts the page renders that figure rather than a
+    // second one typed here.
+    await expect(section.getByRole('heading', { name: 'Long-form YouTube' })).toBeVisible()
+    await expect(section.getByText('$400', { exact: true })).toBeVisible()
+
+    // The honest half, which is the whole reason 19 v2's objection no longer
+    // applies — asserted word for word, because a paraphrase is the failure
+    // mode here. The same sentence appears on /app/calendar for TikTok, and
+    // `platform-limits.test.ts` holds the two together.
+    await expect(
+      section.getByText('YouTube posts stay private until our app is approved.'),
+    ).toBeVisible()
+
+    // A waitlist rather than a purchase. 09 §11: nothing on the site may
+    // imply it can be bought today.
+    await expect(section.getByText('Waitlist', { exact: true })).toBeVisible()
+    await expect(section.getByRole('button', { name: /buy|start|subscribe/i })).toHaveCount(0)
+
+    // The limit that decides whether it is for you, in the list rather than
+    // in a footnote under it.
+    await expect(section).toContainText(/you send/i)
+  })
 })
 
 test.describe('/product', () => {

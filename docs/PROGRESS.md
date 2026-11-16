@@ -6,6 +6,105 @@
 
 ---
 
+## Handoff — 16 November 2026, afternoon (PR D is in; PR E is all that is left)
+
+**Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.
+Nothing promoted.
+
+**The long-form YouTube add-on card is on `/pricing`.** 19's page table has
+asked for it since it was written and F3 deliberately left it out, on an
+argument worth repeating: "a card for an add-on whose API audit has not
+started would be an invented product."
+
+**The audit still has not started.** What answers the objection is not that
+something got built — it is where the limit sits. The card says what it is,
+what it costs, **that you cannot buy it and why**, and only then what it
+includes. Somebody who stops reading halfway has still met the limit. That is
+the difference between describing a product and pretending to sell one, and
+Studio's `Waitlist` treatment at 09 §11 is the precedent.
+
+### What this needed before any pixel could be drawn
+
+**No spec said what the add-on is**, and 09 §11 is "the one place a price is
+written down" — so typing a figure onto `/pricing` would have inverted the
+only rule keeping prices from drifting. 09 §11 gained an **Add-ons**
+subsection first, and `long-form-addon.ts` transcribes it exactly as
+`pricing-tiers.ts` transcribes the plans. **$400 a month, on top of any
+monthly plan; 4 long videos; "you send" path only.** The price is a judgement
+and it is flagged as one — Needs Vlad **M**.
+
+### "In the same words" is now a property of the code
+
+The instruction was that the card carry the limit in the calendar legend's
+own words. Typing them again would have been true the day it was typed and
+nothing after: six places in this repo already carry hand-typed variants, and
+`/metrics`, the accounts board, the publishing section, the agents list and
+onboarding say "audited" or "approved" in five different sentences.
+
+`lib/copy/platform-limits.ts` now holds one template and two platform names.
+`week-grid.tsx` renders the TikTok constant instead of its literal; the card
+renders the YouTube one. **The test that matters reads `week-grid.tsx` off
+disk** and fails if the legend ever reverts to an inline string — without it,
+somebody types the sentence back, every other assertion passes, and the
+guarantee is gone while the suite stays green.
+
+### Two things worth knowing before touching it
+
+**It is not a sixth `PricingTier`, and a test holds that.** Folding it in
+would break three things at once: `PlanPicker` would offer it as a plan, the
+hero index would number it as one, and `perDayUsd` would divide a price only
+ever paid on top of another.
+
+**The co-pilot knows about it.** 18 §3.1 lets the bot answer only from the
+corpus, so without an entry the honest answer available to it was that it
+cannot find anything — about a product the page it cites advertises. The
+add-on rides in the existing plans chunk and **the caveat is in the same
+chunk as the price**, because retrieval can return a chunk without its
+neighbours.
+
+### No credits spent
+
+Five Higgsfield credits remain, checked rather than assumed, and that is
+D53's regeneration reserve. The visual is the existing `studio-cuts-16x10`
+screenshot in the kit's `BrowserFrame` — the upload screen showing one long
+video already cut into shorts, which is the add-on's own subject. No
+`<video>`: D50 put `/product` at Lighthouse 57 over one, and `/pricing` is
+held to ≥ 90. A generated long-form clip is left as an optional item.
+
+### The thing PR D found that is bigger than PR D
+
+09 §5 lists **YouTube Shorts** among the platforms every plan posts to, and
+names only TikTok's private-until-audited limit. If our YouTube app is
+unaudited — which Needs Vlad G implies — then Shorts sit in exactly the
+position the long uploads do, and the site under-states that on pages this PR
+does not touch. Written into 09 §11 and raised as **Needs Vlad M**, rather
+than rewritten across nine pages on an assumption only Vlad can settle.
+
+### Checks
+
+Unit **771** (up 10), e2e **320** (up 1). Lint, typecheck, build and
+licence-check green; 432 packages, GSAP scope clean.
+
+**Lighthouse has still not been run**, and `/pricing` just gained a section.
+It is one of the three pages held to mobile ≥ 90 and has not been measured
+since the co-pilot landed. **PR E must run it before it closes** — the new
+section adds no video and two theme-swapped images, so the expectation is no
+movement, but that is a prediction rather than a measurement.
+
+### The queue
+
+1. **PR E** — the remaining motion, per `docs/specs/17_MOTION_PLAN.md`, plus
+   the Lighthouse run above. If it leaves room, the dev server is still the
+   one door nothing pins: `pnpm dev` reads `.env.local` and answers from the
+   live model.
+
+Needs Vlad: **G** (start the YouTube API audit), **H** (an Anthropic console
+spend limit), **I–L** (Milo's rights, trademark, four renders with alpha, a
+Rive file) and **new M** (confirm the $400 figure; say whether our YouTube
+app already holds an approved upload scope).
+
+---
+
 ## Handoff — 16 November 2026, early afternoon (#418 is answered, not unreproduced; PR D is next)
 
 **Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.
@@ -2340,6 +2439,26 @@ L. **Optional, later: a Rive file from a designer.** The five states are
    dropped in there reads the same five names and nothing in `lib/copilot`
    changes. Worth it only if the mascot earns its place first — the CSS
    version costs 47 KB and no new dependency.
+
+M. **Two YouTube questions, both from PR D, and the second one is the bigger
+   of the two.**
+
+   1. **Confirm $400 a month for the long-form add-on**, or give me the
+      figure you want. 09 §11 is the one place a price is written down, so a
+      number had to go in it for `/pricing` to copy rather than invent one;
+      the reasoning is in D64 and it is a judgement, not a transcription.
+      Nothing is exposed by it being provisional — the add-on is a waitlist
+      and `PRICING_NOTE` already says we set the final price per engagement,
+      in writing, before any work starts.
+
+   2. **Does our YouTube app already hold an approved upload scope?** 09 §5
+      lists YouTube Shorts among the platforms every plan posts to, and names
+      only TikTok's private-until-audited limit. If the answer is no — which
+      G implies — then **Shorts are in the same position as the long uploads
+      are**, and the site currently under-states that on pages PR D does not
+      touch. PR D says so in 09 §11 and on the add-on card rather than
+      rewriting nine pages on an assumption. One word from you settles
+      whether that rewrite is owed.
 
 G. **A YouTube API audit, and the thing to know is that uploads stay private
    until it passes.** For **PR D** (the long-form add-on). Google's audit is

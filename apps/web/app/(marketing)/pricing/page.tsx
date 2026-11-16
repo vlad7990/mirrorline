@@ -14,9 +14,14 @@
  * protecting had scrolled apart anyway. 19 v2 ★2 asks for cards, and three
  * columns put all five plans where they can actually be compared.
  *
- * **No long-form YouTube add-on card.** 19's own table asks for one and v2
- * removes it: PR D owns that work and the platform audit it depends on has
- * not started. A card for it would be an invented product.
+ * **The long-form YouTube add-on card is here now (PR D).** This comment used
+ * to say the opposite, and the argument it made was right at the time: 19 v2
+ * removed the card because "a card for an add-on whose API audit has not
+ * started would be an invented product". The audit still has not started.
+ * What changed is that the card carries the limit — "YouTube posts stay
+ * private until our app is approved", the calendar legend's own sentence —
+ * beside the price rather than beneath it, which is the difference between
+ * describing a thing and pretending to sell it. See D64.
  */
 
 import { Check } from 'lucide-react'
@@ -27,6 +32,7 @@ import { HeroInset, InsetCycle } from '@/components/marketing/kit/hero-inset'
 import { PAGE_CTAS, PageCta } from '@/components/marketing/kit/page-cta'
 import { PageHeroImage } from '@/components/marketing/kit/page-hero-image'
 import { PAGE_HERO_IMAGES, allocateFrames } from '@/components/marketing/kit/page-media'
+import { LongFormAddon } from '@/components/marketing/long-form-addon-card'
 import { PlanPicker, type PlanAction } from '@/components/marketing/plan-picker'
 import { BillingPromises, CostComparison } from '@/components/marketing/pricing-sections'
 import { PRICING_FAQ } from '@/components/marketing/pricing-faq-content'
@@ -153,6 +159,12 @@ export default function PricingPage() {
           ))}
         </ul>
       </Section>
+
+      {/* The one thing that is an add-on, straight after the section saying
+          the rest are not. 19's page table puts it between the plans and the
+          FAQ, and that order is also the argument: the limits above do not
+          change with the price, and this is the single thing you can add. */}
+      <LongFormAddon />
 
       <FaqSection
         id="pricing-faq"

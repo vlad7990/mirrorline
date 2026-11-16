@@ -18,6 +18,7 @@ import type { PostStatus, ScheduledPost, WeekSchedule } from '@mirrorline/mock'
 import { cn } from '@mirrorline/ui'
 import type * as React from 'react'
 
+import { TIKTOK_PRIVATE_UNTIL_APPROVED } from '@/lib/copy/platform-limits'
 import { PostChip, STATUS_SWATCH_CLASS, statusWord } from './post-chip'
 import { type ChipDragStart, type ChipDragState, DROP_CELL_ATTRIBUTE } from './use-chip-drag'
 
@@ -151,8 +152,11 @@ export function WeekGrid({
             {statusWord(status)}
           </span>
         ))}
-        {/* 02_BRAND_AND_VOICE: say the limit plainly rather than hide it. */}
-        <span>TikTok posts stay private until our app is approved.</span>
+        {/* 02_BRAND_AND_VOICE: say the limit plainly rather than hide it.
+            The sentence moved to `lib/copy/platform-limits.ts` in PR D, which
+            shows the YouTube version of it on /pricing. Both are built from
+            one template, so "the same words" survives a rewrite of either. */}
+        <span>{TIKTOK_PRIVATE_UNTIL_APPROVED}</span>
       </div>
     </div>
   )

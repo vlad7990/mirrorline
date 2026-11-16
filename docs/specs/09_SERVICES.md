@@ -166,6 +166,44 @@ Repost Watch, plain billing and full file export. **Studio is not open yet** —
 it takes a waitlist and says so, and nothing on the site implies it can be
 bought today.
 
+### Add-ons
+
+There is exactly one, it is written here because this file is the one place a
+price is written down, and **it is not open yet either.**
+
+| Add-on | Price | Includes | Best for |
+|---|---|---|---|
+| **Long-form YouTube** | **$400/mo**, on top of any monthly plan | **Waitlist now.** 4 long videos a month, published to the client's own YouTube channel — the same recordings the shorts are already cut from — edited, titled, chaptered and given a thumbnail | An account that already sends us its own long recordings and wants the shorts to have somewhere to point |
+
+**It only works on the "you send" path** (§1), and that is a real limit rather
+than a soft one. It needs the client's own long recording. A remake copies a
+format's *structure* and is short by construction, and stretching one to long
+form is the thing non-negotiable 2 exists to prevent — so an account on "we
+create" alone has nothing for this add-on to publish. The site says so rather
+than letting somebody buy it and find out.
+
+**It is not open, and the reason is Google's rather than ours.** Our YouTube
+app has to pass Google's API audit before it may make uploads public, and that
+audit has not started (`docs/PROGRESS.md`, "Needs Vlad G"). Until it passes,
+**YouTube posts stay private until our app is approved** — the same sentence
+the calendar already shows for TikTok (§5), in the same words, because it is
+the same kind of limit and a client deserves to meet it in the same voice.
+
+**The price obeys §10 like every other price here:** flat monthly, no credits,
+no per-minute charge, cancel in one click. It is written down so the pricing
+page can copy a figure rather than invent one; the note that page already
+carries — "we set the final price per engagement, in writing, before any work
+starts" — is what actually binds. **Vlad has not confirmed the figure**
+(`docs/PROGRESS.md`, "Needs Vlad M").
+
+**The caveat reaches further than this add-on, and that is worth saying out
+loud rather than discovering later.** §5 lists YouTube Shorts among the
+platforms every plan posts to, and names only TikTok's private-until-audited
+limit. If our YouTube app is unaudited, Shorts sit in the same position as
+these long uploads do. This is **flagged, not silently rewritten** across the
+site, because whether our app already holds an approved YouTube upload scope
+is Vlad's to confirm — it is the second half of "Needs Vlad M".
+
 ## 12. Who we serve
 
 **Everyone.** Any business or individual, in any industry, with a new or an

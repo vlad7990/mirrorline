@@ -81,6 +81,17 @@ import {
   PROBLEM_CARDS,
   SCAN_STEPS,
 } from '@/components/marketing/home/problem-content'
+import {
+  ADDON_FACTS,
+  ADDON_NAME,
+  ADDON_PERIOD,
+  ADDON_PRICE,
+  ADDON_SUMMARY,
+  ADDON_VIDEOS_PER_MONTH,
+  PRIVATE_UNTIL_APPROVED,
+  WAITLIST_LABEL,
+  WHY_NOT_OPEN,
+} from '@/components/marketing/long-form-addon'
 import { PRICING_NOTE, PRICING_TIERS, perDayUsd } from '@/components/marketing/pricing-tiers'
 import { PRODUCT_TOUR } from '@/components/marketing/product-tour-content'
 
@@ -125,11 +136,32 @@ function plansSection(): CorpusSection {
     ].join('\n')
   }).join('\n\n')
 
+  /**
+   * The add-on rides with the plans rather than taking a section of its own.
+   *
+   * Somebody asking "do you do long-form YouTube?" is asking a pricing
+   * question, and §3.1 lets the bot answer only from the corpus — so without
+   * this, the honest answer available to it is that it cannot find anything,
+   * about a product the page it would cite is advertising.
+   *
+   * The limit sits in the same chunk as the price for the reason it sits in
+   * the same card: retrieval can return a chunk without its neighbours, and a
+   * chunk reading "$400 a month" with the audit caveat one chunk away is how
+   * the bot ends up quoting a price for something nobody can buy.
+   */
+  const addon = [
+    `Add-on: ${ADDON_NAME} — ${ADDON_PRICE} ${ADDON_PERIOD}`,
+    `  What it is: ${ADDON_SUMMARY}`,
+    `  Volume: ${ADDON_VIDEOS_PER_MONTH} long videos a month.`,
+    `  Not open yet — ${WAITLIST_LABEL} only, and there is nothing to pay. ${PRIVATE_UNTIL_APPROVED} ${WHY_NOT_OPEN}`,
+    `  ${ADDON_FACTS.map((fact) => `${fact.label}: ${fact.detail}`).join(' ')}`,
+  ].join('\n')
+
   return {
     id: 'plans',
     heading: 'The plans and what they cost',
     route: '/pricing',
-    body: `${body}\n\n${PRICING_NOTE}`,
+    body: `${body}\n\n${addon}\n\n${PRICING_NOTE}`,
   }
 }
 

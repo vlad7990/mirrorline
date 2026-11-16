@@ -4417,3 +4417,154 @@ queue, and it leaves it **answered** rather than unreproduced.
 No test added and none removed, which is the point. Unit **761**, e2e **319**,
 both unchanged. Lint, typecheck, build and licence-check green. The diff is
 two comments and this entry.
+
+---
+
+## 2026-11-16 · D64 · The long-form add-on, the card 19 v2 was right to refuse, and the caveat that is now a template rather than a promise
+
+PR D. 19's page table has asked for a long-form YouTube add-on card on
+`/pricing` since it was written; F3 deliberately left it out, and the
+sentence it left behind is the one this decision has to answer:
+
+> A card for an add-on whose API audit has not started would be an invented
+> product.
+
+**The audit still has not started.** It is "Needs Vlad G", and Google's queue
+is measured in weeks. So the objection is not answered by anything having been
+built. It is answered by what the card says.
+
+### What makes the card honest is the limit's position, not its presence
+
+Google's audit gates an app's ability to make uploads **public**. Until it
+passes, YouTube posts stay private. That fact was always going to be *on* the
+page somewhere; the decision is that it sits **beside the price, above the
+feature list**, in the same box. The order on screen is: what it is, what it
+costs, that you cannot buy it and why, then what it includes. Somebody who
+stops reading halfway has still met the limit.
+
+That is the difference between describing a product and pretending to sell
+one, and the site already had the vocabulary for it: Studio is $79 and
+**Waitlist**, because 09 §11 says "nothing on the site implies it can be
+bought today". The add-on gets the identical treatment and the e2e test
+asserts the absence of a buy button rather than only the presence of a card.
+
+### 09 §11 had to be written first, because no spec defined the add-on
+
+Nothing in `docs/specs/` said what the add-on *is*, and 09 §11 is "the one
+place a price is written down". Typing a figure onto `/pricing` would have
+inverted the only rule that keeps prices from drifting. So 09 §11 gained an
+**Add-ons** subsection, and `long-form-addon.ts` transcribes it the way
+`pricing-tiers.ts` transcribes the plans.
+
+Three things in it are decisions rather than transcription, and each is
+written where it can be checked:
+
+**$400 a month, on top of any monthly plan.** Creator is $499 for a whole
+plan; the add-on is roughly a week's long edit, a title, chapters and a
+thumbnail — materially less than a plan and more than a trivial extra, so it
+sits just under the cheapest plan and cannot be mistaken for one. **Vlad has
+not confirmed the figure** — "Needs Vlad M" — and `PRICING_NOTE` already
+carries what binds: "we set the final price per engagement, in writing,
+before any work starts."
+
+**Flat monthly, never per video.** 09 §10 is a promise rather than a style
+rule, and an add-on priced per upload would have broken it while looking
+reasonable. A unit test forbids `per video|clip|minute|upload|episode` and a
+bare "credits" across every line of the copy — with the same lookbehind
+`banned-phrases.ts` uses, because "no credits" is the sentence we want and
+"credits" is the charge we are refusing.
+
+**It only works on the "you send" path**, and that limit is in the feature
+list rather than in a footnote. A remake copies a format's *structure* and is
+short by construction; stretching one to long form is what non-negotiable 2
+exists to prevent, so an account on "we create" alone has nothing for this to
+publish. A test asserts the limit is in the list, because it is the fact that
+decides whether somebody should want this at all.
+
+### It is not a sixth `PricingTier`, and the test says why
+
+Folding it into `PRICING_TIERS` was the short way and would have been wrong in
+three places at once: `PlanPicker` would offer it as a plan, the pricing
+hero's numbered index would count it as one, and `perDayUsd` would divide a
+price that is only ever paid *on top of* another. So it is a different type,
+and `long-form-addon.test.ts` asserts it never appears in the plan list —
+guarding the decision rather than a value, because the simplification is the
+kind somebody makes in good faith a month from now.
+
+### "In the same words" became a property of the code
+
+The instruction was that the card say the limit **in the same words the
+calendar legend uses for TikTok**. Typing those words again would have made
+that true on the day it was typed and unenforceable the day after — and this
+repo already proves it: six places carry hand-typed variants of this caveat,
+and `/metrics`, the accounts board, the publishing section, the agents list
+and onboarding say "audited" or "approved" in five slightly different
+sentences.
+
+So `lib/copy/platform-limits.ts` holds one template and two platform names.
+`week-grid.tsx` renders `TIKTOK_PRIVATE_UNTIL_APPROVED` instead of its
+literal, and the card renders the YouTube one. The test that matters is the
+third: it reads `week-grid.tsx` off disk and fails if the legend ever goes
+back to an inline string. **Without that one, somebody types the sentence
+back inline, every other assertion still passes, and the guarantee is gone
+while the suite stays green** — which is D52's eighth goal-picker test and
+D55's theme-key typo in a third costume.
+
+### The corpus, because a bot that denies our own product is worse than silent
+
+18 §3.1 lets the website co-pilot answer only from the corpus. "Do you do
+long-form YouTube?" is a pricing question, so without a corpus entry the
+honest answer available to it would have been that it cannot find anything —
+about a product the page it cites is advertising.
+
+The add-on rides inside the existing plans chunk rather than taking a section
+of its own, and **the caveat is in the same chunk as the price**. Retrieval
+can return a chunk without its neighbours, and a chunk reading "$400 a month"
+with the audit caveat one chunk away is exactly how the bot ends up quoting a
+price for something nobody can buy. The corpus only grows here, which is the
+safe direction against `HAIKU_CACHE_MINIMUM_TOKENS`.
+
+### No new imagery, and the budget decided a design question again
+
+Five Higgsfield credits remain (D53) — checked with `higgsfield account
+status` rather than assumed, and that is the regeneration reserve, not a
+budget for a new section. The visual is the existing `studio-cuts-16x10`
+screenshot in the kit's `BrowserFrame`: the upload screen showing one long
+video already cut into shorts, which is the add-on's own subject, since the
+card sells publishing *that* long video too.
+
+No `<video>` either, and D50 is why: a hero loop put `/product` at Lighthouse
+57, and `/pricing` is one of the three pages held to ≥ 90. A generated
+long-form clip would be better and is left as an optional item for Vlad
+rather than spent into from a reserve.
+
+**A 9:16 sample strip was considered and dropped.** The page's hero already
+cycles three sample frames, `ReelStrip` grids to eight columns and reads as
+sparse at three, and three more lazy images on a page whose Lighthouse score
+has not been measured since the co-pilot landed is a cost with no argument
+behind it.
+
+### The caveat reaches further than this card, and it is flagged rather than fixed
+
+09 §5 lists **YouTube Shorts** among the platforms every plan posts to, and
+names only TikTok's private-until-audited limit. If our YouTube app is
+unaudited, Shorts sit in exactly the position these long uploads do — which
+would mean the site under-states a limit on pages PR D does not touch.
+
+Saying so is cheap; rewriting it across the site is not, and it turns on a
+fact only Vlad has: whether our app already holds an approved YouTube upload
+scope. So it is written into 09 §11 and raised as the second half of **Needs
+Vlad M**, rather than silently corrected on nine pages or silently left alone.
+
+### Measurements
+
+Unit **771**, up 10: seven on the add-on's copy and three on the shared
+caveat, one of which is the drift guard that reads `week-grid.tsx`. e2e
+**320**, up 1 — the add-on section, its price, the caveat word for word, the
+absence of a buy button, and the "you send" limit. Lint, typecheck, build and
+licence-check green; 432 packages, GSAP scope clean.
+
+**One test failed first and the regex was wrong, not the copy.** The per-unit
+assertion caught "Flat monthly, no credits" — our own promise — which is the
+same false positive `banned-phrases.ts` solved for "never guarantees" and was
+fixed the same way.
