@@ -6,6 +6,71 @@
 
 ---
 
+## Handoff — 16 November 2026, midday (C3 is done; React #418 is next)
+
+**Branch** `v4/site-and-metrics` · **last commit** `0ace298` · pushed. Clean
+tree. Nothing promoted.
+
+**PR C is finished.** C1 (the adapter), C2 (the website surface) and C3 (the
+studio panel) are all in. The co-pilot answers on both surfaces, cites what it
+read, refuses what it must, and proposes changes a person approves.
+
+### What C3 shipped
+
+⌘K from anywhere in `/app/*`, Escape, a focus-trapped modal below `xl` and an
+inline aside above it, and Approve/Dismiss wired to the calendar's own
+reschedule on sample data.
+
+**The thing worth knowing before touching it:** a proposal used to be three
+strings and a literal `true`, with no payload, so Approve had nothing to
+perform and the only way to get an action out of it would have been parsing
+the prose — which §2.3 forbids. `move-post` now carries a structured, strictly
+validated payload, and one that does not parse is dropped rather than shown.
+The other two kinds (`swap-format`, `pause-account`) have no screen behind
+them and **say so on approval** instead of reporting a success.
+
+The calendar's reschedules moved from `calendar-view.tsx` into a provider in
+the studio layout, so the co-pilot performs the same move rather than a second
+copy of it. Still nothing persisted.
+
+### Two things a screenshot caught that no test could
+
+**The "inline aside" was an overlay.** It was `fixed`, so on `/app/calendar` it
+covered the post panel §2.4 had told it to sit alongside. Every assertion
+passed while it was wrong — "beside" is not a property any of them could see.
+`main` now reflows from `xl` up, driven by `data-copilot-open` on `<html>`.
+
+**Milo at 28px was a smudge.** Below about 40px the face stops reading. That
+is why the launcher is 48 inside a 60px pill.
+
+### Checks
+
+Unit **761** (up 6), e2e **319** (up 8). Lint, typecheck, build and
+licence-check green; 432 packages, GSAP scope clean. Screenshots of the studio
+panel empty, proposing and approved, at 1440 and 390, in
+`docs/screens-built/copilot-studio/`.
+
+**One flake, recorded not chased.** `screenshots.spec.ts` at 390px dark failed
+once in a 10.9-minute full-suite run and passed three times in isolation
+after. Nothing in this PR touches it. D55's rule applied.
+
+### The queue
+
+1. **React #418 at `/app/calendar`, 390px** — its own small PR. `useIsWide`
+   now lives in `lib/motion/use-is-wide.ts` with its server snapshot and the
+   reason it is narrow-first written down; that is the place to start. D55
+   stands: it never reproduced, and the next person reads rather than runs.
+2. **PR D** — long-form YouTube, with the add-on card on `/pricing`. Five
+   Higgsfield credits remain; without them, build from existing
+   `public/samples/` frames and studio screenshots, labelled.
+3. **PR E** — the remaining motion.
+
+Needs Vlad is unchanged: **H** (a spend limit in the Anthropic console) and
+**I–L** (Milo's commercial rights, the trademark check, the four remaining
+state renders exported *with alpha*, and a Rive file later if he earns it).
+
+---
+
 ## Handoff — 16 November 2026 (Milo is in; the C3 panel itself is next)
 
 **Branch** `v4/site-and-metrics` · **last commit** `6c66a86` · pushed. Clean

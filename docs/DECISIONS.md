@@ -4190,3 +4190,164 @@ run answered from the live model and spent a few tenths of a cent before it was
 restarted with the key pinned empty. The e2e suite is hermetic and the live
 script is opt-in; **the dev server is the third door and nothing pins it.**
 Worth closing the next time the co-pilot is touched.
+
+## 2026-11-16 · D62 · The studio panel, the payload that made Approve possible, and an aside that was not beside anything
+
+### A proposal could not be approved, and the type said why
+
+18 §2.3 is that the co-pilot proposes and the person disposes, and §2.4 is
+sharper about the mechanism: "A regex over model text deciding whether to
+pause someone's account is the version of this feature that must never ship."
+Both were honoured. The consequence was not noticed until the Approve button
+had to be wired: **a `Proposal` was three strings and a literal `true`, with
+no payload at all.** The card could describe a move in `detail` and the screen
+had nothing to perform, and the only way to get an action out of it would have
+been to parse the prose — the exact thing the spec forbids.
+
+So the rule was right and the type was incomplete. `move-post` now carries a
+structured `move` — `postId`, `date`, `time24`, `timeLabel`, the shape
+`schedule-moves.ts` already takes — and `parseProposal` drops a `move-post`
+whose payload is missing or malformed rather than showing it. **A card whose
+Approve button does nothing is worse than no card**, because it reads as an
+offer and fails silently.
+
+Every field is checked for shape rather than for presence, which is stricter
+than the other three fields need to be and is deliberate: `date` and `time24`
+end up in a cell of the grid, and a malformed time sorts wrongly inside a day
+while a malformed date makes a column that does not exist. Neither throws.
+`"9:15"` and `"25:00"` are both refused.
+
+The other two kinds carry no payload, and that is not an oversight.
+`swap-format` would queue a remake and `pause-account` would stop the
+Publisher, and neither screen exists — so they are proposals that explain
+rather than act, and **approving one says so** rather than reporting a
+success. A confirmation for a thing that did not happen is the one failure a
+proposal card must not have.
+
+### The canned proposal reads the fixtures, because ids are computed
+
+`weekPosts` builds its ids as `post-<platform>-<date>-<time>` from dates the
+fixture computes. A literal post id written into `canned.ts` would be correct
+today and point at nothing the moment the week rolls — and a proposal naming a
+post that is not on the calendar is a card whose button silently does nothing,
+which is the failure the validation above exists to prevent, arriving by a
+different door. So the sample move is derived at module load: Thursday's first
+post, to Tuesday, keeping its time of day, with `null` if the fixtures ever
+stop having one. `canned.test.ts` asserts the proposal names a post that is
+actually in the week.
+
+### Lifting the calendar's moves, and what it bought
+
+They were local state in `calendar-view.tsx`, which was right while the
+calendar was the only thing that could reschedule anything. The co-pilot's
+Approve is the second, and §2.3 means it has to perform **the same** move
+rather than a second implementation of it.
+
+`ScheduleMovesProvider` sits in the studio layout. Two things came out of it
+beyond the obvious:
+
+- **Approving from `/app/results` and then walking to the calendar shows the
+  post where the co-pilot said it would be.** A panel reporting a move the
+  grid had never heard of would be the worst version of this feature.
+- **`movePost` returns whether anything changed**, read from a ref rather than
+  from the state closure so it is answering about the current value. The
+  calendar now stays quiet when a chip is dropped onto the day it is already
+  in — it used to raise a toast claiming a move that had not happened.
+
+The hook throws rather than returning a no-op default when used outside the
+provider. A default would give the co-pilot an Approve button that quietly did
+nothing: §2.3's failure mode, arriving by accident instead of by design.
+
+### Two shapes, one body, and why not `Dialog`
+
+§2.4 asks for "a focus-trapped dialog on narrow screens and an inline aside
+from `xl` up". `@mirrorline/ui`'s `Dialog` exists and the calendar uses it, and
+it is wrong for this one: the panel has to be *either* modal or inline
+depending on the viewport, and switching a component's modality across a
+breakpoint means mounting and unmounting it on resize — **losing the
+transcript, the input's contents and the focus position.** So the frame is
+conditional, the body is not, and twenty lines of focus trap are cheaper than
+that bug.
+
+The trap is on the narrow shape only, and `aria-modal` with it. An aside
+beside the content must not trap anything — a trap there would make the rest
+of the studio unreachable by keyboard — and claiming `aria-modal` on it would
+tell a screen reader the studio is inert while it plainly is not.
+
+The focusable list is recomputed on every Tab rather than captured on open,
+because Approve and Dismiss *disappear* once a decision is made and a captured
+list would send focus to a button that has gone.
+
+### An inline aside has to be beside something
+
+The first build was `fixed right-6 top-24`, which is an overlay however it is
+styled. The screenshot made it obvious: on `/app/calendar` the co-pilot
+covered the post panel it was supposed to sit alongside — the very panel §2.4
+told it to copy.
+
+The content has to move. `StudioLayout` is a server component and cannot hold
+the open state, so the panel sets `data-copilot-open` on `<html>` and
+`globals.css` pads `main` from `xl` up. Below `xl` nothing happens, because
+there it is a modal and covering the page is what it is for.
+
+**This is the second time a screenshot caught something no test would have.**
+Every assertion about the panel passed while it was an overlay; "beside" is
+not a property any of them could see.
+
+### "Nothing ran until Approve" as a test rather than a promise
+
+The honest version of that test cannot read the panel, because the panel
+claiming a move is exactly what is in question. `copilot-studio.spec.ts` reads
+the **calendar grid** instead — through the chips' own accessible names, which
+begin with the day each one sits in, so a move changes them. It asks, dismisses
+once and proves nothing moved, then asks again, approves, and proves it did.
+
+Reading the accessibility API rather than adding a `data-post-id` for the test
+was a deliberate choice: the assertion is then about the thing a screen-reader
+user is told rather than about a hook nobody else uses, and it cannot drift
+from what is on screen.
+
+Two defences against a double press, and both are needed. `decideProposal`
+returns the **same object** when there is nothing to decide, and the container
+checks that identity before it reaches `movePost` — so a second press never
+performs the move. And the buttons unmount once a decision is made, so there
+is nothing left to press. The first is the belt; the second is what a person
+actually experiences.
+
+The e2e also caught a real selector problem worth keeping: the proposal card
+and the exchange containing it were both list items matching "Approve". The
+fix was to **name the proposal list** (`aria-label`), which the test needed and
+a screen reader wanted anyway — a run of anonymous list items in a transcript
+is worse for both.
+
+### `useIsWide` moved, with its reasoning
+
+Private to `calendar-view.tsx` until now. §2.4 asks the co-pilot to copy the
+calendar's split so the studio has "one answer to where does the detail go",
+and one answer means one hook rather than two copies that drift to different
+pixel values.
+
+The server snapshot is `false` — narrow — and the reason is now written where
+the next person will look. Narrow-first means the server renders the drawer
+closed and the aside absent, so hydration *adds* an element; starting wide
+would render an aside a narrow client then removes, and removing
+server-rendered content during hydration is the shape that produces a
+mismatch. D55 recorded React #418 at `/app/calendar` and 390px as never
+reproducing. This is the first thing to re-read if it comes back, and it is
+the next item in the queue.
+
+### Measurements
+
+Unit **761**, up 6: four on the payload's validation, two on the canned
+proposal pointing at a real post. e2e **319**, up 8 — ⌘K from a screen the
+component does not own, Escape and focus restoration, the two shapes, the Tab
+trap, dismiss-then-approve against the grid, the double press, the AI label,
+and axe on the open panel with a proposal in it. Lint, typecheck, build and
+licence-check green; 432 packages, GSAP scope clean. Screenshots of the panel
+empty, proposing and approved, at 1440 and 390.
+
+**One flake, handled by D55's rule.** `screenshots.spec.ts` at 390px dark
+failed once in a full-suite run that took 10.9 minutes, and passed three times
+in isolation afterwards. Nothing in this PR touches it; the file is slow
+enough that a timeout under load is the likely cause. Recorded rather than
+chased, and worth watching.
