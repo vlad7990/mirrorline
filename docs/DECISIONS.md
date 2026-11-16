@@ -5008,3 +5008,74 @@ what changed is only that the site now says so everywhere it claims to post.
 Unit **782**, up 5: four on the sweep and its allowlist, one on the legend
 covering every platform the grid draws. Lint, typecheck, build and
 licence-check green; 432 packages, GSAP scope clean.
+
+---
+
+## 2026-11-16 · D69 · Nine pages want a hero picture and five credits remain, so the picture is made of the output instead
+
+**F6 is the eleven pages F1–F5 left on the old kit**, and it opens on an
+arithmetic problem rather than a design one. 19 §Shared rules gives every
+inner page its own full-bleed generated image. Nine of the eleven want one. A
+Nano Banana Pro 16:9 costs 2 credits, so that is eighteen, and D53 left
+**five**.
+
+### The option I did not take, and why it was the tempting one
+
+Reusing an F2–F5 room on an F6 page costs nothing and nobody would file a bug
+about it. It is also the exact failure `page-media.ts` already asserts
+against — *"one repeated room reads as a template rather than as a site"* —
+and that is what settles it. **A rule with a test behind it cannot be
+quietly set aside; it can only be deliberately weakened.** I would have had to
+edit `no two pages share a hero image` to let the reuse through, and an
+assertion edited to permit the thing it was written to catch is worse than no
+assertion, because the next reader believes it is still on duty.
+
+### What the pages got instead
+
+A **wall of three sample frames**, full-bleed, under the same two scrims the
+room sits under. `PageHeroFrames` beside `PageHeroImage`, both on a new
+`PageHeroShell` — which is the part that mattered more than the picture:
+the AI label is unconditional in the shell, so a second hero variant did not
+become a second place for the label to go missing (non-negotiable 4).
+
+**On two of the pages it is not a substitute at all.** 19 §Page by page asks
+/businesses and /individuals for a "hero with a reel collage relevant to the
+page" in those words. The budget pushed me onto the thing the spec had already
+asked for, which is the happiest version of a constraint.
+
+The image budget survives intact: the leftmost frame is the page's one
+`priority` image and the other two are lazy, so a wall costs the same single
+blocking request a room does and weighs less — three thumbnails against a
+1600×900.
+
+### The rule that came with it
+
+`PAGE_HERO_FRAMES` gives each page an **offset** into the twelve frames, and a
+test asserts the offsets are distinct. Without it every F6 page opens on the
+baker and eleven pages read as one page with eleven headlines — which is the
+repeated-room failure arriving by a different door. The manifest-drift test
+became three-way at the same time: a page now has a room **or** a wall, never
+both and never neither, so a page that falls out of both manifests fails
+rather than silently shipping the old text hero.
+
+`/legal/*` and `/accessibility` are absent from the manifest on purpose. 19
+gives them "no reels, readable layout, light motion only", and leaving them
+out means there is nowhere to add a hero to them out of habit.
+
+### The thing that was typed and should not have been
+
+Porting /businesses and /individuals turned up a second defect that had
+nothing to do with pictures. `AudienceStage` carried `cadence: '7–21 posts a
+week'` as a **string**, which was fine while it was only ever printed. The new
+sample-week strip draws a cell per post, so the sentence and the picture would
+have been two sources for one number — and the picture would have gone on
+agreeing with itself after the cadence changed. It is `postsPerWeek: [7, 21]`
+now, with the sentence derived from it, which is D24's rule applied to a page
+that was not selling a plan.
+
+### Measurements
+
+Unit **785**, up 3: distinct wall offsets, every wall three frames that exist,
+and no page holding both kinds of hero. Ten new Playwright assertions in
+`e2e/inner-pages-f6.spec.ts`. Lint, typecheck, build and licence-check green.
+Axe: 0 serious or critical on both pages in both themes.

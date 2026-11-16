@@ -21,6 +21,7 @@ export const metadata: Metadata = {
 }
 
 const CONTENT: AudiencePageContent = {
+  page: 'businesses',
   eyebrow: 'For businesses',
   title: (
     <>
@@ -28,7 +29,8 @@ const CONTENT: AudiencePageContent = {
     </>
   ),
   lead: 'We do not need to know your trade to start — our agents research it. What we do need to know is whether you already have an account worth growing, or whether we are starting one.',
-  marginNote: 'pilot first · month to month after',
+  insetCaption: 'Three samples, three unrelated trades',
+  stripLabel: 'Sample reels made for four different kinds of business',
   stages: [
     {
       id: 'existing',
@@ -36,7 +38,7 @@ const CONTENT: AudiencePageContent = {
       body: 'It exists, it posts occasionally, and there is almost certainly a pile of recorded material nobody has cut up — a talk, a webinar, a long call you had permission to record. That back catalogue is already a month of posts, which is why existing accounts see something happening fastest.',
       plan: 'Pilot → Growth or Scale',
       inputMix: 'Your footage + remakes',
-      cadence: '7–21 posts a week',
+      postsPerWeek: [7, 21],
     },
     {
       id: 'new',
@@ -44,7 +46,7 @@ const CONTENT: AudiencePageContent = {
       body: 'No presence on one platform, or on any of them. We start it properly rather than with three posts and six months of silence: mostly originals at first, built from the formats the Niche Scan found working in your niche, shifting to your own footage as the library grows.',
       plan: 'Pilot → Growth',
       inputMix: 'Mostly created, then yours',
-      cadence: '7–14 posts a week',
+      postsPerWeek: [7, 14],
     },
   ],
   commonGoals: ['leads', 'bookings', 'sales', 'awareness'],
@@ -75,7 +77,6 @@ const CONTENT: AudiencePageContent = {
         'Then the question worth asking them is what their last four weeks produced beyond views. If the answer comes back as leads, bookings or sales per post, you are in good hands and you do not need us.',
     },
   ],
-  next: { href: '/pricing', label: 'Pricing' },
 }
 
 export default function BusinessesPage() {

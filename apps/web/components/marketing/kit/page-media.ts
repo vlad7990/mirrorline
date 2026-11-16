@@ -170,3 +170,40 @@ export const PAGE_HERO_IMAGES = {
 } as const satisfies Record<string, PageHeroImage>
 
 export type PageHeroKey = keyof typeof PAGE_HERO_IMAGES
+
+/* -------------------------------------------------------------------------- */
+/* Pages whose hero is a wall of frames                                        */
+/* -------------------------------------------------------------------------- */
+
+export interface PageHeroFrameSet {
+  /**
+   * Where this page's window into the twelve starts.
+   *
+   * Distinct per page, and a test says so. Without it every F6 page would
+   * open on the baker and the eleven of them would read as one page with
+   * eleven headlines — the same failure "no two pages share a hero image"
+   * guards against on the generated rooms.
+   */
+  readonly offset: number
+  /** What the wall is of, for the handoff and for whoever picks the next offset. */
+  readonly subject: string
+}
+
+/**
+ * The F6 pages, which have a hero wall rather than a room of their own.
+ *
+ * 19 §Shared rules asks every inner page for its own full-bleed generated
+ * image. Eight exist; five credits remain and nine more pages want one, which
+ * is eighteen credits (19 v2 §asset budget). D69 chose the wall over reuse,
+ * because reuse is the one thing `PAGE_HERO_IMAGES`' own test calls a failure.
+ *
+ * `/legal/*` and `/accessibility` are not here on purpose: 19 §Page by page
+ * gives them "no reels, readable layout, light motion only", so they have no
+ * hero backdrop at all and a key here would be an invitation to add one.
+ */
+export const PAGE_HERO_FRAMES = {
+  businesses: { offset: 0, subject: 'a baker, a mechanic and a man on a studio mat' },
+  individuals: { offset: 3, subject: 'an empty lit room, a parcel being opened and a florist' },
+} as const satisfies Record<string, PageHeroFrameSet>
+
+export type PageHeroFrameKey = keyof typeof PAGE_HERO_FRAMES

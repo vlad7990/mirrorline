@@ -225,3 +225,127 @@ holds its own state and does not touch the URL.
 - No two sections of one page show the same set of sample frames.
 - The per-page image budget holds: one `priority` image, ≤ 12 lazy, ≤ 1 `<video>`.
 - Every page hero carries its own AI label naming the image as generated.
+
+---
+
+# v3 — the eleven pages F1–F5 left on the old kit
+
+Written at the start of F6, 16 November 2026. v2 §Scope deferred eleven routes
+and called the result "a seam, and the honest cost of the narrower scope".
+This half closes it. The shared rules and the image budget above still govern;
+one of them changes, and it changes because of arithmetic.
+
+## The hero picture, and why nine pages do not get one
+
+**19 §Shared rules asks every inner page for its own full-bleed generated
+image. Nine of these eleven want one and five credits remain.**
+
+A Nano Banana Pro 16:9 costs 2 (D29, corrected at D53). Nine heroes is
+eighteen. So the question was never whether to generate — it was what goes
+behind a headline when there is nothing to generate it with, and there were
+two obvious answers:
+
+| Option | What it costs | Why not |
+|---|---|---|
+| Reuse an F2–F5 room on an F6 page | nothing | It is the one thing `page-media.ts` already has a test against: "one repeated room reads as a template rather than as a site". Running that failure deliberately is worse than running it by accident, because the test would have to be weakened to allow it. |
+| A hero with no picture at all | nothing | Honest, but it gives up the pattern on the pages that most need to stop looking like documentation — which is the complaint 19 opens with. |
+
+**D69 takes a third: a wall of three sample frames, full-bleed, under the same
+two scrims.** `PageHeroFrames` sits beside `PageHeroImage` in the kit, both on
+a shared `PageHeroShell`, so the AI label cannot go missing from one of them.
+
+Three things make it an answer rather than a cheaper substitute:
+
+- **On two pages it is the spec.** §Page by page asks /businesses and
+  /individuals for a "hero with a reel collage relevant to the page" in those
+  words. For them the wall is the brief.
+- **Every frame is already generated, already labelled and already on disk**,
+  so nothing on these pages claims to be a photograph of anything.
+- **The image budget is unchanged.** The leftmost frame is the page's one
+  `priority` image and the other two are lazy, so a wall costs the same single
+  blocking request a room does — and weighs less, being three thumbnails
+  rather than a 1600×900.
+
+**The walls must not match each other.** `PAGE_HERO_FRAMES` gives each page an
+offset into the twelve and a test asserts the offsets are distinct — which is
+`PAGE_HERO_IMAGES`' "no two pages share a hero image" rule, carried to the
+pages that could not have a picture each.
+
+**`/legal/*` and `/accessibility` get no hero backdrop at all**, and that is
+not the budget talking: §Page by page already gives them "no reels, readable
+layout, light motion only". They are absent from `PAGE_HERO_FRAMES`, so there
+is nowhere to add one out of habit.
+
+## Per page
+
+### ★ /businesses and /individuals (F6a)
+
+1. ★ Frame-wall hero, labelled, with an inset cross-fade of three more frames.
+2. ★ The two account stages as cards — plan, input mix and cadence (13 §1).
+3. ★ **A sample week per stage, derived from that stage's posts-per-week and
+   never typed** (D24). The cadence sentence and the picture read from one pair
+   of numbers, so a cadence change moves both or neither.
+4. ★ The goals this audience picks most often, each with its headline KPI.
+   **Type-led, not tiled with pictures**: §Page by page asks for "the 7 goals
+   as visual tiles", and the honest version of a tile here would be a chart of
+   a result we have not produced for an account we do not have — which is
+   non-negotiable 7. Every frame on the page is also already spoken for.
+5. ★ The usual worries, answered plainly, including the ones whose honest
+   answer is "then you do not need us".
+6. ★ A reel strip of four, labelled.
+7. ★ Page-specific final CTA.
+8. ★ **No industry named anywhere in the copy** (16 §1). The frames vary by
+   trade on purpose; the words must not, and a test reads the words.
+
+### ★ /agents (F6b)
+
+1. ★ Frame-wall hero, labelled.
+2. ★ One card per agent: icon, job, spend cap, the metric it owns.
+3. ★ The hand-off order as a scroll-lit sequence, reusing home's.
+4. ★ A sample activity log, labelled as sample.
+5. ★ Page-specific final CTA.
+
+### ★ /trust (F6b)
+
+1. ★ Frame-wall hero, labelled.
+2. ★ The rules as icon cards, allowed beside never.
+3. ★ An Originality Gate walkthrough, source beside remake.
+4. ★ An AI label shown on a reel, as the client sees it.
+5. ★ "Where your data goes" as a diagram rather than a paragraph.
+6. ★ Page-specific final CTA.
+
+### ★ /niche-scan/sample, /about, /contact (F6c)
+
+- **/niche-scan/sample:** ★ recipe cards whose beats reveal on scroll, ★ a
+  frame per recipe, ★ views-per-follower bars that grow, ★ final CTA.
+- **/about:** ★ frame-wall hero, ★ the story as a scroll sequence — the
+  complaint, what we built, how we work — ★ principles as icon cards, ★ final
+  CTA. No investigation details and no team photographs we do not have.
+- **/contact:** ★ frame-wall hero, ★ two paths (book a call, send a message),
+  ★ a success state that is an animation rather than a new page, ★ final CTA.
+
+### ★ /faq and /changelog (F6c)
+
+- **/faq:** ★ frame-wall hero, ★ category tabs, ★ a search filter, ★ smooth
+  accordion, ★ final CTA. The "Ask about Mirrorline" co-pilot link v2 left out
+  **is now owed** — PR C2 shipped the website co-pilot.
+- **/changelog:** ★ frame-wall hero, ★ dated entries on a timeline revealing
+  on scroll, ★ a screenshot on entries that changed a screen, ★ final CTA.
+
+### ★ /legal/\* and /accessibility (F6d)
+
+1. ★ A readable document layout: the measure, scale and spacing of the article
+   template rather than of a marketing page.
+2. ★ Sticky table of contents with anchor links.
+3. ★ A last-updated date, from the document rather than from the build.
+4. ★ Light motion only, and **no reels, no frame wall and no final CTA.** A
+   page someone opens to find out what we do with their data should not close
+   by selling them something.
+
+## v3 acceptance, in addition to v2's
+
+- Every F6 page is in `PAGE_HERO_FRAMES` or deliberately absent from it, and
+  the CTA manifest and the two hero manifests hold the same keys between them.
+- No two frame walls open on the same frames.
+- No page keeps the old `PageHero`'s rotated margin note (19 §Shared rules).
+- The audience pages name no industry in their copy.

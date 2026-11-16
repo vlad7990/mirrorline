@@ -22,14 +22,18 @@
  * longer a margin. D44 already removed the version drawn over the screenshot
  * on six pages; this finishes the job rather than finding somewhere new to
  * put it.
+ *
+ * **Only the backdrop lives here now.** F6 added a second hero variant, and
+ * everything either of them draws above the picture — the scrims, the
+ * headline grid, the inset's corner, the numbered index and the AI label —
+ * moved to `PageHeroShell`.
  */
 
-import { cn } from '@mirrorline/ui'
 import Image from 'next/image'
 import * as React from 'react'
 
-import { HeroIndex, type HeroIndexItem } from '../hero-parts'
-import { Section } from '../primitives'
+import type { HeroIndexItem } from '../hero-parts'
+import { PageHeroShell } from './page-hero-shell'
 import type { PageHeroImage as PageHeroImageAsset } from './page-media'
 
 export interface PageHeroImageProps {
@@ -60,11 +64,16 @@ export function PageHeroImage({
   inset,
 }: PageHeroImageProps) {
   return (
-    <Section
-      size="lg"
-      className="band-ink pt-10 sm:pt-16"
+    <PageHeroShell
+      eyebrow={eyebrow}
+      title={title}
+      lead={lead}
+      action={action}
+      index={index}
+      inset={inset}
+      backdropLabel="The room behind this is an AI-generated image, not a photograph of a client or an office of ours."
       backdrop={
-        <div className="absolute inset-0 -z-10">
+        <>
           {/* Oversized, then moved within that slack. A layer translated
               inside its own box shows its edge at the extremes of the travel
               — the trap `reel-backdrop.tsx` documents, and the reason this is
@@ -98,62 +107,8 @@ export function PageHeroImage({
               className="object-cover"
             />
           </div>
-
-          {/* Two scrims, doing two different jobs.
-
-              Left-to-right first, so the text column sits on near-black
-              whatever the picture is doing behind it — the device
-              `hero-parts.tsx` uses, kept because it is what holds the
-              headline's contrast on eight unlike photographs rather than on
-              one known one.
-
-              Then bottom-up, because the numbered index and the inset card
-              sit along the base and several of these images are brightest
-              exactly there. */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/45"
-          />
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 bg-gradient-to-t from-ink via-ink/20 to-transparent"
-          />
-        </div>
+        </>
       }
-    >
-      <div className="grid items-start gap-10 lg:grid-cols-12 lg:gap-12">
-        <div className={cn('flex flex-col gap-5', inset ? 'lg:col-span-8' : 'lg:col-span-9')}>
-          {eyebrow ? <span className="site-eyebrow reveal-lead">{eyebrow}</span> : null}
-          <h1 className="reveal-lead m-0 text-balance text-site-h2 text-on-ink-900">{title}</h1>
-          <p className="reveal m-0 max-w-[52ch] text-subtitle font-normal text-on-ink-muted">
-            {lead}
-          </p>
-          {action ? <div className="reveal mt-2 flex flex-wrap gap-3">{action}</div> : null}
-        </div>
-
-        {/* Bottom-right, as the spec asks, but only where there is a right
-            margin to be in: below `lg` it follows the text in the flow rather
-            than floating over a headline on a 390px screen. */}
-        {inset ? (
-          <div className="reveal flex justify-start lg:col-span-4 lg:justify-end lg:self-end">
-            {inset}
-          </div>
-        ) : null}
-      </div>
-
-      {index ? (
-        <div className="mt-12">
-          <HeroIndex items={index} />
-        </div>
-      ) : null}
-
-      {/* Non-negotiable 4, and unconditional for the same reason the backdrop
-          is: a label that depended on some other prop being passed would go
-          missing the first time a page forgot one. */}
-      <p className="m-0 mt-8 text-caption text-on-ink-faint">
-        The room behind this is an AI-generated image, not a photograph of a client or an office of
-        ours.
-      </p>
-    </Section>
+    />
   )
 }

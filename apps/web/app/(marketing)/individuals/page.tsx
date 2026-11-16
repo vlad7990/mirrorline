@@ -22,6 +22,7 @@ export const metadata: Metadata = {
 }
 
 const CONTENT: AudiencePageContent = {
+  page: 'individuals',
   eyebrow: 'For individuals',
   title: (
     <>
@@ -29,7 +30,8 @@ const CONTENT: AudiencePageContent = {
     </>
   ),
   lead: 'Creators, experts and personal brands. If you record long-form, the raw material exists and the cutting does not. If you are starting out, three repeatable series beat sporadic effort.',
-  marginNote: 'about 15 minutes a week from you',
+  insetCaption: 'Three samples, cut from long-form',
+  stripLabel: 'Sample reels made for four different kinds of creator',
   stages: [
     {
       id: 'existing',
@@ -37,7 +39,7 @@ const CONTENT: AudiencePageContent = {
       body: 'A podcast, a channel, a stream, a newsletter you also record. You post a fraction of what you make because cutting it is an evening a day, and the evening is the thing you do not have. One upload becomes a month of posts, and you spend about fifteen minutes a week approving them.',
       plan: 'Creator, $499 a month',
       inputMix: 'Your long-form + remakes',
-      cadence: '14–28 posts a week',
+      postsPerWeek: [14, 28],
     },
     {
       id: 'new',
@@ -45,7 +47,7 @@ const CONTENT: AudiencePageContent = {
       body: 'No audience yet and nothing to cut up. What works here is not volume but shape: three repeatable series, posted on schedule, until the account has a reason to be followed. Studio is the plan for this and it is not open yet — the waitlist is the only thing to join.',
       plan: 'Studio, $79 — waitlist',
       inputMix: 'Mostly created + phone clips',
-      cadence: '7–14 posts a week',
+      postsPerWeek: [7, 14],
     },
   ],
   commonGoals: ['audience', 'community', 'leads', 'launch'],
@@ -76,7 +78,6 @@ const CONTENT: AudiencePageContent = {
         'One click, from Settings, any time. No contract and no notice period, and you export every file — including after you have gone.',
     },
   ],
-  next: { href: '/pricing', label: 'Pricing' },
 }
 
 export default function IndividualsPage() {

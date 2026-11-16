@@ -6,6 +6,81 @@
 
 ---
 
+## Handoff — 16 November 2026, afternoon (F6a is in: the kit has a second hero, and two of the eleven are off the old kit)
+
+**Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.
+Nothing promoted.
+
+**The tree was not clean when this session opened.** The night handoff below
+says it was, and the corrections it describes were sitting uncommitted — all
+five gates green, nothing written down as a commit. They are `5147e9f` now.
+Worth noting as a pattern rather than as a one-off: a handoff written before
+the commit describes a state that does not exist yet.
+
+### F6 opened on arithmetic, not on a design question
+
+Nine of the eleven deferred pages want their own full-bleed generated image.
+A Nano Banana Pro 16:9 costs 2 credits. **That is eighteen, and five remain.**
+
+The tempting answer was to reuse an F2–F5 room on an F6 page. It costs nothing
+and nobody files a bug about it — but it is the exact failure `page-media.ts`
+already asserts against, so taking it would have meant *editing the test that
+forbids it*. **An assertion weakened to permit the thing it was written to
+catch is worse than no assertion**, because the next reader believes it is
+still on duty.
+
+**D69 took a third option: the hero picture is made of the output.** Three
+sample frames, full-bleed, under the same two scrims — `PageHeroFrames` beside
+`PageHeroImage`, both on a new `PageHeroShell`. The shell is the part that
+mattered more than the picture: the AI label lives there and is unconditional,
+so a second hero variant did not become a second place for the label to go
+missing.
+
+**On two of the pages it is not a substitute at all.** 19 §Page by page asks
+/businesses and /individuals for a "hero with a reel collage relevant to the
+page" in those words. The budget pushed me onto what the spec had already
+asked for.
+
+### The defect the port turned up, which was not about pictures
+
+`AudienceStage` carried `cadence: '7–21 posts a week'` as a string. Fine while
+it was only printed — but the new sample-week strip draws a cell per post, so
+the sentence and the picture would have been two sources for one number, and
+**the picture would have gone on agreeing with itself after the cadence
+changed.** It is `postsPerWeek: [7, 21]` now and the sentence is derived. D24's
+rule, on a page that was not selling a plan.
+
+### 19 v3 is written, and it is the checklist for the other nine
+
+The ★ list for all eleven, the hero decision, and two things worth knowing
+before the next page:
+
+- **`/legal/*` and `/accessibility` get no hero and no closing CTA.** Not the
+  budget — 19 already gives them "readable layout, light motion only". They
+  are absent from `PAGE_HERO_FRAMES`, so there is nowhere to add one by habit.
+- **The /faq co-pilot link v2 left out is now owed.** C2 shipped it.
+
+### Checks
+
+Unit **785** (up 3). Ten new Playwright assertions in
+`e2e/inner-pages-f6.spec.ts`, all green. Axe 0 serious/critical on both pages
+in both themes. Lint, typecheck, build and licence-check green. The eight
+reference screenshots for the two pages are regenerated.
+
+### The queue
+
+1. **F6b** — `/agents` and `/trust` onto the kit, against 19 v3's ★ lists.
+2. **F6c** — `/niche-scan/sample`, `/about`, `/contact`, `/faq`, `/changelog`.
+3. **F6d** — `/legal/*` and `/accessibility`: the reading layout, sticky
+   contents, no reels.
+4. **Home-page performance** — still unmeasured. `reel-backdrop.tsx` asks the
+   optimiser for `w=3840` re-encodes of 640px sources; target mobile ≥ 90.
+
+**Pick an unused offset** when adding a page to `PAGE_HERO_FRAMES` — 0 and 3
+are taken, and a test fails on a repeat.
+
+---
+
 ## Handoff — 16 November 2026, night (both corrections are in; home-page performance is next)
 
 **Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.

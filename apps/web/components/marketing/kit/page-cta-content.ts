@@ -86,6 +86,18 @@ export const PAGE_CTAS = {
     lead: 'Everything here works on your own time and costs nothing. When doing it yourself stops being the cheaper option, the pilot is here:',
     next: { href: '/how-it-works', label: 'How it works' },
   },
+  businesses: {
+    title: 'We do not need to know the trade',
+    accent: 'to start on Monday.',
+    lead: 'The Niche Scan is what learns it, and it runs before anyone signs anything. Two weeks is long enough to see whether what comes back is worth posting:',
+    next: { href: '/niche-scan', label: 'Start the scan' },
+  },
+  individuals: {
+    title: 'One account, posted properly,',
+    accent: 'for a fortnight.',
+    lead: 'No team, no studio and nothing to keep to — that is the part we take. The first two weeks are where you find out whether it suits you:',
+    next: { href: '/how-it-works', label: 'How it works' },
+  },
 } as const satisfies Record<string, PageCtaContent>
 
 export type PageCtaKey = keyof typeof PAGE_CTAS

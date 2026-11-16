@@ -10,17 +10,31 @@
  *
  * One component rather than two near-identical pages, because two copies of a
  * layout is how they drift until one quietly stops matching the product.
+ *
+ * **F6 moved it onto the F1 kit** (19 v3). The text hero became a frame wall,
+ * every second section now carries a picture rather than a third list of
+ * cards, and the shared closing block became this page's own `PageCta` — the
+ * seam 19 v2 §Scope admitted to when it left these two on the old kit.
  */
 
 import { Card } from '@mirrorline/ui'
 import * as React from 'react'
 
+import Image from 'next/image'
+
 import { GOALS, type GoalKey } from '@/lib/audience/account-type'
 
 import { GOAL_EXAMPLES } from './home/problem-content'
-import { PageHero } from './page-hero'
+import { HeroInset, InsetCycle } from './kit/hero-inset'
+import { PAGE_CTAS, PageCta } from './kit/page-cta'
+import { PageHeroFrames } from './kit/page-hero-frames'
+import { PAGE_HERO_FRAMES, type SampleFrame, allocateFrames } from './kit/page-media'
+import { ReelStrip } from './kit/reel-strip'
+import { busiestDay, distributePosts } from './month-preview-content'
 import { Section, SectionHeading } from './primitives'
-import { SiteCta } from './site-cta'
+
+/** Monday first, because a first week starts on one. */
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
 
 export interface AudienceStage {
   readonly id: string
@@ -30,7 +44,88 @@ export interface AudienceStage {
   /** From 13 §1. The things that genuinely differ. */
   readonly plan: string
   readonly inputMix: string
-  readonly cadence: string
+  /**
+   * The weekly range, low to high — not the sentence that describes it.
+   *
+   * It used to be the string "7–21 posts a week", which was fine while it was
+   * only ever printed. The week strip below draws a cell per post, so a typed
+   * sentence would be a second source for a number already written down, and
+   * the picture would go on agreeing with itself after the cadence changed.
+   * Derived, never typed (D24).
+   */
+  readonly postsPerWeek: readonly [number, number]
+}
+
+/** The sentence, from the range. One place, so the strip and the line agree. */
+export function cadenceLabel([low, high]: readonly [number, number]): string {
+  return low === high ? `${low} posts a week` : `${low}–${high} posts a week`
+}
+
+interface WeekStripProps {
+  readonly postsPerWeek: readonly [number, number]
+  /** One still beside the week, so the card is not a fourth list of numbers. */
+  readonly frame?: SampleFrame
+  /** Which card this is, for the summary a screen reader gets instead. */
+  readonly stage: string
+}
+
+/**
+ * A week of this stage's posts, as cells, beside one sample still.
+ *
+ * `distributePosts` is /pricing's, unchanged: the same question — "what does
+ * this number look like spread over days" — with seven days instead of thirty
+ * and the plan's top of range rather than its month. Reusing it is the point;
+ * two functions that round the same way until one is edited is how the
+ * mini-calendar and this strip would stop agreeing.
+ *
+ * The grid is decorative and the sentence under it is not. A screen reader
+ * gets the summary and skips 7–21 unlabelled squares, which is what the
+ * squares are: a picture of a number already read out.
+ */
+function WeekStrip({ postsPerWeek, frame, stage }: WeekStripProps) {
+  const [, high] = postsPerWeek
+  const distribution = distributePosts(high, WEEKDAYS.length)
+  const busiest = busiestDay(distribution)
+
+  return (
+    <figure className="m-0 mt-auto flex items-end gap-4 border-t border-border pt-4">
+      <div aria-hidden="true" className="grid flex-1 grid-cols-7 gap-1.5">
+        {WEEKDAYS.map((day, index) => (
+          <div key={day} className="flex flex-col items-center gap-1">
+            <div className="flex w-full flex-col-reverse gap-0.5" style={{ minHeight: '2.75rem' }}>
+              {Array.from({ length: distribution[index] ?? 0 }, (_, post) => (
+                <span
+                  key={post}
+                  className="block h-2 w-full rounded-[2px] bg-gold-text/70"
+                  style={{ opacity: 1 - post / (busiest + 2) }}
+                />
+              ))}
+            </div>
+            <span className="machine text-[0.625rem] text-text-muted">{day}</span>
+          </div>
+        ))}
+      </div>
+
+      {frame ? (
+        <div className="relative hidden aspect-[9/16] w-12 shrink-0 overflow-hidden rounded-thumb sm:block">
+          <Image
+            src={frame.src}
+            alt=""
+            aria-hidden="true"
+            fill
+            loading="lazy"
+            sizes="48px"
+            className="object-cover"
+          />
+        </div>
+      ) : null}
+
+      <figcaption className="sr-only">
+        {stage}: a sample week at {cadenceLabel(postsPerWeek)}, busiest day {busiest} posts. Sample
+        data.
+      </figcaption>
+    </figure>
+  )
 }
 
 export interface AudienceConcern {
@@ -39,34 +134,58 @@ export interface AudienceConcern {
 }
 
 export interface AudiencePageContent {
+  /**
+   * Which page this is.
+   *
+   * One key rather than a hero prop and a CTA prop, because the two manifests
+   * are keyed by page slug and a test asserts they hold the same keys. A page
+   * that could take its frames from one slug and its closing block from
+   * another would be a way to defeat that test by hand.
+   */
+  readonly page: keyof typeof PAGE_HERO_FRAMES
   readonly eyebrow: string
   readonly title: React.ReactNode
   readonly lead: string
-  readonly marginNote: string
+  /** One line under the hero's corner card, saying what the frames are. */
+  readonly insetCaption: string
   /** The two account stages for this audience. */
   readonly stages: readonly AudienceStage[]
   /** Which of the seven goals this audience most often picks. */
   readonly commonGoals: readonly GoalKey[]
   /** What this audience usually worries about, answered plainly. */
   readonly concerns: readonly AudienceConcern[]
-  readonly next: { readonly href: string; readonly label: string }
+  /** What the reel strip near the foot of the page is introduced as. */
+  readonly stripLabel: string
 }
 
 export function AudiencePage({ content }: { content: AudiencePageContent }) {
   const goals = GOALS.filter((goal) => content.commonGoals.includes(goal.key))
 
+  // One call, so no two sections of this page can show the same frames
+  // (19 v2). Three for the wall, three for the corner card, one per stage
+  // card, four for the strip: eleven of the twelve.
+  const [WALL = [], INSET = [], STAGE_FRAMES = [], STRIP_FRAMES = []] = allocateFrames(
+    [3, 3, content.stages.length, 4],
+    PAGE_HERO_FRAMES[content.page].offset,
+  )
+
   return (
     <>
-      <PageHero
+      <PageHeroFrames
         eyebrow={content.eyebrow}
         title={content.title}
         lead={content.lead}
+        frames={WALL}
         index={content.stages.map((stage, position) => ({
           number: String(position + 1).padStart(2, '0'),
           title: stage.title,
           description: stage.plan,
         }))}
-        marginNote={content.marginNote}
+        inset={
+          <HeroInset caption={content.insetCaption}>
+            <InsetCycle frames={INSET} />
+          </HeroInset>
+        }
       />
 
       {/* The two stages --------------------------------------------------- */}
@@ -92,11 +211,11 @@ export function AudiencePage({ content }: { content: AudiencePageContent }) {
               <Card className="flex h-full flex-col gap-3">
                 <h3 className="m-0 font-heading text-title text-text">{stage.title}</h3>
                 <p className="m-0 text-body text-text-muted">{stage.body}</p>
-                <dl className="m-0 mt-auto grid grid-cols-1 gap-3 border-t border-border pt-4 sm:grid-cols-3">
+                <dl className="m-0 grid grid-cols-1 gap-3 border-t border-border pt-4 sm:grid-cols-3">
                   {[
                     { label: 'Plan', value: stage.plan },
                     { label: 'Mostly', value: stage.inputMix },
-                    { label: 'Cadence', value: stage.cadence },
+                    { label: 'Cadence', value: cadenceLabel(stage.postsPerWeek) },
                   ].map((item) => (
                     <div key={item.label} className="flex flex-col gap-0.5">
                       <dt className="text-caption text-text-muted">{item.label}</dt>
@@ -104,6 +223,16 @@ export function AudiencePage({ content }: { content: AudiencePageContent }) {
                     </div>
                   ))}
                 </dl>
+
+                {/* The cadence as a picture, drawn from the same pair of
+                    numbers the line above prints. A busy week and a quiet one
+                    are the difference between these two cards, and the
+                    sentence alone does not show it. */}
+                <WeekStrip
+                  postsPerWeek={stage.postsPerWeek}
+                  frame={STAGE_FRAMES[position]}
+                  stage={stage.title}
+                />
               </Card>
             </li>
           ))}
@@ -172,7 +301,27 @@ export function AudiencePage({ content }: { content: AudiencePageContent }) {
         </dl>
       </Section>
 
-      <SiteCta next={content.next} />
+      {/* What it looks like ----------------------------------------------- */}
+      <Section className="band-ink" aria-labelledby="output-heading">
+        <SectionHeading
+          id="output-heading"
+          eyebrow="What comes back"
+          title={
+            <>
+              Four of ours, <span className="gold-phrase">made the way yours would be.</span>
+            </>
+          }
+          lead="Every one of these is a sample we generated to show the work, not a client's video. The trades differ because the agents research each account's own; the format is what carries across."
+          headingClassName="text-site-h2 font-serif"
+        />
+        <ReelStrip
+          className="mt-10"
+          label={content.stripLabel}
+          items={STRIP_FRAMES.map((frame) => ({ frame }))}
+        />
+      </Section>
+
+      <PageCta cta={PAGE_CTAS[content.page]} />
     </>
   )
 }

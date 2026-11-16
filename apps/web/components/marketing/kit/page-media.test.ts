@@ -14,7 +14,7 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 
 import { PAGE_CTAS } from './page-cta-content'
-import { PAGE_HERO_IMAGES, SAMPLE_FRAMES, allocateFrames } from './page-media'
+import { PAGE_HERO_FRAMES, PAGE_HERO_IMAGES, SAMPLE_FRAMES, allocateFrames } from './page-media'
 
 /** `public/` holds the files these manifests name. */
 const PUBLIC_DIR = join(import.meta.dirname, '..', '..', '..', 'public')
@@ -154,14 +154,60 @@ describe('page CTAs', () => {
     expect(headlines).not.toContain('Record once. Show up everywhere.')
   })
 
-  test('every page in the CTA set has a hero image, and the reverse', () => {
-    // The two manifests are keyed by the same page slugs and drift apart the
+  test('every page in the CTA set has a hero of one kind, and the reverse', () => {
+    // The manifests are keyed by the same page slugs and drift apart the
     // first time a page is added to one and not the other. `auth` is the one
     // deliberate exception: /sign-in and /sign-up share an image and have no
     // closing CTA, because they are a door rather than a page of argument.
-    const withHero = Object.keys(PAGE_HERO_IMAGES).filter((key) => key !== 'auth')
+    //
+    // F6 made this a three-way check rather than a pair. A page now has
+    // either a generated room or a wall of frames, so the union is what has
+    // to match — a page in neither would ship the old text hero, which is
+    // exactly the seam 19 v2 §Scope admitted to and F6 is closing.
+    const withHero = [
+      ...Object.keys(PAGE_HERO_IMAGES).filter((key) => key !== 'auth'),
+      ...Object.keys(PAGE_HERO_FRAMES),
+    ]
     const withCta = Object.keys(PAGE_CTAS)
 
     expect([...withCta].sort()).toEqual([...withHero].sort())
+  })
+
+  test('no page has both kinds of hero', () => {
+    // Two heroes is not something that renders twice — it is a state where
+    // one manifest is read and the other silently is not, so the entry
+    // nobody sees is the one that goes stale.
+    const both = Object.keys(PAGE_HERO_FRAMES).filter((key) => key in PAGE_HERO_IMAGES)
+
+    expect(both).toEqual([])
+  })
+})
+
+describe('frame-wall heroes', () => {
+  test('no two of them open on the same frames', () => {
+    // The reason `PAGE_HERO_IMAGES` holds eight entries rather than one
+    // reused eight times, applied to the pages that could not have eight: a
+    // shared offset makes two walls identical, which is the repeated-room
+    // failure with extra steps.
+    const offsets = Object.values(PAGE_HERO_FRAMES).map((set) => set.offset)
+
+    expect(new Set(offsets).size).toBe(offsets.length)
+  })
+
+  test('every wall is three frames that exist and do not repeat', () => {
+    // The wall is cut for three and `PageHeroFrames` throws on any other
+    // count. This is that assertion one layer earlier, where the failure
+    // names the page rather than the component.
+    const sources = new Set(SAMPLE_FRAMES.map((frame) => frame.src))
+
+    for (const [page, set] of Object.entries(PAGE_HERO_FRAMES)) {
+      const [wall = []] = allocateFrames([3], set.offset)
+
+      expect(wall, page).toHaveLength(3)
+      expect(new Set(wall.map((frame) => frame.src)).size, page).toBe(3)
+      for (const frame of wall) {
+        expect(sources.has(frame.src), `${page} → ${frame.src}`).toBe(true)
+      }
+    }
   })
 })
