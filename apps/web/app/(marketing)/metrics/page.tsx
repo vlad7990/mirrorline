@@ -16,6 +16,7 @@ import type { Metadata } from 'next'
 import * as React from 'react'
 
 import { KPI_TIERS } from '@/components/kpi/kpi-types'
+import { AccountViews } from '@/components/marketing/account-views-section'
 import { BrowserFrame } from '@/components/marketing/kit/frames'
 import { GoalPicker } from '@/components/marketing/goal-picker'
 import { HeroInset, InsetCycle } from '@/components/marketing/kit/hero-inset'
@@ -347,6 +348,9 @@ export default function MetricsPage() {
           </ol>
         </div>
       </Section>
+
+      {/* One account, or several (15 §2: the portfolio view) -------------- */}
+      <AccountViews />
 
       {/* The honesty rules ------------------------------------------------ */}
       <Section tone="subtle" aria-labelledby="honesty-heading">

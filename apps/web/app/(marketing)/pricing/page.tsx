@@ -28,6 +28,7 @@ import { PAGE_CTAS, PageCta } from '@/components/marketing/kit/page-cta'
 import { PageHeroImage } from '@/components/marketing/kit/page-hero-image'
 import { PAGE_HERO_IMAGES, allocateFrames } from '@/components/marketing/kit/page-media'
 import { PlanPicker, type PlanAction } from '@/components/marketing/plan-picker'
+import { BillingPromises, CostComparison } from '@/components/marketing/pricing-sections'
 import { PRICING_FAQ } from '@/components/marketing/pricing-faq-content'
 import { PRICING_NOTE, PRICING_TIERS } from '@/components/marketing/pricing-tiers'
 import { Section, SectionHeading } from '@/components/marketing/primitives'
@@ -116,6 +117,10 @@ export default function PricingPage() {
 
         <p className="mb-0 mt-8 max-w-[68ch] text-meta text-text-muted">{PRICING_NOTE}</p>
       </Section>
+
+      {/* What the same job costs elsewhere, and what billing will not do --- */}
+      <CostComparison />
+      <BillingPromises />
 
       {/* What never changes ----------------------------------------------- */}
       <Section className="band-ink-alt" aria-labelledby="included-heading">

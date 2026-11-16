@@ -21,6 +21,45 @@ Every competitor sells one piece of the job: a clip, a caption, a scheduled post
 | P9 | Reposts and recycled content now lose reach. | Instagram (30 Apr 2026): accounts that mostly post unoriginal content are no longer recommended to non-followers; now covers photos and carousels too. Meta: "material edits" required; watermarks and minor crops don't count. | Originality Gate (check_uniq.py reused in reverse) blocks anything too close to a source. Viral remakes copy the format only: new script, new footage, client's own voice. |
 | P10 | Their own videos get stolen by repost pages, and small creators can't get Meta's protection. | Meta Content Protection works only on Reels posted to Facebook or shared there, and is rolling out first to monetised creators; smaller creators are left exposed. | Repost Watch: we crosspost originals to the client's Facebook page so they're eligible, and a checklist shows them how to enrol and act. We never file claims for them. |
 
+## 2a. Cost benchmarks, re-checked before quoting them
+
+Added 15 November 2026 for the cost comparison on `/pricing`. The header of
+this file says to "treat the figures as directional and re-check them before
+quoting any on the public site", and P7's agency range is the only money
+figure the original pass collected. These are the re-check: read on
+**15 November 2026**, each one traceable to a page that publishes it.
+
+**They are market numbers, not ours, and the page says so.** Nothing here is a
+claim about what a competitor charged a customer of ours, because we have
+none. A range is a range, and the page shows the whole band rather than the
+end that flatters us.
+
+| Route | Published range | What it is | Source |
+|---|---|---|---|
+| Freelance editor | **$20–$75 a clip** | Cuts, captions and music, quality varying seller to seller | Mark Studios, "Short-Form Video Editing Cost in 2026 (Per Clip)", figures checked 27 Sep 2026 and rechecked 26 Oct 2026; the band is community-reported ($30–75 a Short; $20–50 a podcast clip) |
+| Per-clip agency | **$80–$94 a vertical video** | A managed team, roughly a day's turnaround | Tasty Edits published pricing, via the same Mark Studios guide: $94 for one, $88 each in a 15-pack, $80 each in a 30-pack |
+| Clip subscription | **about $31 a clip** ($495 a month for 16) | A queue with a monthly clip count | VidChops published pricing, via the same guide (the per-clip figure is their arithmetic, not a published price) |
+| Full-service agency | **$2,000–$5,000 a month**, 6–12 month contracts, setup fees | A retainer, usually reporting views | Already in P7 above, from the $99 Social comparison |
+| In-house | **$50,000–$75,000 a year** for a full-time editor producing 15–20 shorts a month, plus software and hardware | Hiring for it | Maken Media, "Short-Form Video Editing Services for Reels, TikTok & Shorts (2026)", updated 28 Jun 2026 |
+
+Sources:
+
+- https://www.markstudios.com/blog/short-form-video-editing-cost-2026
+- https://www.tastyedits.com/pricing/ and https://vidchops.com/pricing-details/ (both via the guide above)
+- https://maken.media/blog-short-form-editing
+
+**Our own side of that table is derived, never typed.** A plan's cost per post
+is its price divided by the posts it delivers, both of which already live in
+`pricing-tiers.ts` — so the comparison cannot drift from the price list the
+way a second written figure would (the D24 rule, applied to arithmetic rather
+than to a calendar).
+
+**What this does not license.** No brand is named on the public page: the
+routes are categories, exactly as 11 §2 and the banned-phrase test require,
+and the sources stay in this file. If a figure here goes stale, the fix is to
+re-read it and change this table — not to leave a number on `/pricing` that
+nobody has checked since.
+
 ## 3. How the platforms rank in 2026 (what "growing" means)
 
 - Instagram's top signals: watch time, likes per reach, and sends per reach (shares in DMs). Mosseri: "sends are one of the biggest signals we use in ranking."

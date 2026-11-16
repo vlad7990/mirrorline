@@ -3678,3 +3678,119 @@ Lighthouse mobile, medians of three runs: **/product 89, /how-it-works 91,
 the one point is inside this machine's run-to-run noise rather than a measured
 regression. Accessibility 100, best practices 96, SEO 100 on all four, and on
 `/` performance is 80, which is where the home page has always sat.
+
+## 2026-11-15 · D58 · The gap-fill: 19's ★ list was already complete, and the gaps were in 16 and 09
+
+Vlad's review named five things missing from four pages and asked for them
+checked against 19 v2's "required sections per page". **Every ★ on every page
+in that list already exists** — the audit is in the handoff, page by page. The
+five gaps are real, and they come from the other content specs: 16 §4's own
+row for each route, 09 §10's four billing promises, 11 §2 P8's fifteen
+minutes, and 15's portfolio view. That is worth stating rather than quietly
+filing them under 19, because it says something about where the next gap will
+be: 19 governs *shape* (a hero, a tour, a strip, a CTA) and 16 governs
+*substance* (inputs, agents, the Gate, publishing, metrics). A page can pass
+19 completely and still not say what it does.
+
+### The cost comparison needed the figures re-read before it could exist
+
+11's own header says to "treat the figures as directional and re-check them
+before quoting any on the public site", and the only money figure the research
+pass collected was P7's agency range. So the comparison was blocked on
+research, not on design.
+
+**§2a is the re-check**: five published ranges, each with the page it came
+from and the date it was read, including which bands are community-reported
+rather than published prices. The page shows the whole band — a freelance
+editor at $20 a clip is cheaper per post than any plan we sell, and the row
+says so. Trimming a range to the end that flatters us would be the version of
+this section not worth building.
+
+**Our own column is arithmetic.** `price ÷ posts` off `pricing-tiers.ts`, so
+the comparison cannot drift from the price list two sections above it, and the
+pilot's $63 a post appears beside Growth's $17 rather than being averaged
+away. A test asserts both halves: every range still matches §2a exactly, and
+every per-post figure is the division rather than a number somebody typed.
+
+### The billing promises existed, in the one place nobody reads first
+
+09 §10's four lines were on `/legal/cancellation-refunds` and nowhere else. A
+refund policy is the right home for the binding version and the wrong home for
+the promise — nobody reads it before deciding whether to care. They now sit
+beside the prices, and a test asserts each one is **also** written on the legal
+page, in the words that bind. The marketing summary cannot drift into a
+promise we have not actually made without failing the suite.
+
+### Publishing: the awkward sentence goes next to the claim it qualifies
+
+09 §5 says TikTok posts stay private until our app is audited. That is the
+single least convenient fact on the public site, and it now sits under the
+TikTok phone rather than in a footnote under all three. A test asserts the
+caveat is in the visitor-facing copy rather than only in a `status` field,
+because a status nobody renders is a caveat nobody sees.
+
+The integrations strip is labelled the same way: two entries say **Built** and
+two say **Planned**, and only things a spec already commits to appear at all
+(the Facebook crosspost is P10, the enquiry attribution is 12). A strip of
+all-green capabilities is the easiest lie on a marketing site.
+
+### Fifteen minutes, itemised and summed
+
+P8's answer to the burnout complaint is "the client spends ~15 minutes a week
+approving", and it had never appeared anywhere a visitor could see it.
+"Fifteen minutes a week" from a vendor is unbelievable on its own, so the page
+lists four tasks with the minutes each takes and **sums them** — the headline
+is `totalEffortMinutes()`, not a number typed over a list. A fifth task
+changes the figure automatically; a re-estimate that breaks the claim fails
+the test holding the sum against P8.
+
+### What was not built, and why
+
+**"Remember me" on `/sign-in` is not in this PR.** There is no session to
+remember: sign-in is a mock, it checks nothing, and the page says so in its
+own copy. A checkbox wired to nothing is the same class of untruth as an
+unlabelled AI scene — an interface implying something that is not so — and it
+is not on 19's ★ list for that page either. It belongs with real auth, where
+it would actually choose between a persistent and a session cookie. Flagged
+rather than shipped.
+
+### The key landed mid-PR, and the suite had to stop spending money
+
+`apps/web/.env.local` gained an `ANTHROPIC_API_KEY` at 21:10 on 15 November —
+"Needs Vlad F", arriving. Twelve co-pilot tests went red in the same run, and
+**nothing was broken**: `/api/copilot/status` correctly answered `live`, and
+the tests assert `sample`.
+
+The tests were right to fail, for a reason worth more than the fix. A suite
+that picks up whatever key is lying around is a suite that **spends money
+every time it runs** — non-negotiable 11, broken nine hundred tests deep where
+nobody would look — and 18 §8's co-pilot tests are written against canned mode
+on purpose: they assert the sample label, the exact refusal wording and the
+citation attached to it. Against a live model those assertions test the
+weather.
+
+So `playwright.config.ts` now pins `ANTHROPIC_API_KEY: ''` for the server it
+starts. Empty rather than deleted, because deleting it in a config mutates the
+developer's own shell; `copilotMode` trims before testing, so an empty string
+is the ordinary sample path rather than a special case. Verifying the live
+path is now a deliberate act with the key put back — which is a thing worth
+doing, and not a thing the default suite should do by accident.
+
+**One honest consequence:** the run that discovered this made real calls to
+the API before the pin existed. A handful of Haiku 4.5 requests on the canned
+corpus, well inside the $20 cap, and the ledger is per process so nothing
+persisted — but it happened, and it is the exact failure mode the pin now
+prevents.
+
+### Measurements
+
+Unit tests **717**, up 30 from 687 — four new content modules, each with the
+test that stops its figures drifting from the spec they came from. e2e up 8.
+Lint, typecheck, build and licence-check green; licence-check 432 packages,
+GSAP scope clean, and this PR adds no dependency.
+
+Screenshots re-captured for the four changed pages at 1440 and 390 in both
+themes. Lighthouse mobile, medians of three: **/product 89, /how-it-works 91,
+/pricing 90, /metrics 91**, accessibility 100 on all four — unchanged from
+D57's measurements, including on `/product`, which gained three lazy phone
+frames and did not move.

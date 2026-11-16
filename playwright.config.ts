@@ -64,6 +64,33 @@ export default defineConfig({
     command: USE_DEV_SERVER
       ? 'pnpm --filter @mirrorline/web dev'
       : 'pnpm --filter @mirrorline/web build && pnpm --filter @mirrorline/web start',
+    /**
+     * The suite runs the co-pilot in sample mode, always, whatever is in
+     * `.env.local`.
+     *
+     * A key landed in `apps/web/.env.local` on 15 November and twelve tests
+     * went red in the same run — not because anything broke, but because
+     * `/api/copilot/status` correctly answered `live`. Two things were wrong
+     * with that, and neither is the tests' fault:
+     *
+     * 1. **The run made real API calls.** Non-negotiable 11 is "no paid API
+     *    calls beyond test mode", and a suite that spends money every time it
+     *    runs breaks that quietly, nine hundred tests deep.
+     * 2. **It stopped being deterministic.** 18 §8's co-pilot tests are
+     *    written against canned mode on purpose: they assert the sample
+     *    label, the exact refusal text and the citation that comes with it.
+     *    A live model answers differently every time, so with a key those
+     *    assertions test the weather.
+     *
+     * Empty rather than deleted, because `delete process.env.X` in a config
+     * mutates the shell the developer is standing in. The adapter treats an
+     * empty string as no key — `copilotMode` trims before testing it — so
+     * this is the supported sample path rather than a special case.
+     *
+     * Verifying the live path is a deliberate act with the key put back, not
+     * something the default suite should do by accident.
+     */
+    env: { ANTHROPIC_API_KEY: '' },
     url: BASE_URL,
     // Only the dev loop reuses whatever is already on the port. Reusing a
     // server the suite did not start is how a run silently changes what it is

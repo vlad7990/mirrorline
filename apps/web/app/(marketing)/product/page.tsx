@@ -23,6 +23,7 @@
 import { cutSummary, sourceVideo } from '@mirrorline/mock'
 import type { Metadata } from 'next'
 
+import { FaqSection } from '@/components/marketing/kit/faq-section'
 import { HeroInset, InsetCycle } from '@/components/marketing/kit/hero-inset'
 import { PAGE_CTAS, PageCta } from '@/components/marketing/kit/page-cta'
 import { PageHeroImage } from '@/components/marketing/kit/page-hero-image'
@@ -30,8 +31,10 @@ import { PAGE_HERO_IMAGES, allocateFrames } from '@/components/marketing/kit/pag
 import { ReelStrip } from '@/components/marketing/kit/reel-strip'
 import { OriginalityDemo } from '@/components/marketing/originality-demo'
 import { SampleDataLabel, Section, SectionHeading } from '@/components/marketing/primitives'
+import { PRODUCT_FAQ } from '@/components/marketing/product-faq-content'
 import { ProductTour } from '@/components/marketing/product-tour'
 import { PRODUCT_TOUR } from '@/components/marketing/product-tour-content'
+import { PublishingSection } from '@/components/marketing/publishing-section'
 import { reelAsset } from '@/components/marketing/reel-assets'
 
 export const metadata: Metadata = {
@@ -41,8 +44,13 @@ export const metadata: Metadata = {
 }
 
 /**
- * Eight frames for the strip. The gate demo takes no frames — its evidence is
- * the script beside the beats — so one window is all this page allocates.
+ * Eight frames for the strip, three for the phones in the publishing section.
+ * The gate demo takes no frames — its evidence is the script beside the
+ * beats.
+ *
+ * Two windows from one call rather than two calls, because that is what stops
+ * the phones repeating a frame the strip already used two sections earlier
+ * (19 v2: "no two sections of one page show the same set of sample frames").
  *
  * The `= []` is for `noUncheckedIndexedAccess` and nothing else:
  * `allocateFrames` returns exactly one window per count, so a page that asks
@@ -50,7 +58,7 @@ export const metadata: Metadata = {
  * default rather than a `!` because an assertion that is wrong fails at the
  * worst moment and an empty strip fails visibly in a screenshot.
  */
-const [STRIP_FRAMES = []] = allocateFrames([8])
+const [STRIP_FRAMES = [], PHONE_FRAMES = []] = allocateFrames([8, 3])
 
 interface StripHook {
   readonly hook: string
@@ -213,6 +221,19 @@ export default function ProductPage() {
           <OriginalityDemo />
         </div>
       </Section>
+
+      {/* Where it goes once the gate has passed it (16 §4: publishing). */}
+      <PublishingSection frames={PHONE_FRAMES} />
+
+      <FaqSection
+        id="product-faq"
+        eyebrow="Still wondering"
+        title="The questions"
+        accent="a tour does not answer."
+        lead="The ones that come up once somebody has stopped asking whether this is legitimate and started asking what it does on a Tuesday."
+        items={PRODUCT_FAQ}
+        band="snow"
+      />
 
       <PageCta cta={PAGE_CTAS.product} />
     </>

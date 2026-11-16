@@ -30,11 +30,14 @@ import type { Metadata } from 'next'
 import * as React from 'react'
 
 import { CountUp } from '@/components/marketing/count-up'
+import { ClientEffort, DivisionOfLabour } from '@/components/marketing/effort-sections'
+import { FaqSection } from '@/components/marketing/kit/faq-section'
 import { BrowserFrame, PhoneFrame } from '@/components/marketing/kit/frames'
 import { HeroInset, InsetCycle } from '@/components/marketing/kit/hero-inset'
 import { PAGE_CTAS, PageCta } from '@/components/marketing/kit/page-cta'
 import { PageHeroImage } from '@/components/marketing/kit/page-hero-image'
 import { PAGE_HERO_IMAGES, allocateFrames } from '@/components/marketing/kit/page-media'
+import { ONBOARDING_FAQ } from '@/components/marketing/onboarding-faq-content'
 import { Section, SectionHeading } from '@/components/marketing/primitives'
 
 export const metadata: Metadata = {
@@ -417,6 +420,21 @@ export default function HowItWorksPage() {
           </p>
         </Card>
       </Section>
+
+      {/* The reader's own week, which the three phases describe in the third
+          person and never put a number on (11 §2 P8). */}
+      <ClientEffort />
+      <DivisionOfLabour />
+
+      <FaqSection
+        id="onboarding-faq"
+        eyebrow="Before you start"
+        title="The first fortnight"
+        accent="answered in advance."
+        lead="What we need on day one, when anything appears, and what happens if the first batch is not right."
+        items={ONBOARDING_FAQ}
+        band="white"
+      />
 
       <PageCta cta={PAGE_CTAS['how-it-works']} />
     </>
