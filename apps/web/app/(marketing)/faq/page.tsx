@@ -9,9 +9,17 @@ import * as React from 'react'
 
 import { Faq } from '@/components/marketing/faq'
 import { FAQ_ITEMS } from '@/components/marketing/faq-content'
-import { PageHero } from '@/components/marketing/page-hero'
+import { HeroInset, InsetCycle } from '@/components/marketing/kit/hero-inset'
+import { PAGE_CTAS, PageCta } from '@/components/marketing/kit/page-cta'
+import { PageHeroFrames } from '@/components/marketing/kit/page-hero-frames'
+import { PAGE_HERO_FRAMES, allocateFrames } from '@/components/marketing/kit/page-media'
 import { Section } from '@/components/marketing/primitives'
-import { SiteCta } from '@/components/marketing/site-cta'
+
+/** Three for the wall, three for the corner card. 19 v3 §hero, D69. */
+const [WALL_FRAMES = [], INSET_FRAMES = []] = allocateFrames(
+  [3, 3],
+  PAGE_HERO_FRAMES.faq.offset,
+)
 
 export const metadata: Metadata = {
   title: 'FAQ',
@@ -22,7 +30,7 @@ export const metadata: Metadata = {
 export default function FaqPage() {
   return (
     <>
-      <PageHero
+      <PageHeroFrames
         eyebrow="FAQ"
         title={
           <>
@@ -30,7 +38,16 @@ export default function FaqPage() {
           </>
         }
         lead="The home page carries the six we are asked most. This is all of them, and the ones where the honest answer is “we cannot promise that” say so."
-        marginNote={`${FAQ_ITEMS.length} questions · no guarantees anywhere`}
+        frames={WALL_FRAMES}
+        index={[
+          { number: '01', title: 'All of them', description: `${FAQ_ITEMS.length} questions` },
+          { number: '02', title: 'No guarantees', description: 'anywhere on this page' },
+        ]}
+        inset={
+          <HeroInset caption="Three samples, in place of a promise">
+            <InsetCycle frames={INSET_FRAMES} />
+          </HeroInset>
+        }
       />
 
       <Section aria-labelledby="faq-heading">
@@ -40,7 +57,7 @@ export default function FaqPage() {
         <Faq items={FAQ_ITEMS} />
       </Section>
 
-      <SiteCta next={{ href: '/niche-scan', label: 'Free Niche Scan' }} />
+      <PageCta cta={PAGE_CTAS.faq} />
     </>
   )
 }

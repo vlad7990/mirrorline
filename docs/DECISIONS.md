@@ -5133,3 +5133,118 @@ where D50's hero-video measurement does not apply. The exception is written
 into the e2e spec with a reason the test length-checks, which is D68's
 `youtube-claims.test.ts` device: an exception a reader can see is a different
 thing from a rule quietly relaxed.
+
+---
+
+## 2026-11-16 · D71 · The home page's performance item was a false diagnosis, and two fixes for it made things worse
+
+The handoff queued home-page performance as *"`reel-backdrop.tsx` asks the
+optimiser for `w=3840` re-encodes of 640px-wide sources"*. **It does not, and
+it has not for some time.**
+
+Measured on the built page at 390px and at 1440px, counting every
+`/_next/image` request including after a full scroll:
+
+| Viewport | Requested widths | `w=3840` |
+|---|---|---|
+| 390 | 256 ×1, 384 ×3, 828 ×1 | **0** |
+| 1440 | 96 ×1, 256 ×3, 1920 ×1 | **0** |
+
+`reel-backdrop.tsx` already declares `width={640}`, `loading="lazy"` and a
+real `sizes`, and its own comment explains why. **The queue item was a
+diagnosis written from reading the file, carried forward across four
+handoffs, and never checked against a request log.**
+
+### What the number actually is
+
+**Lighthouse mobile, median of three: 80.** LCP 5,258 ms, TBT 14 ms, CLS 0.
+It had genuinely never been measured; 80 was inherited from somewhere and
+happened to be right.
+
+So the page is not slow in any of the ways that are easy to fix. TBT and CLS
+are excellent. It is one number, LCP, and the thing it waits on is **184 KB
+of webfonts in three files** which start at ~190 ms and land between 1.5 s
+and 2.2 s on a throttled connection, ahead of an 11 KB hero image.
+
+### Two attempts, both worse, both instructive
+
+**Making the first hero float card eager: 80 → 76.** The reasoning was sound
+and the target was wrong. `.hero-float` is `display: none` below 64rem — the
+cards do not exist on a phone — so an eager fetch bought the mobile page a
+download it never paints. *I measured the LCP element in a desktop-sized
+observer and then optimised for mobile.* Reverted.
+
+This is the second time this exact shape has cost a round: D65's
+`fetchPriority` change was also a plausible LCP fix that measured worse. **A
+hint that moves one request earlier moves every other request later**, and on
+a page whose critical path is already saturated that is a loss by default.
+
+### What I am not doing, and saying so
+
+Getting home to 90 means changing the font strategy — three faces at 184 KB,
+of which Geist Serif is required by D25 and Geist Mono is used for small
+machine text well below the fold. That is a real PR with a real risk of
+changing how the site looks, and it is not something to bolt onto a page
+port. **The home page is at 80, the cause is named, and the fix is scoped
+but unwritten.**
+
+The queue item is rewritten in PROGRESS as what it actually is, because the
+version that was there would have sent the next session to re-fix an
+imaginary bug for a fifth time.
+
+---
+
+## 2026-11-16 · D72 · The policy pages lost their closing offer, and a hero that was describing a picture they should not have had
+
+F6c and F6d finished the eleven. Seven pages moved: /about, /contact, /faq,
+/changelog and /niche-scan/sample onto the kit, and /legal/* plus
+/accessibility onto a reading layout. /trust's three open ★ are closed.
+
+### The reading pages are defined by three absences
+
+19 gives `/legal/*` and `/accessibility` "no reels, readable layout, light
+motion only". F6d read that as three things they must *not* have, and the
+absences turned out to matter more than the additions:
+
+- **No closing CTA.** `SiteCta` sat at the foot of every one of these. A
+  reader opens the privacy notice to find out what happens to their data, and
+  the page ended by asking them to buy a pilot. **It was selling to them
+  while they were still reading the terms.**
+- **No hero picture — and the first version of this port kept one.** `DocPage`
+  used `PageHero`, which draws `HeroBackdrop` unconditionally and carries
+  "the room behind this is an AI-generated image" with it. Rendered, the
+  cookie policy opened on a photograph of a room and a label explaining the
+  photograph. Caught by **looking at the page**, not by any test — which is
+  the argument for screenshotting a port rather than trusting that it
+  typechecks. It is a document header now, and the e2e spec asserts **both**
+  hero labels are absent.
+- **No frame wall.** They are deliberately missing from `PAGE_HERO_FRAMES`,
+  so there is nowhere to add one by habit.
+
+What they gained: a sticky table of contents whose every anchor is asserted
+to reach a real heading (a contents list with a dead link is worse than none
+— it tells the reader the section is there), and a **last-updated date the
+document owns rather than the build**. A policy re-dated by a deploy claims a
+review nobody did.
+
+### /trust's three ★, and one that was never missing
+
+★3 is `<OriginalityDemo />` — the component /product already runs, on the
+fixtures the studio renders. ★5 is the data diagram: four hops and an
+explicit "no fifth one", every entry naming something the product already
+does. Nothing names a region, a retention period or a certification, because
+we do not have those answers and **the page a reader checks first is the
+worst possible place to invent one.**
+
+**★4 already existed.** The AI label on a reel was inside the rules list
+rather than in a section of its own, so F6b's audit read it as missing. It is
+asserted now, which is the useful half: a tidy-up can no longer remove it
+quietly. Auditing by section heading misses anything built inside another
+section.
+
+### /contact never had a closing block at all
+
+`SiteCta` was on nine pages and not on that one, which nobody had noticed
+because the page looked complete. It has one now, and the sentence is the
+only honest thing to say at the foot of a contact page: the scan answers most
+of what people write in to ask, and answers it about their own account.

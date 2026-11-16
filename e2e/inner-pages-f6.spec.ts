@@ -126,6 +126,16 @@ const KIT_PAGES = [
       'The gate panel shows the three cuts Compliance actually held, each with its own status chip and reason. They are the subject of the section rather than decoration, so they cannot become a hover-loop still the way a reel strip can — and they sit well below the fold, where D50’s hero-video measurement does not apply. Revisit if /agents ever joins the Lighthouse gate.',
   },
   { path: '/trust', videos: 1 },
+  { path: '/about', videos: 1 },
+  { path: '/contact', videos: 1 },
+  { path: '/faq', videos: 1 },
+  { path: '/changelog', videos: 1 },
+  {
+    path: '/niche-scan/sample',
+    videos: 3,
+    reason:
+      'The three sample recipes each carry a frame of what that recipe produces, which is the page: a recipe card with no output beside it is the thing /niche-scan/sample exists to stop being. They are below the fold and the page is not on the Lighthouse gate. Revisit if it ever joins it.',
+  },
 ] as const
 
 for (const { path, videos, ...rest } of KIT_PAGES) {
@@ -188,3 +198,99 @@ test.describe('/agents', () => {
     await expect(section.getByText(/^\$\d/).first()).toBeVisible()
   })
 })
+
+test.describe('/trust', () => {
+  test('runs the Originality Gate on a real remake, with the limit stated', async ({ page }) => {
+    await page.goto('/trust')
+    const section = await sectionById(page, 'gate-demo-heading')
+
+    // ★3. The honest half is the threshold: a similarity meter with no limit
+    // beside it is a number that cannot be wrong.
+    await expect(section).toContainText('30%')
+    await expect(section).toContainText('Sample data')
+  })
+
+  test('draws where the files go, and ends the list', async ({ page }) => {
+    await page.goto('/trust')
+    const section = await sectionById(page, 'data-heading')
+
+    // ★5, and the claim the section actually makes — four hops and no fifth.
+    await expect(section.locator('ol > li')).toHaveCount(4)
+    await expect(section).toContainText('Through the official Instagram, TikTok and YouTube APIs')
+    await expect(section).toContainText('never hold your platform password')
+  })
+
+  test('shows an AI label on a reel, where a client would meet it', async ({ page }) => {
+    await page.goto('/trust')
+
+    // ★4, which already existed inside the rules rather than as a section of
+    // its own — asserted here so a tidy-up cannot remove it silently.
+    await expect(page.locator('main').getByText('AI scene').first()).toBeVisible()
+  })
+})
+
+/**
+ * The reading pages: /legal/* and /accessibility.
+ *
+ * These assert three absences as well as two presences, because the absences
+ * are the design (19 v3 ★ F6d). A closing CTA creeping back onto the privacy
+ * notice is exactly the kind of change that looks like an improvement in a
+ * diff and is wrong on the page.
+ */
+const DOC_PAGES = [
+  '/accessibility',
+  '/legal/acceptable-use',
+  '/legal/ai-use',
+  '/legal/cancellation-refunds',
+  '/legal/cookies',
+] as const
+
+for (const path of DOC_PAGES) {
+  test.describe(`${path} · reading layout`, () => {
+    test('has a contents list whose links reach real headings', async ({ page }) => {
+      await page.goto(path)
+      const toc = page.locator('nav[aria-labelledby="toc-heading"]')
+      await expect(toc).toHaveCount(1)
+
+      // Every anchor resolves to a heading that exists. A table of contents
+      // with a dead link is worse than none: it tells the reader the section
+      // is there.
+      const hrefs = await toc.locator('a').evaluateAll((as) =>
+        as.map((a) => a.getAttribute('href') ?? ''),
+      )
+      expect(hrefs.length).toBeGreaterThan(2)
+      for (const href of hrefs) {
+        await expect(page.locator(href)).toHaveCount(1)
+      }
+    })
+
+    test('states when it was written, and not when it was built', async ({ page }) => {
+      await page.goto(path)
+
+      // ★3. The date is the document's own string, so it reads as a date
+      // somebody chose rather than today's.
+      await expect(page.locator('main')).toContainText('Last updated')
+      await expect(page.locator('main')).toContainText('9 November 2026')
+    })
+
+    test('sells nothing and shows nothing', async ({ page }) => {
+      await page.goto(path)
+      const main = page.locator('main')
+
+      // No closing CTA — the old `SiteCta` sat at the foot of every one of
+      // these, asking the reader to buy while they were still reading the
+      // terms.
+      await expect(main).not.toContainText('Record once. Show up everywhere.')
+      await expect(main).not.toContainText('$750')
+      // No reels, no frame wall — and no hero room either. The first version
+      // of this port kept `PageHero`, which draws `HeroBackdrop`
+      // unconditionally, so the label sat on the privacy notice describing a
+      // photograph the page should not have had. Both labels are checked,
+      // because there is one per hero variant and either would mean a
+      // picture came back.
+      await expect(main.locator('video')).toHaveCount(0)
+      await expect(main).not.toContainText('AI-generated samples of our own output')
+      await expect(main).not.toContainText('The room behind this is an AI-generated image')
+    })
+  })
+}

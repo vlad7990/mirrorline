@@ -77,7 +77,7 @@ const CONTENT: DocPageContent = {
       ],
     },
   ],
-  next: { href: '/contact', label: 'Contact' },
+  updated: '9 November 2026',
 }
 
 export default function AccessibilityPage() {

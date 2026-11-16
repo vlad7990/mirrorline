@@ -17,9 +17,17 @@ import { Card } from '@mirrorline/ui'
 import type { Metadata } from 'next'
 import * as React from 'react'
 
-import { PageHero } from '@/components/marketing/page-hero'
+import { HeroInset, InsetCycle } from '@/components/marketing/kit/hero-inset'
+import { PAGE_CTAS, PageCta } from '@/components/marketing/kit/page-cta'
+import { PageHeroFrames } from '@/components/marketing/kit/page-hero-frames'
+import { PAGE_HERO_FRAMES, allocateFrames } from '@/components/marketing/kit/page-media'
 import { SampleDataLabel, Section, SectionHeading } from '@/components/marketing/primitives'
-import { SiteCta } from '@/components/marketing/site-cta'
+
+/** Three for the wall, three for the corner card. 19 v3 §hero, D69. */
+const [WALL_FRAMES = [], INSET_FRAMES = []] = allocateFrames(
+  [3, 3],
+  PAGE_HERO_FRAMES['niche-scan-sample'].offset,
+)
 
 export const metadata: Metadata = {
   title: 'Sample Niche Scan',
@@ -101,7 +109,7 @@ const ACCOUNT_SUMMARY = [
 export default function SampleScanPage() {
   return (
     <>
-      <PageHero
+      <PageHeroFrames
         eyebrow="Sample report"
         title={
           <>
@@ -109,7 +117,12 @@ export default function SampleScanPage() {
           </>
         }
         lead="This is an example for a fictional two-person bookkeeping practice. Every figure on this page is invented — it shows the shape of the report, not a result anyone achieved."
-        marginNote="example only · every figure invented"
+        frames={WALL_FRAMES}
+        inset={
+          <HeroInset caption="Three frames, as invented as the figures">
+            <InsetCycle frames={INSET_FRAMES} />
+          </HeroInset>
+        }
       />
 
       <Section aria-labelledby="account-heading">
@@ -222,7 +235,7 @@ export default function SampleScanPage() {
         </p>
       </Section>
 
-      <SiteCta next={{ href: '/pricing', label: 'Pricing' }} />
+      <PageCta cta={PAGE_CTAS['niche-scan-sample']} />
     </>
   )
 }

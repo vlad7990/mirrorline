@@ -73,7 +73,7 @@ const CONTENT: DocPageContent = {
       ],
     },
   ],
-  next: { href: '/legal/cancellation-refunds', label: 'Cancellation and refunds' },
+  updated: '9 November 2026',
 }
 
 export default function AcceptableUsePage() {

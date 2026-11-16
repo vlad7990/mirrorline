@@ -92,6 +92,36 @@ export const PAGE_CTAS = {
     lead: 'The Niche Scan is what learns it, and it runs before anyone signs anything. Two weeks is long enough to see whether what comes back is worth posting:',
     next: { href: '/niche-scan', label: 'Start the scan' },
   },
+  about: {
+    title: 'You do not have to take',
+    accent: 'any of that on faith.',
+    lead: 'Everything above is checkable: the rules are enforced in the product, the numbers are the platforms’ own, and the sample work is labelled as sample. The fortnight is where you check it:',
+    next: { href: '/trust', label: 'Our rules' },
+  },
+  contact: {
+    title: 'Or skip the message',
+    accent: 'and send us a video.',
+    lead: 'The scan answers most of what people write in to ask, and it answers it about your own account rather than in general:',
+    next: { href: '/niche-scan', label: 'Start the scan' },
+  },
+  faq: {
+    title: 'Still something',
+    accent: 'we have not answered?',
+    lead: 'Ask the co-pilot above, or send it to a person. Either way the honest end of most of these questions is the same two weeks:',
+    next: { href: '/contact', label: 'Contact' },
+  },
+  changelog: {
+    title: 'Everything here shipped',
+    accent: 'while someone was waiting.',
+    lead: 'The list is short because the product is new, and it is dated because a changelog without dates is a brochure. If you would rather see it working than read about it:',
+    next: { href: '/product', label: 'The product' },
+  },
+  'niche-scan-sample': {
+    title: 'That was somebody else’s niche.',
+    accent: 'Yours takes a minute.',
+    lead: 'Every figure above is invented, because it belongs to an account that does not exist. The scan we run for you reads your real niche and costs nothing:',
+    next: { href: '/niche-scan', label: 'Start the scan' },
+  },
   agents: {
     title: 'Seven agents, one loop,',
     accent: 'and a log you can read.',

@@ -66,7 +66,7 @@ const CONTENT: DocPageContent = {
       ],
     },
   ],
-  next: { href: '/accessibility', label: 'Accessibility' },
+  updated: '9 November 2026',
 }
 
 export default function CookiesPage() {

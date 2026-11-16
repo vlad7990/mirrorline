@@ -327,9 +327,19 @@ ever joins the Lighthouse gate.
 
 1. ★ Frame-wall hero, labelled. **Done, F6b.**
 2. ★ The rules as cards, allowed beside never. **Already existed.**
-3. ★ An Originality Gate walkthrough, source beside remake. **Open.**
-4. ★ An AI label shown on a reel, as the client sees it. **Open.**
-5. ★ "Where your data goes" as a diagram rather than a paragraph. **Open.**
+3. ★ An Originality Gate walkthrough, source beside remake. **Done, F6c** —
+   `<OriginalityDemo />`, the component /product already runs, on the same
+   fixtures the studio renders. A second copy drawn for this page would have
+   been a second thing to keep true.
+4. ★ An AI label shown on a reel, as the client sees it. **It already
+   existed**, inside the rules list rather than as a section of its own,
+   which is why F6b read it as missing. Asserted now, so a tidy-up cannot
+   remove it quietly.
+5. ★ "Where your data goes" as a diagram rather than a paragraph. **Done,
+   F6c** — four hops and an explicit "no fifth one". Every entry names
+   something the product already does; none names a region, a retention
+   period or a certification, because we do not have those answers and the
+   page a reader checks first is the worst place to invent one.
 6. ★ Page-specific final CTA. **Done, F6b.**
 
 **F6b put /trust on the kit and left three ★ open**, which is a smaller claim

@@ -6,6 +6,105 @@
 
 ---
 
+## Handoff — 16 November 2026, evening (F6 is finished — all eleven; and the home-page queue item was a false diagnosis)
+
+**Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.
+Nothing promoted.
+
+**F6 is done.** All eleven pages are off the old kit. Every inner page now
+closes on its own `PageCta`, or — for the reading pages — deliberately does
+not close at all.
+
+**Two pieces of the old kit are left, and only one of them is live.**
+`SiteCta` is still the home page's closing block, which is right: it is the
+one page the per-page CTAs were never about. `page-hero.tsx` now has **no
+importers at all** and is dead code. I have not deleted it, because the
+working rules say not to remove files I did not create — it is a one-line
+call for whoever wants it gone.
+
+### Read this before touching home-page performance again
+
+**The queue item was wrong and had been carried across four handoffs.** It
+said `reel-backdrop.tsx` asks the optimiser for `w=3840` re-encodes. Measured
+on the built page, counting every `/_next/image` request after a full scroll:
+
+| Viewport | Requested widths | `w=3840` |
+|---|---|---|
+| 390 | 256 ×1, 384 ×3, 828 ×1 | **0** |
+| 1440 | 96 ×1, 256 ×3, 1920 ×1 | **0** |
+
+The file already declares `width={640}`, `loading="lazy"` and a real `sizes`.
+**It was a diagnosis written from reading the file and never checked against
+a request log.**
+
+**The real number, measured for the first time: Lighthouse mobile median
+80.** LCP 5,258 ms, TBT 14 ms, CLS 0. The page is not slow in any of the ways
+that are cheap to fix — it is one metric, and what it waits on is **184 KB of
+webfonts in three files**, landing between 1.5 s and 2.2 s throttled, ahead
+of an 11 KB hero image.
+
+**I tried one fix and it measured worse: 80 → 76.** Making the first hero
+float card eager — except `.hero-float` is `display: none` below 64rem, so on
+a phone the cards do not exist and the eager fetch bought a download nothing
+paints. I had measured the LCP element in a desktop-sized observer and then
+optimised for mobile. Reverted. **This is the second time this shape has cost
+a round** (D65's `fetchPriority`): a hint that moves one request earlier moves
+every other request later.
+
+**Home is at 80, the cause is named, and the fix is a font-strategy PR** —
+three faces, of which Geist Serif is required by D25 and Geist Mono carries
+the small machine text. Not something to bolt onto a page port (D71).
+
+### What F6c and F6d did
+
+**Five pages onto the kit** — /about, /contact, /faq, /changelog,
+/niche-scan/sample — frame-wall hero, labelled inset, own closing CTA.
+**/contact never had a closing block at all**; `SiteCta` was on nine pages
+and not that one, and nobody had noticed because the page looked complete.
+
+**/legal/\* and /accessibility onto a reading layout**, and that group is
+defined by what it does *not* have (D72):
+
+- **No closing CTA.** `SiteCta` was at the foot of every one of them. A
+  reader opens the privacy notice to learn what happens to their data, and
+  the page ended by selling them a pilot while they were still reading the
+  terms.
+- **No hero picture — and my first version of this port kept one.** `DocPage`
+  used `PageHero`, which draws `HeroBackdrop` unconditionally along with "the
+  room behind this is an AI-generated image". Rendered, the cookie policy
+  opened on a photograph and a label explaining the photograph. **Caught by
+  looking at the page, not by a test** — the port typechecked perfectly. It
+  is a document header now and the spec asserts both hero labels are absent.
+
+They gained a sticky table of contents whose every anchor is asserted to
+reach a real heading, and a **last-updated date the document owns rather than
+the build** — a policy re-dated by a deploy claims a review nobody did.
+
+**/trust's three ★ are closed.** ★3 reuses `<OriginalityDemo />` from
+/product; ★5 is the data diagram, four hops and an explicit "no fifth one".
+**★4 was never missing** — the AI label on a reel was inside the rules list
+rather than a section of its own, so F6b's audit read it as absent. Auditing
+by section heading misses anything built inside another section.
+
+### Checks
+
+Unit **785**. The F6 spec is **57 assertions**, all green. Axe **90 tests, 0
+serious/critical**, every route in both themes. Lint, typecheck, build and
+licence-check green. Forty-four reference screenshots regenerated.
+
+### The queue
+
+1. **Home-page performance, as actually scoped** — the font strategy. Read
+   D71 before starting, and measure before and after on the same three-run
+   median.
+2. **`/legal/privacy` and `/legal/terms` have no table of contents.** They
+   are bespoke layouts rather than `DocPage` consumers, so F6d did not reach
+   them. They already carry their own last-updated dates.
+3. **Lighthouse has never been run on the F6 pages.** Only /product,
+   /how-it-works and /pricing are gated at ≥ 90.
+
+---
+
 ## Handoff — 16 November 2026, late afternoon (F6a and F6b are in; four of the eleven are on the kit, and one ★ was wrong)
 
 **Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.

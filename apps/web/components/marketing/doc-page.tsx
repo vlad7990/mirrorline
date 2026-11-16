@@ -9,13 +9,28 @@
  * **The legal ones carry the draft notice.** None has been read by a lawyer,
  * and a policy page that looks finished is worse than no policy page: a
  * reader would reasonably rely on it.
+ *
+ * **F6d gave these pages a reading layout rather than the marketing kit**
+ * (19 v3 ★ /legal/\* and /accessibility). Three absences, and the absences
+ * are the design:
+ *
+ *   - **No hero picture, and not because of the credits.** 19 §Page by page
+ *     gives this group "no reels, readable layout, light motion only". They
+ *     are absent from `PAGE_HERO_FRAMES` too, so there is nowhere to add a
+ *     frame wall to them out of habit.
+ *   - **No closing CTA.** `SiteCta` used to sit at the foot of every one of
+ *     these. A page someone opens to find out what we do with their data
+ *     should not close by selling them a pilot — the old foot was asking
+ *     them to buy while they were still reading the terms.
+ *   - **No motion beyond the stagger the rest of the site already uses.**
+ *
+ * What they gained: a sticky table of contents, anchor links, and a
+ * last-updated date that comes from the document rather than from the build.
  */
 
 import * as React from 'react'
 
-import { PageHero } from './page-hero'
 import { DraftNotice, Prose, Section, SectionHeading } from './primitives'
-import { SiteCta } from './site-cta'
 
 export interface DocSection {
   readonly id: string
@@ -32,22 +47,40 @@ export interface DocPageContent {
   readonly lead: string
   /** What the draft notice calls this document. Omit where it is not legal. */
   readonly draftName?: string
+  /**
+   * When this wording was written, as the document says it — "9 November
+   * 2026", the convention `/legal/privacy` already used.
+   *
+   * A string the document owns rather than a build date, and that is the
+   * whole point of the field: a policy re-dated by a deploy tells a reader
+   * it was reviewed on a day nobody read it. Required, because a policy with
+   * no date is the thing 19 ★3 is asking to fix.
+   */
+  readonly updated: string
   readonly sections: readonly DocSection[]
-  readonly next: { readonly href: string; readonly label: string }
 }
 
 export function DocPage({ content }: { content: DocPageContent }) {
   return (
     <>
-      <PageHero
-        eyebrow={content.eyebrow}
-        title={content.title}
-        lead={content.lead}
-        index={content.sections.slice(0, 4).map((section, position) => ({
-          number: String(position + 1).padStart(2, '0'),
-          title: section.title,
-        }))}
-      />
+      {/* A document header, not a page hero.
+          `PageHero` draws `HeroBackdrop` unconditionally and carries the "the
+          room behind this is an AI-generated image" label with it — which is
+          right on a marketing page and wrong here twice over: 19 gives this
+          group "no reels, readable layout, light motion only", and a policy
+          page that opens on a photograph of a room is dressing up the one
+          document a reader came to read plainly. Caught by looking at the
+          rendered page; the first version of this port kept the hero and the
+          label sat there describing a picture these pages should not have. */}
+      <Section size="md" className="band-ink">
+        <span className="site-eyebrow">{content.eyebrow}</span>
+        <h1 className="reveal-lead m-0 mt-4 max-w-[26ch] text-balance text-site-h2 text-on-ink-900">
+          {content.title}
+        </h1>
+        <p className="reveal m-0 mt-5 max-w-[60ch] text-subtitle font-normal text-on-ink-muted">
+          {content.lead}
+        </p>
+      </Section>
 
       <Section aria-labelledby="doc-heading">
         <h2 id="doc-heading" className="sr-only">
@@ -58,7 +91,51 @@ export function DocPage({ content }: { content: DocPageContent }) {
           <DraftNotice documentName={content.draftName} className="mb-10" />
         ) : null}
 
-        <div className="flex flex-col gap-10">
+        <p className="m-0 mb-8 text-meta text-text-muted">
+          Last updated <span className="machine">{content.updated}</span>.
+        </p>
+
+        {/* The contents, beside the document on a wide screen and above it on
+            a phone.
+
+            `position: sticky` inside a grid column rather than a floated
+            box: the column is as tall as the prose, so the list can follow
+            the reader down it without any JavaScript measuring anything.
+            At one column it simply scrolls away above the text, which is the
+            right behaviour on a screen with no room to spare.
+
+            A <nav> with its own label, because a page with a second set of
+            links needs to say what they are — otherwise a screen reader
+            meets two unlabelled navigations and has to read both to find
+            out which is which. */}
+        <div className="grid gap-10 lg:grid-cols-12">
+          <nav aria-labelledby="toc-heading" className="lg:col-span-4">
+            <div className="lg:sticky lg:top-24">
+              <h3
+                id="toc-heading"
+                className="m-0 mb-3 font-heading text-caption uppercase tracking-wide text-text-muted"
+              >
+                On this page
+              </h3>
+              <ol className="m-0 flex list-none flex-col gap-2 p-0">
+                {content.sections.map((section, position) => (
+                  <li key={section.id} className="flex gap-3">
+                    <span className="machine text-mono text-text-muted">
+                      {String(position + 1).padStart(2, '0')}
+                    </span>
+                    <a
+                      href={`#${section.id}-heading`}
+                      className="text-meta text-text underline-offset-4 hover:underline"
+                    >
+                      {section.title}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </nav>
+
+          <div className="flex flex-col gap-10 lg:col-span-8">
           {content.sections.map((section, position) => (
             <section key={section.id} aria-labelledby={`${section.id}-heading`}>
               <SectionHeading
@@ -89,10 +166,9 @@ export function DocPage({ content }: { content: DocPageContent }) {
               </Prose>
             </section>
           ))}
+          </div>
         </div>
       </Section>
-
-      <SiteCta next={content.next} />
     </>
   )
 }

@@ -12,8 +12,17 @@ import type { Metadata } from 'next'
 import * as React from 'react'
 
 import { LeadDialogButton } from '@/app/(marketing)/components/lead-form'
-import { PageHero } from '@/components/marketing/page-hero'
+import { HeroInset, InsetCycle } from '@/components/marketing/kit/hero-inset'
+import { PAGE_CTAS, PageCta } from '@/components/marketing/kit/page-cta'
+import { PageHeroFrames } from '@/components/marketing/kit/page-hero-frames'
+import { PAGE_HERO_FRAMES, allocateFrames } from '@/components/marketing/kit/page-media'
 import { Section, SectionHeading } from '@/components/marketing/primitives'
+
+/** Three for the wall, three for the corner card. 19 v3 §hero, D69. */
+const [WALL_FRAMES = [], INSET_FRAMES = []] = allocateFrames(
+  [3, 3],
+  PAGE_HERO_FRAMES.contact.offset,
+)
 
 export const metadata: Metadata = {
   title: 'Contact',
@@ -53,7 +62,7 @@ const ROUTES: readonly Route[] = [
 export default function ContactPage() {
   return (
     <>
-      <PageHero
+      <PageHeroFrames
         eyebrow="Contact"
         title={
           <>
@@ -75,7 +84,12 @@ export default function ContactPage() {
           number: String(position + 1).padStart(2, '0'),
           title: route.title,
         }))}
-        marginNote="no ticket system · no chatbot"
+        frames={WALL_FRAMES}
+        inset={
+          <HeroInset caption="Three we made this week, for three accounts">
+            <InsetCycle frames={INSET_FRAMES} />
+          </HeroInset>
+        }
       />
 
       <Section aria-labelledby="routes-heading">
@@ -118,6 +132,13 @@ export default function ContactPage() {
           scheduler is connected this page will say so, and the button will do what it says.
         </p>
       </Section>
+
+      {/* /contact never had a closing block at all — `SiteCta` was on nine
+          pages and not on this one. 19 v3 ★ gives it one, and the sentence it
+          gets is the only honest thing to say at the foot of a contact page:
+          the scan answers most of what people write in to ask, and answers it
+          about their own account rather than in general. */}
+      <PageCta cta={PAGE_CTAS.contact} />
     </>
   )
 }

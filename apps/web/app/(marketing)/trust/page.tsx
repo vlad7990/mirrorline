@@ -12,6 +12,7 @@ import { AiLabel, Card, VideoThumb, ViewerPanel } from '@mirrorline/ui'
 import type { Metadata } from 'next'
 import * as React from 'react'
 
+import { OriginalityDemo } from '@/components/marketing/originality-demo'
 import { HeroInset, InsetCycle } from '@/components/marketing/kit/hero-inset'
 import { PAGE_CTAS, PageCta } from '@/components/marketing/kit/page-cta'
 import { PageHeroFrames } from '@/components/marketing/kit/page-hero-frames'
@@ -51,6 +52,48 @@ const AI_LABELLED_CUT = (() => {
   )
   return cuts.find((cut) => labelledIds.has(cut.id)) ?? null
 })()
+
+interface DataHop {
+  readonly id: string
+  readonly title: string
+  readonly body: string
+}
+
+/**
+ * Where a file actually travels, in order, for 19 v3 ★5.
+ *
+ * Four hops and no fifth, which is the claim the section makes and the
+ * reason it is a list rather than a paragraph: a reader asking this question
+ * wants to know how far the file goes, and prose lets you answer around it.
+ *
+ * Every entry names a thing that already exists in the product — Supabase
+ * storage, the Python workers, Postiz, the platform APIs — rather than an
+ * architecture we intend. Nothing here mentions a region, a retention period
+ * or a certification, because we do not have those answers yet and inventing
+ * one on the page a reader checks first is the worst possible place for it.
+ */
+const DATA_HOPS: readonly DataHop[] = [
+  {
+    id: 'upload',
+    title: 'You upload it',
+    body: 'Straight to our storage from your browser. We keep the original so the Compliance agent can check every cut against it, which is also why a remake can always be traced back to its source.',
+  },
+  {
+    id: 'engine',
+    title: 'The engine cuts it',
+    body: 'Our own workers transcribe, cut and caption it. Generated scenes are made by named third-party models and come back labelled; nothing is sent anywhere to train on.',
+  },
+  {
+    id: 'approve',
+    title: 'You approve it',
+    body: 'Nothing moves until it has passed the gate and you have said yes. A blocked cut stays blocked unless you override it, and the override is logged with your name on it.',
+  },
+  {
+    id: 'post',
+    title: 'It posts to your account',
+    body: 'Through the official Instagram, TikTok and YouTube APIs, to accounts you connected and can disconnect without asking us. We never hold your platform password.',
+  },
+]
 
 const RULES: readonly Rule[] = [
   {
@@ -240,6 +283,70 @@ export default function TrustPage() {
             Every figure and frame on this website belongs to a fictional demo client.
           </p>
         </div>
+      </Section>
+
+      {/* The gate, shown rather than described (19 v3 ★3) ----------------- */}
+      <Section aria-labelledby="gate-demo-heading">
+        <SectionHeading
+          headingClassName="text-site-h2 font-serif"
+          id="gate-demo-heading"
+          eyebrow="The Originality Gate"
+          title={
+            <>
+              The rule above, <span className="gold-phrase">run on a real remake.</span>
+            </>
+          }
+          lead="The source beside what we made from it, with the similarity the gate measured and the limit it is held to. This is the same component /product runs, on the same fixtures the studio renders — a second copy drawn for this page would be a second thing to keep true."
+          aside={<SampleDataLabel />}
+        />
+        <div className="mt-10">
+          <OriginalityDemo />
+        </div>
+      </Section>
+
+      {/* Where the files go (19 v3 ★5) ------------------------------------ */}
+      <Section className="band-snow" aria-labelledby="data-heading">
+        <SectionHeading
+          headingClassName="text-site-h2 font-serif"
+          id="data-heading"
+          eyebrow="Where your data goes"
+          title={
+            <>
+              Four places, <span className="gold-phrase">and no fifth one.</span>
+            </>
+          }
+          lead="Drawn rather than written out, because the question people actually ask is how far the file travels — and a paragraph is a bad way to answer that."
+        />
+        <ol className="m-0 mt-10 grid list-none grid-cols-1 gap-4 p-0 lg:grid-cols-4">
+          {DATA_HOPS.map((hop, position) => (
+            <li
+              key={hop.id}
+              className="reveal-item"
+              style={{ '--index': position } as React.CSSProperties}
+            >
+              <Card className="flex h-full flex-col gap-2">
+                <span className="machine text-mono text-text-muted">
+                  {String(position + 1).padStart(2, '0')}
+                  {/* The arrow is decoration between steps and must not be
+                      read out as a word — the <ol> already carries the order
+                      for anyone listening. */}
+                  {position < DATA_HOPS.length - 1 ? (
+                    <span aria-hidden="true" className="ml-2 text-gold-text">
+                      →
+                    </span>
+                  ) : null}
+                </span>
+                <h3 className="m-0 font-heading text-subtitle text-text">{hop.title}</h3>
+                <p className="m-0 text-meta text-text-muted">{hop.body}</p>
+              </Card>
+            </li>
+          ))}
+        </ol>
+        <p className="m-0 mt-6 max-w-[72ch] text-meta text-text-muted">
+          Nothing is sold, nothing is used to train a model you do not control, and nothing is
+          posted anywhere you have not connected yourself. You can export every file and disconnect
+          every account without asking us, including after you cancel.
+        </p>
       </Section>
 
       <Section className="band-ink-alt" aria-labelledby="not-claimed-heading">

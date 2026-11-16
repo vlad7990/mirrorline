@@ -10,9 +10,17 @@
 import type { Metadata } from 'next'
 import * as React from 'react'
 
-import { PageHero } from '@/components/marketing/page-hero'
+import { HeroInset, InsetCycle } from '@/components/marketing/kit/hero-inset'
+import { PAGE_CTAS, PageCta } from '@/components/marketing/kit/page-cta'
+import { PageHeroFrames } from '@/components/marketing/kit/page-hero-frames'
+import { PAGE_HERO_FRAMES, allocateFrames } from '@/components/marketing/kit/page-media'
 import { Section, SectionHeading } from '@/components/marketing/primitives'
-import { SiteCta } from '@/components/marketing/site-cta'
+
+/** Three for the wall, three for the corner card. 19 v3 §hero, D69. */
+const [WALL_FRAMES = [], INSET_FRAMES = []] = allocateFrames(
+  [3, 3],
+  PAGE_HERO_FRAMES.changelog.offset,
+)
 
 export const metadata: Metadata = {
   title: 'Changelog',
@@ -67,7 +75,7 @@ const ENTRIES: readonly Entry[] = [
 export default function ChangelogPage() {
   return (
     <>
-      <PageHero
+      <PageHeroFrames
         eyebrow="Changelog"
         title={
           <>
@@ -75,7 +83,16 @@ export default function ChangelogPage() {
           </>
         }
         lead="Written for the people who use it rather than for the people who built it. Removals are in here too — a thing we took off the site is as much a change as a thing we added."
-        marginNote={`${ENTRIES.length} entries · product changes only`}
+        frames={WALL_FRAMES}
+        index={[
+          { number: '01', title: 'Entries', description: String(ENTRIES.length) },
+          { number: '02', title: 'Product changes only', description: 'no marketing notes' },
+        ]}
+        inset={
+          <HeroInset caption="Three the engine made while this list grew">
+            <InsetCycle frames={INSET_FRAMES} />
+          </HeroInset>
+        }
       />
 
       <Section aria-labelledby="entries-heading">
@@ -102,7 +119,7 @@ export default function ChangelogPage() {
         </ol>
       </Section>
 
-      <SiteCta next={{ href: '/product', label: 'Product' }} />
+      <PageCta cta={PAGE_CTAS.changelog} />
     </>
   )
 }

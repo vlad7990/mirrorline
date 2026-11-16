@@ -206,6 +206,14 @@ export const PAGE_HERO_FRAMES = {
   individuals: { offset: 3, subject: 'an empty lit room, a parcel being opened and a florist' },
   agents: { offset: 6, subject: 'a florist, a desk piece to camera and a shopkeeper' },
   trust: { offset: 9, subject: 'a hand pouring coffee, hands sanding wood and a bike repair' },
+  about: { offset: 1, subject: 'a mechanic, a studio mat and an empty lit room' },
+  contact: { offset: 2, subject: 'a studio mat, an empty room and a parcel on a table' },
+  faq: { offset: 4, subject: 'a parcel being opened, a florist and a desk piece to camera' },
+  changelog: { offset: 5, subject: 'a florist, a desk piece to camera and a shopkeeper' },
+  'niche-scan-sample': {
+    offset: 7,
+    subject: 'a shopkeeper, a coffee being poured and hands sanding wood',
+  },
 } as const satisfies Record<string, PageHeroFrameSet>
 
 export type PageHeroFrameKey = keyof typeof PAGE_HERO_FRAMES

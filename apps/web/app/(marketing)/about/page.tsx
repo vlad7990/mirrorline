@@ -14,9 +14,17 @@ import { Card } from '@mirrorline/ui'
 import type { Metadata } from 'next'
 import * as React from 'react'
 
-import { PageHero } from '@/components/marketing/page-hero'
+import { HeroInset, InsetCycle } from '@/components/marketing/kit/hero-inset'
+import { PAGE_CTAS, PageCta } from '@/components/marketing/kit/page-cta'
+import { PageHeroFrames } from '@/components/marketing/kit/page-hero-frames'
+import { PAGE_HERO_FRAMES, allocateFrames } from '@/components/marketing/kit/page-media'
 import { Section, SectionHeading } from '@/components/marketing/primitives'
-import { SiteCta } from '@/components/marketing/site-cta'
+
+/** Three for the wall, three for the corner card. 19 v3 §hero, D69. */
+const [WALL_FRAMES = [], INSET_FRAMES = []] = allocateFrames(
+  [3, 3],
+  PAGE_HERO_FRAMES.about.offset,
+)
 
 export const metadata: Metadata = {
   title: 'About',
@@ -56,7 +64,7 @@ const BELIEFS: readonly Belief[] = [
 export default function AboutPage() {
   return (
     <>
-      <PageHero
+      <PageHeroFrames
         eyebrow="About"
         title={
           <>
@@ -65,11 +73,16 @@ export default function AboutPage() {
           </>
         }
         lead="Mirrorline is new. We have no client logos to show you and we are not going to invent any, so this page is about how we work and what we refuse to do."
+        frames={WALL_FRAMES}
         index={BELIEFS.map((belief, position) => ({
           number: String(position + 1).padStart(2, '0'),
           title: belief.title,
         }))}
-        marginNote="no client logos · none invented"
+        inset={
+          <HeroInset caption="Three we made, for accounts that do not exist">
+            <InsetCycle frames={INSET_FRAMES} />
+          </HeroInset>
+        }
       />
 
       <Section aria-labelledby="why-heading">
@@ -157,7 +170,7 @@ export default function AboutPage() {
         </div>
       </Section>
 
-      <SiteCta next={{ href: '/contact', label: 'Contact' }} />
+      <PageCta cta={PAGE_CTAS.about} />
     </>
   )
 }

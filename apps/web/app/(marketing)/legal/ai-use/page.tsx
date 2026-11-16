@@ -77,7 +77,7 @@ const CONTENT: DocPageContent = {
       ],
     },
   ],
-  next: { href: '/legal/acceptable-use', label: 'Acceptable use' },
+  updated: '9 November 2026',
 }
 
 export default function AiUsePage() {

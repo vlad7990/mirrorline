@@ -72,7 +72,7 @@ const CONTENT: DocPageContent = {
       ],
     },
   ],
-  next: { href: '/legal/cookies', label: 'Cookies' },
+  updated: '9 November 2026',
 }
 
 export default function CancellationRefundsPage() {
