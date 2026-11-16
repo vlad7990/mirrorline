@@ -8,7 +8,12 @@
 
 ## Handoff — 16 November 2026, night (Milo is large, always there, and says hello once a visit)
 
-**Branch** `v4/site-and-metrics` · **last commit** below. Nothing promoted.
+**Branch** `v4/site-and-metrics` · **last commit** `552d6e3` · pushed. Clean
+tree. Nothing promoted.
+
+**Preview:** https://mirrorline-27x71rdfo-vn-mn-product-group.vercel.app —
+built from `552d6e3`. 302 behind deployment protection as always; open it
+signed in to the team or mint a share link.
 
 **Milo is the launcher now**, not a detail inside a gold pill: 112px on a
 desktop, 88px on a tablet, 72px on a phone, with a gold ring, the resting
