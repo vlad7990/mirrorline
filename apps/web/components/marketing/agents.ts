@@ -23,6 +23,20 @@ export interface PublicAgent {
   readonly limit: string
   /** Where it sits in the loop: who hands to it, who it hands to. */
   readonly inLoop: string
+  /**
+   * The metric this agent owns, from `docs/specs/15_METRICS_AND_KPIS.md` §6.
+   *
+   * Required rather than optional, and that is most of the point of making it
+   * a field: an optional one would let an eighth agent ship with no metric
+   * and no error, which is how a list quietly becomes six of seven.
+   *
+   * 15 §6 gives six rows for seven agents — the Remake Producer and the
+   * Multiplier share one ("tag every video with format, hook type, length and
+   * CTA"). They are written out separately here because the loop shows them
+   * as separate steps, and a reader meeting one card at a time cannot see a
+   * shared row. Neither line claims anything the shared row does not.
+   */
+  readonly metric: string
 }
 
 export const PUBLIC_AGENTS: readonly PublicAgent[] = [
@@ -37,6 +51,8 @@ export const PUBLIC_AGENTS: readonly PublicAgent[] = [
       'It never downloads or stores another creator’s video. It keeps a description of the format and nothing else.',
     inLoop:
       'Starts the week. Hands its recipes to the Remake Producer, and takes its ranking of what worked from the Performance Analyst.',
+    metric:
+      'the Niche Scan benchmarks — views per follower, typical hold, length — that seed your targets.',
   },
   {
     id: 'remake-producer',
@@ -48,6 +64,8 @@ export const PUBLIC_AGENTS: readonly PublicAgent[] = [
       'New script and new footage only. Any AI scene is labelled, in the studio and on the platform.',
     inLoop:
       'Sits between the Trend Scout and Compliance. Its drafts go to the gate like everything else.',
+    metric:
+      'the format, hook type, length and CTA tagged onto every video it makes, so results can be compared.',
   },
   {
     id: 'multiplier',
@@ -58,6 +76,8 @@ export const PUBLIC_AGENTS: readonly PublicAgent[] = [
     limit:
       'Every cut has to differ in moment, hook, length or format. It will not ship the same clip twice with a new title.',
     inLoop: 'Runs the moment you upload. Its cuts go straight to Compliance.',
+    metric:
+      'the same tags on every cut, so a cut and a remake can be judged against each other.',
   },
   {
     id: 'compliance',
@@ -68,6 +88,8 @@ export const PUBLIC_AGENTS: readonly PublicAgent[] = [
     limit:
       'It blocks copied footage, copied audio, copied wording, a copied likeness, a near-duplicate of your own recent posts, and any guarantee written into a caption. It is our own check, not a legal clearance, and you can override it. The override is logged.',
     inLoop: 'The gate in the middle. Nothing reaches the calendar without passing through it.',
+    metric:
+      'the quality and safety tier: what passed, what was held, and why.',
   },
   {
     id: 'client-concierge',
@@ -77,6 +99,8 @@ export const PUBLIC_AGENTS: readonly PublicAgent[] = [
     does: 'Queues the videos that need your eye, explains why each one is there, answers questions in the app or by email, and puts the week together into one report.',
     limit: 'It never posts without your approval, unless you turn auto-approve on yourself.',
     inLoop: 'Between the gate and the Publisher. This is where you sit in the loop.',
+    metric:
+      'the weekly ledger and insights, and the outcomes only you can tell us.',
   },
   {
     id: 'publisher',
@@ -88,6 +112,8 @@ export const PUBLIC_AGENTS: readonly PublicAgent[] = [
       'Accounts you own and connected, only. It starts at one to three posts a day per platform, far below what the platforms allow. TikTok posts stay private until our app is audited.',
     inLoop:
       'The end of the outward journey. Its published posts become the Performance Analyst’s input.',
+    metric:
+      'the production tier, and the posting times.',
   },
   {
     id: 'performance-analyst',
@@ -98,6 +124,8 @@ export const PUBLIC_AGENTS: readonly PublicAgent[] = [
     limit:
       'It reports the numbers the platforms give us. No projected or inflated figure is ever shown as an actual.',
     inLoop: 'Closes the loop: its ranking is the first thing the Trend Scout reads next week.',
+    metric:
+      'the baseline, the targets, the KPI calculations, the alerts, and next week’s plan.',
   },
 ]
 

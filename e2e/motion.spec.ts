@@ -1342,6 +1342,43 @@ test('the CTA arrow answers the keyboard as well as the pointer', async ({ page 
 })
 
 /* ---------------------------------------------------------------------------
+   M8 · the progress spine and the metric each agent owns
+   --------------------------------------------------------------------------- */
+
+/** Seven, and the spine joins them with one segment fewer. */
+const PUBLIC_AGENT_COUNT = 7
+
+test('every agent names the metric it owns, with motion off', async ({ page }) => {
+  // The assertion M8 exists to not fail. The stage reveals the metric one
+  // agent at a time as the pin advances, which is the effect asked for — but
+  // 17 §Accessibility says no information is visible only through motion, so
+  // the ladder carries all seven whatever the reader's preference. With
+  // reduced motion the pin never starts, so if the metrics lived only on the
+  // stage this would find six missing.
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+
+  const owned = page.getByText(/^Owns /)
+  await expect(owned.first()).toBeVisible()
+  // Seven in the ladder. The stage carries an eighth copy of the current
+  // agent's line, but it is `aria-hidden` and `lg`-only, so this floor is
+  // about the ladder rather than an exact count.
+  expect(await owned.count()).toBeGreaterThanOrEqual(7)
+})
+
+test('the spine reports no progress before the sequence has any', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+
+  // With no pin there is no sequence being walked, so a filled spine would be
+  // reporting a position that does not exist. Six segments join seven agents,
+  // and every one of them is empty.
+  const fills = page.locator('[data-agent-spine-fill]')
+  await expect(fills).toHaveCount(PUBLIC_AGENT_COUNT - 1)
+  await expect(page.locator('[data-agent-spine-fill="filled"]')).toHaveCount(0)
+})
+
+/* ---------------------------------------------------------------------------
    M12 · the gold sweep across the closing CTA
    --------------------------------------------------------------------------- */
 

@@ -4662,3 +4662,184 @@ properties of the rendered page rather than of a module. e2e **322**, up 2:
 the sweep's timeline and its clipping, and that it paints nothing under
 reduced motion. Lint, typecheck, build and licence-check green; 432 packages,
 GSAP scope clean.
+
+---
+
+## 2026-11-16 · D66 · M8's two halves disagree about motion, and /product reaches 90 by deleting a round trip rather than by anything I predicted
+
+PR E2: the last of 17's motion plan, and the Lighthouse point D65 left open.
+
+### M8, and the rule that overrides the spec it comes from
+
+17 §1 M8: "Keep D35's pin. Add a progress spine down the left and the metric
+each agent owns appearing as its card activates." The pin is untouched. The
+two additions resolved differently, and the difference is the decision.
+
+**The spine fills behind the reader**, gold over the track that already joined
+the numbers. It fills for rows the sequence has *passed*, so at rest — below
+`lg`, under reduced motion, before the pin starts — nothing is filled. That is
+the honest state rather than a missing one: with no pin there is no sequence
+being walked, and a spine showing progress through a list nobody is being led
+through would report a position that does not exist.
+
+**The metric does not hide when the motion is off, and that contradicts a
+literal reading of M8.** "Appearing as its card activates" taken strictly means
+the metric exists only for the active agent. 17's own §Accessibility forbids
+it in one line: *"No information is visible only through motion."* A reader on
+a phone, with reduced motion on, or with no JavaScript would get one metric of
+seven and nothing to tell them the rest existed.
+
+So it resolves the way this component is already built. The **stage** — one
+agent at a time, `aria-hidden`, `lg` only — does exactly what M8 describes, and
+the line genuinely changes under the reader as the hand-off advances. The
+**ladder** carries all seven at every width, always, and the motion there is
+emphasis rather than disclosure: muted to full, between two tokens that each
+pass contrast alone. The component's own header already said this is the
+arrangement — "the stage is an enlargement of a row that is already there,
+never the only copy of it" — so M8 did not need a new idea, only to not break
+an existing one.
+
+The e2e test is the one that would have caught the tempting version: it turns
+reduced motion **on** and counts the metrics. The strict reading passes every
+other assertion and fails that one.
+
+### Seven agents, six rows
+
+15 §6 gives six metric rows for seven agents, because the Remake Producer and
+the Multiplier share one. They are written out separately — the loop shows
+them as separate cards and a reader meeting one at a time cannot see a shared
+row — which creates its own trap: pasting the same sentence twice looks
+exactly like having done the work. Two tests, deliberately opposed: no two
+agents may claim the same metric, **and** those two must both still describe
+tagging. Distinct, and still faithful to the row they came from.
+
+`metric` is a required field rather than an optional one. An optional one lets
+an eighth agent ship with no metric and no error, which is how a list quietly
+becomes six of seven.
+
+### The transcription was faithful and the rendered sentence was wrong
+
+Worth recording in full, because every automated check passed and a
+screenshot caught it.
+
+15 §6's "Metric job" column is not written in one grammatical shape. Some
+cells are noun phrases — "Quality and safety tier", "Production tier; posting
+times" — and some are verb phrases: "Tag every video with format, hook type,
+length and CTA", "Sends the weekly ledger and insights". Transcribed as
+written and rendered behind the word **Owns**, three of the seven came out as
+**"Owns Tags every video it makes…"**, "Owns Tags every cut…", "Owns Sends the
+weekly ledger…".
+
+Unit tests passed: every metric was present, non-empty, distinct, and the two
+sharing a row both described tagging. e2e passed: seven metrics, readable with
+motion off. Nothing that inspected the field in isolation could see it,
+because **the defect was in a sentence none of them assembled** — D62's lesson
+in its third costume, after an aside that was not beside anything and a mascot
+that was a smudge at 28px.
+
+All seven are now noun phrases that complete "Owns …", and two assertions
+hold it: the metric must begin lower case, and `Owns <metric>` must not start
+with a verb. Both were checked against the copy that shipped and both fail it,
+so they are guards rather than decoration.
+
+The comment in the first draft of that test said the metric "must not start
+with a capital that reads as a new sentence mid-phrase" — and then asserted
+only that it ended with a full stop. **A test whose comment describes a
+stronger check than its code is worse than no comment**, because the next
+reader believes the check exists.
+
+### /product: three attempts, and only the third was right
+
+D65 left `/product` at a reproducible 89 against a ≥ 90 gate, LCP-bound at
+3.8 s. Three hypotheses, measured in order.
+
+**1. `fetchpriority="high"` on the LCP image. Wrong, and it is worth saying
+why I believed it.** Lighthouse's LCP-discovery audit failed with
+`priorityHinted: false`, and the emitted HTML backed it up: the image preload
+carried no priority hint and sat behind three `<link rel="preload" as="font">`
+tags — 183 KB of webfonts, which preload at *high* priority by default. A
+tidy story: the one request the page waits on, queued behind three it does
+not.
+
+A/B on the same machine, medians of three:
+
+| Page | with `fetchPriority` | without |
+|---|---|---|
+| `/product` | 84, 88, 88 → 88 | 89, 89, 89 → 89 |
+| `/how-it-works` | 89, 89, 89 → 89 | 88, 90, 89 → 89 |
+| `/pricing` | 90, 90, 90 → 90 | 86, 90, 89 → 89 |
+
+−1, 0, +1 — smaller than the spread *within* either condition. It silences
+the audit and moves nothing. **Dropped**, because a neutral change on the page
+I was trying to move is noise in the next person's A/B, and the comment I had
+written for it claimed a result it did not have.
+
+**2. The font preloads. Not available, and not the cause either.**
+`geist@1.9.2` calls `localFont({...})` with no `preload` option, so all three
+families preload and the package exposes no way to stop it; controlling it
+means re-declaring the fonts against paths inside `node_modules/.pnpm/geist@…`,
+which breaks on any dependency bump. Moot anyway — see below.
+
+**3. The critical chain, which Lighthouse had been naming the whole time.**
+`network-dependency-tree-insight` on `/product` is three entries long:
+
+    /product → /_next/static/css/…css → /_next/static/css/…css
+
+**No font and no image is in it.** The page is not bandwidth-starved; it
+cannot paint until both stylesheets land. That single fact explains attempt 1:
+raising the image's priority cannot help a render that has not been unblocked.
+
+The two files are **20,325 bytes costing 453 ms and 874 bytes costing 153 ms**,
+and they are serialised. 153 ms to deliver 874 bytes is almost entirely round
+trip — a whole render-blocking request for less than a kilobyte.
+
+`experimental.cssChunking: false` merges them into one. Medians of three:
+
+| Page | two stylesheets | merged |
+|---|---|---|
+| `/product` | 89, 89, 89 → **89** | 89, 90, 90 → **90** |
+| `/how-it-works` | 88, 90, 89 → **89** | 90, 90, 90 → **90** |
+| `/pricing` | 86, 90, 89 → **89** | 90, 91, 90 → **90** |
+
+A uniform point on all three, and the spread collapses with it. That
+uniformity is the evidence: every page had the same two-file shape, so a real
+fix had to move all three equally, and a noise artefact would not have.
+
+**The risk it carries is order, not size.** One file means the bundler
+concatenates rather than the browser applying two in sequence, so a rule that
+depended on the old ordering would lose silently. The trip-wire was already in
+the suite rather than needing to be built: the screenshots project captures
+every screen at two widths in both themes and axe sweeps all of them, which is
+precisely the class of regression assertions cannot see.
+
+### What the measurement cost, and the lesson that is not about CSS
+
+Three builds and nine Lighthouse passes to move one point, and the first two
+hypotheses were confident and wrong. Both were wrong the same way: they
+reasoned from a *plausible mechanism* — fonts are big, images are the LCP —
+instead of from the report's own dependency chain, which had been sitting in
+the JSON from the first run. D55 records the same failure in a different
+costume: a plausible sentence sent two pull requests looking in the wrong
+place. The report said `document → css → css` before any of this started.
+
+**One other measurement is worth recording so nobody re-chases it.** The
+machine's run-to-run noise is not constant. D57 reasoned away an 89 on the
+grounds that a stashed build measured 86/90/91 — a spread of five — and that
+was sound then. Partway through this work a stray `next-server` from an
+earlier inspection was still holding port 3124 and competing for CPU, and
+every page scattered until it was killed. **A flat triplet means the machine
+is quiet; a scattered one means measure again, not that the change failed.**
+
+### Measurements
+
+Unit **775**, up 4: the seven agents are still seven and numbered in order,
+every metric is a real sentence, no two are identical, and the two that share
+a row in 15 §6 both still describe tagging. e2e **324**, up 2: all seven
+metrics readable with motion off, and every spine segment empty before the
+sequence has a position. Lint, typecheck, build and licence-check green; 432
+packages, GSAP scope clean.
+
+Lighthouse mobile, medians of three: **/product 90, /how-it-works 90,
+/pricing 90** — accessibility 100, best practices 96, SEO 100 on all three.
+The gate 17 §5 and 19 set is met on every page it names, for the first time
+since the co-pilot landed.

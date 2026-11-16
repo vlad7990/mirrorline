@@ -6,6 +6,119 @@
 
 ---
 
+## Handoff — 16 November 2026, evening (E2 is in; 17's motion plan is finished and all three pages hold 90)
+
+**Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.
+Nothing promoted.
+
+**PR E is done.** M8 shipped, and `/product` reached 90 — so the Lighthouse
+gate that 17 §5 and 19 both set is met on every page they name, for the first
+time since the co-pilot landed.
+
+| Page | before | now |
+|---|---|---|
+| `/product` | 89 | **90** |
+| `/how-it-works` | 89 | **90** |
+| `/pricing` | 89 | **90** |
+
+Medians of three. Accessibility 100, best practices 96, SEO 100 on all three.
+
+### The point came from deleting a round trip, not from anything about images
+
+Worth reading before anyone optimises this site again, because two confident
+hypotheses were wrong first and both failed the same way.
+
+Lighthouse's critical dependency chain on `/product` is three entries:
+`document → css → css`. **No font and no image is in it.** The page was never
+bandwidth-starved; it could not paint until both stylesheets landed. Next was
+splitting this app's CSS into a 20,325-byte file and an **874-byte** one, both
+render-blocking and serialised — and the small one cost **153 ms to deliver
+less than a kilobyte**, almost entirely round trip.
+
+`experimental.cssChunking: false` merges them. One point on all three pages,
+uniformly, and the run-to-run spread collapsed with it.
+
+**What did not work, so nobody repeats it:** `fetchpriority="high"` on the LCP
+image. The audit asks for it, the emitted HTML really did lack it, and 183 KB
+of font preloads really did sit ahead of the image. A/B'd on one machine it
+measured −1 / 0 / +1 — inside the noise — so it was dropped. It cannot help:
+raising an image's priority does not unblock a render that has not started.
+The font preloads are not controllable anyway; `geist@1.9.2` calls
+`localFont()` with no `preload` option.
+
+**The risk the config change carries is CSS order, not size.** One file means
+the bundler concatenates rather than the browser applying two in sequence. The
+trip-wire is the screenshots project plus axe over every screen at two widths
+in both themes — the class of regression assertions cannot see. Both are green.
+
+**And a measurement note that cost an hour:** a stray `next-server` left on
+port 3124 from an earlier inspection competed for CPU and made every page
+scatter. A flat triplet means the machine is quiet; a scattered one means
+measure again rather than that the change failed.
+
+### M8, and the one place it contradicts itself
+
+17 M8 asks for "the metric each agent owns **appearing as its card
+activates**". Read strictly that hides six metrics of seven from anyone with
+reduced motion on, no JavaScript, or a phone — and 17's own §Accessibility
+says in one line: "No information is visible only through motion."
+
+So it splits the way the component was already built. The **stage** does
+exactly what M8 describes — one agent at a time, changing under the reader.
+The **ladder** carries all seven always, and there the motion is emphasis
+rather than disclosure. The e2e test turns reduced motion **on** and counts
+seven; the tempting version passes everything else and fails that.
+
+The **progress spine** fills for rows the sequence has passed, so at rest
+nothing is filled. With no pin there is no sequence being walked, and a filled
+spine would report a position that does not exist.
+
+`metric` is a required field on `PublicAgent`. 15 §6 gives six rows for seven
+agents — the Remake Producer and the Multiplier share one — so two opposed
+tests hold it: no two agents may claim the same metric, **and** those two must
+both still describe tagging. Distinct, and still faithful to the row.
+
+**One bug worth knowing about, because every check passed and a screenshot
+caught it.** 15 §6's column mixes noun phrases ("Quality and safety tier")
+with verb phrases ("Tag every video…", "Sends the weekly ledger…").
+Transcribed faithfully and rendered behind the word **Owns**, three of seven
+read "Owns Tags every video it makes…". Unit tests passed — present,
+non-empty, distinct, both tagging ones tagging. e2e passed — seven metrics,
+readable with motion off. Nothing that inspected the field alone could see it,
+because the defect was in a sentence none of them assembled.
+
+All seven are noun phrases now, and two assertions hold it: lower case at the
+front, and `Owns <metric>` must not begin with a verb. Both were run against
+the copy that shipped and both fail it.
+
+### Checks
+
+Unit **775** (up 4), e2e **324** (up 2). Lint, typecheck, build and
+licence-check green; 432 packages, GSAP scope clean.
+
+### The queue
+
+The v4 motion and site queue is empty. What is left is not a PR anyone has
+scoped yet:
+
+1. **The dev server is still the one door nothing pins.** `pnpm dev` reads
+   `.env.local` and answers from the live model; the e2e suite and
+   `pnpm test:copilot-live` are both deliberate about this and `pnpm dev` is
+   not. Small, and the last known hole.
+2. **F6** — the eleven pages F1–F5 deliberately left on the old kit
+   (`/agents`, `/trust`, `/businesses`, `/individuals`, `/niche-scan/sample`,
+   `/about`, `/contact`, `/faq`, `/changelog`, `/legal/*`, `/accessibility`).
+   The seam is visible and was the honest cost of the narrower scope.
+3. **The home page has never been Lighthouse-tested** and sits at 80. Its
+   `reel-backdrop.tsx` asks the image optimiser for `w=3840` re-encodes of
+   640px-wide sources — a real bug, logged since 14 November, and now the
+   largest known performance item left.
+
+Needs Vlad: **G**, **H**, **I–L**, **M** (confirm $400; say whether our
+YouTube app holds an approved upload scope).
+
+---
+
 ## Handoff — 16 November 2026, late afternoon (E1 is in; E2 is M8 and one Lighthouse point)
 
 **Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.
