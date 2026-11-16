@@ -472,3 +472,32 @@
     transform: rotate(4deg);
   }
 }
+
+/* ---------------------------------------------------------------------------
+   The studio co-pilot makes room for itself.
+
+   18 §2.4 asks for "a focus-trapped dialog on narrow screens and an inline
+   aside from xl up". A `fixed` panel is an overlay however it is styled —
+   on /app/calendar the first build of it covered the post panel it was
+   supposed to sit alongside — so above xl the content has to move.
+
+   The attribute is set on <html> by `studio-copilot.tsx`, because the studio
+   layout is a server component and cannot hold the open state. Below xl
+   nothing happens: there the panel is a modal and covering the page is what
+   it is for.
+
+   The transition is in a no-preference block like every other movement here;
+   under reduced motion the column simply is narrower.
+   --------------------------------------------------------------------------- */
+@media (min-width: 1280px) {
+  html[data-copilot-open='true'] main#main {
+    /* The panel's 21.25rem plus the 1.5rem it sits in from the edge. */
+    padding-right: 24.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (min-width: 1280px) {
+  main#main {
+    transition: padding-right var(--duration-dropdown, 200ms) var(--ease-out);
+  }
+}

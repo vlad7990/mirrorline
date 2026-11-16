@@ -28,17 +28,17 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
   type ReactNode,
   type Ref,
 } from 'react'
 
+import { useIsWide } from '@/lib/motion/use-is-wide'
+import { useScheduleMoves } from '@/lib/studio/schedule-moves-context'
 import {
   applyMoves,
   movedPost,
   movedWeekPosts,
   type PostMove,
-  type ScheduleMoves,
   timeSlotsFor,
 } from '@/lib/studio/schedule-moves'
 
@@ -95,9 +95,6 @@ const MODE_NOTES: Readonly<Record<string, string>> = {
 
 /** How long a confirmation stays on screen. */
 const TOAST_MS = 4000
-/** The inline aside appears at this width; below it the drawer takes over. */
-const WIDE_QUERY = '(min-width: 1280px)'
-
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -107,24 +104,6 @@ type StatusOverrides = Readonly<Record<string, PostStatus>>
 interface ToastState {
   readonly title: string
   readonly description: string
-}
-
-function useIsWide(): boolean {
-  const subscribe = useMemo(
-    () => (onChange: () => void) => {
-      const list = window.matchMedia(WIDE_QUERY)
-      list.addEventListener('change', onChange)
-      return () => list.removeEventListener('change', onChange)
-    },
-    [],
-  )
-
-  return useSyncExternalStore(
-    subscribe,
-    () => window.matchMedia(WIDE_QUERY).matches,
-    // The server has no viewport; start narrow and let hydration correct it.
-    () => false,
-  )
 }
 
 /* -------------------------------------------------------------------------- */
@@ -140,12 +119,16 @@ const DAY_OPTIONS = weekSchedule.days.map((day) => ({
 export function CalendarView() {
   const [overrides, setOverrides] = useState<StatusOverrides>({})
   /**
-   * Reschedules made in this session, keyed by post. Held beside the status
-   * overrides and for the same reason: `weekSchedule` is a module constant,
-   * so editing it would follow the reader to every other screen and survive a
-   * navigation — which is exactly what "not saved" promises it will not do.
+   * Reschedules made in this session, keyed by post.
+   *
+   * **Held in the studio layout rather than here**, since C3. They were local
+   * state while the calendar was the only thing that could reschedule
+   * anything; the co-pilot's Approve is the second, and it has to perform the
+   * same move rather than a second copy of it (18 §2.3). The lifetime is
+   * unchanged — a client-side navigation keeps them, a reload does not, which
+   * is what "not saved" promises.
    */
-  const [moves, setMoves] = useState<ScheduleMoves>({})
+  const { moves, movePost } = useScheduleMoves()
   const [selectedPostId, setSelectedPostId] = useState<string | null>(DEFAULT_POST_ID)
   const [isDrawerOpen, setDrawerOpen] = useState(false)
   const [mode, setMode] = useState<string>(DEFAULT_MODE)
@@ -196,13 +179,20 @@ export function CalendarView() {
    * One place both paths land, so the drag and the menu cannot drift apart —
    * same state change, same confirmation, same wording about saving.
    */
-  const handleMove = useCallback((postId: string, move: PostMove) => {
-    setMoves((previous) => ({ ...previous, [postId]: move }))
-    setToast({
-      title: `Moved to ${DAY_LABEL_BY_DATE[move.date] ?? 'another day'}, ${move.timeLabel}`,
-      description: 'Sample data, not saved. Nothing has been rescheduled on your accounts.',
-    })
-  }, [])
+  const handleMove = useCallback(
+    (postId: string, move: PostMove) => {
+      // `movePost` reports whether anything changed. A drop onto the day a
+      // post is already in is not a move, and a toast for it would be the
+      // screen claiming to have done something it did not.
+      if (!movePost(postId, move)) return
+
+      setToast({
+        title: `Moved to ${DAY_LABEL_BY_DATE[move.date] ?? 'another day'}, ${move.timeLabel}`,
+        description: 'Sample data, not saved. Nothing has been rescheduled on your accounts.',
+      })
+    },
+    [movePost],
+  )
 
   /**
    * A drop changes the day and keeps the time, because a day column has no

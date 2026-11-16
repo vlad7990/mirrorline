@@ -59,6 +59,7 @@ import {
   type CopilotSurface,
   type Proposal,
   type ProposalKind,
+  type ProposalMove,
 } from './canned'
 import {
   SITE_CORPUS,
@@ -567,8 +568,56 @@ export const PROPOSAL_SCHEMA = {
     summary: { type: 'string' },
     detail: { type: 'string' },
     requiresApproval: { const: true },
+    /**
+     * The payload for `move-post`, and the reason Approve can do anything.
+     *
+     * Structured rather than described in `detail`, because §2.3 forbids
+     * reading an action out of prose and a screen cannot perform a sentence.
+     * Optional here and checked hard in `parseProposal`: a `move-post` whose
+     * payload is missing or malformed is dropped rather than offered.
+     */
+    move: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['postId', 'date', 'time24', 'timeLabel'],
+      properties: {
+        postId: { type: 'string' },
+        date: { type: 'string' },
+        time24: { type: 'string' },
+        timeLabel: { type: 'string' },
+      },
+    },
   },
 } as const
+
+/** `"14:15"`. Anchored, so `"9:5"` and `"25:00"` are both refused. */
+const TIME_24 = /^([01]\d|2[0-3]):[0-5]\d$/
+
+/** `"2026-11-19"`. The fixtures' own format, and the one a move is keyed by. */
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * Validate the structured payload a `move-post` carries.
+ *
+ * Every field is checked for shape, not merely for presence. `date` and
+ * `time24` are the two that end up in a `PostMove` and therefore in a cell of
+ * the grid: a malformed time sorts wrongly inside a day and a malformed date
+ * creates a column that does not exist, and neither fails loudly. A string
+ * that is merely non-empty is not enough here.
+ */
+export function parseProposalMove(value: unknown): ProposalMove | null {
+  if (typeof value !== 'object' || value === null) return null
+
+  const source = value as Record<string, unknown>
+  const { postId, date, time24, timeLabel } = source
+
+  if (typeof postId !== 'string' || postId.trim().length === 0) return null
+  if (typeof date !== 'string' || !ISO_DATE.test(date)) return null
+  if (typeof time24 !== 'string' || !TIME_24.test(time24)) return null
+  if (typeof timeLabel !== 'string' || timeLabel.trim().length === 0) return null
+
+  return { postId: postId.trim(), date, time24, timeLabel: timeLabel.trim() }
+}
 
 const PROPOSAL_KINDS: readonly ProposalKind[] = ['move-post', 'swap-format', 'pause-account']
 
@@ -591,10 +640,17 @@ export function parseProposal(value: unknown): Proposal | null {
   // Anything other than a literal `true` is refused rather than coerced.
   if (source.requiresApproval !== true) return null
 
+  // A `move-post` without a payload the screen can act on is not a proposal,
+  // it is a sentence with an Approve button. Dropped here rather than shown
+  // and found to do nothing.
+  const move = kind === 'move-post' ? parseProposalMove(source.move) : null
+  if (kind === 'move-post' && !move) return null
+
   return {
     kind: kind as ProposalKind,
     summary: summary.trim(),
     detail: detail.trim(),
     requiresApproval: true,
+    ...(move ? { move } : {}),
   }
 }

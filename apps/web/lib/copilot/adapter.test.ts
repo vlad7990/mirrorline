@@ -32,6 +32,7 @@ import {
   copilotMode,
   corpusCacheVerdict,
   parseProposal,
+  parseProposalMove,
   requestShapeFor,
   resetClient,
   resetCorpusVerdict,
@@ -297,6 +298,62 @@ describe('a proposal that came back from the model', () => {
     // inventing a capability, and it must not reach a card with a button.
     expect(parseProposal({ ...valid, kind: 'delete-account' })).toBeNull()
     expect(parseProposal({ ...valid, kind: 'post-now' })).toBeNull()
+  })
+
+  describe('the move-post payload, which is what makes Approve able to act', () => {
+    const move = {
+      postId: 'post-instagram-2026-11-19-0915',
+      date: '2026-11-19',
+      time24: '09:15',
+      timeLabel: '9:15 am',
+    }
+
+    const movePost = {
+      kind: 'move-post',
+      summary: 'Move the Thursday post to Tuesday',
+      detail: 'Same platform, same time of day; only the date changes.',
+      requiresApproval: true,
+      move,
+    }
+
+    test('is carried through when every field is the right shape', () => {
+      expect(parseProposal(movePost)).toMatchObject({ kind: 'move-post', move })
+    })
+
+    test('a move-post with no payload is dropped, not shown', () => {
+      // A card whose Approve button has nothing to perform is worse than no
+      // card: it would read as an offer and do nothing, silently. §2.3
+      // forbids reading the action out of `detail`, so there is no fallback.
+      const without = Object.fromEntries(
+        Object.entries(movePost).filter(([field]) => field !== 'move'),
+      )
+      expect(parseProposal(without)).toBeNull()
+      expect(parseProposal({ ...movePost, move: null })).toBeNull()
+      expect(parseProposal({ ...movePost, move: 'tuesday at nine' })).toBeNull()
+    })
+
+    test('a malformed date or time is refused rather than passed to the grid', () => {
+      // These two end up in a cell of the calendar. A bad time sorts wrongly
+      // inside a day and a bad date makes a column that does not exist, and
+      // neither fails loudly — so they are checked for shape, not presence.
+      expect(parseProposalMove({ ...move, date: '19/11/2026' })).toBeNull()
+      expect(parseProposalMove({ ...move, date: '2026-11' })).toBeNull()
+      expect(parseProposalMove({ ...move, time24: '9:15' })).toBeNull()
+      expect(parseProposalMove({ ...move, time24: '25:00' })).toBeNull()
+      expect(parseProposalMove({ ...move, time24: '09:75' })).toBeNull()
+      expect(parseProposalMove({ ...move, postId: '  ' })).toBeNull()
+      expect(parseProposalMove({ ...move, timeLabel: '' })).toBeNull()
+    })
+
+    test('the other two kinds carry no payload, and are still accepted', () => {
+      // `swap-format` and `pause-account` have no screen that performs them.
+      // They are proposals that explain rather than act, and requiring a
+      // payload would delete them.
+      expect(parseProposal(valid)?.move).toBeUndefined()
+      expect(parseProposal({ ...valid, kind: 'swap-format' })).toMatchObject({
+        kind: 'swap-format',
+      })
+    })
   })
 
   test('is refused when it is empty, malformed or not an object', () => {

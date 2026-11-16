@@ -35,6 +35,8 @@
  *   success state and the tests treat as one.
  */
 
+import { weekPosts, weekSchedule } from '@mirrorline/mock'
+
 import { PRICING_TIERS, type PricingTier } from '@/components/marketing/pricing-tiers'
 
 import { BANNED_PATTERNS } from '../copy/banned-phrases'
@@ -100,6 +102,33 @@ export type ProposalKind = 'move-post' | 'swap-format' | 'pause-account'
  * type. A proposal is data describing a change, and the only thing that can
  * perform one is the screen the client presses Approve on.
  */
+/**
+ * Where a `move-post` proposal would put a post, if it were approved.
+ *
+ * **Structured, because Approve cannot act on prose.** 18 §2.3's note is that
+ * proposals come back as structured output "not parsed out of prose", and
+ * §2.4's warning is sharper: "A regex over model text deciding whether to
+ * pause someone's account is the version of this feature that must never
+ * ship." Until now the type had no payload at all, which made that rule easy
+ * to keep and the Approve button impossible to wire — the card could describe
+ * a move and the screen had nothing to perform.
+ *
+ * So the payload is here, in the same shape `schedule-moves.ts` already takes
+ * (`PostMove`, plus the post it applies to), validated field by field in
+ * `parseProposal` before it is ever offered. A proposal whose payload does not
+ * parse is dropped rather than shown: a card we cannot act on is worse than no
+ * card, because its Approve button would do nothing and say nothing.
+ */
+export interface ProposalMove {
+  readonly postId: string
+  /** ISO date of the day column it would move to. */
+  readonly date: string
+  /** "14:15". */
+  readonly time24: string
+  /** "2:15 pm", the fixtures' own format. */
+  readonly timeLabel: string
+}
+
 export interface Proposal {
   readonly kind: ProposalKind
   /** One line, for the card's heading. */
@@ -107,6 +136,16 @@ export interface Proposal {
   /** What would happen, in full, so Approve is an informed press. */
   readonly detail: string
   readonly requiresApproval: true
+  /**
+   * Set on `move-post` and on nothing else.
+   *
+   * Optional rather than a discriminated union on `kind`, because the other
+   * two kinds have no screen to perform them yet: `swap-format` would queue a
+   * remake and `pause-account` would stop the Publisher, and neither exists.
+   * A union would force an empty payload type for each and imply both are
+   * wired. They are not, and their cards say so.
+   */
+  readonly move?: ProposalMove
 }
 
 export interface CopilotAnswer {
@@ -454,18 +493,62 @@ const FORECAST_ASK =
  * producing a plausible number — §2.2, which is the most important rule on
  * this surface.
  */
+/**
+ * The one move this canned answer proposes, read out of the fixtures.
+ *
+ * **Not a hard-coded post id.** `weekPosts` builds its ids from dates the
+ * fixture computes (`post-<platform>-<date>-<time>`), so a literal written
+ * here would be correct today and point at nothing the moment the week rolls
+ * — and a proposal pointing at a post that is not on the calendar is a card
+ * whose Approve button silently does nothing. Reading the fixtures keeps the
+ * proposal and the grid describing the same post by construction.
+ *
+ * Thursday to Tuesday, same platform, same time of day: the days are indices
+ * 3 and 1 of a week that starts on Monday, and `schedule-moves.ts` is explicit
+ * that a move changes the day and the time but never the platform.
+ *
+ * `null` if the fixtures ever stop having a Thursday post, in which case the
+ * question falls through to the ordinary retrieval path rather than offering
+ * a move that cannot be made.
+ */
+const SAMPLE_MOVE = ((): {
+  readonly move: ProposalMove
+  readonly fromLabel: string
+  readonly toLabel: string
+} | null => {
+  const from = weekSchedule.days[3]
+  const to = weekSchedule.days[1]
+  if (!from || !to) return null
+
+  const post = weekPosts.find((candidate) => candidate.date === from.date)
+  if (!post) return null
+
+  return {
+    move: {
+      postId: post.id,
+      date: to.date,
+      // The time of day is the post's own, so only the date changes.
+      time24: post.time24,
+      timeLabel: post.timeLabel,
+    },
+    fromLabel: from.dayLabel,
+    toLabel: to.dayLabel,
+  }
+})()
+
 export function cannedStudioAnswer(question: string): CopilotAnswer {
-  if (MOVE_ASK.test(question)) {
+  if (MOVE_ASK.test(question) && SAMPLE_MOVE) {
     return studioAnswer({
       text: 'I can propose a move, and you would approve it. Nothing is rescheduled until you press Approve — I am not able to move a post myself, by design.',
       citations: [{ label: 'This week’s calendar', href: '/app/calendar' }],
       proposals: [
         {
           kind: 'move-post',
-          summary: 'Move the Thursday post to Tuesday, same platform, same time of day',
+          summary: `Move the ${SAMPLE_MOVE.fromLabel} post to ${SAMPLE_MOVE.toLabel}, same platform, same time of day`,
           detail:
-            'Tuesday has done better for this account than Thursday across the last four weeks of posts. The move keeps the platform and the time of day, so only the date changes. On approval this runs the same reschedule as dragging the chip by hand, and the move is logged.',
+            `${SAMPLE_MOVE.toLabel} has done better for this account than ${SAMPLE_MOVE.fromLabel} across the last four weeks of posts. The move keeps the platform and the time of day, so only the date changes. On approval this runs the same reschedule as dragging the chip by hand — on sample data, which is not saved and changes nothing on your accounts.`,
           requiresApproval: true,
+          move: SAMPLE_MOVE.move,
         },
       ],
       refusal: null,

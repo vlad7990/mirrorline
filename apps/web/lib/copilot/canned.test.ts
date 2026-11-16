@@ -16,6 +16,7 @@
  * website bot to Sonnet 5 rather than loosen the refusals.
  */
 
+import { weekPosts } from '@mirrorline/mock'
 import { describe, expect, test } from 'vitest'
 
 import { findBannedClaims } from '../copy/banned-phrases'
@@ -217,6 +218,39 @@ describe('proposals are inert', () => {
     // because a type is not a runtime guarantee once JSON is involved.
     expect(proposal?.requiresApproval).toBe(true)
     expect(proposal?.detail.length).toBeGreaterThan(80)
+  })
+
+  test('the move-post proposal points at a post that is actually on the calendar', () => {
+    // The payload is what Approve performs, so a post id that is not in the
+    // week would be a card whose button silently does nothing. The ids are
+    // built from dates the fixture computes, which is why `canned.ts` reads
+    // them rather than holding a literal — a literal would be right today and
+    // wrong the moment the week rolls.
+    const proposal = cannedStudioAnswer('Can you move my Thursday post to Tuesday?').proposals[0]
+
+    expect(proposal?.kind).toBe('move-post')
+    expect(proposal?.move).toBeDefined()
+
+    const target = weekPosts.find((post) => post.id === proposal?.move?.postId)
+    expect(target, 'the proposal names a post that is not in the week').toBeDefined()
+
+    // It moves the post somewhere it is not, and keeps its time of day —
+    // `schedule-moves.ts` is explicit that a move changes the day, never the
+    // platform, and inventing a new time would be a number nobody chose.
+    expect(proposal?.move?.date).not.toBe(target?.date)
+    expect(proposal?.move?.time24).toBe(target?.time24)
+    expect(proposal?.move?.timeLabel).toBe(target?.timeLabel)
+  })
+
+  test('the two kinds with no screen behind them carry no payload', () => {
+    // `swap-format` and `pause-account` cannot be performed yet, and the
+    // panel says so on approval. A payload here would imply otherwise.
+    expect(
+      cannedStudioAnswer('Can you swap this to a different format?').proposals[0]?.move,
+    ).toBeUndefined()
+    expect(
+      cannedStudioAnswer('Can you pause posting on my Instagram account?').proposals[0]?.move,
+    ).toBeUndefined()
   })
 
   test('a proposal carries no handler, callback or mutation of any kind', () => {
