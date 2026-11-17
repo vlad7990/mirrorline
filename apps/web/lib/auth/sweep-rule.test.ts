@@ -25,8 +25,13 @@ function shouldDeleteTestAccount(email: string, currentRunId: string | null, now
   const runId = email.slice(TEST_ACCOUNT_PREFIX.length).split('-')[0] ?? ''
   if (currentRunId !== null && runId === currentRunId) return true
 
+  // The shape check is load-bearing: `parseInt('not', 36)` succeeds, so
+  // `e2e+not-a-run-id@…` would otherwise read as a 1970 timestamp and be
+  // swept as ancient. This test is what found that.
+  if (!/^[0-9a-z]{12}$/.test(runId)) return false
+
   const stamp = Number.parseInt(runId.slice(0, RUN_ID_TIMESTAMP_LENGTH), 36)
-  if (!Number.isFinite(stamp) || stamp <= 0) return false
+  if (!Number.isFinite(stamp) || stamp < Date.UTC(2020, 0, 1)) return false
 
   return now - stamp > STALE_ACCOUNT_AGE_MS
 }

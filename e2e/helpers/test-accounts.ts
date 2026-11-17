@@ -174,10 +174,26 @@ export function readRunId(): string | null {
   }
 }
 
-/** When a run id was minted, or `null` if it does not parse. */
+/**
+ * When a run id was minted, or `null` if it does not parse.
+ *
+ * **The shape check is load-bearing, and a test is why it exists.** The first
+ * version only tried `parseInt(…, 36)`, which happily accepts any word made of
+ * `0-9a-z` — `"not"`, out of `e2e+not-a-run-id@…`, parses to a small number,
+ * reads as a timestamp from 1970, and would have been deleted as ancient. The
+ * id must look like one `newRunId` produced, and the timestamp must be after
+ * this project existed.
+ */
+const EARLIEST_PLAUSIBLE_MS = Date.UTC(2020, 0, 1)
+const RUN_ID_PATTERN = /^[0-9a-z]{12}$/
+
 function runIdMintedAt(runId: string): number | null {
+  if (!RUN_ID_PATTERN.test(runId)) return null
+
   const stamp = Number.parseInt(runId.slice(0, RUN_ID_TIMESTAMP_LENGTH), 36)
-  return Number.isFinite(stamp) && stamp > 0 ? stamp : null
+  if (!Number.isFinite(stamp) || stamp < EARLIEST_PLAUSIBLE_MS) return null
+
+  return stamp
 }
 
 /** Two hours. Longer than any run, short enough that debris does not accumulate. */

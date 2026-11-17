@@ -5873,3 +5873,61 @@ one more reason attached.
   stranger. It could not be tested against the public endpoint because the
   sender was rate-limited at the time — the limitation obstructing the test of
   its own workaround. `E2E_SIGNUP_DOMAIN` overrides it.
+
+## 2026-11-17 · D85 · Production exists, and the rule about it got stricter rather than looser
+
+Vlad's decision: **Vercel's production branch is `main`, and the production URL
+is `mirrorline-eosin.vercel.app`.** Production has its own environment
+variables, which he adds. Deployment protection stays on until launch.
+
+Non-negotiable 11 used to read "no production deploys", and it meant it
+literally: there was no production, so deploying to it was impossible rather
+than forbidden. Now there is one, and the rule has to say something harder:
+
+- **I never deploy and never promote.** Not by CLI, not by dashboard, not by
+  API.
+- **I never merge to `main`.** Every change reaches production through a pull
+  request Vlad reviews and merges — and **merging is the only thing that
+  deploys**, which is what makes "do not merge" the whole of the rule rather
+  than one clause of it.
+- **Preview deployments stay mine**, freely, behind protection.
+
+The thing worth noticing is that this is a *tightening*. "No production
+deploys" was a statement about capability; "deploying is somebody else's job"
+is a statement about authority, and it survives the capability arriving.
+
+### What `main` actually contains today, which is not what it sounds like
+
+PR #1 was reported merged and **is not**: `gh pr view 1` says `OPEN`, with
+`mergedAt: null`. `origin/main` is still at `2959de5`, an older marketing
+commit.
+
+That matters for a reason easy to miss: `origin/main` is **already an ancestor
+of `backend/b1-auth`**, with zero commits that branch lacks. The requested
+rebase was a no-op — not because it succeeded, but because there was nothing
+to rebase onto. `backend/b1-auth` descends from `v4/site-and-metrics`, so it
+carries all 117 of that branch's commits, and **a PR from it today would
+contain the entire v4 phase as well as B1** unless PR #1 merges first.
+
+### The service-role key, checked rather than assumed
+
+Asked to confirm the secret never reaches the browser, against a **fresh**
+build:
+
+- `apps/web/.next/static` — **87 files, key absent.**
+- `apps/web/.next/server` — **325 files, key absent.**
+- Source references to `SUPABASE_SERVICE_ROLE_KEY`: `lib/supabase/env.ts` (the
+  reader), its test (synthetic values), `lib/leads/scan-store.ts` (server-side
+  lead writer) and `e2e/helpers/test-accounts.ts` (setup and teardown).
+
+The publishable key is absent from both bundles too, which surprised me until
+it was obvious: **nothing in the browser talks to Supabase yet.** Every call
+goes through a server action, a route handler or the proxy, so even the public
+key is only ever read server-side. The day a client component needs it, it
+will appear in `.next/static` — and that is correct, because RLS is what
+protects the data (`rls.db.test.ts`), not the obscurity of that key.
+
+`lib/supabase/env.ts` also **refuses** a `sb_secret_…` value found in a
+`NEXT_PUBLIC_` variable, with a test, because Next inlines those into the
+bundle and the leak would be permanent. The scan confirms today; that check is
+what keeps it true tomorrow.

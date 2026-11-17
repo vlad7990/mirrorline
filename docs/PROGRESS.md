@@ -6,6 +6,62 @@
 
 ---
 
+## Handoff — 17 November 2026, evening (B1's auth half is done; three things need Vlad before B1 finishes)
+
+**Branch** `backend/b1-auth` · pushed · **no PR yet.** Gates: lint, typecheck,
+**861 unit**, build, licence-check — all green.
+
+### Done since the last note
+
+- **The e2e suite has a session** (D84) — setup project signs in through the
+  real form, saves `storageState`, three projects reuse it.
+- **The sweep is safe on a shared database.** Teardown deletes **this run's**
+  accounts plus any `e2e+` account **older than two hours**, and leaves
+  everything else alone. Six unit tests
+  (`apps/web/lib/auth/sweep-rule.test.ts`).
+- **D85** — production policy, and CLAUDE.md non-negotiable 11 rewritten.
+- **The service-role key is not in either bundle**, checked against a fresh
+  build: `.next/static` 87 files, `.next/server` 325 files, absent from both.
+
+### Three things that need you
+
+1. **PR #1 is not merged.** `gh pr view 1` says `OPEN`, `mergedAt: null`, and
+   `origin/main` is still `2959de5`. The rebase was therefore a no-op —
+   **`origin/main` is already an ancestor of `backend/b1-auth`**, zero commits
+   behind. This branch descends from `v4/site-and-metrics` and carries all 117
+   of its commits, so **a PR from it today would contain the whole v4 phase as
+   well as B1.** Merge PR #1 first and that problem disappears.
+2. **Three e2e flakes in the full run** — 397 passed, 3 failed, and **all three
+   pass in isolation** (`copilot-site.spec.ts:102`,
+   `resources-and-auth.spec.ts:221`, one more). Suspected: the new Suspense
+   boundary on the auth pages means `body.innerText()` can be read before the
+   form streams in. Not yet fixed, and not pretended to be fixed.
+3. **The e2e sign-up domain is still unverified.** `mirrorline-test.dev`
+   (`E2E_SIGNUP_DOMAIN` overrides). GoTrue refuses `@example.com`, and the
+   rate limit blocked testing alternatives. Resend SMTP on a real domain
+   settles it (D79, D84).
+
+### Next, in the order you asked for
+
+1. **Workspace creation** — the bootstrap RPC is applied and proved; what is
+   left is onboarding writing the niche and the real goal
+   (`goals.outcome_text`, in the user's own words).
+2. **The Settings delete control** — `delete_workspace` is applied and proved;
+   this is the typed confirmation and the dialog that offers the export first.
+3. **The data export** — rows, read as the user.
+
+Then open `backend/b1-auth` as its own PR.
+
+### Open decisions
+
+- **Screenshot noise**: `index`, `agents`, `product` and `resources` drift
+  between runs without changing. Left uncommitted. If it keeps happening, the
+  comparison needs a small pixel threshold rather than repeated re-commits.
+- **Email confirmation stays on** (your call), so the sign-up spec skips
+  whenever the sender is spent.
+
+---
+
 ## Handoff — 17 November 2026, evening (the e2e suite has a session: D84, and the red test is green again)
 
 **Branch** `backend/b1-auth` · pushed. **PR #1 untouched.** No PR for this
