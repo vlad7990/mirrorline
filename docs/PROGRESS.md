@@ -6,6 +6,99 @@
 
 ---
 
+## Handoff — 17 November 2026, night (B1 is complete and green; the PR is open and waiting for you to merge it)
+
+**Branch** `backend/b1-auth` · rebased onto `main` · **PR open, not merged.**
+Gates: lint, typecheck, **890 unit**, build, licence-check — all green. Full
+e2e: **404 passed, 824 skipped, 0 failed.**
+
+### The rebase, which is now meaningful
+
+PR #1 merged at 19:34 UTC as `4a81a14`. After `git rebase origin/main` the
+branch is **10 commits ahead and 0 behind, and all 10 are B1** — v4's commits
+reach it through `main` rather than through its own history, so the PR carries
+B1 alone. That was the whole point of waiting.
+
+### The three flakes — two were a different bug (D87)
+
+The brief said all three were the auth page reading `body.innerText()` before
+the Suspense boundary streamed. **That was right about one of them.**
+
+- `resources-and-auth.spec.ts:221` — exactly as described, now waits on the
+  email field's role. Worth knowing why it mattered: read early, `toContain`
+  failed while **both `not.toContain` assertions passed** on an empty page.
+- `copilot-site.spec.ts:102` and `:194` — no auth page, no `innerText`. Both
+  compare the Milo dock's `boundingBox()` while `.milo-dock` is mid
+  `transform 220ms`. One-shot reads of a moving element; now polled with
+  `toPass`, assertions unchanged.
+
+**What the green runs do not prove.** The baseline before any fix was already
+green, so these were fixed by diagnosis, not reproduction. The third flake's
+identity did not survive — the handoff only ever named two and "one more", and
+the green run wiped `test-results/`. `:194` is an inference from shape. If a
+third flake appears outside `copilot-site.spec.ts`, it has not been dealt with.
+
+### D85 split
+
+D85 was carrying two decisions on one number. **D85** keeps the production
+policy; **D86** takes the service-role bundle check. D85's claim that PR #1 was
+still open is corrected.
+
+### B1's app layer (D88)
+
+1. **Workspace creation.** Onboarding writes `niche`, the 2×2 and the primary
+   goal. It is an *update*: `ensure_workspace_for_current_user` already made
+   the workspace at sign-in with `niche: null`. The goal is read-then-write,
+   not upserted — `goals_one_primary_per_workspace` is a *partial* unique index
+   and so is not a conflict target PostgREST can name.
+2. **The Settings delete control.** Typed confirmation, re-checked on the
+   server, with the export offered **inside the dialog** above the field —
+   `delete_workspace` takes the `auth.users` row when it is the last workspace,
+   so afterwards there is no account left to download anything with.
+3. **The data export.** `GET /api/export`, twelve tables read **as the user**,
+   so RLS decides the contents. `leads` is excluded by construction.
+
+**One thing you should look at.** `goals.outcome_text` is `not null` and step 3
+had no field for it, so I added "What would success look like?" — and left it
+the **only field in the wizard with no sample value**. Prefilling it would put
+a sentence nobody wrote into the one column the schema calls "the user's own
+words" and that the Results Ledger quotes back. The consequence is that the
+last step now gates on it, and "Open my studio" became a submit button rather
+than a link, because navigating away would discard the answers.
+
+### How the writes are proved, since a redirect proves nothing
+
+A redirect only shows the action reached its last line. I checked the database
+directly first and saw `niche=null` with no goal row — which looked like a
+silent failure and was not: that was a *different* workspace the sweep had
+spared ("left 1 alone"), while this run's own rows had already been cascaded by
+teardown. The rows therefore cannot be inspected after a run, by design.
+
+So the proof is in the suite: `workspace-data.spec.ts` completes onboarding and
+reads the niche and outcome back through `/api/export` — one B1 feature
+witnessing another, as the same user, under the same policies.
+
+**Nothing in the suite confirms a deletion.** The shared session (D84) is the
+account every other spec depends on, so a test that confirmed the dialog would
+delete it mid-run. The tests prove the gate — the control exists, offers the
+export, and refuses the right name in the wrong case — and leave the deletion
+to `rls.db.test.ts`.
+
+### Still needs you
+
+1. **Merge the PR.** Merging is the only thing that deploys (D85), and it is
+   not mine to do.
+2. **The e2e sign-up domain is still unverified.** `mirrorline-test.dev`
+   (`E2E_SIGNUP_DOMAIN` overrides). Resend SMTP on a real domain settles it
+   (D79, D84).
+3. **Screenshot noise, unchanged.** `index`, `agents`, `app-upload` and
+   `sign-up--390--dark` drift between runs without changing. Left uncommitted
+   again. Only the eight that legitimately changed are committed —
+   `app-onboarding-step3` and `app-settings`, both opened and checked. If this
+   keeps happening the comparison wants a small pixel threshold.
+
+---
+
 ## Handoff — 17 November 2026, evening (B1's auth half is done; three things need Vlad before B1 finishes)
 
 **Branch** `backend/b1-auth` · pushed · **no PR yet.** Gates: lint, typecheck,

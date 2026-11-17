@@ -132,7 +132,21 @@ test('the whole demo path holds up', async ({ page }) => {
     await expect(page.getByRole('button', { name: `Remove ${nearby}` })).toBeVisible()
   }
 
-  await page.getByRole('link', { name: 'Open my studio' }).click()
+  // **The last step saves now, so it has to be completable.** "Open my studio"
+  // was a link while onboarding was a prefilled demo that wrote nothing; it is
+  // a submit button that writes the niche and the goal. The outcome is the one
+  // field with no sample value — `goals.outcome_text` is the user's own words,
+  // so prefilling it would forge them — which makes it the one field this
+  // journey has to type.
+  const openStudio = page.getByRole('button', { name: 'Open my studio' })
+  await expect(openStudio).toBeDisabled()
+
+  await page
+    .getByLabel('What would success look like?')
+    .fill('Ten qualified enquiries a month from people who already trust me')
+
+  await expect(openStudio).toBeEnabled()
+  await openStudio.click()
 
   /* --- 5. Home ----------------------------------------------------------- */
 

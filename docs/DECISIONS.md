@@ -6009,3 +6009,105 @@ The general lesson is the one worth carrying: **`innerText()`, `textContent()`
 and `boundingBox()` are one-shot reads in a suite where almost everything else
 retries.** They are where races hide, and a grep for them is a faster way to
 find the next flake than waiting for it.
+
+## 2026-11-17 · D88 · B1's app layer: onboarding saves, Settings deletes, and the export is read as the user
+
+The three remaining B1 pieces, and the choices inside each that were not
+obvious.
+
+### Onboarding updates; it does not create
+
+`ensure_workspace_for_current_user` already runs at sign-in and sign-up, so the
+workspace exists before anybody sees the wizard — with a name, and with `niche`
+null because sign-up never asked. So "workspace creation from onboarding" is
+really **filling in what the bootstrap left open**, plus the one row the
+bootstrap could not write: the goal.
+
+That is why it needs no service role and no new RPC. `workspaces_update_owner`
+and `goals_insert_members` already permit it as the signed-in user.
+
+**The goal is read-then-write rather than an upsert.**
+`goals_one_primary_per_workspace` is a *partial* unique index — one row per
+workspace `where is_primary` — and a partial index is not a conflict target
+PostgREST can name. An `on_conflict` would have had to pretend the constraint
+was something else. Reading first also makes a second pass through the wizard
+edit the one goal instead of colliding, and leaves the genuine race (two tabs)
+to the index, which is the right place for it.
+
+### The outcome is the only field with no sample value
+
+Every other field in the wizard opens on the demo workspace's data, labelled
+"Sample data" per non-negotiable 7. `outcomeText` opens **empty**, and the last
+step cannot be completed until it is written.
+
+The reason is narrow and worth stating: `goals.outcome_text` is described in the
+schema as "the outcome in the user's own words", and the Results Ledger quotes
+it back to them. A prefilled value would put a sentence nobody wrote into the
+one column that claims authorship. Being consistent with the other fields would
+have meant forging the one field where authorship is the point.
+
+This also turned the last step's action from a `Link` into a submit button.
+"Open my studio" used to navigate away, which was correct while the wizard saved
+nothing — and would now silently discard the three answers the step exists to
+collect.
+
+### The export is read as the user, and `leads` is absent
+
+Every query behind `/api/export` runs on the caller's own session, so **RLS
+decides what comes out** rather than a hand-maintained filter. The export cannot
+include a co-member's private row, and it cannot drift from the policies: if
+`rls.db.test.ts` passes, the export is correct by construction. The service-role
+key would have made it one simpler query and would have been the wrong tool — an
+exporter that can read everything has to be *trusted* to filter (D86).
+
+`leads` is deliberately not in the list. `rls_policies.sql` puts RLS on it with
+no policy at all, because "a lead is a stranger who filled in the Niche Scan
+form, and it belongs to us rather than to any workspace". Reading it as the user
+returns nothing, so listing it would add a permanently empty key to everybody's
+export — which reads as *"Mirrorline holds no leads"* rather than *"this is not
+yours"*. Twelve tables are listed; each is present even when empty, so "nothing
+here" stays distinguishable from "not exported".
+
+### The delete offers the export inside its own dialog
+
+`delete_workspace` cascades every table carrying a `workspace_id` and, when it
+was the user's last, deletes their `auth.users` row (D80). **After confirming
+there is no account left to download anything with.** So the export is offered
+above the confirmation field, not on a neighbouring card: that is the difference
+between an export existing and an export being offered.
+
+Two smaller things:
+
+- **The typed name is checked again on the server.** The button disables until
+  it matches, and that is a courtesy to the person rather than a control on the
+  request — a `disabled` attribute lives in the browser. The workspace id is
+  never taken from the form either; it comes from `getOwnedWorkspace()`, and
+  `delete_workspace` re-asks the ownership question anyway.
+- **The workspace name is in the dialog, not on the card.** `/app/settings` is a
+  captured screen and the e2e session's workspace is named `E2E <runId>` — a new
+  name every run. On the card it would make the settings screenshot differ from
+  itself on every comparison.
+
+### `getOwnedWorkspace` filters on `user_id`, and that is load-bearing
+
+`memberships_select_own_workspaces` reads `using (is_member_of(workspace_id))`,
+which is the right policy and means a select on `memberships` returns **every**
+membership row in every workspace I belong to — including other people's
+`owner` rows. `.eq('role', 'owner')` alone would have handed back a colleague's
+ownership of a shared workspace. RLS decides which rows may be *seen*; only that
+filter decides which one is *mine*.
+
+### How the writes are proved
+
+A redirect proves the action reached its last line, not that a row exists — and
+the rows cannot be inspected after a run, because the teardown sweeps the test
+account and cascades its workspace by design. So `workspace-data.spec.ts`
+completes onboarding and then **reads the values back through `/api/export`**:
+one B1 feature witnessing another, as the same user, under the same policies.
+
+Nothing in the suite confirms a deletion. The shared session (D84) is the
+account every other spec depends on, so a test that confirmed the dialog would
+delete it mid-run and the failures would surface in whichever file ran next. The
+tests prove the gate — that the control exists, offers the export, and cannot be
+satisfied by the right name in the wrong case — and leave the deletion itself to
+`rls.db.test.ts`, which has a throwaway user to spend.

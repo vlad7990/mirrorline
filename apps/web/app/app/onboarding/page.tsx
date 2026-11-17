@@ -6,6 +6,18 @@
  * The draft the client is building lives here and is passed down; the step
  * number lives in the shell's context so the header indicator and this page
  * agree. Nothing is mutated: every change returns a new draft.
+ *
+ * ============================================================================
+ * The draft is prefilled; the outcome is not, and that is deliberate
+ * ============================================================================
+ *
+ * Every other field opens on the demo workspace's values, labelled "Sample
+ * data" per non-negotiable 7 — a starting point somebody can edit.
+ * `outcomeText` starts **empty**, alone among them, because it is written to
+ * `goals.outcome_text`, which the schema describes as "the outcome in the
+ * user's own words". Prefilling it would put a sentence nobody wrote into the
+ * one column that claims authorship, and the Results Ledger quotes that column
+ * back to them. So the last step cannot be completed until they write it.
  */
 
 import { Card } from '@mirrorline/ui'
@@ -34,6 +46,9 @@ import {
 import { useOnboardingStep } from '@/components/onboarding/step-context'
 import { WizardFooter } from '@/components/onboarding/wizard-footer'
 
+import { saveOnboarding } from './actions'
+import { IDLE_ONBOARDING_STATE } from './onboarding-form-state'
+
 interface OnboardingDraft {
   readonly logoFileName: string
   readonly colourId: string
@@ -49,6 +64,8 @@ interface OnboardingDraft {
   readonly nearbyNiches: readonly string[]
   /** A `GoalKey` from 15 §2. The goal decides the KPI set, not the industry. */
   readonly goal: string
+  /** `goals.outcome_text`. Empty until written — see the note at the top. */
+  readonly outcomeText: string
   readonly goalLink: string
   readonly postsPerDay: string
 }
@@ -64,6 +81,7 @@ const INITIAL_DRAFT: OnboardingDraft = {
   niche: DEFAULT_NICHE,
   nearbyNiches: DEFAULT_NEARBY_NICHES,
   goal: DEFAULT_GOAL_KEY,
+  outcomeText: '',
   goalLink: DEFAULT_GOAL_LINK,
   postsPerDay: DEFAULT_POSTS_PER_DAY,
 }
@@ -83,11 +101,26 @@ export default function OnboardingPage() {
     setDraft((previous) => ({ ...previous, tone: { ...previous.tone, [axisId]: value } }))
   }, [])
 
-  // Step 2 is the only gated step: the rights confirmation holds Continue.
-  const canContinue = step !== 2 || draft.rightsConfirmed
+  const [state, formAction, isSubmitting] = React.useActionState(
+    saveOnboarding,
+    IDLE_ONBOARDING_STATE,
+  )
+
+  // Two gated steps now. Step 2 is the rights confirmation (non-negotiable 1);
+  // step 3 is the outcome, which cannot be prefilled and so cannot be skipped.
+  const hasOutcome = draft.outcomeText.trim().length > 0
+  const canContinue = step === 2 ? draft.rightsConfirmed : step !== 3 || hasOutcome
 
   return (
-    <div className="flex flex-col gap-5">
+    <form action={formAction} className="flex flex-col gap-5">
+      {/* The four closed-vocabulary answers travel as hidden fields: they are
+          set by a SegmentedControl and a Select, which hold their value in
+          React rather than in a named form control. `outcomeText` is a real
+          <textarea name="outcomeText"> inside NicheStep, so it posts itself. */}
+      <input type="hidden" name="niche" value={draft.niche} />
+      <input type="hidden" name="audience" value={draft.audience} />
+      <input type="hidden" name="stage" value={draft.stage} />
+      <input type="hidden" name="goalType" value={draft.goal} />
       {/* The wizard opens on the demo workspace's brand and accounts, not on
           yours. CLAUDE.md non-negotiable 7: say so, in the fixed wording. */}
       <div className="flex flex-wrap items-center gap-3">
@@ -134,6 +167,8 @@ export default function OnboardingPage() {
               onNearbyNichesChange={(nearbyNiches) => update('nearbyNiches', nearbyNiches)}
               goal={draft.goal}
               onGoalChange={(goal) => update('goal', goal)}
+              outcomeText={draft.outcomeText}
+              onOutcomeTextChange={(outcomeText) => update('outcomeText', outcomeText)}
               goalLink={draft.goalLink}
               onGoalLinkChange={(goalLink) => update('goalLink', goalLink)}
               postsPerDay={draft.postsPerDay}
@@ -141,10 +176,24 @@ export default function OnboardingPage() {
             />
           ) : null}
 
+          {/* `role="alert"` rather than a toast: this is the reason the button
+              did not do what it said, and it has to be read before the next
+              attempt. Next ships its own route announcer, so the copy is what
+              distinguishes this one. */}
+          {state.status === 'error' && state.message !== null ? (
+            <p
+              role="alert"
+              className="m-0 rounded-lg bg-danger-soft px-4 py-3 text-body text-on-danger-soft"
+            >
+              {state.message}
+            </p>
+          ) : null}
+
           <WizardFooter
             isFirstStep={isFirstStep}
             isLastStep={isLastStep}
             canContinue={canContinue}
+            isSubmitting={isSubmitting}
             onBack={goBack}
             onContinue={goNext}
           />
@@ -155,6 +204,6 @@ export default function OnboardingPage() {
           <LivePreview colourId={draft.colourId} fontValue={draft.fontValue} tone={draft.tone} />
         </div>
       </div>
-    </div>
+    </form>
   )
 }
