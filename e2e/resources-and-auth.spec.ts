@@ -221,6 +221,17 @@ test.describe('/sign-in', () => {
   test('the example address is neutral: no invented person, no real mail host', async ({ page }) => {
     await page.goto('/sign-in')
 
+    // **Wait for the field, not the page.** The example address lives in this
+    // field's hint, and the whole form sits inside the Suspense boundary
+    // `sign-in/page.tsx` needs for `useSearchParams` — whose fallback is an
+    // empty `aria-hidden` div. `innerText()` is a one-shot read with no retry,
+    // so taken before the boundary streams it returns a page with no form in
+    // it at all: `toContain` fails, and the two `not.toContain` assertions
+    // pass for the worst possible reason. Waiting on the email field is
+    // waiting for the boundary, and it is the cheapest assertion the fallback
+    // cannot satisfy.
+    await expect(page.getByRole('textbox', { name: 'Email', exact: true })).toBeVisible()
+
     const body = await page.locator('body').innerText()
     expect(body).toContain('you@your-business.example')
     expect(body).not.toContain('@gmail')

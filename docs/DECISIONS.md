@@ -5896,20 +5896,33 @@ The thing worth noticing is that this is a *tightening*. "No production
 deploys" was a statement about capability; "deploying is somebody else's job"
 is a statement about authority, and it survives the capability arriving.
 
-### What `main` actually contains today, which is not what it sounds like
+### What `main` contains, now that PR #1 has merged
 
-PR #1 was reported merged and **is not**: `gh pr view 1` says `OPEN`, with
-`mergedAt: null`. `origin/main` is still at `2959de5`, an older marketing
-commit.
+**Resolved the same day this was written.** PR #1
+(`v4/site-and-metrics` → `main`) merged at 19:34 UTC on 17 November 2026 as
+merge commit `4a81a14`, and `origin/main` moved `2959de5` → `4a81a14`.
 
-That matters for a reason easy to miss: `origin/main` is **already an ancestor
-of `backend/b1-auth`**, with zero commits that branch lacks. The requested
-rebase was a no-op — not because it succeeded, but because there was nothing
-to rebase onto. `backend/b1-auth` descends from `v4/site-and-metrics`, so it
-carries all 117 of that branch's commits, and **a PR from it today would
-contain the entire v4 phase as well as B1** unless PR #1 merges first.
+When this entry was first written the merge had not happened, and that made the
+rebase meaningless in a way worth recording: `origin/main` was **already an
+ancestor of `backend/b1-auth`**, so there was nothing to rebase onto. Because
+the branch descends from `v4/site-and-metrics`, it carried all 117 of that
+branch's commits, and a PR from it would have contained the entire v4 phase as
+well as B1.
 
-### The service-role key, checked rather than assumed
+The merge is what fixed that, and it fixed it without any work on this branch.
+`v4`'s commits now reach `backend/b1-auth` through `main` rather than through
+its own history, so after `git rebase origin/main` the branch stands at
+**exactly 10 commits ahead and 0 behind** — the B1 commits and nothing else.
+A PR from it now contains B1 alone, which is the whole point of having waited.
+
+## 2026-11-17 · D86 · The service-role key is absent from both bundles, and a test is what keeps it that way
+
+Split out of D85 on 17 November 2026. It had been written as a subsection of
+the production-policy decision because the two were settled in the same
+sitting, but they are not the same decision and the shared number made both
+harder to cite: D85 is a rule about **who may deploy**, and this is a finding
+about **where a secret ends up**. Each now stands on its own. Nothing in the
+substance below changed in the split.
 
 Asked to confirm the secret never reaches the browser, against a **fresh**
 build:
@@ -5931,3 +5944,68 @@ protects the data (`rls.db.test.ts`), not the obscurity of that key.
 `NEXT_PUBLIC_` variable, with a test, because Next inlines those into the
 bundle and the leak would be permanent. The scan confirms today; that check is
 what keeps it true tomorrow.
+
+## 2026-11-17 · D87 · Two of the three e2e flakes were a different bug from the one reported, and the third is not recoverable
+
+The brief named three flakes and one cause: the auth pages read
+`body.innerText()` before the Suspense boundary streams in. **That was right
+about one of them.** Applying it to all three would have shipped one fix and
+two guesses, so each was diagnosed on its own.
+
+### The one the brief described
+
+`resources-and-auth.spec.ts:221` asserts the example address
+`you@your-business.example` appears on `/sign-in`. That string lives in the
+email field's **hint**, and the whole form sits inside the boundary
+`sign-in/page.tsx` needs for `useSearchParams`, whose fallback is an empty
+`aria-hidden` div. `innerText()` takes one reading and never retries, so before
+the boundary resolves it returns a page with no form in it.
+
+The failure mode is worse than a false red, and that is the reason to record
+it: `toContain` fails, while **both `not.toContain` assertions pass** — on an
+empty page, for no reason at all. A run where the boundary was slow but the
+copy was wrong would have reported exactly one of the two problems. It now
+waits on `getByRole('textbox', { name: 'Email', exact: true })`, the cheapest
+assertion the fallback cannot satisfy.
+
+### The two that had nothing to do with auth
+
+`copilot-site.spec.ts:102` never visits an auth page and never reads
+`innerText`. It compares the Milo dock's `boundingBox()` with the cookie
+banner's. `.milo-dock` lifts by `--cookie-banner-height` through
+`transform 220ms`, and `globals.css` says in its own comment that the banner
+"publishes its height a moment after hydration" — the transform was chosen
+*over* `bottom` precisely so that late publish costs no CLS. `boundingBox()`
+does not retry, so one reading lands either before the variable is published or
+midway through the transition, and reports the mascot still sitting on the
+consent buttons.
+
+`copilot-site.spec.ts:194` is the same shape — the other vertical dock
+comparison, lifted by `--milo-cta-lift` on the same transition — and it was
+being held together by a flat `waitForTimeout(500)`. That passed by outlasting
+the transition rather than by knowing it had ended, which is a test that works
+until somebody changes a duration.
+
+Both now wrap the unchanged assertion in `toPass`. **Only the patience
+changed**, not what is being claimed.
+
+### What the two green runs do and do not prove
+
+The baseline run before any fix was **green**: 400 passed, 816 skipped, nothing
+failed. The two runs after the fix were also green (400 passed, 13.2m and
+13.0m). So:
+
+- The auth race and the two geometry races were fixed **by diagnosis**, against
+  code that can be read and reasoned about.
+- They were **not** fixed by reproduction, because none of the three reproduced
+  on demand. Three green runs cannot distinguish "fixed" from "did not fire".
+- **The third flake's identity is gone.** The handoff only ever named two and
+  "one more", and the green baseline wiped `test-results/`. `:194` is an
+  inference from shape, not an identification. If a third flake outside
+  `copilot-site.spec.ts` returns, this entry is the reason not to assume it was
+  already dealt with.
+
+The general lesson is the one worth carrying: **`innerText()`, `textContent()`
+and `boundingBox()` are one-shot reads in a suite where almost everything else
+retries.** They are where races hide, and a grep for them is a faster way to
+find the next flake than waiting for it.

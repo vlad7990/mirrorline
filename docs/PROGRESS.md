@@ -20,8 +20,10 @@
   everything else alone. Six unit tests
   (`apps/web/lib/auth/sweep-rule.test.ts`).
 - **D85** — production policy, and CLAUDE.md non-negotiable 11 rewritten.
-- **The service-role key is not in either bundle**, checked against a fresh
-  build: `.next/static` 87 files, `.next/server` 325 files, absent from both.
+- **D86** — **the service-role key is not in either bundle**, checked against a
+  fresh build: `.next/static` 87 files, `.next/server` 325 files, absent from
+  both. This was written inside D85 at first and now has its own number, because
+  "who may deploy" and "where the secret ends up" are two decisions.
 
 ### Three things that need you
 
