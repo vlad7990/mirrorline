@@ -1,12 +1,18 @@
-import { deleteTestAccounts, supabaseConfig, TEST_ACCOUNT_PREFIX } from './helpers/test-accounts'
+import {
+  deleteTestAccounts,
+  readRunId,
+  supabaseConfig,
+  TEST_ACCOUNT_PREFIX,
+} from './helpers/test-accounts'
 
 /**
  * Sweep every test account out of the shared preview database.
  *
  * D76 put all previews on one project, so anything this suite leaves behind
- * accumulates where real work happens. The sweep is by **prefix, not by run
- * id**: a crashed run never reaches its own cleanup, and a teardown that only
- * tidies after itself slowly fills the database it was meant to protect.
+ * accumulates where real work happens. The sweep takes **this run's accounts,
+ * plus any `e2e+` account older than two hours** — a crashed run never reaches
+ * its own cleanup, so age is what eventually collects it, while anything
+ * younger might still belong to a run happening right now.
  *
  * Runs after every project, including on failure — which is the case that
  * matters, because a failing run is exactly the one that left rows behind.
@@ -24,10 +30,13 @@ export default async function globalTeardown(): Promise<void> {
   }
 
   try {
-    const { users, workspaces } = await deleteTestAccounts(config)
+    const { users, workspaces, kept } = await deleteTestAccounts(config, readRunId())
+
+    const keptNote =
+      kept > 0 ? `, left ${kept} alone (another run's, under two hours old)` : ''
 
     console.log(
-      `[e2e teardown] removed ${users} account(s) matching "${TEST_ACCOUNT_PREFIX}" and ${workspaces} workspace(s)`,
+      `[e2e teardown] removed ${users} account(s) matching "${TEST_ACCOUNT_PREFIX}" and ${workspaces} workspace(s)${keptNote}`,
     )
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'unknown failure'

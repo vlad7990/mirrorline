@@ -7,6 +7,7 @@ import {
   supabaseConfig,
   testEmail,
   testPassword,
+  writeRunId,
 } from './helpers/test-accounts'
 
 /**
@@ -44,6 +45,11 @@ setup('sign in and save the session', async ({ page }) => {
   if (config === null) return
 
   const runId = newRunId()
+  // The teardown runs in its own process and cannot see this variable, so the
+  // id goes to disk. Without it the sweep would only know the age rule, and
+  // this run's own accounts would survive until they were two hours old.
+  writeRunId(runId)
+
   const email = testEmail(runId)
   const password = testPassword(runId)
 

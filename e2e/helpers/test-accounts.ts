@@ -15,11 +15,15 @@
  * ============================================================================
  *
  * D76 put every preview on **one shared database**, so whatever this suite
- * creates sits beside everything else. Accounts are therefore named
- * `e2e+<runId>-<label>@<domain>` and the teardown deletes **every** address
- * beginning `e2e+` — not only this run's. A crashed run leaves rows behind,
- * and a sweep that tidies only after itself is a sweep that slowly fills the
- * database.
+ * creates sits beside everything else. Accounts are named
+ * `e2e+<runId>-<label>@<domain>`, and the teardown deletes **this run's
+ * accounts, plus any `e2e+` account older than two hours**.
+ *
+ * Both halves matter. Sweeping only this run would let a crashed run's rows
+ * accumulate for ever; sweeping *every* `e2e+` address would let two
+ * concurrent runs delete each other's accounts mid-test, and that failure
+ * surfaces as a random auth error — the worst kind to debug. The age rule is
+ * the line between debris and somebody else's live fixtures.
  *
  * **Workspaces go before users.** Deleting the auth user cascades to
  * `profiles` and so to `memberships` — which would leave the workspace
@@ -42,8 +46,8 @@
  * so a typo cannot quietly deliver mail to a stranger.
  */
 
-import { existsSync, readFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 
 const ENV_RELATIVE_PATH = join('apps', 'web', '.env.local')
 
@@ -139,9 +143,78 @@ export const TEST_ACCOUNT_PREFIX = 'e2e+'
 
 export const SIGNUP_DOMAIN = process.env.E2E_SIGNUP_DOMAIN ?? 'mirrorline-test.dev'
 
-/** One id per run, so parallel runs on the shared database cannot collide. */
+/**
+ * One id per run, so parallel runs on the shared database cannot collide.
+ *
+ * **The first eight characters are `Date.now()` in base 36**, which is what
+ * lets the teardown work out how old an account is from its address alone.
+ * That matters because the sweep must never delete a *live* account belonging
+ * to somebody else's run on the shared preview database (D76).
+ */
 export function newRunId(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+}
+
+const RUN_ID_TIMESTAMP_LENGTH = 8
+
+/** Where this run leaves its id for the teardown, which runs in a separate process. */
+const RUN_ID_FILE = '.playwright/auth/run-id.txt'
+
+export function writeRunId(runId: string): void {
+  mkdirSync(dirname(RUN_ID_FILE), { recursive: true })
+  writeFileSync(RUN_ID_FILE, runId, 'utf8')
+}
+
+export function readRunId(): string | null {
+  try {
+    const value = readFileSync(RUN_ID_FILE, 'utf8').trim()
+    return value.length > 0 ? value : null
+  } catch {
+    return null
+  }
+}
+
+/** When a run id was minted, or `null` if it does not parse. */
+function runIdMintedAt(runId: string): number | null {
+  const stamp = Number.parseInt(runId.slice(0, RUN_ID_TIMESTAMP_LENGTH), 36)
+  return Number.isFinite(stamp) && stamp > 0 ? stamp : null
+}
+
+/** Two hours. Longer than any run, short enough that debris does not accumulate. */
+export const STALE_ACCOUNT_AGE_MS = 2 * 60 * 60 * 1000
+
+/**
+ * Should the sweep delete this address?
+ *
+ * **Only two reasons**, and the distinction is the whole point:
+ *
+ * - it belongs to **this** run, or
+ * - it is **older than two hours**, so no live run can still be using it.
+ *
+ * An `e2e+` account from somebody else's run started ten minutes ago is left
+ * alone. The previous version deleted every `e2e+` address it found, which on
+ * a shared database (D76) meant two concurrent runs could delete each other's
+ * accounts mid-test — the failure would look like a random auth error, which
+ * is the worst kind to debug.
+ *
+ * An address whose id does not parse is treated as **not** stale: the sweep
+ * refuses to guess about something it does not recognise.
+ */
+export function shouldDeleteTestAccount(
+  email: string,
+  currentRunId: string | null,
+  now: number,
+): boolean {
+  if (!email.startsWith(TEST_ACCOUNT_PREFIX)) return false
+
+  const runId = email.slice(TEST_ACCOUNT_PREFIX.length).split('-')[0] ?? ''
+
+  if (currentRunId !== null && runId === currentRunId) return true
+
+  const mintedAt = runIdMintedAt(runId)
+  if (mintedAt === null) return false
+
+  return now - mintedAt > STALE_ACCOUNT_AGE_MS
 }
 
 export function testEmail(runId: string, label = 'studio'): string {
@@ -237,12 +310,18 @@ async function listTestUsers(config: SupabaseTestConfig): Promise<readonly Admin
   return found
 }
 
-/** Delete every tagged account and the workspaces they own. Workspaces first. */
-export async function deleteTestAccounts(config: SupabaseTestConfig): Promise<{
-  users: number
-  workspaces: number
-}> {
-  const users = await listTestUsers(config)
+/**
+ * Delete this run's accounts and anything older than two hours, and the
+ * workspaces they own. Workspaces first — see the note at the top of the file.
+ */
+export async function deleteTestAccounts(
+  config: SupabaseTestConfig,
+  currentRunId: string | null,
+  now: number = Date.now(),
+): Promise<{ users: number; workspaces: number; kept: number }> {
+  const all = await listTestUsers(config)
+  const users = all.filter((user) => shouldDeleteTestAccount(user.email, currentRunId, now))
+  const kept = all.length - users.length
   let workspaceCount = 0
 
   for (const user of users) {
@@ -272,7 +351,7 @@ export async function deleteTestAccounts(config: SupabaseTestConfig): Promise<{
     }).catch(() => null)
   }
 
-  return { users: users.length, workspaces: workspaceCount }
+  return { users: users.length, workspaces: workspaceCount, kept }
 }
 
 /**
