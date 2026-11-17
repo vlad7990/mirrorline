@@ -5524,3 +5524,167 @@ Nothing visual changed on any page: all three were semantic wrappers.
 
 **90 audits, zero violations at `moderate` or above, and nothing printed at
 `minor` either.** The suite now says what its name says.
+
+## 2026-11-16 · D76 · Previews share one database, and the cost of that is paid in test fixtures rather than in dollars
+
+Vlad's decision: **one `mirrorline-preview` Supabase project, region
+`us-east-1`, for every preview deployment.** Not Supabase branching. Production
+gets its own project later, and the two never share a key.
+
+`BACKEND_PHASE.md` §1 had offered branching as the cleaner option, and it is —
+a database per branch cannot be contaminated by another branch. The shared
+project is the right call anyway: previews are the only environment that will
+exist for weeks, branching costs per branch, and the uncleanliness it avoids is
+a problem I can solve in the test suite for free.
+
+**So the suite has to earn it.** Every fixture is namespaced to its run and
+deleted in teardown; nothing writes to a fixed, well-known row. Two branches
+running the RLS tests at the same moment must not see each other — which is,
+usefully, the same property the policies themselves are being written to
+guarantee. A test that leaks a workspace into a shared preview database would
+be a test that disproves the feature it is checking.
+
+**And the preview says it is a preview.** A shared database behind a URL that
+looks like the product is exactly the confusion non-negotiable 7 exists to
+prevent, so the environment is on the screen rather than in the deployment
+settings.
+
+`us-east-1` puts the database beside the Vercel deployments rather than an
+ocean away from them.
+
+## 2026-11-16 · D77 · I create the two Stripe test products, and the price id joins the price under the rule the price already lives by
+
+Vlad's decision: **I create Pilot and Creator in the test dashboard through the
+API, and keep the price ids beside the prices in `pricing-tiers.ts`.**
+
+The alternative — Vlad creates them and sends two ids — puts the ids in a chat
+message and the prices in a file, which is two sources that drift the first
+time a price changes. `pricing-tiers.ts` already exists to stop exactly that:
+it carries `price` as prose and `priceUsd` as a number **with a test asserting
+the two never disagree**, and `postsInPeriod` under the same arrangement.
+
+The id joins them. A new optional `stripeTestPriceId`, `null` on the three
+sales-led plans, and the test asks the question that matters rather than
+listing names: **a tier with a `priceUsd` and no `comingSoonLabel` is a plan
+you can buy, and a plan you can buy must have an id.** Studio stays a waitlist
+and stays exempt by its own data rather than by a hard-coded exception.
+
+**The ids are committed.** A test-mode `price_…` is not a secret — it names a
+product in a sandbox, and without `sk_test_…` it buys nothing. Non-negotiable 9
+is about credentials, and treating a public identifier as one would make the
+rule mean less, not more.
+
+## 2026-11-16 · D78 · n8n is deferred, and the adapter that would have called it stays exactly where it is
+
+Vlad's decision: **skip n8n for now. B4 emails the scan notification directly
+from the app. Keep the n8n adapter, inactive.**
+
+`BACKEND_PHASE.md` had planned to stand up `automation/n8n/` because CLAUDE.md's
+repo layout promises it. The promise is deferred, not dropped — and the useful
+part of this decision is what it does *not* do: `notifyN8n` in
+`lib/leads/scan-store.ts` is not deleted. It is present, tested, and dormant
+because `N8N_WEBHOOK_URL` is unset. Removing working code to re-add it in a
+month is churn, and the thing it would have been replaced by is a different
+transport for the same event.
+
+**The honest problem this surfaced, which was not in the question.** D79 keeps
+auth mail on Supabase's built-in sender — but that sender only renders
+Supabase's own auth templates: confirmation, magic link, recovery. **It cannot
+send a scan notification.** "Email me directly from the app" therefore needs one
+mail credential that D79 does not supply.
+
+The shortest path that does not need a domain we do not have: **Resend's test
+sender, which delivers only to the account owner's own address** — which is
+precisely the single address this notification goes to. Its limitation is this
+use case.
+
+Two things fall out of it:
+
+- **A `lib/notify/email.ts` adapter shaped like `scan-store.ts`** — provider
+  when the key is set, logged no-op otherwise. **The write and the
+  notification never share a failure path**: a lead lost because a mail server
+  was down is the worst outcome available here, and it is the one that needs
+  designing out rather than hoping about.
+- **The recipient is `SCAN_NOTIFY_EMAIL`, not a line in the repo.** A personal
+  address committed to git is a small leak with a long life.
+
+The lead's own email address goes in the body, never in a URL or a subject
+line — the same rule the n8n webhook was given, surviving the change of
+transport.
+
+## 2026-11-16 · D79 · Auth mail stays on Supabase's sender until there is a name and a domain to send from
+
+Vlad's decision: **Supabase's built-in auth email until we have a real name and
+a domain.**
+
+Right, and for the reason that makes it temporary: "Mirrorline" is a
+placeholder, there is no domain, and verifying a sending domain for a name that
+will change is work done twice. Supabase's sender is rate-limited and mails from
+a Supabase address, which is fine for a test-mode product with no production
+deploy and no client on it.
+
+**It is a thing to revisit before the first client, not after.** A confirmation
+mail from a stranger's domain is the detail that costs an account its first
+impression — and the first client is the moment it stops being a test. When the
+name and the domain exist, auth mail and B4's notifications (D78) move to the
+same verified sender, which is one of the reasons B4's mailer is an adapter
+rather than a function call.
+
+## 2026-11-16 · D80 · The plan gains three things the site already promises, and one of them had no control at all
+
+Vlad's additions to `BACKEND_PHASE.md`: **cancellation in B3**, and **account
+deletion plus an export of the user's own data in B1/B2**.
+
+He is right, and the gap was mine: I planned the backend from the schema
+outward and did not check it against what the pages already say. They say a
+great deal.
+
+- **"Cancel in one click"** appears on `/legal/cancellation-refunds`,
+  `/pricing`, `/individuals`, the home page's problem section, the FAQ and the
+  long-form add-on. `plan-card.tsx` already carries the affordance, with a
+  comment citing 09 §10 and a notice that billing is not connected. **Six
+  promises and a button waiting for a server.**
+- **"Export all of it at any time… and that export keeps working after you
+  cancel."** Settings ships two export buttons and both open a notice.
+- **"You can ask for a copy of your data, or ask us to delete your
+  workspace."** — `/legal/privacy`. **There is no delete control anywhere in
+  the app.** Not a stub: absent.
+
+A promise with no mechanism is the failure mode this entire project is the
+turnaround of. The previous version of this product lied to platforms; writing
+"cancel in one click" above a button that cannot cancel is the same habit in a
+smaller font.
+
+**Three judgements inside the three additions:**
+
+**Our own cancel button, not the Stripe Customer Portal.** The portal is a
+redirect off our domain and several clicks deep. The promise is "from Settings,
+in one click… you do not need to email us, give notice, or speak to anyone
+first" — a redirect to Stripe keeps the letter of it and loses the point. It is
+`cancel_at_period_end`, with the status read back from our own table via the
+webhook rather than from the mutation's response, so one path writes state
+whatever caused the change. And **"Keep my plan" undoes it** while the period
+runs: a reversible flag presented as irreversible is a worse product and a
+worse support queue.
+
+**The export is two things because Settings already offers two.** "Export my
+data" is the rows and is deliverable in B2. "Export all my files" is the media
+and **has nothing to export until B5** — so it says so, rather than producing
+an empty archive, which would be a working button that lies. Both run as the
+user through their own session; an export endpoint that takes a workspace id
+and reads with the service role is an export endpoint that hands any workspace
+to anyone who can guess an id. The test is the one the RLS suite already sets
+up: **a second workspace's rows are absent from the first's export.**
+
+**Deletion deletes.** `on delete cascade` from `workspaces` through every table
+carrying a `workspace_id`, and the auth user goes too when it was their last
+workspace. The proof is "zero rows across all eleven tables for that id" rather
+than "the workspace row is gone" — a soft delete would let the privacy notice
+stay true in the UI and false in the database. The dialog offers the export
+first, because the copy says the files stay yours and deletion is the one
+action here that cannot be undone.
+
+One ordering consequence worth naming: `/legal/cancellation-refunds` says the
+export keeps working **after** you cancel, so **export is gated on having an
+account, never on subscription status** — and §8 proves it with a test that
+cancels, passes the period end, and exports anyway.

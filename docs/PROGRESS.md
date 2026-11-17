@@ -6,6 +6,78 @@
 
 ---
 
+## Handoff — 16 November 2026, late night (the five answers landed, the backend plan says what was decided, and B1 waits on one confirmation)
+
+**Branch** `v4/site-and-metrics` · pushed. Clean tree. **PR #1 is still open
+and unmerged, and stays that way** — Vlad is changing Vercel's production
+branch first, so that merging to `main` does not deploy to production. **I will
+not merge it.**
+
+**Vlad's answers are in, logged as D76–D80, and folded into
+`docs/plan/BACKEND_PHASE.md`:**
+
+1. **D76 — previews share one database.** A single `mirrorline-preview`
+   Supabase project, region `us-east-1`, for every preview. Production gets its
+   own project later and never shares a key. The cost is paid in the test
+   suite: every fixture is namespaced to its run and deleted in teardown, so
+   two branches running the RLS tests at once cannot see each other.
+2. **D77 — I create the two Stripe test products** through the API, and the
+   `price_…` ids go beside the prices in `pricing-tiers.ts`, under the same
+   rule `priceUsd` already lives by: a test asserts that a tier you can buy has
+   an id. The ids are committed — a test-mode price id without `sk_test_` buys
+   nothing.
+3. **D78 — n8n is deferred.** `automation/n8n/` is not stood up; `notifyN8n`
+   stays in `scan-store.ts`, present and dormant. B4 emails the scan
+   notification to Vlad directly instead.
+4. **D79 — auth mail stays on Supabase's built-in sender** until there is a
+   real name and a domain. To revisit before the first client, not after.
+5. **D80 — the plan gains three things the site already promises**:
+   cancellation in B3, and account deletion plus a self-service export in
+   B1/B2.
+
+### What D80 found, and it is the part worth reading
+
+I planned the backend from the schema outward and never checked it against what
+the pages already say. **"Cancel in one click" is on six surfaces**
+(`/legal/cancellation-refunds`, `/pricing`, `/individuals`, the home page, the
+FAQ, the long-form add-on) and `plan-card.tsx` carries the button with a notice
+saying billing is not connected. **Both Settings export buttons are stubs.**
+And `/legal/privacy` says "ask us to delete your workspace" while **the app has
+no delete control at all** — not a stub, absent.
+
+All three are in this phase now. The cancel is **our own button**, not the
+Stripe Customer Portal: a redirect off-domain keeps the letter of "one click"
+and loses the point. Export is **two things because Settings offers two** —
+rows in B2, media not until B5, and the media button says so rather than
+sending an empty archive. Deletion **cascades, and is proved by "zero rows
+across all eleven tables"**, because a soft delete would leave the privacy
+notice true in the UI and false in the database.
+
+### One thing the answers did not cover, and it is small
+
+**Supabase's built-in sender only renders Supabase's own auth templates** —
+confirmation, magic link, recovery. It cannot send B4's scan notification. So
+B4 needs one mail credential of its own even though D79 says auth mail does
+not: **Resend's test sender, which delivers only to the account owner's own
+address**, which is exactly where this notification goes. `SCAN_NOTIFY_EMAIL`
+holds the recipient, so a personal address is not committed. **Without the key
+B4 still works** — the lead is written, the notification logged — so it blocks
+the notification, not the feature.
+
+### Next step: B1, and it waits on one confirmation
+
+**Nothing starts until Vlad confirms the Supabase keys are in
+`apps/web/.env.local` and in Vercel (Preview).** That is the whole gate. They
+are the `mirrorline-preview` project's keys: `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, plus the project
+ref and database password in my shell for `supabase link` / `db push`.
+
+Then **B1 and nothing before it** — policies, sessions, `profiles`,
+`memberships`, and the deletion from D80 — because until a request carries a
+user there is no policy to write.
+
+---
+
 ## Handoff — 16 November 2026, late night (the site phase is closed: a PR is open for review, and the backend phase is planned)
 
 **Branch** `v4/site-and-metrics` · **last commit** `e20dca1` · pushed. Clean
@@ -73,6 +145,9 @@ CLAUDE.md promises that do not exist: `automation/n8n/`, and any Stripe code at
 all.
 
 ### 4. Next step: fold Vlad's decisions into the backend plan
+
+**Done — see the handoff above.** All five were answered and are logged as
+D76–D80. The questions are kept below as the record of what was asked.
 
 **This is where the next session starts, and it is an edit to
 `docs/plan/BACKEND_PHASE.md` rather than any code.** Five answers are
