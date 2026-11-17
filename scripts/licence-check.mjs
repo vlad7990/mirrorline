@@ -6,10 +6,19 @@
  * `pnpm ls --json --depth Infinity`: faster, needs no pnpm on PATH, and behaves
  * the same in CI. Under pnpm every resolved package lives at
  * node_modules/.pnpm/<name>@<version>/node_modules/<name>/package.json.
+ *
+ * Two gates run here, because rule 10 now has two halves. The first asks *may
+ * we install this* — a question a package manifest can answer. The second asks
+ * *where may we use it*, which GSAP's scoped exception (D41) adds and no
+ * manifest can answer; that one lives in ./gsap-scope.mjs and reads our own
+ * source. A licence that only permits one part of the product is not enforced
+ * by checking the licence alone.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { checkGsapScope, printViolations as printScopeViolations } from './gsap-scope.mjs';
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 const NODE_MODULES = join(REPO_ROOT, 'node_modules');
@@ -68,6 +77,12 @@ const LGPL_DYNAMIC_BINARY_EXCEPTIONS = new Set([
  * that copied the wording, so the exception is pinned to the package name
  * *and* to that licence, and to nothing else.
  *
+ * The two packages word it differently — core says "Standard 'no charge'
+ * license: <url>", `@gsap/react` says "SEE LICENSE AT <url>" — so the pattern
+ * matches the **licence URL** they share rather than either sentence. That is
+ * also the stricter choice: prose can be copied by accident, a link to
+ * Webflow's own licence page cannot.
+ *
  * What it is: free for commercial use, every plugin included, since Webflow
  * took it on. What it is not: an OSI-permissive licence. It reserves
  * termination at Webflow's discretion, lets them amend the terms
@@ -76,9 +91,22 @@ const LGPL_DYNAMIC_BINARY_EXCEPTIONS = new Set([
  * encourages building on top, so the non-compete is not thought to reach us —
  * but it is a term MIT does not have, and rule 10 exists because this project
  * has to survive a lawyer reading it.
+ *
+ * **Scoped on 2026-11-13 (D41), Vlad's decision.** The exception now covers
+ * the public marketing site only, and the installable set is named rather than
+ * left as "all plugins": `gsap` core, ScrollTrigger, SplitText, and
+ * `@gsap/react` for `useGSAP`'s cleanup. The studio app, `packages/ui`, the
+ * Remotion templates and any customer-facing animation tooling stay on CSS and
+ * `motion` (MIT, D19). That boundary is the point of the non-compete clause
+ * above: a marketing page that animates is nothing like an animation tool we
+ * hand to a customer, and keeping GSAP out of the second means the clause
+ * never has to be argued.
+ *
+ * Whether a file obeys that scope is not a manifest question, so it is
+ * enforced in ./gsap-scope.mjs instead of here.
  */
-const GSAP_LICENCE_EXCEPTIONS = new Set(['gsap']);
-const GSAP_LICENCE_PATTERN = /standard\s+'?no charge'?\s+license/i;
+const GSAP_LICENCE_EXCEPTIONS = new Set(['gsap', '@gsap/react']);
+const GSAP_LICENCE_PATTERN = /gsap\.com\/standard-license/i;
 
 const readJson = (path) => {
   try {
@@ -191,13 +219,22 @@ const main = () => {
     .filter((pkg) => !isAllowed(pkg.licence, pkg.name))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  if (offenders.length === 0) {
-    console.log(`licence-check: ${packages.length} packages checked, all licences allowed`);
-    process.exit(0);
+  // Both gates run and both report before anything exits. They fail for
+  // unrelated reasons — a dependency's licence, and one of our own imports —
+  // so stopping at the first would hide the second until the next commit.
+  const scopeViolations = checkGsapScope();
+
+  if (offenders.length > 0) printOffenders(offenders);
+  if (scopeViolations.length > 0) printScopeViolations(scopeViolations);
+
+  if (offenders.length > 0 || scopeViolations.length > 0) {
+    process.exit(1);
   }
 
-  printOffenders(offenders);
-  process.exit(1);
+  console.log(
+    `licence-check: ${packages.length} packages checked, all licences allowed; GSAP scope clean`,
+  );
+  process.exit(0);
 };
 
 main();

@@ -1,21 +1,68 @@
 /**
- * /pricing — the four tiers, exactly as docs/plan/30_DAY_PLAN.md writes them.
+ * /pricing — the five plans, what a month on each looks like, and the
+ * questions a price list usually leaves out.
  *
- * docs/design/STITCH_REVIEW.md item 5: Stitch's $650 / $3,200 figures and its
- * "Save 20%" annual toggle do not ship. There is one price per tier, no annual
- * discount, and no comparison column against anybody else.
+ * Rebuilt for 19_INNER_PAGES v2 (D51). The figures are unchanged: they come
+ * from `pricing-tiers.ts`, which transcribes 09 §11, and nothing on this page
+ * types a price of its own. docs/design/STITCH_REVIEW.md item 5 still rules
+ * out Stitch's $650 / $3,200 and its "Save 20%" annual toggle.
+ *
+ * **The row list became a card grid, and that overturns a comment the old
+ * page made.** It argued a price list reads down, because the mono figures
+ * line up against each other. True of four rows; it stopped being true at
+ * five, where the list ran most of a screen and the comparison it was
+ * protecting had scrolled apart anyway. 19 v2 ★2 asks for cards, and three
+ * columns put all five plans where they can actually be compared.
+ *
+ * **The long-form YouTube add-on card is here now (PR D).** This comment used
+ * to say the opposite, and the argument it made was right at the time: 19 v2
+ * removed the card because "a card for an add-on whose API audit has not
+ * started would be an invented product". The audit still has not started.
+ * What changed is that the card carries the limit — "YouTube posts stay
+ * private until our app is approved", the calendar legend's own sentence —
+ * beside the price rather than beneath it, which is the difference between
+ * describing a thing and pretending to sell it. See D64.
  */
 
-import { cn } from '@mirrorline/ui'
 import { Check } from 'lucide-react'
 import type { Metadata } from 'next'
 
-import { PageHero } from '@/components/marketing/page-hero'
-import { ComingSoonLabel, Section, SectionHeading } from '@/components/marketing/primitives'
-import { SiteCta } from '@/components/marketing/site-cta'
-import { PRICING_NOTE, PRICING_TIERS, perDayUsd } from '@/components/marketing/pricing-tiers'
+import { FaqSection } from '@/components/marketing/kit/faq-section'
+import { HeroInset, InsetCycle } from '@/components/marketing/kit/hero-inset'
+import { PAGE_CTAS, PageCta } from '@/components/marketing/kit/page-cta'
+import { PageHeroImage } from '@/components/marketing/kit/page-hero-image'
+import { PAGE_HERO_IMAGES, allocateFrames } from '@/components/marketing/kit/page-media'
+import { LongFormAddon } from '@/components/marketing/long-form-addon-card'
+import { PlanPicker, type PlanAction } from '@/components/marketing/plan-picker'
+import { BillingPromises, CostComparison } from '@/components/marketing/pricing-sections'
+import { PRICING_FAQ } from '@/components/marketing/pricing-faq-content'
+import { PRICING_NOTE, PRICING_TIERS } from '@/components/marketing/pricing-tiers'
+import { Section, SectionHeading } from '@/components/marketing/primitives'
+import { actionCopy, checkoutMode } from '@/lib/billing/checkout'
 
-import { LeadDialogButton } from '../components/lead-form'
+/**
+ * Resolved once, on the server. Never `test` unless a `sk_test_` key is in
+ * the environment, which nothing in this repo sets — so the buttons say what
+ * will happen rather than implying a charge.
+ */
+const CHECKOUT_MODE = checkoutMode()
+
+/**
+ * The per-plan button copy, resolved here and handed to the client component.
+ *
+ * `checkoutMode()` reads the environment and a client component may not, so
+ * the decision is made where the secret lives and only its answer crosses the
+ * boundary.
+ */
+const PLAN_ACTIONS: Record<string, PlanAction> = Object.fromEntries(
+  PRICING_TIERS.map((tier) => {
+    const copy = actionCopy(tier.id, CHECKOUT_MODE)
+    return [tier.id, { label: copy.label, note: copy.note }]
+  }),
+)
+
+/** Offset 8 so this page does not open on a frame /product or /how-it-works used. */
+const [INSET_FRAMES = []] = allocateFrames([3], 8)
 
 export const metadata: Metadata = {
   title: 'Pricing',
@@ -36,131 +83,63 @@ const ALWAYS_INCLUDED: readonly string[] = [
 export default function PricingPage() {
   return (
     <>
-      <PageHero
-        title="One flat price a month"
+      <PageHeroImage
+        eyebrow="Pricing"
+        title={
+          <>
+            One flat price, <span className="gold-phrase">a month at a time.</span>
+          </>
+        }
         lead="Start with a two-week pilot. If it is worth continuing, pick a month. No setup fee, no annual contract and no discount for paying a year ahead."
-        shot="results-16x10"
-        shotAlt="The results screen: views, link clicks and calls booked for the week, with the posts that earned them."
-        shotCaption="The weekly report you get, on sample data from a fictional demo client."
+        image={PAGE_HERO_IMAGES.pricing}
         index={PRICING_TIERS.map((tier, position) => ({
           number: String(position + 1).padStart(2, '0'),
           title: tier.name,
         }))}
-        marginNote="introductory prices · set per engagement, in writing"
+        inset={
+          <HeroInset caption="A week of posts, on three unlike accounts.">
+            <InsetCycle frames={INSET_FRAMES} />
+          </HeroInset>
+        }
       />
 
-      <Section className="band-snow" size="md" aria-labelledby="tiers-heading">
-        <h2 id="tiers-heading" className="sr-only">
-          Tiers
-        </h2>
-        {/* One bordered band, one row per tier, not four equal columns. A price
-            list reads down: the mono figures line up against each other, which
-            is the whole point of comparing them. DESIGN.md "Typography": a
-            price is a figure, so it is set in the machine's voice. */}
-        <ul className="flex list-none flex-col divide-y divide-border rounded-lg border border-border bg-surface p-0">
-          {PRICING_TIERS.map((tier) => {
-            const isComingLater = tier.comingLaterLabel !== null
-            const perDay = perDayUsd(tier)
+      {/* The plans -------------------------------------------------------- */}
+      <Section className="band-snow" aria-labelledby="tiers-heading">
+        <SectionHeading
+          id="tiers-heading"
+          eyebrow="The plans"
+          rail
+          title={
+            <>
+              Five plans, <span className="gold-phrase">and what each one posts.</span>
+            </>
+          }
+          headingClassName="text-site-h2"
+          lead="Pick one to see the month it buys. The calendar is drawn from the plan's own post count, not from an example we chose."
+        />
+        <div className="mt-10">
+          <PlanPicker tiers={PRICING_TIERS} actions={PLAN_ACTIONS} />
+        </div>
 
-            return (
-              <li
-                key={tier.id}
-                className={cn(
-                  'grid gap-4 p-5 sm:p-6 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_minmax(0,13rem)] lg:items-start lg:gap-8',
-                  // Gold, not the studio's coral tint. The band remap (D25)
-                  // made this page's text light, and light text on a pale
-                  // coral wash is a serious contrast failure — axe caught it.
-                  tier.isSuggested ? 'bg-gold/10' : null,
-                )}
-              >
-                <div className="flex flex-col gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="m-0 font-heading text-title text-text">{tier.name}</h3>
-                    {tier.isSuggested ? (
-                      <span className="rounded-full bg-gold-gradient px-3 py-1 text-caption font-semibold text-ink-900">
-                        Suggested
-                      </span>
-                    ) : null}
-                    {isComingLater ? (
-                      <ComingSoonLabel>{tier.comingLaterLabel}</ComingSoonLabel>
-                    ) : null}
-                  </div>
-                  {/* repurpose.io leads with the daily figure and puts the
-                      billed amount underneath
-                      (docs/design/COMPETITOR_REFERENCES.md §2.5). On a
-                      retainer that is the more useful number: $1,500 a month
-                      is a decision, $50 a day is a comparison with the hour
-                      of editing it replaces. Derived, never typed — see
-                      `perDayUsd`. */}
-                  {perDay === null ? (
-                    <p className="m-0 flex flex-wrap items-baseline gap-x-2">
-                      <span className="machine text-metric font-semibold text-text">
-                        {tier.price}
-                      </span>
-                      <span className="text-meta text-text-muted">{tier.period}</span>
-                    </p>
-                  ) : (
-                    <p className="m-0 flex flex-col gap-0.5">
-                      <span className="flex flex-wrap items-baseline gap-x-2">
-                        <span className="machine text-metric font-semibold text-text">
-                          ${perDay}
-                        </span>
-                        <span className="text-meta text-text-muted">a day</span>
-                      </span>
-                      <span className="text-meta text-text-muted">
-                        <span className="machine">{tier.price}</span> {tier.period}
-                      </span>
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex min-w-0 flex-col gap-3">
-                  <p className="m-0 max-w-[62ch] text-body text-text-muted">{tier.summary}</p>
-                  <ul className="m-0 flex list-none flex-col gap-2 p-0 sm:flex-row sm:flex-wrap sm:gap-x-5">
-                    {tier.includes.map((line) => (
-                      <li key={line} className="flex items-start gap-2 text-meta text-text">
-                        <span className="mt-0.5 text-on-success-soft">
-                          <Check aria-hidden="true" className="size-4" strokeWidth={2.2} />
-                        </span>
-                        {line}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="flex flex-col gap-2 lg:items-stretch">
-                  {isComingLater ? (
-                    <p className="m-0 text-meta text-text-muted">
-                      Not built yet, so there is nothing to buy and no waiting list to join.
-                    </p>
-                  ) : (
-                    <LeadDialogButton
-                      intent={tier.id === 'pilot' ? 'pilot' : 'demo'}
-                      // Gold, not the studio's coral primary: this is the
-                      // public site, and one gold action per row is what
-                      // marks the suggested tier (D25).
-                      variant={tier.isSuggested ? 'gold' : 'secondary'}
-                      size="lg"
-                      fullWidth
-                    >
-                      {tier.id === 'pilot' ? 'Start a pilot' : `Talk about ${tier.name}`}
-                    </LeadDialogButton>
-                  )}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-
-        <p className="mt-6 mb-0 max-w-[68ch] text-meta text-text-muted">{PRICING_NOTE}</p>
+        <p className="mb-0 mt-8 max-w-[68ch] text-meta text-text-muted">{PRICING_NOTE}</p>
       </Section>
 
+      {/* What the same job costs elsewhere, and what billing will not do --- */}
+      <CostComparison />
+      <BillingPromises />
+
+      {/* What never changes ----------------------------------------------- */}
       <Section className="band-ink-alt" aria-labelledby="included-heading">
         <SectionHeading
-          headingClassName="text-site-h2 font-serif"
           id="included-heading"
           eyebrow="Every tier"
-          title="The limits do not change with the price"
+          rail
+          title={
+            <>
+              The limits do not change <span className="gold-phrase">with the price.</span>
+            </>
+          }
+          headingClassName="text-site-h2"
           lead={
             <>
               These are not add-ons, and they are not a premium plan. They are how the studio is
@@ -181,7 +160,23 @@ export default function PricingPage() {
         </ul>
       </Section>
 
-      <SiteCta next={{ href: '/', label: 'Home' }} />
+      {/* The one thing that is an add-on, straight after the section saying
+          the rest are not. 19's page table puts it between the plans and the
+          FAQ, and that order is also the argument: the limits above do not
+          change with the price, and this is the single thing you can add. */}
+      <LongFormAddon />
+
+      <FaqSection
+        id="pricing-faq"
+        eyebrow="Before you ask"
+        title="The questions"
+        accent="a price list usually skips."
+        lead="Including the one about whether you should be buying this at all."
+        items={PRICING_FAQ}
+        band="white"
+      />
+
+      <PageCta cta={PAGE_CTAS.pricing} />
     </>
   )
 }

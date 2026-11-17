@@ -15,23 +15,42 @@
 
 import { cutSummary, cuts, funnel, metrics, sourceVideo } from '@mirrorline/mock'
 import { SiteCta } from '@/components/marketing/site-cta'
-import { Button, Card, FunnelBar, VideoThumb } from '@mirrorline/ui'
-import { ArrowRight, Film, Plug, Repeat, Tag } from 'lucide-react'
+import { Button, Card, FunnelBar, ReelStill, VideoThumb } from '@mirrorline/ui'
+import { ArrowRight } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import * as React from 'react'
 
 import { LOOP_CLOSING_LINE } from '@/components/marketing/agents'
 import { AgentLoop } from '@/components/marketing/agent-loop'
-import { Choices } from '@/components/marketing/choices'
-import { CutWall } from '@/components/marketing/cut-wall'
+import { BackgroundWord } from '@/components/marketing/background-word'
+import { OutputSequence } from '@/components/marketing/output-sequence'
 import { ReelBackdrop } from '@/components/marketing/reel-backdrop'
-import { Faq, type FaqItem } from '@/components/marketing/faq'
+import { Faq } from '@/components/marketing/faq'
+import { FAQ_ITEMS } from '@/components/marketing/faq-content'
 import { GateReadout } from '@/components/marketing/gate-readout'
 import { CountUp } from '@/components/marketing/count-up'
 import { FeatureTabs } from '@/components/marketing/feature-tabs'
-import { HeroCinematic, UPLOAD_ANCHOR_ID } from '@/components/marketing/hero-cinematic'
+import {
+  CHOICE_ANCHOR_ID,
+  HeroCinematic,
+  UPLOAD_ANCHOR_ID,
+} from '@/components/marketing/hero-cinematic'
 import { HeroUpload } from '@/components/marketing/hero-upload'
+import {
+  AudiencePicker,
+  AudiencePickerStatus,
+} from '@/components/marketing/home/audience-picker'
+import {
+  ChangedIn2026,
+  ContrastTable,
+  NicheScanExplainer,
+  TwoWaysIn,
+} from '@/components/marketing/home/argument-sections'
+import { ProblemPicker } from '@/components/marketing/home/problem-picker'
+import { MetricsPreview } from '@/components/kpi/metrics-preview'
+import { NotAFarm, PlainBilling } from '@/components/marketing/home/trust-sections'
+import { FinalCta } from '@/components/marketing/home/final-cta'
 import { AUDIENCES, PROOF_CARDS, SHOWCASE_CARDS } from '@/components/marketing/home-content'
 import { ShowcaseMarquee } from '@/components/marketing/showcase-marquee'
 import { SplitReveal } from '@/components/marketing/split-reveal'
@@ -45,185 +64,50 @@ import { SELLABLE_TIERS, perDayUsd } from '@/components/marketing/pricing-tiers'
 
 
 export const metadata: Metadata = {
-  title: 'Turn one long video into daily short-form growth',
+  title: 'Original short video, every day, on the accounts you own',
   description:
-    'Mirrorline is an AI content studio for coaches, consultants and local service businesses. Your own footage becomes short vertical videos, posted to your own accounts through the official platform APIs.',
+    'Mirrorline runs short-video growth for any business or individual, in any industry. Send your own videos or we create originals from formats growing in your niche, posted to your own accounts through the official platform APIs.',
 }
-
-/* -------------------------------------------------------------------------- */
-/* The limits — CLAUDE.md "Non-negotiables", written for a visitor             */
-/* -------------------------------------------------------------------------- */
-
-interface Limit {
-  readonly id: string
-  readonly title: string
-  readonly line: string
-  readonly Icon: typeof Film
-}
-
-const LIMITS: readonly Limit[] = [
-  {
-    id: 'own-footage',
-    title: 'We will not touch another creator’s video',
-    line: 'We work from footage you own, or footage we hold the rights to. Nothing is downloaded, stored or reused from anyone else.',
-    Icon: Film,
-  },
-  {
-    id: 'format-not-footage',
-    title: 'We will not repost a format’s footage',
-    line: 'When a format rises in your niche we rebuild its structure, then write a new script and shoot it with your material.',
-    Icon: Repeat,
-  },
-  {
-    id: 'ai-labelled',
-    title: 'We will not hide a generated scene',
-    line: 'Where a scene is made by a model, it says so in the studio and on the platform. No face swaps, and no voice without a signed release.',
-    Icon: Tag,
-  },
-  {
-    id: 'official-apis',
-    title: 'We will not post from anywhere but the official APIs',
-    line: 'Instagram, TikTok and YouTube’s own APIs, to accounts you connect and can disconnect without asking us. No device automation, proxies or app clones.',
-    Icon: Plug,
-  },
-]
 
 /* -------------------------------------------------------------------------- */
 /* Hero                                                                        */
 /* -------------------------------------------------------------------------- */
 
+/*
+ * `LIMITS` — the four "things we will not do" — lived here. 16 §3 row 15
+ * merges that band into "Not a farm, not a repost page", where the same
+ * limits are stated against the model they are actually a contrast with.
+ * The copy moved to `home/trust-sections.tsx` and gained the two it was
+ * missing: detection evasion, and Repost Watch.
+ */
+
 /**
- * The cycling second line, verbatim from docs/design/handoff-v4.
+ * The cycling second line, completing "Original short video, …".
  *
- * The first is what a static render and a reduced-motion reader see, so it
- * has to stand alone as the headline's ending — "Turn one long video into a
- * week of posts." reads correctly with no animation at all.
- *
- * Every one of these is a claim about what the product produces, never about
- * what it achieves. "booked calls." is the closest to the line and stays on
- * the right side of it: the studio schedules posts that carry a booking
- * link, and non-negotiable 7 forbids promising the calls arrive.
+ * Each one has to be true of **both** ways in and of any niche — the old set
+ * ("a week of posts", "twelve short videos") described the Multiplier alone
+ * and said nothing to an account with no footage yet.
  */
 const HERO_PHRASES = [
-  'a week of posts.',
-  'twelve short videos.',
-  'booked calls.',
-  'a daily presence.',
+  'every day.',
+  'on accounts you own.',
+  'in any niche.',
+  'never a repost.',
 ] as const
 
 /* -------------------------------------------------------------------------- */
 /* FAQ                                                                         */
 /* -------------------------------------------------------------------------- */
 
-const FAQ_ITEMS: readonly FaqItem[] = [
-  {
-    id: 'do-you-post',
-    question: 'Do you post for me?',
-    answer: (
-      <>
-        <p className="m-0">
-          Yes, once you approve. The Publisher puts approved posts out through the official APIs of
-          Instagram, TikTok and YouTube, at the times that have worked for your audience.
-        </p>
-        <p className="m-0">
-          You can leave every post on manual approval, or turn auto-approve on yourself. Nothing is
-          posted on your behalf until you choose one.
-        </p>
-      </>
-    ),
-  },
-  {
-    id: 'whose-accounts',
-    question: 'Whose accounts do the posts go to?',
-    answer: (
-      <>
-        <p className="m-0">
-          Yours. You connect each account, and you can disconnect it at any time without asking us.
-        </p>
-        <p className="m-0">
-          We do not create accounts for you, we do not run accounts on your behalf, and we do not
-          use device automation, proxies or app clones.
-        </p>
-      </>
-    ),
-  },
-  {
-    id: 'copyright',
-    question: 'What about copyright?',
-    answer: (
-      <>
-        <p className="m-0">
-          We only work from material you own or we hold rights to. When a format is rising in your
-          niche we take its structure (the hook pattern, the beats, the pacing) and nothing else:
-          new script, your footage, your voice.
-        </p>
-        <p className="m-0">
-          Before a video can be scheduled, the Compliance agent compares it with its source and
-          holds the wording under our <span className="machine">30%</span> similarity limit, checks
-          the rights and consent records, and checks the AI labels.
-        </p>
-        <p className="m-0">
-          That is our own check, not legal clearance. We cannot promise a platform or a rights
-          holder will always agree with it, so you see the result and can decide for yourself.
-        </p>
-      </>
-    ),
-  },
-  {
-    id: 'face-and-voice',
-    question: 'Do you use my face or voice?',
-    answer: (
-      <>
-        <p className="m-0">
-          Only if you ask us to, and only with a signed release we keep on file. No face swaps,
-          ever.
-        </p>
-        <p className="m-0">
-          Without a release we use the footage you recorded and a stock voice, and any generated
-          scene carries its AI label.
-        </p>
-      </>
-    ),
-  },
-  {
-    id: 'platform-rule',
-    question: 'What if a video breaks a platform rule?',
-    answer: (
-      <>
-        <p className="m-0">
-          Compliance blocks it before it reaches the calendar and tells you why in plain words. For
-          example: background music from a venue, or a claim with nothing behind it.
-        </p>
-        <p className="m-0">
-          You can fix it and send it back through, or override the block yourself; the override is
-          logged either way. If something does slip through, tell us and we take it down.
-        </p>
-      </>
-    ),
-  },
-  {
-    id: 'results',
-    question: 'When do I see results?',
-    answer: (
-      <>
-        <p className="m-0">
-          We do not promise numbers, and we will not quote you any. Short-form growth is slow and
-          uneven, it depends on your niche, your footage and your offer, and no agency can honestly
-          predict it.
-        </p>
-        <p className="m-0">
-          What we can tell you is what you get and when: in a two-week pilot you get{' '}
-          <span className="machine">12</span> videos, a posting schedule and one report. After that
-          you get posts out on time, every week, and a report that runs from views to clicks to
-          calls. The figures in it are the real ones, including the weeks that go badly.
-        </p>
-        <p className="m-0">
-          Judge us on that. If the posts stop or the reporting goes quiet, leave.
-        </p>
-      </>
-    ),
-  },
-]
+// The FAQ moved to components/marketing/faq-content.tsx when /faq was
+// built: 16 §3 row 18 has the home page show six and /faq carry all of
+// them, which only works from one list.
+
+/**
+ * 16 §3 row 18: the home page shows the top six and `/faq` (PR7) carries the
+ * rest. Sliced rather than kept as a second list, so the two cannot drift.
+ */
+const HOME_FAQ_COUNT = 6
 
 /* -------------------------------------------------------------------------- */
 /* Page                                                                        */
@@ -259,52 +143,155 @@ export default function LandingPage() {
           instead of decoration. */}
       <HeroCinematic phrases={HERO_PHRASES} />
 
-      {/* Start here ------------------------------------------------------ */}
-      {/* The upload, in its own band. It used to *be* the hero (D22); the
-          cinematic rebuild moved it here and the hero's one action points at
-          this id (D34). It is still the first step of the product and still
-          the first thing below the fold — what changed is that it no longer
-          shares a frame with a headline and a backdrop. */}
+      {/* 1b. The picker --------------------------------------------------
+          16 §3 row 1 puts this in the hero; D34 had already emptied the hero
+          of controls and D39 keeps it that way, so it opens the band directly
+          below instead. Everything that reads the choice sits beneath it. */}
+      <Section
+        id={CHOICE_ANCHOR_ID}
+        className="band-ink-alt scroll-mt-24"
+        size="md"
+        aria-labelledby="choose-heading"
+      >
+        <SectionHeading
+          id="choose-heading"
+          rail
+          eyebrow="Start here"
+          title={
+            <>
+              Two questions, <span className="gold-phrase">no industry list.</span>
+            </>
+          }
+          lead="We never make you pick from an industry list. Our agents research your niche themselves — these two answers are only so the rest of this page shows you the right examples."
+          headingClassName="text-site-h2 font-serif"
+        />
+        <div className="reveal mt-8 flex flex-col gap-4">
+          <AudiencePicker />
+          <AudiencePickerStatus />
+          <p className="m-0 max-w-[62ch] text-meta text-on-ink-muted">
+            Whichever you pick, the first step is the same and it is free: a Niche Scan of what is
+            actually growing where you are.
+          </p>
+        </div>
+      </Section>
+
+      {/* 2. Sound familiar? ---------------------------------------------- */}
+      <Section aria-labelledby="problems-heading">
+        <SectionHeading
+          id="problems-heading"
+          rail
+          eyebrow="Sound familiar?"
+          title={
+            <>
+              You have tried this before, <span className="gold-phrase">and it did not hold.</span>
+            </>
+          }
+          lead="Six things people say about the tools, the agencies and the doing-it-yourself. Open the one that is yours."
+          headingClassName="text-site-h2 font-serif"
+        />
+        <div className="mt-8">
+          <ProblemPicker />
+        </div>
+      </Section>
+
+      {/* 3. What changed in 2026 ----------------------------------------- */}
+      <Section className="band-ink-alt" size="md" aria-labelledby="changed-heading">
+        <SectionHeading
+          id="changed-heading"
+          rail
+          eyebrow="What changed in 2026"
+          title={
+            <>
+              The shortcut <span className="gold-phrase">stopped working.</span>
+            </>
+          }
+          lead="Three rule changes, and between them they explain why the posting that used to work does not any more."
+          headingClassName="text-site-h2 font-serif"
+        />
+        <div className="mt-8">
+          <ChangedIn2026 />
+        </div>
+      </Section>
+
+      {/* 4. We built the opposite ---------------------------------------- */}
+      {/* The second light band (D39). One snow section read as an outlier;
+          two read as the alternation DESIGN.md's public-site section calls
+          deliberate art direction. */}
+      <Section className="band-snow" aria-labelledby="opposite-heading">
+        <SectionHeading
+          id="opposite-heading"
+          rail
+          eyebrow="We built the opposite"
+          title={
+            <>
+              Every row here is <span className="gold-phrase">a complaint we read.</span>
+            </>
+          }
+          lead="We studied what people say about clipping tools, agencies, doing it yourself and repost pages, then built the other thing. Categories, never brand names — the argument is about the method, whoever sells it."
+          headingClassName="text-site-h2 font-serif"
+        />
+        <div className="mt-10">
+          <ContrastTable />
+        </div>
+      </Section>
+
+      {/* 5. Any niche ---------------------------------------------------- */}
+      <Section aria-labelledby="niche-heading">
+        <SectionHeading
+          id="niche-heading"
+          rail
+          eyebrow="Any niche"
+          title={
+            <>
+              Our agents <span className="gold-phrase">research yours.</span>
+            </>
+          }
+          lead="This is why there is no industry page anywhere on this site. The Niche Scan finds what is growing where you are, every week, whatever that is."
+          headingClassName="text-site-h2 font-serif"
+        />
+        <div className="mt-10">
+          <NicheScanExplainer />
+        </div>
+      </Section>
+
+      {/* 6. Start here: two ways in --------------------------------------
+          The upload used to *be* the hero (D22); the cinematic rebuild moved
+          it here and 16 §3 row 6 puts it alongside the other way in, so the
+          band now names both rather than only the footage you already have. */}
       <Section
         id={UPLOAD_ANCHOR_ID}
         className="band-ink-alt scroll-mt-24"
-        size="md"
         aria-labelledby="start-heading"
       >
         <SectionHeading
           id="start-heading"
-          eyebrow="Start here"
+          rail
+          eyebrow="Two ways in"
           title={
             <>
-              Your own footage, <span className="gold-phrase">and nothing else.</span>
+              Your footage, <span className="gold-phrase">or originals we make.</span>
             </>
           }
-          lead="Drop in a talk, a podcast or a webinar you recorded. The run happens on this machine, and the rights question is asked before anything starts rather than after."
+          lead="Most accounts use both, and the mix changes as the library grows. Neither costs more than the other."
           headingClassName="text-site-h2 font-serif"
         />
-        <div className="reveal mt-8">
+        <TwoWaysIn className="mt-10" />
+        <div className="reveal mt-10 border-t border-ink-line pt-10">
+          <h3 className="m-0 mb-2 font-heading text-title text-on-ink-900">
+            Send us something now
+          </h3>
+          <p className="m-0 mb-6 max-w-[62ch] text-meta text-on-ink-muted">
+            Drop in a talk, a podcast or a webinar you recorded. The rights question is asked before
+            anything starts, rather than after.
+          </p>
           <HeroUpload />
         </div>
       </Section>
 
-      {/* What it does, in four steps ------------------------------------ */}
-      <Section className="band-ink-alt" aria-labelledby="steps-heading">
-        <SectionHeading
-          id="steps-heading"
-          eyebrow="How the loop runs"
-          title={
-            <>
-              Four jobs, <span className="gold-phrase">one loop.</span>
-            </>
-          }
-          lead="Each one hands to the next, and the last one decides what the first does on Monday."
-          headingClassName="text-site-h2 font-serif"
-          aside={<SampleDataLabel />}
-        />
-        <div className="mt-10">
-          <FeatureTabs />
-        </div>
-      </Section>
+      {/* 7 is gone: "Four jobs, one loop" is now inside section 9, where the
+          seven agents are. Two sections twenty lines apart both headed "one
+          loop", one naming four jobs and the other seven agents, asked the
+          reader to work out whether those were the same loop. They are. */}
 
       {/* The output, as proof ------------------------------------------- */}
       {/* The one band that may carry a generated backdrop: it already states
@@ -314,13 +301,19 @@ export default function LandingPage() {
       <Section aria-labelledby="proof-heading" backdrop={<ReelBackdrop />}>
         <SectionHeading
           id="proof-heading"
+          rail
           eyebrow="The output"
-          title="One episode, twelve cuts"
+          title={
+            <>
+              One episode, <span className="gold-phrase">twelve cuts.</span>
+            </>
+          }
+          headingClassName="text-site-h2 font-serif"
           lead={`A ${sourceVideo.durationLabel} talk became ${cuts.length} short videos, each with its own moment, hook, length and format. None of them is the same clip with a new title, and the ones that did not pass say so on the frame.`}
           aside={<SampleDataLabel />}
         />
         <div className="mt-8">
-          <CutWall />
+          <OutputSequence />
         </div>
         <p className="mt-4 mb-0 max-w-[68ch] text-meta text-text-muted">
           Sample data. These frames belong to Maya Torres Coaching, a fictional demo client: a
@@ -350,203 +343,50 @@ export default function LandingPage() {
               do: the sentence is split into its words and they arrive in
               order. Everything else here is scroll-driven CSS (D32). */}
           <SplitReveal>
-            <h2 id="showcase-heading" className="m-0 max-w-[20ch] text-site-h2 text-on-ink-900">
-              Made for people who <span className="gold-phrase">sell what they know.</span>
+            {/* "Made for people who sell what they know" named an audience,
+                and naming one is the thing 16 §1 rules out — it reads as
+                coaches and consultants however carefully it is phrased, which
+                is exactly the narrowing D38 corrected everywhere else. What
+                the marquee below actually shows is one shape of work applied
+                to unlike trades, so the heading says that instead. */}
+            <h2
+              id="showcase-heading"
+              className="m-0 max-w-[20ch] font-serif text-site-h2 text-on-ink-900"
+            >
+              Different trades, <span className="gold-phrase">the same week of work.</span>
             </h2>
           </SplitReveal>
           <p className="m-0 mt-3 max-w-[62ch] text-body text-on-ink-muted">
-            Sample hooks for fictional businesses, to show the shape of the work. Yours would be
-            cut from your own recordings. These are not customers and not customer results.
+            Sample hooks for twelve fictional businesses, to show the shape of the work. Every
+            frame is AI-generated and labelled on its face — nobody here is a real person and no
+            business here exists. Yours would be cut from your own recordings. These are not
+            customers and not customer results.
           </p>
         </div>
         <ShowcaseMarquee />
       </section>
 
-      {/* The limits ----------------------------------------------------- */}
-      <Section tone="subtle" size="md" aria-labelledby="limits-heading">
-        <SectionHeading
-          id="limits-heading"
-          title="Four things we will not do"
-          lead="These are limits, not features we can switch off for a bigger account. They are also the only reason we can say any of this."
-        />
-        {/* One bordered band with hairline dividers, not four cards. DESIGN.md
-            "Elevation & Depth": depth comes from 1px borders and the contrast
-            between surface and background, so a limit does not need a card of
-            its own to read as a separate thing. */}
-        <ul className="mt-8 flex list-none flex-col divide-y divide-border rounded-lg border border-border bg-surface p-0 lg:flex-row lg:divide-x lg:divide-y-0">
-          {LIMITS.map((limit) => (
-            <li key={limit.id} className="flex flex-1 items-start gap-4 p-5 lg:flex-col lg:gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-md bg-accent-soft text-on-accent-soft">
-                <limit.Icon aria-hidden="true" className="size-5" strokeWidth={1.8} />
-              </span>
-              <div className="flex min-w-0 flex-col gap-1.5">
-                <h3 className="m-0 font-heading text-subtitle text-text">{limit.title}</h3>
-                <p className="m-0 text-meta text-text-muted">{limit.line}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-4 mb-0 max-w-[68ch] text-meta text-text-muted">
-          None of these is a certification and none of them is a guarantee. They describe how the
-          studio is built, and you can hold us to them.
-        </p>
-      </Section>
+      {/* "What else you could do instead" lived here and is gone: 16 §3 row 4
+          merges it into "We built the opposite" near the top of the page, and
+          running both left two comparison tables on one page making the same
+          argument twenty sections apart. `Choices` is still used on /compare,
+          which is where a full alternatives table belongs. */}
 
-      {/* The alternatives ----------------------------------------------- */}
-      {/* Straight after the limits, because the limits are what the
-          comparison is actually about: the row a repost tool loses is the
-          row our four limits exist to win. */}
-      <Section aria-labelledby="choices-heading">
-        <SectionHeading
-          id="choices-heading"
-          eyebrow="The choices"
-          title="What else you could do instead"
-          lead="We do not win every row. A freelancer is cheaper to start and a repost tool is faster. What changes is whose footage goes out, and what happens before it does."
-        />
-        <div className="mt-8">
-          <Choices />
-        </div>
-      </Section>
-
-      {/* Who it is for --------------------------------------------------- */}
-      {/* The one light band on the page. The handoff alternates ink and
-          snow; a single snow section is what stops the page reading as one
-          long dark scroll. */}
-      <Section className="band-snow" aria-labelledby="audiences-heading">
-        <SectionHeading
-          id="audiences-heading"
-          eyebrow="Who it is for"
-          title={
-            <>
-              Built for people who <span className="gold-phrase">already know their subject.</span>
-            </>
-          }
-          lead="You have the expertise and the recordings. What you do not have is an evening a day to cut them up."
-          headingClassName="text-site-h2 font-serif"
-          /* The cards carry sample hooks now, so the section has to say so —
-             non-negotiable 7. It did not need this when they were four boxes
-             of our own copy. */
-          aside={<SampleDataLabel />}
-        />
-        {/* Two across, not four, and each card is a frame beside its detail
-            rather than a box of text. Four equal text boxes were the last of
-            the "plain stacks" in DESIGN_BACKLOG, and the obvious fix — a
-            hover lift — would have been a lie, because these are not
-            interactive. What they actually lacked was something to look at,
-            so each one now shows the shape of a post for that audience
-            (docs/design/MOTION_STUDY.md §4).
-
-            The hooks are the showcase's own fictional-business samples,
-            matched by niche rather than by index so reordering either list
-            cannot pair a clinic with a gym's hook. */}
-        <ul className="m-0 mt-10 grid list-none grid-cols-1 gap-5 p-0 lg:grid-cols-2">
-          {AUDIENCES.map((audience, position) => {
-            const sample = SHOWCASE_CARDS.find((card) => card.niche === audience.sampleNiche)
-
-            return (
-              <li
-                className="reveal-item"
-                key={audience.number}
-                style={{ '--index': position % 2 } as React.CSSProperties}
-              >
-                <Card className="flex h-full gap-5">
-                  {/* The frame keeps the demo colour rather than borrowing a
-                      generated still: every still we have is one fictional
-                      coach, and putting her face on "Clinics and wellness"
-                      would say something untrue about who these are. */}
-                  {sample ? (
-                    <div className="w-[104px] shrink-0 sm:w-[124px]">
-                      <VideoThumb
-                        caption={`${sample.lead} ${sample.highlight}`}
-                        highlight={sample.highlight}
-                        index={position}
-                        length={sample.lengthLabel}
-                      />
-                    </div>
-                  ) : null}
-
-                  <div className="flex min-w-0 flex-col gap-2">
-                    {/* `gold-text`, not `gold-deep`. This was `text-metric`
-                        before the cards were rebuilt, and large text only
-                        needs 3:1 — at mono size it needs 4.5:1 and gold-deep
-                        does not clear it on the snow band. axe caught it;
-                        shrinking text is exactly when that happens. */}
-                    <span className="machine text-mono text-gold-text">{audience.number}</span>
-                    <h3 className="m-0 font-heading text-title text-text">{audience.title}</h3>
-                    <p className="m-0 text-meta text-text-muted">{audience.body}</p>
-                    {/* A goal, never a promise. Non-negotiable 7 rules out
-                        saying these will arrive — only that they are what the
-                        work is aimed at. */}
-                    <p className="m-0 mt-auto border-t border-border pt-3 text-meta text-gold-text">
-                      Aimed at: {audience.goal}
-                    </p>
-                  </div>
-                </Card>
-              </li>
-            )
-          })}
-        </ul>
-      </Section>
-
-      {/* One demo week, in numbers --------------------------------------- */}
-      <Section aria-labelledby="numbers-heading">
-        <SectionHeading
-          id="numbers-heading"
-          eyebrow="A demo week"
-          title={
-            <>
-              One demo week, <span className="gold-phrase">in numbers.</span>
-            </>
-          }
-          lead="Figures from the fictional demo client, so you can see what the loop reports. Your numbers will differ, and we report them as they are."
-          headingClassName="text-site-h2 font-serif"
-          aside={<SampleDataLabel />}
-        />
-        <ul className="m-0 mt-10 grid list-none grid-cols-1 gap-5 p-0 lg:grid-cols-3">
-          {PROOF_CARDS.map((proof) => (
-            <li key={proof.label}>
-              <Card className="flex h-full flex-col gap-3">
-                <p className="m-0">
-                  <CountUp
-                    value={proof.value}
-                    decimals={proof.decimals}
-                    suffix={proof.suffix}
-                    className="machine text-site-h2 text-gold-bright"
-                  />
-                </p>
-                <h3 className="m-0 font-heading text-title text-text">{proof.label}</h3>
-                <p className="m-0 text-meta text-text-muted">{proof.story}</p>
-                <p className="m-0 mt-auto border-t border-border pt-3 text-caption text-text-muted">
-                  {proof.agents}
-                </p>
-              </Card>
-            </li>
-          ))}
-        </ul>
-      </Section>
-
-      {/* The gate ------------------------------------------------------- */}
-      <Section aria-labelledby="gate-heading">
-        <SectionHeading
-          id="gate-heading"
-          title="Nothing reaches your calendar unchecked"
-          lead="Every cut goes through the Compliance agent before it can be scheduled. It compares the wording with its source, checks the rights, the consent records and the AI labels, then writes down what it did and what it cost."
-          aside={<SampleDataLabel />}
-        />
-        <Card padding="lg" className="mt-8">
-          <GateReadout />
-        </Card>
-      </Section>
-
-      {/* The seven-agent loop ------------------------------------------- */}
+      {/* 9. Seven agents, one loop --------------------------------------- */}
       <Section tone="subtle" aria-labelledby="loop-heading">
         <SectionHeading
           id="loop-heading"
+          rail
           eyebrow="The studio"
-          title="Seven agents, one loop"
+          title={
+            <>
+              Seven agents, <span className="gold-phrase">one loop.</span>
+            </>
+          }
+          headingClassName="text-site-h2 font-serif"
           lead="Each agent has one job, its own spend cap and its own log. A format found on Monday becomes your videos, posted all week, and the results shape the next week."
           aside={
-            <Button asChild variant="secondary" className="press">
+            <Button asChild variant="secondary" className="press arrow-cta">
               <Link href="/agents">
                 How it works
                 <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.8} />
@@ -572,13 +412,150 @@ export default function LandingPage() {
           <ComingSoonLabel />
           <p className="m-0 max-w-[68ch] text-body text-text-muted">{LOOP_CLOSING_LINE}</p>
         </div>
+
+        {/* Was section 7, "How the loop runs". An h3, because it is a second
+            view of the loop this section already named rather than a new
+            subject: seven agents is who does the work, four jobs is what the
+            work is.
+
+            The band is why it moved here rather than the other way round.
+            `FeatureTabs` paints its tab strip in `text-gold-bright` and
+            `text-on-ink-faint` and its panel on an ink gradient — all of it
+            built for a dark band. This section is `tone="subtle"` under the
+            page's `band-ink`, so it is dark too. Moving the agent ladder up
+            into section 7's band instead would have been the same merge with
+            the colour risk pointing the other way. */}
+        <div className="mt-14 border-t border-border pt-10">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="flex min-w-0 max-w-[62ch] flex-col gap-2">
+              <span className="eyebrow">How the loop runs</span>
+              <h3 className="m-0 text-balance font-serif text-site-h2 text-text">
+                Four jobs, <span className="gold-phrase">one loop.</span>
+              </h3>
+              <p className="m-0 max-w-[62ch] text-body text-text-muted">
+                Each one hands to the next, and the last one decides what the first does on Monday.
+              </p>
+            </div>
+            <SampleDataLabel />
+          </div>
+          <div className="mt-10">
+            <FeatureTabs />
+          </div>
+        </div>
       </Section>
 
-      {/* From views to calls -------------------------------------------- */}
+      {/* 10. Nothing reaches your calendar unchecked ---------------------
+          The one trial band for 17 §1 M10. Why this band, and why not the
+          two more the spec offers, is in `background-word.tsx`. */}
+      <Section aria-labelledby="gate-heading" backdrop={<BackgroundWord>Proven</BackgroundWord>}>
+        <SectionHeading
+          id="gate-heading"
+          title={
+            <>
+              Nothing reaches your calendar <span className="gold-phrase">unchecked.</span>
+            </>
+          }
+          headingClassName="text-site-h2 font-serif"
+          lead="Every cut goes through the Compliance agent before it can be scheduled. It compares the wording with its source, checks the rights, the consent records and the AI labels, then writes down what it did and what it cost."
+          aside={<SampleDataLabel />}
+        />
+        <Card padding="lg" className="mt-8">
+          <GateReadout />
+        </Card>
+      </Section>
+
+      {/* 11. Metrics ----------------------------------------------------
+          16 §3 row 11, and the section v4 turns on: every account, on every
+          plan, gets goals, KPIs and this dashboard. It shows a not-connected
+          card and a projection deliberately — a preview of nothing but
+          healthy green numbers would misrepresent the product in the one
+          direction non-negotiable 7 rules out. */}
+      {/* On a light band, for two reasons that agree. It is a preview of the
+          studio, and the studio is light — showing it on ink would be showing
+          a screen that does not exist. And the `band-*` utilities remap
+          surface, border and text but **not** the status colours, so a green
+          delta or a gold target inside a card on ink falls below 4.5:1. That
+          is a real gap in the band system; the honest fix here is to put the
+          dashboard where it actually lives rather than to invent ink variants
+          of locked status tokens. Logged in D40. */}
+      <Section className="band-snow" aria-labelledby="metrics-heading">
+        <SectionHeading
+          id="metrics-heading"
+          rail
+          eyebrow="Metrics"
+          title={
+            <>
+              Track every account <span className="gold-phrase">against your goals.</span>
+            </>
+          }
+          lead="Pick a goal in onboarding and the KPI set, the targets and the dashboard follow it. Targets are proposed from your own 14-day baseline, and they are called targets, never guarantees."
+          headingClassName="text-site-h2 font-serif"
+          aside={<SampleDataLabel />}
+        />
+        <MetricsPreview className="mt-10" />
+        <p className="mt-6 mb-0 text-meta text-text-muted">
+          Every KPI shows its definition, its source and how fresh it is. A source you have not
+          connected says so, with a button — it never shows a zero.
+        </p>
+
+        {/* Was section 13, "A demo week". It belongs here: the dashboard
+            above is what the loop reports, and these three figures are one
+            week of it. Read apart, the demo week looked like a second,
+            unrelated claim. */}
+        <div className="mt-14 border-t border-border pt-10">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="flex min-w-0 max-w-[62ch] flex-col gap-2">
+              <span className="eyebrow">A demo week</span>
+              <h3 className="m-0 text-balance font-serif text-site-h2 text-text">
+                One demo week, <span className="gold-phrase">in numbers.</span>
+              </h3>
+              <p className="m-0 max-w-[62ch] text-body text-text-muted">
+                Figures from the fictional demo client, so you can see what the loop reports. Your
+                numbers will differ, and we report them as they are.
+              </p>
+            </div>
+            <SampleDataLabel />
+          </div>
+          <ul className="m-0 mt-10 grid list-none grid-cols-1 gap-5 p-0 lg:grid-cols-3">
+            {PROOF_CARDS.map((proof) => (
+              <li key={proof.label}>
+                <Card className="flex h-full flex-col gap-3">
+                  <p className="m-0">
+                    {/* `gold-text`, not `gold-bright`, and that is the D40
+                        trap: this band is `band-snow`, and the band
+                        utilities remap surface, border and text but not the
+                        gold. The figure was `gold-bright` while it sat on an
+                        ink band; carrying that class across to a light one
+                        would have put it below 4.5:1. */}
+                    <CountUp
+                      value={proof.value}
+                      decimals={proof.decimals}
+                      suffix={proof.suffix}
+                      className="machine text-site-h2 text-gold-text"
+                    />
+                  </p>
+                  <h4 className="m-0 font-heading text-title text-text">{proof.label}</h4>
+                  <p className="m-0 text-meta text-text-muted">{proof.story}</p>
+                  <p className="m-0 mt-auto border-t border-border pt-3 text-caption text-text-muted">
+                    {proof.agents}
+                  </p>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Section>
+
+      {/* 12. From views to calls ---------------------------------------- */}
       <Section aria-labelledby="funnel-heading">
         <SectionHeading
           id="funnel-heading"
-          title="From views to calls"
+          title={
+            <>
+              From views <span className="gold-phrase">to calls.</span>
+            </>
+          }
+          headingClassName="text-site-h2 font-serif"
           lead="The weekly report does not stop at views. It follows the same week all the way to the thing you actually sell, including the weeks that go badly."
           aside={<SampleDataLabel />}
         />
@@ -604,14 +581,154 @@ export default function LandingPage() {
         </Card>
       </Section>
 
-      {/* Pricing teaser -------------------------------------------------- */}
+      {/* 13 is gone: "A demo week" is now inside section 11, under the
+          dashboard it is a week of. */}
+
+      {/* 14. Who it is for -----------------------------------------------
+          A light band, and one of three now rather than the lone one it used
+          to be (D39): the contrast table and the metrics preview carry the
+          other two, so the ink/snow alternation reads as rhythm. */}
+      <Section className="band-snow" aria-labelledby="audiences-heading">
+        <SectionHeading
+          id="audiences-heading"
+          rail
+          eyebrow="Who it is for"
+          title={
+            <>
+              Any business, any individual, <span className="gold-phrase">any industry.</span>
+            </>
+          }
+          lead="What changes the work is not your trade — it is whether you are a business or a person, and whether the account already exists. Those two answers set the plan, the mix of inputs and the cadence. The frame on each card is an AI-generated sample from a fictional account, labelled as one."
+          headingClassName="text-site-h2 font-serif"
+          /* The cards carry sample hooks, so the section has to say so —
+             non-negotiable 7. */
+          aside={<SampleDataLabel />}
+        />
+        {/* Two across, not four, and each card is a frame beside its detail
+            rather than a box of text (docs/design/MOTION_STUDY.md §4).
+
+            The four cards were four *industries* until v4 — the clearest
+            contradiction of 16 §1 anywhere on the site. They are the four
+            account types from 13 §1 now, and they carry the plan and the
+            cadence, which are the things that actually differ between them. */}
+        <ul className="m-0 mt-10 grid list-none grid-cols-1 gap-5 p-0 lg:grid-cols-2">
+          {AUDIENCES.map((audience, position) => {
+            const sample = SHOWCASE_CARDS.find((card) => card.context === audience.sampleContext)
+
+            return (
+              <li
+                className="reveal-item"
+                key={audience.number}
+                style={{ '--index': position % 2 } as React.CSSProperties}
+              >
+                <Card className="flex h-full gap-5">
+                  {/* A different fictional account on every card (D45).
+                      These were four flat colours, and before that the same
+                      podcast still four times over — which said the opposite
+                      of what the heading says, because one presenter repeated
+                      four times is one kind of person, not four.
+
+                      The pairing is deliberate rather than incidental: the
+                      business growing an account it has is a counter trade,
+                      the business starting one is a place with nobody in it
+                      yet, the individual with an audience is at a desk, and
+                      the individual starting from zero is holding a phone at
+                      arm's length. */}
+                  {sample ? (
+                    <div className="w-[104px] shrink-0 sm:w-[124px]">
+                      <VideoThumb
+                        aiScene
+                        caption={`${sample.lead} ${sample.highlight}`}
+                        highlight={sample.highlight}
+                        index={position}
+                        length={sample.lengthLabel}
+                        /* The one place the Ken Burns drift is used. These
+                           four frames are still, where the marquee's twelve
+                           are already crossing the screen — adding a second
+                           motion to something already moving reads as drift
+                           rather than as life. Off under reduced motion; the
+                           class carries that in theme.css. */
+                        media={<ReelStill className="ken-burns" src={sample.frameSrc} />}
+                      />
+                    </div>
+                  ) : null}
+
+                  <div className="flex min-w-0 flex-col gap-2">
+                    {/* `gold-text`, not `gold-deep`. Large text only needs
+                        3:1; at mono size it needs 4.5:1 and gold-deep does
+                        not clear it on the snow band. axe caught it (D36). */}
+                    <span className="machine text-mono text-gold-text">{audience.number}</span>
+                    <h3 className="m-0 font-heading text-title text-text">{audience.title}</h3>
+                    <p className="m-0 text-meta text-text-muted">{audience.body}</p>
+                    <p className="machine m-0 text-mono text-text-muted">
+                      {audience.plan} · {audience.cadence}
+                    </p>
+                    {/* A goal, never a promise. Non-negotiable 7 rules out
+                        saying these will arrive — only that they are what the
+                        work is aimed at. */}
+                    <p className="m-0 mt-auto border-t border-border pt-3 text-meta text-gold-text">
+                      Aimed at: {audience.goal}
+                    </p>
+                  </div>
+                </Card>
+              </li>
+            )
+          })}
+        </ul>
+      </Section>
+
+      {/* 15. Not a farm, not a repost page -------------------------------
+          16 §3 row 15 merges "Four things we will not do" into this. The
+          limits are the same; the frame is stronger, because what they are
+          actually contrasted with is the model this company exists as the
+          legal turnaround of (11 §4). No real farm and no competitor is
+          named, and the tone stays flat. */}
+      <Section tone="subtle" aria-labelledby="farm-heading">
+        <SectionHeading
+          id="farm-heading"
+          rail
+          eyebrow="Not a farm"
+          title={
+            <>
+              Accounts you own, <span className="gold-phrase">through the front door.</span>
+            </>
+          }
+          lead="Reposts and fake accounts are penalised now. Everything below is a limit rather than a feature, and together they are the only reason we can say any of the rest of this."
+          headingClassName="text-site-h2 font-serif"
+        />
+        <NotAFarm className="mt-10" />
+
+        {/* Was section 16. Both halves answer the same question — what we
+            will not do with your account, and what we will not do with your
+            money — and they were two sections saying "ownership" in a row. */}
+        <div className="mt-14 border-t border-border pt-10">
+          <div className="flex min-w-0 max-w-[62ch] flex-col gap-2">
+            <span className="eyebrow">Plain billing</span>
+            <h3 className="m-0 text-balance font-serif text-site-h2 text-text">
+              Your files, your accounts, <span className="gold-phrase">no credits.</span>
+            </h3>
+            <p className="m-0 max-w-[62ch] text-body text-text-muted">
+              The direct answer to the complaint we read most often about this category. It is a
+              feature, so it is on the page rather than in the terms.
+            </p>
+          </div>
+          <PlainBilling className="mt-10" />
+        </div>
+      </Section>
+
+      {/* 17. Pricing ----------------------------------------------------- */}
       <Section tone="subtle" size="md" aria-labelledby="pricing-heading">
         <SectionHeading
           id="pricing-heading"
-          title="Start with a pilot, then pick a month"
+          title={
+            <>
+              Start with a pilot, <span className="gold-phrase">then pick a month.</span>
+            </>
+          }
+          headingClassName="text-site-h2 font-serif"
           lead="Flat prices, set per engagement in writing before any work starts. No setup fee, no annual lock-in, and you can stop after the pilot."
           aside={
-            <Button asChild variant="secondary" className="press">
+            <Button asChild variant="secondary" className="press arrow-cta">
               <Link href="/pricing">
                 See what each tier includes
                 <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.8} />
@@ -619,34 +736,57 @@ export default function LandingPage() {
             </Button>
           }
         />
-        <dl className="m-0 mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-10">
-          {/* Per-day leads here too, so the teaser and the pricing page frame
-              the same number the same way. One line rather than two: this is
-              a glance, not the decision. */}
+        {/* "Best for" per plan, which 09 §11 requires and the old teaser did
+            not carry. It is the line that does the work here: the price only
+            means something once you know which plan is yours. */}
+        <dl className="m-0 mt-8 grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
           {SELLABLE_TIERS.map((tier) => (
-            <div key={tier.id} className="flex items-baseline gap-2">
-              <dt className="text-label text-text">{tier.name}</dt>
-              <dd className="m-0 flex items-baseline gap-1.5">
-                <span className="machine text-title text-text">${perDayUsd(tier)}</span>
-                <span className="text-meta text-text-muted">
-                  a day · <span className="machine">{tier.price}</span> {tier.period}
+            <div key={tier.id} className="flex flex-col gap-1 bg-surface p-5">
+              <dt className="text-label font-semibold text-text">{tier.name}</dt>
+              <dd className="m-0 flex flex-col gap-1.5">
+                <span className="flex items-baseline gap-1.5">
+                  <span className="machine text-title text-text">${perDayUsd(tier)}</span>
+                  <span className="text-meta text-text-muted">
+                    a day · <span className="machine">{tier.price}</span> {tier.period}
+                  </span>
                 </span>
+                <span className="text-meta text-text-muted">{tier.bestFor}</span>
               </dd>
             </div>
           ))}
         </dl>
+        <p className="mt-4 mb-0 text-meta text-text-muted">
+          Studio, at <span className="machine">$79</span> a month for an individual starting from
+          zero, is not open yet. It takes a waitlist and nothing else.
+        </p>
       </Section>
 
       {/* FAQ ------------------------------------------------------------- */}
       <Section aria-labelledby="faq-heading">
         <SectionHeading
           id="faq-heading"
-          title="The six we are asked most"
+          title={
+            <>
+              The six <span className="gold-phrase">we are asked most.</span>
+            </>
+          }
+          headingClassName="text-site-h2 font-serif"
           lead="Short answers, including the ones where the honest answer is that we cannot promise."
         />
         <div className="mt-8">
-          <Faq items={FAQ_ITEMS} />
+          <Faq items={FAQ_ITEMS.slice(0, HOME_FAQ_COUNT)} />
         </div>
+      </Section>
+
+      {/* 19. Final CTA --------------------------------------------------- */}
+      <Section size="md" aria-labelledby="final-cta-heading">
+        {/* The sr-only "Get started" h2 that used to sit here is gone. It
+            existed to name the landmark, but `FinalCta` renders its own
+            visible h2 — so the section had two, one of which nobody could
+            see and which was the one the landmark was named after. The card's
+            heading now carries the id and names the section itself, which is
+            both one heading fewer and the heading a reader actually meets. */}
+        <FinalCta />
       </Section>
 
       <SiteCta next={{ href: '/product', label: 'Product' }} />

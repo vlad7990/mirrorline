@@ -68,7 +68,24 @@ export function DataRightsCard({ onNotice }: DataRightsCardProps) {
         ))}
       </dl>
 
+      {/* 09 §10 and 16 §5: two different exports, because they answer two
+          different fears. "Your data" is the GDPR-shaped request. "All your
+          files" is the one a client asks before cancelling — every video,
+          script and caption we ever made for them — and folding it into a
+          privacy button would hide the answer to the more common question. */}
       <div className="flex flex-wrap gap-2">
+        <Button
+          variant="secondary"
+          onClick={() =>
+            onNotice(
+              'File export is not connected',
+              'Every video, script and caption we have made for you, as one download. The job lands with the database.',
+            )
+          }
+        >
+          Export all my files
+        </Button>
+
         <Button
           variant="secondary"
           onClick={() =>

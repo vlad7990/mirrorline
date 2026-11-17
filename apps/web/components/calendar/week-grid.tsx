@@ -16,8 +16,11 @@
 
 import type { PostStatus, ScheduledPost, WeekSchedule } from '@mirrorline/mock'
 import { cn } from '@mirrorline/ui'
+import type * as React from 'react'
 
+import { BOTH_PRIVATE_UNTIL_APPROVED } from '@/lib/copy/platform-limits'
 import { PostChip, STATUS_SWATCH_CLASS, statusWord } from './post-chip'
+import { type ChipDragStart, type ChipDragState, DROP_CELL_ATTRIBUTE } from './use-chip-drag'
 
 /**
  * Below this the seven columns squeeze the chips out of shape; above it the
@@ -59,6 +62,9 @@ export interface WeekGridProps {
   statusOf: (post: ScheduledPost) => PostStatus
   selectedPostId: string | null
   onSelect: (postId: string) => void
+  /** The drag in progress, or null. Drives the lifted chip and the drop slot. */
+  drag?: ChipDragState | null
+  onChipPointerDown?: (start: ChipDragStart, event: React.PointerEvent) => void
 }
 
 /** "Tue 10" for every date in the week, so a chip can say which day it is on. */
@@ -74,6 +80,8 @@ export function WeekGrid({
   statusOf,
   selectedPostId,
   onSelect,
+  drag = null,
+  onChipPointerDown,
 }: WeekGridProps) {
   const dayLabels = dayLabelsByDate(schedule)
 
@@ -126,6 +134,8 @@ export function WeekGrid({
                 statusOf={statusOf}
                 selectedPostId={selectedPostId}
                 onSelect={onSelect}
+                drag={drag}
+                onChipPointerDown={onChipPointerDown}
               />
             ))}
           </tbody>
@@ -142,8 +152,13 @@ export function WeekGrid({
             {statusWord(status)}
           </span>
         ))}
-        {/* 02_BRAND_AND_VOICE: say the limit plainly rather than hide it. */}
-        <span>TikTok posts stay private until our app is approved.</span>
+        {/* 02_BRAND_AND_VOICE: say the limit plainly rather than hide it.
+            The sentence moved to `lib/copy/platform-limits.ts` in PR D. It
+            named TikTok alone until Vlad confirmed on 16 November that our
+            YouTube app has no approved upload scope either — the grid shows
+            three platform rows, so a legend qualifying one of them was the
+            calendar's own claim being half true. */}
+        <span>{BOTH_PRIVATE_UNTIL_APPROVED}</span>
       </div>
     </div>
   )
@@ -156,6 +171,8 @@ interface GridRowProps {
   statusOf: (post: ScheduledPost) => PostStatus
   selectedPostId: string | null
   onSelect: (postId: string) => void
+  drag: ChipDragState | null
+  onChipPointerDown?: (start: ChipDragStart, event: React.PointerEvent) => void
 }
 
 function GridRow({
@@ -165,6 +182,8 @@ function GridRow({
   statusOf,
   selectedPostId,
   onSelect,
+  drag,
+  onChipPointerDown,
 }: GridRowProps) {
   return (
     <tr>
@@ -175,27 +194,64 @@ function GridRow({
       >
         {row.platformLabel}
       </th>
-      {row.cells.map((cell) => (
-        <td key={`${row.platform}-${cell.date}`} className="align-top">
-          <div
-            className={cn(
-              'flex min-h-[120px] min-w-0 flex-col gap-1.5 rounded-md p-1',
-              cell.date === highlightDate ? 'bg-accent-soft/50' : 'bg-background',
-            )}
-          >
-            {cell.posts.map((post) => (
-              <PostChip
-                key={post.id}
-                post={post}
-                status={statusOf(post)}
-                dayLabel={dayLabels[cell.date] ?? ''}
-                isSelected={post.id === selectedPostId}
-                onSelect={onSelect}
-              />
-            ))}
-          </div>
-        </td>
-      ))}
+      {row.cells.map((cell) => {
+        // The slot the pointer is over right now. Only the dragged chip's own
+        // platform row can light up — `use-chip-drag` refuses the rest, so a
+        // cell that cannot take the chip simply never highlights.
+        const isDropSlot =
+          drag?.over?.platform === row.platform && drag.over.date === cell.date
+        // Where it started. Marked too, so letting go over home reads as
+        // "back where it was" rather than as a drop that did nothing.
+        const isDragOrigin =
+          drag?.from.platform === row.platform && drag.from.date === cell.date
+
+        return (
+          <td key={`${row.platform}-${cell.date}`} className="align-top">
+            <div
+              // Read by `document.elementFromPoint` during a drag. The value
+              // is the whole target, so the hook never has to walk the DOM
+              // upwards guessing which row it landed in.
+              {...{ [DROP_CELL_ATTRIBUTE]: `${row.platform}|${cell.date}` }}
+              className={cn(
+                'flex min-h-[120px] min-w-0 flex-col gap-1.5 rounded-md p-1',
+                cell.date === highlightDate ? 'bg-accent-soft/50' : 'bg-background',
+                // SC 1.4.11: a 2px inset ring rather than a fill, so the drop
+                // slot is legible over both the plain and the tinted column
+                // without changing either one's contrast with the chips on it.
+                isDropSlot && 'ring-2 ring-inset ring-ink',
+                isDragOrigin && !isDropSlot && 'ring-1 ring-inset ring-border-strong',
+              )}
+            >
+              {cell.posts.map((post) => (
+                <PostChip
+                  key={post.id}
+                  post={post}
+                  status={statusOf(post)}
+                  dayLabel={dayLabels[cell.date] ?? ''}
+                  isSelected={post.id === selectedPostId}
+                  onSelect={onSelect}
+                  isDragging={drag?.postId === post.id}
+                  onPointerDown={
+                    onChipPointerDown
+                      ? (event) =>
+                          onChipPointerDown(
+                            {
+                              postId: post.id,
+                              title: post.title,
+                              timeLabel: post.timeLabel,
+                              platform: row.platform,
+                              date: cell.date,
+                            },
+                            event,
+                          )
+                      : undefined
+                  }
+                />
+              ))}
+            </div>
+          </td>
+        )
+      })}
     </tr>
   )
 }

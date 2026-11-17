@@ -50,6 +50,20 @@ function invoicePeriodLabel(invoice: Invoice): string {
   return MONTH_NAMES[monthIndex] ?? invoice.dateLabel
 }
 
+/**
+ * 09 §10, word for word in substance.
+ *
+ * Four sentences, each one a thing a client would otherwise have to ask
+ * support about. None of them is a promise about results — they are promises
+ * about our own conduct, which are the only kind we are allowed to make.
+ */
+const PLAIN_BILLING: readonly string[] = [
+  'One flat monthly price. No credits, no per-minute charges, no setup fee.',
+  'Cancel from this page at any time. No contract, no notice period, no cancellation call.',
+  'You keep every file, forever. Export everything whenever you like, including after cancelling.',
+  'Nothing is charged after you cancel. The plan runs to the end of the period you have paid for.',
+]
+
 /** The platforms the plan actually posts to. */
 const connectedPlatformCount = accounts.filter(
   (account) => account.status !== 'not-connected',
@@ -105,6 +119,44 @@ export function PlanCard() {
           valueText={`${usageLabel} posts`}
         />
       </div>
+
+      {/* 09 §10, and 16 §5's "plain billing". The direct answer to P3, which
+          is that a client cannot tell what they are paying for or how to get
+          out. Stated as facts on the card rather than as a link to terms: a
+          cancellation policy nobody can find is a cancellation policy nobody
+          has. */}
+      <ul className="m-0 flex list-none flex-col gap-1.5 border-t border-border p-0 pt-3">
+        {PLAIN_BILLING.map((line) => (
+          <li key={line} className="text-meta text-text-muted">
+            {line}
+          </li>
+        ))}
+      </ul>
+
+      <Dialog>
+        <DialogTrigger asChild>
+          {/* Tertiary, but not hidden. 09 §10 asks for cancel in one click
+              from Settings, and a cancel button behind a support email is the
+              thing P3 is about. */}
+          <Button variant="tertiary" className="self-start">
+            Cancel my plan
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogTitle>Cancel your plan?</DialogTitle>
+          <DialogDescription>
+            Your plan runs to the end of the period you have already paid for, then stops. There is
+            no notice period and no cancellation call. You keep every file, including after you
+            cancel, and you can export all of them at any time. Billing is not connected in this
+            preview, so nothing happens here yet.
+          </DialogDescription>
+          <DialogClose asChild>
+            <Button variant="secondary" className="self-start">
+              Close
+            </Button>
+          </DialogClose>
+        </DialogContent>
+      </Dialog>
 
       <h3 className="m-0 font-body text-label text-text">Invoices</h3>
       <ul className="m-0 flex list-none flex-col p-0">

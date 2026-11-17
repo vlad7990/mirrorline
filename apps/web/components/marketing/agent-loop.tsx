@@ -23,6 +23,30 @@
  * **It does not pin below `lg`.** A pinned section on a short touch screen
  * eats the viewport and fights the scroll, which is the objection that kept
  * ScrollSmoother out in D32. Narrow screens get the plain ladder.
+ *
+ * ## M8's two additions (PR E2)
+ *
+ * 17 §1 M8: "Keep D35's pin. Add a progress spine down the left and the
+ * metric each agent owns appearing as its card activates." The pin is
+ * untouched; both additions are below, and they resolve differently on the
+ * one question that matters.
+ *
+ * **The spine fills behind the reader.** The ladder already drew a track
+ * joining the numbers; the gold filling it is new, and it fills for rows the
+ * sequence has *passed*. At rest — below `lg`, under reduced motion, before
+ * the pin starts — nothing is filled, which is the honest state rather than a
+ * missing one: with no pin there is no sequence being walked, and a spine
+ * showing progress through a list nobody is being led through would report a
+ * position that does not exist.
+ *
+ * **The metric does not hide when the motion is off.** M8 says it appears as
+ * a card activates, and the stage does exactly that — one agent at a time,
+ * changing under the reader. Doing only that would put a fact behind a scroll
+ * position, and 17 §Accessibility is flat: "No information is visible only
+ * through motion." A reader on a phone, with reduced motion on, or with no
+ * JavaScript would get one metric of seven and no way to know the rest
+ * existed. So the ladder carries all seven at all times and the motion is
+ * emphasis — muted to full, between two tokens that each pass contrast alone.
  */
 
 import { cn } from '@mirrorline/ui'
@@ -143,6 +167,13 @@ export function AgentLoop({ gateAgentId }: AgentLoopProps) {
             <p className="m-0 font-heading text-site-h2 text-text">{current.name}</p>
             <p className="m-0 max-w-[36ch] text-body text-text-muted">{current.short}</p>
 
+            {/* 17 §1 M8: "the metric each agent owns appearing as its card
+                activates". This is the half that genuinely appears — the
+                stage shows one agent at a time, so the line changes under the
+                reader as the hand-off advances. The ladder beside it carries
+                the same metric on every row, always; see there for why. */}
+            <p className="m-0 max-w-[36ch] text-caption text-gold">Owns {current.metric}</p>
+
             {/* How far through the hand-off the reader is. A rail rather than
                 a percentage: this is a position in a sequence, not a
                 measurement of anything. */}
@@ -177,7 +208,32 @@ export function AgentLoop({ gateAgentId }: AgentLoopProps) {
                     >
                       {agent.step}
                     </span>
-                    {isLast ? null : <span aria-hidden="true" className="w-px flex-1 bg-border" />}
+                    {/* 17 §1 M8's progress spine. The track was already here
+                        joining the numbers; what is new is the gold filling
+                        it in behind the reader as the hand-off advances.
+
+                        It fills for rows the sequence has *passed*, so at
+                        rest — below `lg`, under reduced motion, or before the
+                        pin starts — nothing is filled. That is the honest
+                        state rather than a missing one: with no pin there is
+                        no sequence being walked, and a spine showing progress
+                        through a list nobody is being led through would be
+                        reporting a position that does not exist. */}
+                    {isLast ? null : (
+                      <span aria-hidden="true" className="relative w-px flex-1 bg-border">
+                        <span
+                          /* Named, because a test has to find exactly this
+                             and `.bg-gold.absolute` finds three other gold
+                             layers on the home page. */
+                          data-agent-spine-fill={index < active ? 'filled' : 'empty'}
+                          className={cn(
+                            'absolute inset-x-0 top-0 bg-gold',
+                            'transition-[height] duration-[var(--duration-dropdown)] ease-[var(--ease-out)]',
+                            index < active ? 'h-full' : 'h-0',
+                          )}
+                        />
+                      </span>
+                    )}
                   </div>
                   <div className={cn('flex min-w-0 flex-col gap-1', isLast ? 'pb-0' : 'pb-6')}>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -199,6 +255,31 @@ export function AgentLoop({ gateAgentId }: AgentLoopProps) {
                       ) : null}
                     </div>
                     <p className="m-0 max-w-[68ch] text-meta text-text-muted">{agent.short}</p>
+
+                    {/* The metric, on every row and at every width, rather
+                        than only on the lit one.
+
+                        M8 says it "appears as its card activates", and the
+                        stage does exactly that. Doing it here too would put a
+                        fact behind a scroll position — and 17
+                        §Accessibility is flat about it: "No information is
+                        visible only through motion." Somebody on a phone,
+                        with reduced motion on, or with no JavaScript would
+                        get six of seven metrics and no way to know.
+
+                        So the motion here is emphasis, not disclosure: the
+                        line brightens from muted to full with its heading,
+                        between two tokens that each pass contrast on their
+                        own — the same device the heading above already uses,
+                        and the lesson from mirrorline-scroll-lit. */}
+                    <p
+                      className={cn(
+                        'm-0 max-w-[68ch] text-caption transition-colors duration-[var(--duration-dropdown)]',
+                        isActive ? 'text-text' : 'text-text-muted',
+                      )}
+                    >
+                      Owns {agent.metric}
+                    </p>
                   </div>
                 </li>
               )

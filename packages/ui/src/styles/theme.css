@@ -226,6 +226,46 @@
      animation-delay: calc(var(--index) * var(--stagger-step)) */
   --stagger-step: 60ms;
 
+  /* Motion v2 — docs/specs/17_MOTION_PLAN.md's token table, minus the half of
+     it that was already here.
+
+     Three of its six already existed under the house names and are
+     deliberately *not* duplicated: its `--dur-micro` (160ms) is
+     `--duration-tooltip`, its press duration is `--duration-press`, and its
+     `--stagger` (60ms) is `--stagger-step`. Two tokens holding one value under
+     two names is how a scale stops agreeing with itself.
+
+     `--ease-out-expo` is a sharper sibling of `--ease-out`, not a replacement.
+     0.16 against 0.23 on the first control point is the difference between a
+     reveal that *arrives* and one that settles: `--ease-out` stays the default
+     for a control answering a click, and this is for scroll reveals and card
+     entrances, where the element has travelled further and wants to stop
+     harder. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
+
+  /* Scroll choreography, and named `--dur-*` rather than `--duration-*` for a
+     reason the test suite will enforce either way: the `--duration-*` scale is
+     the *UI* scale, and `__tests__/tokens.test.ts` holds it to nothing over
+     300ms with every enter paired to a faster exit. A 600ms section reveal is
+     neither — it answers a scroll, not a click, and it has no exit. Putting it
+     in that namespace would mean weakening two live invariants to fit one
+     value that does not belong to them.
+
+     These are CSS-only: nothing in TypeScript reads them, so they are not
+     mirrored into tokens.ts (see the motion note there). */
+  --dur-reveal: 600ms;
+
+  /* Parallax depth: translate factor relative to scroll. The front layer moves
+     most, so the stack reads as depth rather than as three things sliding. */
+  --parallax-back: 0.15;
+  --parallax-mid: 0.35;
+  --parallax-front: 0.6;
+
+  /* The gold in a numbered section rail. The band utilities pin it per band
+     (see `.band-ink`); this is the fallback for a rail outside any band. */
+  --rail-fill: var(--color-gold);
+
   /* Entering is ease-out by default, at dropdown speed. */
   --default-transition-timing-function: var(--ease-out);
   --default-transition-duration: var(--duration-dropdown);
@@ -282,6 +322,16 @@
   }
 
   body {
+    /* Creates the numbered-section-rail counter once, in one scope. Without
+       it each `.section-rail` creates its own and every rail reads "01" — see
+       the note on `.section-rail` in the utilities layer. */
+    /* Creates the numbered-section-rail counter once, in one scope. Without
+       it each `.section-rail` creates its own and every rail reads "01" — see
+       the note on `.section-rail` in the utilities layer. */
+    /* Creates the numbered-section-rail counter once, in one scope. Without
+       it each `.section-rail` creates its own and every rail reads "01" — see
+       the note on `.section-rail` in the utilities layer. */
+    counter-reset: mirrorline-section;
     background-color: var(--color-background);
     color: var(--color-text);
     font-family: var(--font-body);
@@ -350,6 +400,15 @@
       --ease-out: linear;
       --ease-in-out: linear;
       --ease-drawer: linear;
+      /* Motion v2. The reveal duration collapses with the rest; the parallax
+         depths go to 0 so anything reading them as a translate factor stops
+         flat rather than needing its own reduced-motion branch. */
+      --dur-reveal: 0.01ms;
+      --ease-out-expo: linear;
+      --ease-in-out-quint: linear;
+      --parallax-back: 0;
+      --parallax-mid: 0;
+      --parallax-front: 0;
     }
 
     *,
@@ -380,6 +439,1063 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--color-text-muted);
+  }
+
+  /* ---------------------------------------------------------------------
+     The numbered section rail: "01 ——— WHAT WE DO" (17 §1 M2, Arigo).
+
+     **The number is a CSS counter, not a prop.** The home page has nineteen
+     sections, and nineteen hand-written indices are nineteen chances to
+     renumber wrongly the first time one moves. The number also carries no
+     information the eyebrow does not — it is a device for showing the reader
+     where they are in a list — so deriving it is both safer and truer.
+
+     **It is still a real `aria-hidden` span, not `::before` on the label.**
+     Generated content is exposed to assistive tech by some engines and not
+     others, so putting the counter on the label's own pseudo-element would
+     read a bare "01" ahead of every heading in some browsers and not in
+     others. A hidden span answers the same in all of them.
+
+     **The reset on `body` is load-bearing, and I had it wrong first time.**
+     The comment here used to say no reset was needed because an unreset
+     counter is implicitly reset on the root. That is CSS 2.1; css-lists-3
+     changed it, and browsers follow the newer rule: a `counter-increment` for
+     a counter that is not already in scope creates the counter **on that
+     element**. So every rail minted its own private counter, incremented it to
+     one, and rendered "01" — fourteen times. Caught by reading the page in a
+     browser; the first version of the test could not see it.
+     --------------------------------------------------------------------- */
+  .section-rail {
+    counter-increment: mirrorline-section;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .section-rail-index {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-caption);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+  }
+
+  .section-rail-index::before {
+    content: counter(mirrorline-section, decimal-leading-zero);
+  }
+
+  /* The track is the full width and always drawn; the gold is a child that
+     scales from the left. Animating a width would lay out every frame. */
+  .section-rail-line {
+    position: relative;
+    height: 1px;
+    width: clamp(1.75rem, 5vw, 4rem);
+    flex: none;
+    background-color: var(--color-border-strong);
+  }
+
+  /* Default is the *finished* state, so a browser without view timelines — and
+     a reader who asked for reduced motion — gets a full gold rail rather than
+     an empty one. The animation below only takes it away and gives it back. */
+  .section-rail-line::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: var(--rail-fill);
+    transform-origin: left center;
+  }
+
+  /* ---------------------------------------------------------------------
+     The marker that slides between nav items (17 §2).
+
+     `SlidingIndicator` measures the active item and sets the two custom
+     properties; everything else is here. It sits *behind* the links, so the
+     active link's own background has to come off — see `studio-nav.tsx`.
+
+     The studio is a tool, not a page, so this is the dropdown duration rather
+     than a reveal: long enough to see where the marker went, short enough
+     that it has arrived before the eye follows it.
+     --------------------------------------------------------------------- */
+  .nav-indicator {
+    position: absolute;
+    z-index: 0;
+    border-radius: var(--radius-md);
+    background-color: var(--color-accent-soft);
+    pointer-events: none;
+    transition:
+      translate var(--duration-dropdown) var(--ease-out),
+      opacity var(--duration-tooltip) var(--ease-out);
+  }
+
+  .nav-indicator[data-axis='y'] {
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: var(--indicator-size, 0);
+    translate: 0 var(--indicator-offset, 0);
+  }
+
+  .nav-indicator[data-axis='x'] {
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: var(--indicator-size, 0);
+    translate: var(--indicator-offset, 0) 0;
+  }
+
+  /* A reader who asked for stillness gets the marker, not its travel: it is
+     where the selection is, which is information, so it never goes away. */
+  @media (prefers-reduced-motion: reduce) {
+    .nav-indicator {
+      transition: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------------
+     The argument sections (17 §1 M4, M5, M6) and the metrics preview (M9).
+
+     All four are CSS. None of them has ordered stages, so none of them needs
+     GSAP — and three of the four are below the fold on the page whose mobile
+     Lighthouse score is an acceptance criterion.
+     --------------------------------------------------------------------- */
+
+  /* M5 · The before → after rows light as they pass the middle of the screen.
+
+     **Neither column dims below `--color-text-muted`, and that is deliberate.**
+     17 §1 M5 asks for the "What you got" column to dim; `mirrorline-scroll-lit`
+     already carries the warning, learned from an axe failure: a view-timeline
+     animation holds its start state, so a row parked at the start sits at that
+     contrast for as long as the reader leaves it there. Text below 4.5:1 is a
+     bug however briefly it is passing through.
+
+     So the contrast between the two columns is made by *lighting* the answer
+     rather than by darkening the complaint, and the complaint is struck
+     through instead. Both ends stay readable; the row still reads as
+     before-and-after. */
+  .lit-row {
+    view-timeline-name: --lit-row;
+    view-timeline-axis: block;
+  }
+
+  /* The strike line. A drawn pseudo-element rather than `text-decoration`,
+     and never an `<s>`: the old way is not *deleted*, it is what you used to
+     get, and marking it up as removed would say something the page does not
+     mean. Decorative, so it is invisible to assistive technology either way. */
+  .lit-before {
+    position: relative;
+  }
+
+  .lit-before::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 1px;
+    background-color: currentColor;
+    opacity: 0.5;
+    transform: scaleX(0);
+    transform-origin: left center;
+  }
+
+  /* M9 · A bar that grows from its left edge.
+     `transform`, never `width`: a width animation lays out on every frame. The
+     inline width stays the real value and the scale reveals it. */
+  .bar-grow {
+    transform-origin: left center;
+  }
+
+  /* M9 · The funnel's bars grow one after another.
+
+     Reached by selector rather than by a prop, because `FunnelBar` lives in
+     `packages/ui`, which CLAUDE.md keeps closed to anything but bug fixes. Its
+     fill is the only `<span>` inside the `aria-hidden` track span, so this is
+     specific without being clever about class names that may change.
+
+     The coupling is real, so it is tested rather than trusted: if that markup
+     moves, `e2e/motion.spec.ts` fails instead of the bars quietly stopping. */
+  .funnel-grow span[aria-hidden='true'] > span {
+    transform-origin: left center;
+  }
+
+  /* M9 · A sparkline that draws itself.
+     17 §1 M9 names `stroke-dashoffset`, and this uses `clip-path` instead —
+     the same spec's performance budget allows only transform, opacity, filter
+     and clip-path, because the others cannot be composited. A left-to-right
+     clip is the same picture and keeps the budget the spec itself sets. */
+  .draw-line {
+    clip-path: inset(0 0 0 0);
+  }
+
+  /* 17 §1 M10 · One oversized word behind one band, drifting as it passes.
+     The component, and why it is on this band and no other, is
+     `apps/web/components/marketing/background-word.tsx`.
+
+     Three things about the colour, because this is the rule the device is
+     most likely to break. It is `currentColor` at 7%, so it follows whatever
+     band it is dropped on rather than hard-coding an ink value that would be
+     invisible on snow and glaring on ink. 7% is low enough that the heading
+     over it keeps its contrast — near-white on this band is ~18:1 and the
+     word takes it to ~15:1, nowhere near the 4.5 floor. And it is behind
+     `isolate`, so it cannot land on top of a card. */
+  .band-word {
+    position: absolute;
+    /* A fixed offset from the top of the band, **not** a percentage of it,
+       and that is the one measurement here that was got wrong first. `50%`
+       centres the word on the band, which on the desktop layout is exactly
+       where the card starts — the word was almost entirely behind it, and
+       the sliver that showed read as a mistake rather than as scale. Worse
+       on a phone, where the same band is 1393px tall instead of 722 and the
+       word disappeared completely. The heading is a fixed distance from the
+       top of the band at every width, so the word is too.
+
+       Horizontally over-wide, so both ends are already outside the clip and
+       the drift never reveals an edge. */
+    top: 9rem;
+    left: 50%;
+    width: 140%;
+    z-index: 0;
+    translate: -50% -50%;
+    text-align: center;
+    text-transform: uppercase;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    /* Oversized is the whole point, but it has to stay oversized on a phone
+       without becoming taller than the band it decorates. */
+    font-size: clamp(5rem, 22vw, 16rem);
+    line-height: 0.8;
+    letter-spacing: -0.03em;
+    color: color-mix(in oklab, currentColor 7%, transparent);
+    user-select: none;
+    /* It is `aria-hidden`, but a pointer should not be able to select or
+       drag it either — it is not text anyone is reading. */
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .band-word {
+        animation: mirrorline-word-drift linear both;
+        animation-timeline: view();
+        /* The whole time the band is on screen, so the drift is slow enough
+           to read as depth rather than as something sliding past. */
+        animation-range: cover 0% cover 100%;
+      }
+    }
+  }
+
+  /* 17 §2 · The submit button morphs into a spinner, then a drawn checkmark.
+     Public forms only — Niche Scan and the lead dialog. The component, and
+     the reasoning for animating `max-width` here when nothing else in this
+     file does, is `apps/web/components/marketing/submit-morph.tsx`.
+
+     All three phases hang off one attribute, `data-morph`, so they cannot
+     disagree with each other: there is no state in the CSS. */
+  .morph-submit {
+    position: relative;
+    overflow: hidden;
+    /* The resting width is whatever the label needs. `max-width` is the only
+       thing that moves, so the idle button lays out exactly as it did before
+       this class existed. */
+    max-width: 100%;
+    transition:
+      max-width var(--duration-dropdown) var(--ease-in-out-quint),
+      border-radius var(--duration-dropdown) var(--ease-in-out-quint);
+  }
+
+  /* 3rem is the `lg` button's height, which is the size `SubmitMorph` always
+     asks for. Equal width and height, plus a full radius, is the circle —
+     and at `md` it is a 48×44 stadium instead, which is how the missing
+     `size` was spotted. */
+  .morph-submit[data-morph='sending'],
+  .morph-submit[data-morph='done'] {
+    max-width: 3rem;
+    border-radius: 9999px;
+  }
+
+  .morph-submit__label {
+    transition: opacity var(--duration-press) var(--ease-out);
+  }
+
+  .morph-submit[data-morph='sending'] .morph-submit__label,
+  .morph-submit[data-morph='done'] .morph-submit__label {
+    opacity: 0;
+  }
+
+  /* Out of the flow, so the label alone decides the button's real width and
+     nothing shifts underneath when the marks arrive. */
+  .morph-submit__marks {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+  }
+
+  .morph-submit__spinner,
+  .morph-submit__check {
+    grid-area: 1 / 1;
+    opacity: 0;
+  }
+
+  .morph-submit[data-morph='sending'] .morph-submit__spinner {
+    opacity: 1;
+    animation: mirrorline-morph-spin 1s linear infinite;
+  }
+
+  /* `clip-path`, not `stroke-dashoffset`: see `.draw-line` above. A
+     left-to-right wipe is the same picture, and composites. */
+  .morph-submit__check {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  .morph-submit[data-morph='done'] .morph-submit__check {
+    opacity: 1;
+    animation: mirrorline-morph-draw var(--duration-dropdown) var(--ease-out-expo) both;
+  }
+
+  /* The static fallback is the *end* of the sequence, not the start: the
+     button is already the circle and the mark is already drawn. Nothing here
+     is said only through motion either — the `role="status"` line in the
+     component carries the same news in words. */
+  @media (prefers-reduced-motion: reduce) {
+    .morph-submit,
+    .morph-submit__label {
+      transition: none;
+    }
+
+    .morph-submit[data-morph='sending'] .morph-submit__spinner,
+    .morph-submit[data-morph='done'] .morph-submit__check {
+      animation: none;
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      /* M4's stacked deck lived here and is gone — D44, Vlad's call on 14
+         November after seeing both laid out side by side. Stacking is a
+         device for large image cards; on four-line text cards each one
+         became a full-width bar sliding under another full-width bar, which
+         reads as a list collapsing rather than as a deck and cost two and a
+         half screens of scroll to say three sentences. The weight it was
+         reaching for is now in the cards themselves: an icon and a
+         title-size headline, in the three-column grid, with the section
+         heading still beside them. */
+
+      .lit-before::after {
+        animation: mirrorline-strike linear both;
+        animation-timeline: --lit-row;
+        animation-range: cover 35% cover 65%;
+      }
+
+      .lit-after {
+        animation: mirrorline-lit linear both;
+        animation-timeline: --lit-row;
+        animation-range: cover 35% cover 65%;
+      }
+
+      .bar-grow,
+      .funnel-grow span[aria-hidden='true'] > span {
+        animation: mirrorline-bar-grow linear both;
+        animation-timeline: view();
+        /* Finished by the time the figure beside it is readable. */
+        animation-range: entry 30% cover 40%;
+      }
+
+      .draw-line {
+        animation: mirrorline-draw linear both;
+        animation-timeline: view();
+        animation-range: entry 30% cover 45%;
+      }
+    }
+  }
+
+  @keyframes mirrorline-strike {
+    from {
+      transform: scaleX(0);
+    }
+
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  /* Muted to full. The start is the readable muted token, not a faded one. */
+  @keyframes mirrorline-lit {
+    from {
+      color: var(--color-text-muted);
+    }
+
+    to {
+      color: var(--color-text);
+    }
+  }
+
+  @keyframes mirrorline-bar-grow {
+    from {
+      transform: scaleX(0);
+    }
+
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes mirrorline-draw {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  /* M10 · The drift. `translate` rather than `transform`, so it composes with
+     the centring `translate` on the element instead of overwriting it — a
+     `transform: translateX()` here would throw away the -50% -50% and drop
+     the word into the band's bottom-right quadrant.
+
+     ±4% of a 140%-wide element, which is about a tenth of the travel the
+     content makes over the same scroll. That ratio is the effect: slower
+     than the content, which is what reads as distance. */
+  @keyframes mirrorline-word-drift {
+    from {
+      translate: calc(-50% - 4%) -50%;
+    }
+
+    to {
+      translate: calc(-50% + 4%) -50%;
+    }
+  }
+
+  /* The same wipe as `mirrorline-draw`, kept separate because the checkmark
+     needs `both` fill and a different duration token, and sharing one
+     keyframe across two very different timings is how one of them quietly
+     stops matching its comment. */
+  @keyframes mirrorline-morph-draw {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  /* Tailwind's `animate-spin` would do, but it is a utility class and this
+     spinner is turned on by an attribute selector rather than by a class on
+     the element. Own keyframes, no dependency on the framework's name. */
+  @keyframes mirrorline-morph-spin {
+    to {
+      rotate: 360deg;
+    }
+  }
+
+  /* ---------------------------------------------------------------------
+     The hero's depth (17 §1 M1).
+
+     Three layers at the plan's three depths — the room behind (0.15), the
+     glow and grain (0.35), the floating cuts (0.6) — on a `scroll()` timeline
+     rather than `view()`. The difference matters here: `view()` measures an
+     element's passage through the viewport, and the hero *starts* in the
+     viewport, so a third of its travel has already happened before the reader
+     touches anything. `scroll()` measures the document, which is what "moves
+     as the page moves" actually means.
+
+     Everything is inside `prefers-reduced-motion: no-preference`, so a reader
+     who asked for stillness gets the hero as a flat composition — which it
+     still is: the layers are placed by CSS, not by the animation.
+     --------------------------------------------------------------------- */
+  .hero-glow {
+    position: absolute;
+    inset: -20% -10% auto;
+    height: 70%;
+    z-index: -9;
+    background: radial-gradient(
+      ellipse 60% 50% at 50% 0%,
+      rgb(245 184 61 / 0.16) 0%,
+      transparent 70%
+    );
+    pointer-events: none;
+  }
+
+  /* **The bottom third is not theirs.** The hero's last band carries the
+     non-negotiable 4 disclosure and the numbered index, and a card behind
+     low-contrast caption text makes that sentence unreadable — which is the
+     same failure as not having it, and the reason the label was moved above
+     the index in the first place. The float layer stops before it. */
+  .hero-floats {
+    position: absolute;
+    inset: 0 0 34% 0;
+    z-index: -8;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    pointer-events: none;
+    /* Below `lg` there is no margin to float anything into: the headline
+       already fills the width, and three cards behind it is noise over text. */
+    display: none;
+  }
+
+  .hero-float {
+    position: absolute;
+    width: clamp(92px, 11vw, 150px);
+    rotate: var(--float-rotate, 0deg);
+    border-radius: var(--radius-thumb);
+    overflow: hidden;
+    border: 1px solid var(--color-ink-line-strong);
+    /* The cards sit over a photograph, so they need their own floor or the
+       caption lands on whatever the room is doing behind them. */
+    background-color: var(--color-ink-800);
+  }
+
+  .hero-float-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    opacity: 0.85;
+  }
+
+  /* Two lines, then stop. A hook is a sentence and these cards are small. */
+  .hero-float-caption {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    padding: 0.5rem 0.625rem;
+    font-size: var(--text-caption);
+    line-height: 1.3;
+    color: var(--color-on-ink-muted);
+  }
+
+  /* **Hand-placed around two things that were already there**, and the first
+     attempt was not. Measured at 1440×900, where the hero is 792px tall: the
+     cards collided with the inset preview and with the vertical margin note,
+     and the third ran off the bottom of the hero entirely.
+
+     The rule they follow, from those measurements. The inset owns the
+     right-hand column from 51% of the hero's height down; the margin note owns
+     the last 3% of its width. So a card on the right has to *finish* above the
+     inset (hence the 8% on `b`, which is the only one that shares its column),
+     and a card lower than that has to be left of it. `c` is also kept below
+     `a`'s bottom edge so the three read as placed rather than stacked. */
+  /* The phone's one cut card. In the flow, not floated: everything above is
+     positioned against a hero whose proportions only exist from 64rem up.
+     The lean is what keeps it reading as a card rather than a thumbnail. */
+  .hero-float-mobile {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    max-width: 22rem;
+    margin-top: 0.25rem;
+  }
+
+  .hero-float-mobile-image {
+    flex: none;
+    width: 5.25rem;
+    height: auto;
+    aspect-ratio: 9 / 16;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-ink-line);
+    rotate: -4deg;
+  }
+
+  .hero-float-mobile-caption {
+    min-width: 0;
+    font-size: var(--text-meta);
+    line-height: 1.35;
+    color: var(--color-on-ink-muted);
+    /* Two lines. A hook that wraps to four turns the card into a paragraph
+       with a picture beside it. */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
+  .hero-float-a {
+    top: 6%;
+    right: 26%;
+  }
+
+  /* The only card sharing a column with the inset, so it has to finish above
+     it rather than merely miss it. */
+  .hero-float-b {
+    top: 4%;
+    right: 6%;
+  }
+
+  .hero-float-c {
+    top: 46%;
+    right: 38%;
+  }
+
+  /* The inset preview, bottom right. Not `aria-hidden`: it is the one frame in
+     the hero a reader can actually look at, and it carries its own labels. */
+  .hero-inset {
+    position: absolute;
+    right: clamp(1rem, 4vw, 3rem);
+    bottom: clamp(1rem, 4vw, 3rem);
+    z-index: 1;
+    width: clamp(132px, 14vw, 190px);
+    display: none;
+  }
+
+  @media (width >= 64rem) {
+    .hero-floats,
+    .hero-inset {
+      display: block;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: scroll()) {
+      .hero-glow,
+      .hero-floats,
+      .hero-inset {
+        animation: mirrorline-hero-depth linear both;
+        animation-timeline: scroll();
+        /* The hero is roughly one screen tall, so the whole effect is spent
+           in the first screen of scrolling. Beyond that it is off-screen and
+           still moving, which is work nobody sees. */
+        animation-range: 0 100vh;
+      }
+
+      .hero-glow {
+        --hero-depth: var(--parallax-mid);
+      }
+
+      .hero-floats {
+        --hero-depth: var(--parallax-front);
+      }
+
+      /* The inset sits with the floats but travels less: it is the one thing
+         here a reader may want to watch, and a frame that runs off the bottom
+         of the screen while it is playing is a frame nobody finishes. */
+      .hero-inset {
+        --hero-depth: var(--parallax-back);
+      }
+    }
+  }
+
+  /* Translate only, and the depth is the multiplier. 120px is the full travel
+     at depth 1, so the front layer moves 72px across a screen of scrolling and
+     the back 18px — far enough to read as depth, short enough that nothing
+     drifts out of its own composition. */
+  @keyframes mirrorline-hero-depth {
+    from {
+      transform: translateY(0);
+    }
+
+    to {
+      transform: translateY(calc(var(--hero-depth, 0.35) * -120px));
+    }
+  }
+
+  /* ---------------------------------------------------------------------
+     The Output sequence: "one episode, twelve cuts" as a pinned scene
+     (17 §3, D42).
+
+     **Every decorative layer is `display: none` until the sequence actually
+     runs.** `OutputSequence` sets `data-sequence="on"` only once GSAP has
+     loaded, on a wide screen, with reduced motion off. Three things follow,
+     and all three are requirements rather than conveniences:
+
+       - **CLS is zero by construction.** Nothing the sequence adds ever
+         enters the flow, so there is no layout for it to shift.
+       - **The reduced-motion fallback is the final state**, not a frozen
+         first frame. With no sequence there is no episode player, no playhead
+         and no scan line — there is the finished wall with its verdicts, the
+         same one this section has always shown.
+       - **A browser that cannot load GSAP shows the wall**, not scaffolding
+         waiting for a script that never arrives.
+     --------------------------------------------------------------------- */
+  .output-stage {
+    position: relative;
+    /* The tilt needs depth to turn in, or ±4° is a shear rather than a
+       rotation. Only meaningful while the tilt query matches. */
+    perspective: 1200px;
+    transform-style: preserve-3d;
+  }
+
+  .output-layer-back,
+  .output-episode,
+  .output-front,
+  .output-scan {
+    display: none;
+  }
+
+  .output-stage[data-sequence='on'] .output-layer-back,
+  .output-stage[data-sequence='on'] .output-episode,
+  .output-stage[data-sequence='on'] .output-front,
+  .output-stage[data-sequence='on'] .output-scan {
+    display: block;
+  }
+
+  /* Back layer (0.15): the episode behind its own cuts. A wash rather than an
+     image, so the frames in front keep every bit of their contrast. */
+  .output-layer-back {
+    position: absolute;
+    inset: -10% -5%;
+    z-index: 0;
+    border-radius: var(--radius-xl);
+    background:
+      radial-gradient(circle at 50% 30%, rgb(245 184 61 / 0.1) 0%, transparent 60%),
+      var(--color-ink-900);
+    filter: blur(18px);
+    pointer-events: none;
+  }
+
+  /* **Above the wall, not behind it.** The first version put this at
+     `z-index: 1` against the wall's 2, and the wall is an opaque panel — so
+     the episode, the timeline and the playhead were painted behind it and the
+     opening stage of the sequence could never be seen at all. Found by
+     scrolling the preview, not by a test: every assertion was about the
+     finished state, and the finished state was right.
+
+     Centred rather than pinned to the top for the same reason: the episode is
+     what the stage *is* until the cuts leave it. */
+  .output-episode {
+    position: absolute;
+    inset-inline: 8%;
+    top: 50%;
+    translate: 0 -50%;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  /* 16:9, the episode's own shape. */
+  /* A real frame now, not an empty box with a duration in the middle of it.
+     `position: relative` so the duration chip and the AI label can sit on
+     the image; `overflow: hidden` so the image takes the frame's corners. */
+  .output-episode-frame {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    max-height: 32vh;
+    margin-inline: auto;
+    width: 100%;
+    border: 1px solid var(--color-ink-line-strong);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-ink-800);
+    color: var(--color-on-ink-muted);
+  }
+
+  .output-episode-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* Darkened, because this is the thing being taken apart rather than the
+       thing being shown: the twelve frames in front of it have to win. */
+    opacity: 0.55;
+  }
+
+  .output-episode-chip,
+  .output-episode-ai {
+    position: absolute;
+    padding: 0.25rem 0.625rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-ink-line-strong);
+    background-color: color-mix(in oklab, var(--color-ink-900) 82%, transparent);
+    font-size: var(--text-caption);
+    line-height: 1.2;
+  }
+
+  .output-episode-chip {
+    left: 0.75rem;
+    bottom: 0.75rem;
+    color: var(--color-on-ink-900);
+  }
+
+  /* Non-negotiable 4. Top-right, where it is on the frame rather than under
+     it — a label you have to look for is the same failure as not having one,
+     which is the lesson D34 wrote down about the hero's disclosure. */
+  .output-episode-ai {
+    right: 0.75rem;
+    top: 0.75rem;
+    color: var(--color-on-ink-muted);
+  }
+
+  /* The bar the twelve moments are found on. Taller than it was, because it
+     now holds a waveform rather than being a plain track. */
+  .output-timeline {
+    position: relative;
+    height: 34px;
+    margin-top: 0.75rem;
+    border-radius: var(--radius-md);
+    background-color: var(--color-ink-800);
+    overflow: hidden;
+  }
+
+  /* The waveform the playhead crosses. */
+  .output-wave {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1px;
+    padding-inline: 2px;
+  }
+
+  /* Thin and fixed, not flexible. A bar that grows to fill its share of the
+     track is 15px wide at this width, and 160 of those is a bar chart; 2px
+     with the space between them is a waveform. */
+  .output-wave-bar {
+    flex: none;
+    width: 2px;
+    border-radius: 1px;
+    background-color: color-mix(in oklab, var(--color-on-ink-900) 22%, transparent);
+  }
+
+  /* Full height of the taller bar, so a found moment reads as a cut through
+     the waveform rather than as a dot sitting on it. */
+  .output-marker {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    translate: -50% 0;
+    background-color: var(--color-gold-bright);
+  }
+
+  .output-playhead {
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    width: 2px;
+    background-color: var(--color-on-ink-900);
+  }
+
+  .output-wall {
+    position: relative;
+    z-index: 2;
+  }
+
+  /* The gate's scan. A band rather than a hairline: a 1px line crossing a grid
+     at scroll speed strobes, and a band reads as a pass over the work. */
+  .output-scan {
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 28%;
+    z-index: 4;
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgb(245 184 61 / 0.14) 50%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+
+  /* Front layer (0.6): the week, carrying the two figures the gate section
+     states in prose. It is `aria-hidden` — the figures are read from the chips
+     on the frames. This is the picture of them, never the source. */
+  .output-front {
+    position: absolute;
+    inset-inline: 0;
+    bottom: -2.5rem;
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  /* A week, not a pill. The radius comes down with it: a seven-column grid
+     inside a 999px capsule leaves two dead crescents at the ends. */
+  .output-week {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    margin-inline: auto;
+    width: 100%;
+    max-width: 44rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--color-ink-line-strong);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-ink-800);
+    color: var(--color-on-ink-muted);
+  }
+
+  .output-week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.375rem;
+  }
+
+  .output-week-day {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3125rem;
+    min-width: 0;
+  }
+
+  .output-week-label {
+    font-size: var(--text-caption);
+    line-height: 1;
+    color: var(--color-on-ink-faint);
+    text-align: center;
+  }
+
+  .output-week-slots {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1875rem;
+  }
+
+  /* A cut that landed, and a slot that did not get one. Both are drawn:
+     an empty slot is information — it is why the caption can say the rest of
+     the week comes from the next episode without that being a claim about
+     cuts this episode made. */
+  .output-week-cut,
+  .output-week-empty {
+    height: 0.5rem;
+    border-radius: 2px;
+  }
+
+  .output-week-cut {
+    background-color: var(--color-gold-bright);
+  }
+
+  .output-week-empty {
+    background-color: color-mix(in oklab, var(--color-on-ink-900) 12%, transparent);
+  }
+
+  .output-week-note {
+    text-align: center;
+    color: var(--color-on-ink-muted);
+  }
+
+  /* 17 §3's mobile fallback: one horizontal snap row rather than six rows of a
+     grid nobody reaches the end of. It stops at the breakpoint where the pin
+     takes over, so the two are never both in force. */
+  .output-snap-row {
+    grid-auto-columns: 62%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 0.75rem;
+  }
+
+  .output-snap-row > li {
+    scroll-snap-align: start;
+  }
+
+  @media (width >= 40rem) {
+    .output-snap-row {
+      grid-auto-columns: 38%;
+    }
+  }
+
+  @media (width >= 64rem) {
+    .output-snap-row {
+      grid-auto-columns: auto;
+      overflow-x: visible;
+      scroll-snap-type: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------------
+     The arrow on a call to action slides and rotates on hover
+     (17 §2, MOTION_STUDY item 5).
+
+     Hover *and* focus-visible: a keyboard user gets the same answer, and
+     without the second selector this is a mouse-only affordance.
+
+     Gated on a fine pointer for the same reason `.press` is — on touch there
+     is no hover state, and the rule would either never fire or stick after a
+     tap. The rest state is untouched, so the look is exactly as it was and
+     only the response is new.
+     --------------------------------------------------------------------- */
+  @media (hover: hover) and (pointer: fine) {
+    .arrow-cta svg:last-child {
+      transition:
+        transform var(--duration-tooltip) var(--ease-out-expo),
+        rotate var(--duration-tooltip) var(--ease-out-expo);
+    }
+
+    .arrow-cta:hover svg:last-child,
+    .arrow-cta:focus-visible svg:last-child {
+      transform: translateX(3px);
+      rotate: -45deg;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .arrow-cta:hover svg:last-child,
+      .arrow-cta:focus-visible svg:last-child {
+        transform: none;
+        rotate: none;
+      }
+    }
+  }
+
+  /* ---------------------------------------------------------------------
+     The selection pill that slides between two options (17 §2).
+
+     One pill is positioned behind the group and moved, rather than each
+     option painting its own background: a background that appears on one
+     button and disappears from another cannot animate between them, because
+     they are different elements. This is the CSS half of `layoutId`.
+
+     The track is a flex line with a gap, so each of n options is
+     `(100% - (n - 1) * gap) / n` along the axis; the pill is exactly that, and
+     one step is `100% + gap` of *its own* width, which lands on the next
+     option. `--choice-count` is read from the options rather than assumed to
+     be two: the two groups here are both binary, and hard-coding `/ 2` would
+     mean a third option silently rendering a pill of the wrong size against
+     the right label.
+
+     It stacks vertically below `sm`, where the group does, so the step is on
+     the other axis. Reduced motion keeps the pill and drops the travel: the
+     selected option still reads as selected, it just arrives at once.
+     --------------------------------------------------------------------- */
+  .choice-track {
+    position: relative;
+    --choice-gap: 0.5rem;
+    --choice-count: 2;
+  }
+
+  .choice-pill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: calc(
+      (100% - (var(--choice-count) - 1) * var(--choice-gap)) / var(--choice-count)
+    );
+    width: 100%;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-gold);
+    background-color: var(--color-gold-wash);
+    translate: 0 calc(var(--choice-index) * (100% + var(--choice-gap)));
+    pointer-events: none;
+  }
+
+  /* The travel is gated on hydration, and that is not belt-and-braces.
+     The server renders the default choice, and the client may restore a
+     different one from storage — so on a restored visit the pill's first act
+     would be to slide from the default to the real answer, which reads as the
+     page changing its mind. Untransitioned until the client has settled, it is
+     simply in the right place. */
+  .choice-track[data-hydrated='true'] .choice-pill {
+    transition: translate var(--duration-dropdown) var(--ease-out-expo);
+  }
+
+  @media (width >= 40rem) {
+    .choice-pill {
+      height: 100%;
+      width: calc(
+        (100% - (var(--choice-count) - 1) * var(--choice-gap)) / var(--choice-count)
+      );
+      translate: calc(var(--choice-index) * (100% + var(--choice-gap))) 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .choice-track[data-hydrated='true'] .choice-pill {
+      transition: none;
+    }
   }
 
   /* Wide content scrolls inside its card, never breaking the page.
@@ -629,13 +1745,44 @@
     animation-duration: var(--marquee-duration, 60s);
   }
 
+  /*
+   * The slow push on a still frame. 40 seconds and 6% is deliberately below
+   * the threshold at which it reads as an animation: what it buys is that a
+   * photograph in a 9:16 frame stops looking like a screenshot and starts
+   * looking like a held shot, which is the claim the frame is making.
+   *
+   * `alternate` rather than looping from zero, because a hard cut back to 1
+   * at the end of every cycle is the one thing here that would draw the eye.
+   * Only ever applied to frames that are otherwise still — the marquee tiles
+   * are already crossing the screen and do not get it.
+   */
+  @keyframes mirrorline-ken-burns {
+    from {
+      transform: scale(1);
+    }
+    to {
+      transform: scale(1.06);
+    }
+  }
+
+  .ken-burns {
+    animation: mirrorline-ken-burns 40s ease-in-out infinite alternate;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-caret,
     .animate-dot-pulse,
     .animate-track-fill,
     .animate-marquee-left,
-    .animate-marquee-right {
+    .animate-marquee-right,
+    .ken-burns {
       animation: none;
+    }
+
+    /* Back to the frame as shot. Without this the still keeps whatever scale
+       the animation left on it, which is a crop nobody chose. */
+    .ken-burns {
+      transform: none;
     }
 
     /* With the drift stopped the rails still hold more than fits, so they
@@ -695,6 +1842,64 @@
     background-color: var(--color-background);
   }
 
+  /*
+   * Status colours have to be pinned per band too, and not doing so was a bug.
+   *
+   * D25: the public site is art-directed band by band and `.dark` does not
+   * reach it. The band utilities kept that promise for the *neutral* tokens —
+   * background, surface, border, text — and quietly broke it for the status
+   * ones, which went on resolving from whichever theme the visitor's system
+   * asked for. So in dark mode a green delta inside a `band-snow` card was a
+   * dark-theme mint (#79E2B8) on white: about 1.9:1, a WCAG AA failure that
+   * appeared only for the half of visitors whose OS prefers dark.
+   *
+   * Pinned explicitly here to the set that suits each band's own surface: the
+   * light values on snow and white, the dark ones on ink. Nothing in `:root`
+   * or `.dark` changes, so the studio is untouched.
+   *
+   * Found by axe on a KPI card in the home metrics section, 2026-11-13 (D40).
+   */
+  .band-ink,
+  .band-ink-alt {
+    --color-success: #35c68c;
+    --color-success-soft: #0c2620;
+    --color-on-success-soft: #79e2b8;
+    --color-warning: #e5ae38;
+    --color-warning-soft: #2a2210;
+    --color-on-warning-soft: #f2cc79;
+    --color-danger: #f0686b;
+    --color-danger-soft: #2d1618;
+    --color-on-danger-soft: #ffa7aa;
+    --color-info: #6b9bf2;
+    --color-info-soft: #121e31;
+    --color-on-info-soft: #a9c5fa;
+    --color-neutral-soft: #262e3a;
+    --color-on-neutral-soft: #c5cbd5;
+  }
+
+  .band-snow,
+  .band-white {
+    --color-success: #128a5e;
+    --color-success-soft: #def2e8;
+    --color-on-success-soft: #0e5940;
+    --color-warning: #b7790a;
+    --color-warning-soft: #faefd6;
+    --color-on-warning-soft: #6b4606;
+    --color-danger: #c9343c;
+    --color-danger-soft: #fbe2e3;
+    --color-on-danger-soft: #8c2126;
+    --color-info: #2563d9;
+    --color-info-soft: #e2eafa;
+    --color-on-info-soft: #1c4aa3;
+    --color-neutral-soft: #e9ecf1;
+    --color-on-neutral-soft: #3a4250;
+  }
+
+  /* `--rail-fill` is pinned per band for the reason D40 wrote up: the band
+     utilities remap the neutrals and the status colours, and gold was in
+     neither group. Ink takes the bright gold and the light bands take the deep
+     one, because one value cannot be seen on both. It is a 1px decorative
+     rule, so this is about being visible at all rather than about AA. */
   .band-ink {
     --color-background: var(--color-ink-900);
     --color-surface: var(--color-ink-700);
@@ -703,6 +1908,7 @@
     --color-border-strong: var(--color-ink-line-strong);
     --color-text: var(--color-on-ink-900);
     --color-text-muted: var(--color-on-ink-muted);
+    --rail-fill: var(--color-gold-bright);
   }
 
   .band-ink-alt {
@@ -713,6 +1919,7 @@
     --color-border-strong: var(--color-ink-line-strong);
     --color-text: var(--color-on-ink-900);
     --color-text-muted: var(--color-on-ink-muted);
+    --rail-fill: var(--color-gold-bright);
   }
 
   .band-snow {
@@ -723,6 +1930,7 @@
     --color-border-strong: var(--color-snow-line-strong);
     --color-text: var(--color-on-snow);
     --color-text-muted: var(--color-on-snow-muted);
+    --rail-fill: var(--color-gold-deep);
   }
 
   .band-white {
@@ -733,6 +1941,7 @@
     --color-border-strong: var(--color-snow-line-strong);
     --color-text: var(--color-on-snow);
     --color-text-muted: var(--color-on-snow-muted);
+    --rail-fill: var(--color-gold-deep);
   }
 
   /* ---------------------------------------------------------------------
@@ -864,6 +2073,23 @@
         animation-timeline: view();
         animation-range: cover 0% cover 100%;
       }
+
+      /* The gold fills the section rail as the section crosses the screen
+         (17 §1 M2).
+
+         The timeline is the *rail's* own passage, not the section's: a rail
+         sits at the top of its band, so by the time the band has finished
+         crossing the viewport the rail left the screen long ago, and a line
+         keyed to the band would finish filling after nobody could see it.
+
+         It ends at `cover 55%` for the same reason the reveal ends early —
+         the fill is for arriving, and a line still creeping while the reader
+         is three paragraphs in reads as a progress bar for nothing. */
+      .section-rail-line::after {
+        animation: mirrorline-rail-fill linear both;
+        animation-timeline: view();
+        animation-range: entry 20% cover 55%;
+      }
     }
   }
 
@@ -895,6 +2121,19 @@
 
     to {
       transform: translateY(0);
+    }
+  }
+
+  /* Left to right, and transform-only so it composites. `scaleX(0)` on a 1px
+     child of a drawn track leaves the track visible throughout, so the rail is
+     never missing — it is unfilled, then filled. */
+  @keyframes mirrorline-rail-fill {
+    from {
+      transform: scaleX(0);
+    }
+
+    to {
+      transform: scaleX(1);
     }
   }
 
@@ -1276,5 +2515,60 @@
       transition: none !important;
       translate: none !important;
     }
+  }
+}
+
+/* --------------------------------------------------------------------------
+   17 §1 M11 · Between marketing pages
+   --------------------------------------------------------------------------
+
+   Outside every `@layer`, on purpose. View-transition pseudo-elements are
+   matched against the document's own transition pseudo tree, and the user
+   agent's default cross-fade is not in a layer either — putting these in one
+   means losing to it and wondering why nothing changed.
+
+   Only the root pair is named. The spec also asks for the pricing card to
+   morph into the checkout header, and there is no checkout: `/pricing` opens
+   the lead dialog on the page you are already on. A shared-element flight
+   needs two pages, so that half is not built rather than faked against a
+   destination that does not exist. Logged in D43.
+
+   Short, and shorter leaving than arriving — DESIGN.md puts exits at about
+   65% of an entrance, because leaving is not an event. 180ms out, 280ms in:
+   the whole thing is over inside a third of a second, which is the point. A
+   page transition the reader has time to notice is a page transition they
+   have time to resent.
+
+   `opacity` and `translate` only, so the compositor does all of it. */
+::view-transition-old(root) {
+  animation: mirrorline-page-out 180ms var(--ease-out) both;
+}
+
+::view-transition-new(root) {
+  animation: mirrorline-page-in 280ms var(--ease-out-expo) both;
+}
+
+/* Belt and braces. The component already refuses to start a transition under
+   reduced motion, so this covers a transition started any other way — and it
+   is the rule, not the implementation, that the next person will read. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+@keyframes mirrorline-page-out {
+  to {
+    opacity: 0;
+    translate: 0 -8px;
+  }
+}
+
+@keyframes mirrorline-page-in {
+  from {
+    opacity: 0;
+    translate: 0 12px;
   }
 }

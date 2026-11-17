@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 import { NAV_ITEMS, isNavItemActive } from './nav-items'
+import { SlidingIndicator } from './sliding-indicator'
 
 /**
  * The studio navigation list. The sidebar and the mobile drawer both render
@@ -25,9 +26,12 @@ export function StudioNav({
 
   return (
     <nav aria-label="Studio" className={className}>
-      <ul className="flex flex-col gap-0.5">
+      <ul className="relative flex flex-col gap-0.5">
+        {/* The active fill, as one element that moves (17 §2). It sits behind
+            the links, so the active link no longer paints its own. */}
+        <SlidingIndicator axis="y" activeKey={pathname} className="nav-indicator" />
         {NAV_ITEMS.map((item) => {
-          const isActive = isNavItemActive(item.href, pathname)
+          const isActive = isNavItemActive(item, pathname)
           return (
             <li key={item.href}>
               <Link
@@ -35,18 +39,26 @@ export function StudioNav({
                 aria-current={isActive ? 'page' : undefined}
                 onClick={onNavigate}
                 className={[
-                  'flex min-h-touch items-center rounded-md px-3 text-label',
+                  // `relative`, so the link paints above the marker behind it.
+                  'relative flex min-h-touch items-center rounded-md px-3 text-label',
                   // DESIGN.md "Motion — Press": a 3% dip on :active, fine
-                  // pointers only, dropped under prefers-reduced-motion. This
-                  // is the ONLY motion the nav gets. The arrival of the screen
-                  // itself stays instant — no fade, no slide, no stagger —
-                  // because moving between studio screens is something a
-                  // person does dozens of times a day, and a transition on it
-                  // would read as lag rather than as feedback. `.press` owns
-                  // the transition shorthand, so the hover tint lands at once.
+                  // pointers only, dropped under prefers-reduced-motion.
+                  //
+                  // **The arrival of the screen itself stays instant** — no
+                  // fade, no slide, no stagger — because moving between studio
+                  // screens is something a person does dozens of times a day,
+                  // and a transition on it reads as lag rather than as
+                  // feedback. That rule has not changed; it used to say this
+                  // was the only motion the nav got, and 17 §2 added one more
+                  // that does not break it. The marker behind these links
+                  // slides, but nothing waits on it: the link is styled active
+                  // the instant the route changes, and the marker is
+                  // `aria-hidden` decoration catching up.
                   'press',
                   isActive
-                    ? 'bg-accent-soft font-semibold text-on-accent-soft'
+                    ? // The fill now comes from the marker, so the active link
+                      // contributes only its text treatment.
+                      'font-semibold text-on-accent-soft'
                     : 'font-medium text-text-muted hover:bg-surface-subtle hover:text-text',
                 ].join(' ')}
               >

@@ -15,6 +15,10 @@ import { workspace } from '@mirrorline/mock'
 import { AiLabel, Button, Label, StatusChip, Switch, Textarea, ViewerPanel } from '@mirrorline/ui'
 import { useId, useState } from 'react'
 
+import type { PostMove } from '@/lib/studio/schedule-moves'
+
+import { MoveToMenu } from './move-to-menu'
+
 /** Statuses that are already settled; approving them again would say nothing. */
 const SETTLED_STATUSES: readonly PostStatus[] = ['approved', 'published', 'published-private']
 
@@ -39,9 +43,23 @@ export interface PostPanelProps {
   dayLabel: string
   onApprove: (postId: string) => void
   onSendBack: (postId: string) => void
+  /** Every day column, for the "Move to…" menu. */
+  days: readonly { readonly value: string; readonly label: string }[]
+  /** The slots this post's platform uses. */
+  slots: readonly { readonly time24: string; readonly timeLabel: string }[]
+  onMove: (postId: string, move: PostMove) => void
 }
 
-export function PostPanel({ post, status, dayLabel, onApprove, onSendBack }: PostPanelProps) {
+export function PostPanel({
+  post,
+  status,
+  dayLabel,
+  onApprove,
+  onSendBack,
+  days,
+  slots,
+  onMove,
+}: PostPanelProps) {
   const captionId = useId()
   const aiSwitchId = useId()
   const aiNoteId = useId()
@@ -118,6 +136,10 @@ export function PostPanel({ post, status, dayLabel, onApprove, onSendBack }: Pos
           cannot be turned off.
         </p>
       ) : null}
+
+      {/* The no-drag path, above the two decisions because rescheduling is a
+          question you answer before approving, not after. */}
+      <MoveToMenu post={post} days={days} slots={slots} onMove={onMove} />
 
       {/* DESIGN.md "Motion — Press": the two decisions dip 3% on :active, on
           fine pointers only, dropped under prefers-reduced-motion. */}

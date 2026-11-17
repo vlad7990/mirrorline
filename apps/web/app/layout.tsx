@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
-import { GeistMono } from 'geist/font/mono'
-import { GeistSans } from 'geist/font/sans'
-import { GeistSerifRegular } from 'geist/font/serif/regular'
 import { ThemeProvider, TooltipProvider, THEME_SCRIPT } from '@mirrorline/ui'
+
+import { geistMono, geistSans, geistSerifRegular } from './fonts'
 
 import './globals.css'
 
@@ -11,6 +10,11 @@ import './globals.css'
    costs, timings, similarity percentages, spend caps. Both are self-hosted by
    the `geist` package, so no font is fetched from a third party.
    theme.css consumes --font-geist-sans and --font-geist-mono.
+
+   The three `localFont` calls moved to `./fonts` so that one of them can stop
+   preloading: the package's own exports preload all three, which put 184 KB
+   at high priority in front of the first screen. Same files, same variables,
+   same metrics — see that file for which face preloads and why.
 
    Geist Serif is the third voice and belongs to the PUBLIC SITE ONLY (D25):
    display headlines and the gold accent phrase. The studio stays entirely
@@ -24,9 +28,15 @@ export const metadata: Metadata = {
     default: 'Mirrorline',
     template: '%s · Mirrorline',
   },
-  // The one-liner from docs/specs/01_PRODUCT_BRIEF.md.
+  // The one-liner from docs/specs/01_PRODUCT_BRIEF.md, with one phrase
+  // changed: it said "the formats going viral in its niche". True of what the
+  // Niche Scan finds, and still the wrong words in the sentence a search
+  // result shows — read quickly it is a promise about your account rather
+  // than a description of someone else's. "Growing fastest" is what we
+  // actually measure, by views per follower over 30 days. The banned-phrase
+  // test holds it.
   description:
-    "Mirrorline turns a brand's own videos, and the formats going viral in its niche, into a steady stream of original short videos, published several times a day to the brand's own accounts by a team of AI agents that learns from every post. Mirrorline is a placeholder name.",
+    "Mirrorline turns a brand's own videos, and the formats growing fastest in its niche, into a steady stream of original short videos, published several times a day to the brand's own accounts by a team of AI agents that learns from every post. Mirrorline is a placeholder name.",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -36,7 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`scroll-pt-20 ${GeistSans.variable} ${GeistMono.variable} ${GeistSerifRegular.variable}`}
+      className={`scroll-pt-20 ${geistSans.variable} ${geistMono.variable} ${geistSerifRegular.variable}`}
       suppressHydrationWarning
     >
       <head>

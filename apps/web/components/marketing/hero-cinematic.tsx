@@ -25,14 +25,27 @@
 
 import { Button } from '@mirrorline/ui'
 import { ArrowDown } from 'lucide-react'
+import Link from 'next/link'
 import * as React from 'react'
 
+import { NICHE_SCAN } from '@/lib/site-map'
+
+import { HeroDepth, HeroFloatMobile } from './hero-depth'
 import { HeroBackdrop, HeroIndex, HeroMarginNote } from './hero-parts'
 import { FEATURE_TABS } from './home-content'
+import { SplitReveal } from './split-reveal'
 import { TypedPhrase } from './typed-phrase'
 
-/** The id of the upload band below, which the hero's one action points at. */
+/** The id of the upload band, further down, where "You send" begins. */
 export const UPLOAD_ANCHOR_ID = 'start'
+
+/**
+ * The band directly below the hero, holding the Business/Individual ×
+ * New/Existing picker. The hero's primary action points here rather than at
+ * `/niche-scan`, which does not exist until PR6 — a hero button that 404s is
+ * worse than one that scrolls.
+ */
+export const CHOICE_ANCHOR_ID = 'choose'
 
 export interface HeroCinematicProps {
   /** The cycling half of the headline. */
@@ -49,6 +62,7 @@ export function HeroCinematic({ phrases }: HeroCinematicProps) {
       className="band-ink relative isolate flex min-h-[86vh] flex-col justify-end overflow-clip"
     >
       <HeroBackdrop />
+      <HeroDepth />
 
       <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 px-5 pb-7 pt-28 sm:px-8 sm:pt-32">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-end">
@@ -58,8 +72,10 @@ export function HeroCinematic({ phrases }: HeroCinematicProps) {
                 aria-hidden="true"
                 className="animate-dot-pulse size-1.5 rounded-full bg-gold-bright"
               />
+              {/* Industry-agnostic (16 §1). This read "for coaches and local
+                  businesses" until D38 retired that positioning. */}
               <span className="site-eyebrow">
-                An AI content studio for coaches and local businesses
+                Short-video growth for any business or individual
               </span>
             </p>
 
@@ -70,28 +86,52 @@ export function HeroCinematic({ phrases }: HeroCinematicProps) {
               id="hero-heading"
               className="reveal-lead m-0 max-w-[18ch] text-balance text-site-hero text-on-ink-900"
             >
-              Turn one long video into
+              {/* **Only the fixed half is split, and that is the design.**
+                  SplitText rewrites the DOM it is given; `TypedPhrase`
+                  rewrites its own text on a timer. Handed the whole headline,
+                  the split would freeze the cycling line into whatever it
+                  happened to say at that instant — and `aria: 'auto'` would
+                  copy that half-typed string onto the element as a permanent
+                  `aria-label`, so the page's one `h1` would be named after a
+                  phrase no longer on screen.
+
+                  Split the fixed line; leave the cycling one to the component
+                  that owns it. */}
+              <SplitReveal as="span" type="lines" className="block">
+                <span className="block">Original short video,</span>
+              </SplitReveal>
               <span className="block">
                 <TypedPhrase phrases={phrases} className="gold-phrase" />
               </span>
             </h1>
 
-            <p className="reveal m-0 max-w-[52ch] text-subtitle font-normal text-on-ink-muted">
-              Seven agents cut your videos, remake the formats rising in your niche, and publish to
-              your own accounts several times a day. You record once a week and approve from your
-              phone.
+            {/* 16 §3 row 1: the sub names *both* inputs. The old version named
+                only the client's own footage, which described half the
+                product and excluded every account starting from nothing. */}
+            <p className="reveal m-0 max-w-[54ch] text-subtitle font-normal text-on-ink-muted">
+              Send us your videos, or we create originals from the formats growing in your niche.
+              Seven agents cut, check, post and prove it — several times a day, to accounts you own.
             </p>
 
-            {/* The hero's one action, and it is a pointer now rather than the
-                control itself. A plain in-page anchor, so it works with
-                JavaScript off and follows the document's own scroll
-                behaviour. */}
-            <Button asChild size="lg" variant="gold" className="press">
-              <a href={`#${UPLOAD_ANCHOR_ID}`}>
-                Start with your own footage
-                <ArrowDown aria-hidden="true" className="size-4" strokeWidth={1.8} />
-              </a>
-            </Button>
+            {/* Two actions, both links. D34 moved every interactive *control*
+                out of the hero and that still holds: there is no field here,
+                only somewhere to go. */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Button asChild size="lg" variant="gold" className="press">
+                <a href={`#${CHOICE_ANCHOR_ID}`}>
+                  {NICHE_SCAN.label}
+                  <ArrowDown aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                </a>
+              </Button>
+              <Button asChild size="lg" variant="secondary" className="press">
+                <Link href="/pricing">See plans</Link>
+              </Button>
+            </div>
+
+            {/* The phone's one cut card. The floating three are wide-screen
+                only — `HeroFloatMobile` says why they cannot simply be
+                unhidden here. */}
+            <HeroFloatMobile />
           </div>
 
           <HeroMarginNote>one episode 52:14 · twelve cuts · three minutes</HeroMarginNote>
@@ -103,8 +143,23 @@ export function HeroCinematic({ phrases }: HeroCinematicProps) {
             screen — a label for a generated image that you have to scroll to
             find is not a label. The room is generated; nothing in it is a
             customer, a result or a claim. */}
-        <p className="m-0 text-right text-caption text-on-ink-faint">
-          The room behind this is an AI-generated image, not a photograph of a client.
+        {/* Extended when the floating cuts and the inset preview arrived
+            (17 §1 M1). It used to name only the room, which was true of the
+            hero as it then was — a backdrop and a headline. The hero now also
+            shows generated frames of a presenter who does not exist, and a
+            disclosure that covers the wallpaper but not the faces is the gap
+            non-negotiable 4 exists to close. The preview carries its own "AI
+            scene" and "Sample" labels as well; this is the sentence for the
+            decorative cards, which are hidden from assistive technology and
+            so cannot carry one. */}
+        {/* The right padding keeps it out of the inset preview's column. The
+            inset is positioned and this is in flow, so it paints over this
+            sentence — and the label ran underneath the card it was labelling,
+            which is the same failure as not having one. Measured at 1440: the
+            inset is 190px wide with a 3rem gutter. */}
+        <p className="m-0 text-right text-caption text-on-ink-faint lg:pr-[240px]">
+          The room and every cut shown here are AI-generated sample frames, not photographs of a
+          client or a customer result.
         </p>
 
         {/* The reference runs 01–04 with a caption each; we already have

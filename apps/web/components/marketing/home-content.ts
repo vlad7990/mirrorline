@@ -15,6 +15,74 @@
 /* Feature tabs                                                                */
 /* -------------------------------------------------------------------------- */
 
+/** A 9:16 still with the hook that is burned onto it. */
+export interface LoopReel {
+  readonly src: string
+  /** The hook's opening, in plain weight. */
+  readonly lead: string
+  /** The phrase that takes the sand highlight. */
+  readonly highlight: string
+  readonly lengthLabel: string
+}
+
+/**
+ * What each tab shows beside its copy, and why the four differ.
+ *
+ * All four used to render the same six `cuts` from `@mirrorline/mock`: the
+ * same hooks, in the same order, on four tabs whose whole purpose is to say
+ * that these are four different jobs. It made the section an illustration of
+ * nothing — and the hooks themselves ("The meeting that cost me my best
+ * engineer") were management-coaching copy, which is the audience-naming D38
+ * retired everywhere else on the page.
+ *
+ * So each tab now gets the shape of its own job. Multiply is one recording
+ * and the cuts taken out of it; Remake is one format rebuilt by three
+ * unrelated trades; Publish is posts landing on the three platforms; Learn is
+ * the same posts ranked by what they earned. Someone who only looks at the
+ * pictures should still be able to tell the four apart.
+ */
+export type FeatureStage =
+  | {
+      /** One long recording, and three of the cuts taken out of it. */
+      readonly kind: 'multiply'
+      readonly sourceSrc: string
+      /** What the recording was: "A dog-training class, filmed on a phone". */
+      readonly sourceLabel: string
+      readonly sourceLength: string
+      /** How many cuts came out of it in total, of which we show three. */
+      readonly cutTotal: number
+      /** Where in the recording each cut came from: "06:12". */
+      readonly cuts: readonly (LoopReel & { readonly fromTimecode: string })[]
+    }
+  | {
+      /** One rising format, rebuilt by three unrelated accounts. */
+      readonly kind: 'remake'
+      readonly formatName: string
+      readonly formatNote: string
+      /**
+       * `madeFor` names a kind of work, and it is the one place on this page
+       * that does. It is not a vertical we sell to — it is the evidence for
+       * the sentence beside it, that the same structure carries anywhere. 16
+       * §1 forbids industry pages and industry navigation; it does not forbid
+       * showing range.
+       */
+      readonly takes: readonly (LoopReel & { readonly madeFor: string })[]
+    }
+  | {
+      /** The same week of posts, landing on the three platforms. */
+      readonly kind: 'publish'
+      readonly posts: readonly (LoopReel & {
+        readonly platform: string
+        readonly slot: string
+      })[]
+    }
+  | {
+      /** Last week's posts, ranked by the one number that moves the plan. */
+      readonly kind: 'learn'
+      readonly metricLabel: string
+      readonly rows: readonly (LoopReel & { readonly sendsPerThousand: number })[]
+    }
+
 export interface FeatureTab {
   readonly id: string
   /** "01"–"04". The handoff numbers them. */
@@ -27,6 +95,7 @@ export interface FeatureTab {
   readonly body: string
   /** One figure, in the machine's voice, under the body. */
   readonly stat: string
+  readonly stage: FeatureStage
 }
 
 export const FEATURE_TABS: readonly FeatureTab[] = [
@@ -38,7 +107,41 @@ export const FEATURE_TABS: readonly FeatureTab[] = [
     headline: 'One recording,',
     headlineAccent: 'a week of posts.',
     body: 'The Multiplier finds the moments that stand on their own, cuts them to 9:16, writes the hook and burns in captions in your brand style.',
-    stat: 'A 52:14 episode · 12 cuts · 3 min',
+    stat: 'A 48:12 class · 12 cuts · 3 min',
+    stage: {
+      kind: 'multiply',
+      sourceSrc: '/loop/talk-wide.webp',
+      // Deliberately not a podcast. The /reels/ set is twelve near-identical
+      // frames of one person at one microphone, and leaning on it again here
+      // would say the input has to be a studio recording. It does not: this
+      // is a phone on a tripod at the back of a hall.
+      sourceLabel: 'A dog-training class, filmed on a phone at the back of the hall',
+      sourceLength: '48:12',
+      cutTotal: 12,
+      cuts: [
+        {
+          src: '/loop/talk-cut-01.webp',
+          lead: 'The recall mistake',
+          highlight: 'almost everyone makes',
+          lengthLabel: '0:31',
+          fromTimecode: '06:12',
+        },
+        {
+          src: '/loop/talk-cut-02.webp',
+          lead: 'Loose lead,',
+          highlight: 'in three steps',
+          lengthLabel: '0:44',
+          fromTimecode: '21:40',
+        },
+        {
+          src: '/loop/talk-cut-03.webp',
+          lead: 'Why your dog ignores you',
+          highlight: 'in the park',
+          lengthLabel: '0:28',
+          fromTimecode: '39:05',
+        },
+      ],
+    },
   },
   {
     id: 'remake',
@@ -49,6 +152,34 @@ export const FEATURE_TABS: readonly FeatureTab[] = [
     headlineAccent: 'never the footage.',
     body: 'Trend Scout finds what is rising in your niche. The Remake Producer rebuilds its structure as a new script, shot with your material and your voice.',
     stat: '2 remakes a week · within 48 hours',
+    stage: {
+      kind: 'remake',
+      formatName: '“3 things I’d never do”',
+      formatNote: 'One rising structure, rebuilt three times. No shared footage, no shared script.',
+      takes: [
+        {
+          src: '/samples/sample-01.webp',
+          madeFor: 'A bakery',
+          lead: '3 things I’d never do',
+          highlight: 'to a sourdough starter',
+          lengthLabel: '0:27',
+        },
+        {
+          src: '/samples/sample-11.webp',
+          madeFor: 'A bike shop',
+          lead: '3 things I’d never do',
+          highlight: 'to a carbon frame',
+          lengthLabel: '0:33',
+        },
+        {
+          src: '/samples/sample-06.webp',
+          madeFor: 'A flower studio',
+          lead: '3 things I’d never put',
+          highlight: 'in a bridal bouquet',
+          lengthLabel: '0:29',
+        },
+      ],
+    },
   },
   {
     id: 'publish',
@@ -57,8 +188,41 @@ export const FEATURE_TABS: readonly FeatureTab[] = [
     description: 'Several posts a day, to accounts you own.',
     headline: 'To your accounts,',
     headlineAccent: 'through the front door.',
-    body: 'Several posts a day on Instagram, TikTok and YouTube Shorts, through the official APIs, to accounts you connect and can disconnect without asking us. Approve each post, or let them go after 24 hours.',
+    body: 'Several posts a day on Instagram, TikTok and YouTube Shorts, through the official APIs, to accounts you connect and can disconnect without asking us. Approve each post, or let them go after 24 hours. TikTok posts and YouTube uploads stay private until those platforms have approved our app.',
     stat: 'Growth plan · 21 posts a week',
+    stage: {
+      kind: 'publish',
+      // Platform names only. A logo would be someone else's mark on our page
+      // implying a partnership we do not have, and non-negotiable 3 is the
+      // reason the names are here at all: these are the three we post to
+      // through official APIs.
+      posts: [
+        {
+          src: '/samples/sample-09.webp',
+          platform: 'Instagram',
+          slot: 'Tue 08:10',
+          lead: 'The one step',
+          highlight: 'people skip at home',
+          lengthLabel: '0:22',
+        },
+        {
+          src: '/samples/sample-10.webp',
+          platform: 'TikTok',
+          slot: 'Tue 12:30',
+          lead: 'Sand to 180,',
+          highlight: 'then stop',
+          lengthLabel: '0:19',
+        },
+        {
+          src: '/samples/sample-12.webp',
+          platform: 'YouTube Shorts',
+          slot: 'Tue 17:45',
+          lead: 'What to buy',
+          highlight: 'in the wrong season',
+          lengthLabel: '0:35',
+        },
+      ],
+    },
   },
   {
     id: 'learn',
@@ -69,6 +233,44 @@ export const FEATURE_TABS: readonly FeatureTab[] = [
     headlineAccent: 'decides what is next.',
     body: 'The Performance Analyst reads what happened — views, profile visits, link clicks — and the loop makes more of what worked, on the platform it worked on.',
     stat: 'Reported weekly, through to booked calls',
+    stage: {
+      kind: 'learn',
+      // Sends per 1,000 reach rather than views: a view is what the platform
+      // showed, a send is what a person chose to pass on. It is the signal
+      // that survives a feed change, and it is the one the next week's plan
+      // is actually built from.
+      metricLabel: 'Sends per 1,000 reach',
+      rows: [
+        {
+          src: '/samples/sample-03.webp',
+          lead: 'The stretch',
+          highlight: 'that is doing nothing',
+          lengthLabel: '0:26',
+          sendsPerThousand: 18.4,
+        },
+        {
+          src: '/samples/sample-08.webp',
+          lead: 'Ask this',
+          highlight: 'before you buy the tool',
+          lengthLabel: '0:21',
+          sendsPerThousand: 12.1,
+        },
+        {
+          src: '/samples/sample-05.webp',
+          lead: 'What goes in',
+          highlight: 'before the lid',
+          lengthLabel: '0:18',
+          sendsPerThousand: 7.9,
+        },
+        {
+          src: '/samples/sample-02.webp',
+          lead: 'The noise',
+          highlight: 'worth stopping for',
+          lengthLabel: '0:24',
+          sendsPerThousand: 4.2,
+        },
+      ],
+    },
   },
 ]
 
@@ -77,55 +279,153 @@ export const FEATURE_TABS: readonly FeatureTab[] = [
 /* -------------------------------------------------------------------------- */
 
 export interface ShowcaseCard {
-  readonly niche: string
+  /**
+   * What the post is *for*, as a goal from 15 §2 — not what trade made it.
+   *
+   * This field held an industry ("Coach", "Clinic", "Real estate") until v4.
+   * Labelling a sample by its industry quietly turns the site into a list of
+   * the industries we serve, which is the thing 16 §1 and 10 §1 forbid. A
+   * goal label says the same useful thing — here is the shape of a post aimed
+   * at bookings — without implying we are built for anyone in particular.
+   */
+  readonly context: string
   /** The hook's opening, in plain weight. */
   readonly lead: string
   /** The phrase that takes the sand highlight. */
   readonly highlight: string
   readonly lengthLabel: string
+  /**
+   * The generated 9:16 still this hook is burned onto, under `public/samples/`.
+   *
+   * Required, not optional: a hook with no frame would render as a flat colour
+   * beside eleven photographs, which reads as a broken image rather than as a
+   * deliberate choice. A test pins every one of these to a file on disk and to
+   * no other card, so a rename cannot leave a hole in the rail and two cards
+   * cannot quietly share a frame.
+   *
+   * Every file is AI-generated, so every surface that renders one carries the
+   * label — non-negotiable 4.
+   */
+  readonly frameSrc: string
 }
 
 /**
- * Sample hooks for fictional businesses, straight from the handoff.
+ * Sample hooks from fictional accounts.
  *
  * Not customer work and not customer results — the section rendering them
  * says so. They show the *shape* of what comes out, which is the only claim
  * available to us before there is a first client.
+ *
+ * The hooks deliberately span different kinds of work without naming any
+ * trade, per 13's "examples rotate through different kinds of business and
+ * individual" and the rule that none is featured above another.
+ *
+ * **Twelve frames, twelve unlike accounts** (D45). The set used to be eight
+ * hooks on four rotating brand colours, which made the heading — "Different
+ * trades, the same week of work" — a sentence the section did not illustrate:
+ * a coloured rectangle has no trade. Each card now carries a generated 9:16
+ * still of a different fictional account, and the twelve deliberately span
+ * faces, hands and places, and a range of ages, genders and ethnicities. None
+ * is a likeness of a real person and none is a health claim or a before-and-
+ * after. The *frames* vary by trade; the *labels* stay goals, which is the
+ * distinction 16 §1 turns on — we show that the work fits anyone without
+ * sorting anyone into a vertical.
+ *
+ * Two hooks changed with them. "You're not tired / You're over-responsible"
+ * and "Burnout isn't / a workload problem" both read as coaching copy, which
+ * is the audience-naming D38 retired everywhere else on the page; over a
+ * baker and a hardware-shop owner they would have read as a mismatch rather
+ * than as range.
  */
 export const SHOWCASE_CARDS: readonly ShowcaseCard[] = [
   {
-    niche: 'Coach',
-    lead: 'You’re not tired.',
-    highlight: 'You’re over-responsible.',
+    // Short on purpose. This hook and the "Launching an account" one below
+    // are the two the account-type cards reuse, and those frames are 124px
+    // wide — a caption that runs to four lines there covers the photograph it
+    // is burned onto.
+    context: 'Leads',
+    lead: 'What they ask',
+    highlight: 'before they buy',
     lengthLabel: '0:24',
+    frameSrc: '/samples/sample-01.webp',
   },
   {
-    niche: 'Clinic',
-    lead: '3 signs your back pain',
-    highlight: 'isn’t about posture',
+    context: 'Bookings',
+    lead: '3 signs the thing you booked',
+    highlight: 'isn’t the thing you needed',
     lengthLabel: '0:31',
+    frameSrc: '/samples/sample-02.webp',
   },
   {
-    niche: 'Consultant',
+    context: 'Sales',
     lead: 'The pricing mistake',
-    highlight: 'that costs you clients',
+    highlight: 'that costs you customers',
     lengthLabel: '0:42',
+    frameSrc: '/samples/sample-05.webp',
   },
   {
-    niche: 'Fitness studio',
+    context: 'Community',
     lead: 'Do this before',
-    highlight: 'every workout',
+    highlight: 'you start, every time',
     lengthLabel: '0:19',
+    frameSrc: '/samples/sample-03.webp',
   },
-  { niche: 'Podcast', lead: 'Why your best people', highlight: 'go quiet', lengthLabel: '0:36' },
-  { niche: 'Real estate', lead: 'What to ask', highlight: 'before you list', lengthLabel: '0:28' },
   {
-    niche: 'Therapist',
-    lead: 'Burnout isn’t',
-    highlight: 'a workload problem',
-    lengthLabel: '0:22',
+    context: 'Audience growth',
+    lead: 'Why your best people',
+    highlight: 'go quiet',
+    lengthLabel: '0:36',
+    frameSrc: '/samples/sample-07.webp',
   },
-  { niche: 'Salon', lead: 'Ask for this', highlight: 'at your next cut', lengthLabel: '0:21' },
+  {
+    context: 'Awareness',
+    lead: 'What to ask',
+    highlight: 'before you commit',
+    lengthLabel: '0:28',
+    frameSrc: '/samples/sample-04.webp',
+  },
+  {
+    context: 'Launching an account',
+    lead: 'Day one,',
+    highlight: 'no audience yet',
+    lengthLabel: '0:22',
+    frameSrc: '/samples/sample-08.webp',
+  },
+  {
+    context: 'Returning customers',
+    lead: 'Ask for this',
+    highlight: 'on your next visit',
+    lengthLabel: '0:21',
+    frameSrc: '/samples/sample-09.webp',
+  },
+  {
+    context: 'Walk-ins',
+    lead: 'Two minutes,',
+    highlight: 'one thing you can copy',
+    lengthLabel: '0:26',
+    frameSrc: '/samples/sample-06.webp',
+  },
+  {
+    context: 'Repeat work',
+    lead: 'The five-minute check',
+    highlight: 'most people skip',
+    lengthLabel: '0:33',
+    frameSrc: '/samples/sample-11.webp',
+  },
+  {
+    context: 'Enquiries',
+    lead: 'What it costs,',
+    highlight: 'and why',
+    lengthLabel: '0:29',
+    frameSrc: '/samples/sample-10.webp',
+  },
+  {
+    context: 'Waitlist sign-ups',
+    lead: 'Start it now,',
+    highlight: 'not in spring',
+    lengthLabel: '0:18',
+    frameSrc: '/samples/sample-12.webp',
+  },
 ]
 
 /* -------------------------------------------------------------------------- */
@@ -138,47 +438,70 @@ export interface Audience {
   readonly body: string
   /** What they are actually buying. Phrased as a goal, never as a promise. */
   readonly goal: string
+  /** The plan 13 §1 pre-selects for this account type. */
+  readonly plan: string
+  /** Posts a week, from 13 §1. In the machine's voice where it renders. */
+  readonly cadence: string
   /**
-   * The `SHOWCASE_CARDS` niche whose sample hook this audience is shown with.
+   * The `SHOWCASE_CARDS` context whose sample hook this card is shown with.
    *
    * A name rather than an index, so reordering either list cannot silently
-   * pair a clinic with a gym's hook. A test pins every one of these to a card
-   * that exists.
+   * pair one card with another's hook. A test pins every one of these to a
+   * card that exists.
    *
-   * These are hooks for **fictional businesses**, which is why the section
+   * These are hooks from **fictional accounts**, which is why the section
    * rendering them carries the sample-data label — non-negotiable 7.
    */
-  readonly sampleNiche: string
+  readonly sampleContext: string
 }
 
+/**
+ * The four account types from 13 §1 — the **only** segmentation we use.
+ *
+ * These were four industries until v4 ("Coaches and consultants", "Clinics and
+ * wellness", "Studios and gyms", "Local services"). That card set was the
+ * clearest contradiction of 16 §1 anywhere on the site: a visitor who was none
+ * of those four read it as "not for me", and a visitor who was one of them
+ * read it as a vertical product. Account type and account stage are what
+ * actually change what we do — the plan, the input mix and the cadence all
+ * follow from them, and none of them follows from a trade.
+ */
 export const AUDIENCES: readonly Audience[] = [
   {
     number: '01',
-    title: 'Coaches and consultants',
-    body: 'Turn webinars, podcasts and client Q&As into a steady stream of authority.',
-    goal: 'discovery calls',
-    sampleNiche: 'Coach',
+    title: 'A business, growing an account it has',
+    body: 'There is a page, it posts rarely, and there are recordings nobody has cut up. That back catalogue is already a month of posts.',
+    goal: 'leads and booked work',
+    plan: 'Pilot, then Growth or Scale',
+    cadence: '7–21 posts a week',
+    sampleContext: 'Leads',
   },
   {
     number: '02',
-    title: 'Clinics and wellness',
-    body: 'Answer the questions patients ask every day, once, on camera.',
-    goal: 'booked appointments',
-    sampleNiche: 'Clinic',
+    title: 'A business, starting a new account',
+    body: 'Nothing on one platform or on any of them. We start it properly, with originals, rather than with three posts and silence.',
+    goal: 'a presence that compounds',
+    plan: 'Pilot, then Growth',
+    cadence: '7–14 posts a week',
+    sampleContext: 'Awareness',
   },
   {
     number: '03',
-    title: 'Studios and gyms',
-    body: 'Show the class, the coach and the result, every single day.',
-    goal: 'intro offers sold',
-    sampleNiche: 'Fitness studio',
+    title: 'An individual with an audience',
+    body: 'A creator, expert or personal brand already making long-form and posting a fraction of it. The raw material exists; the cutting does not.',
+    goal: 'reach that turns into work',
+    plan: 'Creator',
+    cadence: '14–28 posts a week',
+    sampleContext: 'Audience growth',
   },
   {
     number: '04',
-    title: 'Local services',
-    body: 'Stay the name people remember when they need you.',
-    goal: 'local bookings',
-    sampleNiche: 'Salon',
+    title: 'An individual starting from zero',
+    body: 'No audience yet, and no library to draw on. Three repeatable series beat sporadic effort, so that is where we start.',
+    goal: 'the first thousand followers',
+    plan: 'Studio, on the waitlist',
+    cadence: '7–14 posts a week',
+    sampleContext: 'Launching an account',
   },
 ]
 

@@ -3,6 +3,7 @@
 import { useId } from 'react'
 import type { AccountStatus, SocialAccount } from '@mirrorline/mock'
 import { Button, Card, Divider, cn } from '@mirrorline/ui'
+import Link from 'next/link'
 
 /**
  * "Connected accounts" — one row per platform, with its honest limits.
@@ -130,6 +131,19 @@ export function ConnectedAccountsCard({
           )
         })}
       </ul>
+
+      {/* Where Accounts is reached from, now the sidebar is back to eight
+          items. The Accounts screen already links here for "connect or
+          disconnect"; this is the other half of that pair. The split is
+          deliberate — this card decides which accounts we may post to, which
+          is the question with a consent record attached, and that one reports
+          how each is doing. */}
+      <Link
+        href="/app/accounts"
+        className="text-label text-primary underline-offset-4 hover:underline dark:text-accent"
+      >
+        See each account&rsquo;s own results
+      </Link>
     </Card>
   )
 }

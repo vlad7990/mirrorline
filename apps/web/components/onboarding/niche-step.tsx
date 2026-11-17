@@ -3,24 +3,40 @@
 /**
  * Step 3 — "Your niche and goal".
  *
- * Niche, the nearby niches the Trend Scout watches, the goal every post points
- * at, the link that carries the traffic, and the starting cadence.
+ * Who you are, what state the account is in, what you do in your own words,
+ * the nearby niches Trend Scout watches, the goal every post points at, the
+ * link that carries the traffic, and the starting cadence.
+ *
+ * **The industry is a text box, not a dropdown** (16 §1, 13 §1). It is asked
+ * once, and only so Trend Scout knows what to research. A list of industries
+ * would be a claim that we know which businesses we serve, and the whole of
+ * v4 rests on not needing to know.
+ *
+ * The step ends with the 14-day baseline notice, because that is the honest
+ * answer to the question this step raises — "so what will my numbers be?" —
+ * and holding it back until week three would make the first targets look like
+ * something we had decided in advance.
  *
  * Each removable chip keeps a 44px hit area: the small round button grows its
  * target with an ::after overlay rather than growing the chip.
  */
 
-import { Input, Label, Select, cn } from '@mirrorline/ui'
+import { Input, Label, SegmentedControl, Select, cn } from '@mirrorline/ui'
 import * as React from 'react'
 
 import {
+  AUDIENCE_OPTIONS,
   GOAL_OPTIONS,
   NEARBY_NICHE_SUGGESTIONS,
-  NICHE_OPTIONS,
   POSTS_PER_DAY_OPTIONS,
+  STAGE_OPTIONS,
 } from './onboarding-data'
 
 export interface NicheStepProps {
+  audience: string
+  onAudienceChange: (audience: string) => void
+  stage: string
+  onStageChange: (stage: string) => void
   niche: string
   onNicheChange: (niche: string) => void
   nearbyNiches: readonly string[]
@@ -34,6 +50,10 @@ export interface NicheStepProps {
 }
 
 export function NicheStep({
+  audience,
+  onAudienceChange,
+  stage,
+  onStageChange,
   niche,
   onNicheChange,
   nearbyNiches,
@@ -46,6 +66,7 @@ export function NicheStep({
   onPostsPerDayChange,
 }: NicheStepProps) {
   const nicheId = React.useId()
+  const nicheHintId = `${nicheId}-hint`
   const goalId = React.useId()
   const linkId = React.useId()
   const cadenceId = React.useId()
@@ -74,16 +95,38 @@ export function NicheStep({
         </p>
       </div>
 
-      {/* Niche ------------------------------------------------------------ */}
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor={nicheId}>Niche</Label>
-        <Select
-          id={nicheId}
-          options={NICHE_OPTIONS.map((option) => ({ ...option }))}
-          value={niche}
-          onValueChange={onNicheChange}
-          className="max-w-[320px]"
+      {/* Who, and what state the account is in — 16 §1's 2×2 -------------- */}
+      <div className="flex flex-wrap gap-5">
+        <SegmentedControl
+          label="You are"
+          items={AUDIENCE_OPTIONS.map((option) => ({ ...option }))}
+          value={audience}
+          onValueChange={onAudienceChange}
         />
+        <SegmentedControl
+          label="This account is"
+          items={STAGE_OPTIONS.map((option) => ({ ...option }))}
+          value={stage}
+          onValueChange={onStageChange}
+        />
+      </div>
+
+      {/* Niche, in the client's own words ---------------------------------- */}
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={nicheId}>What do you do?</Label>
+        <Input
+          id={nicheId}
+          type="text"
+          value={niche}
+          onChange={(event) => onNicheChange(event.target.value)}
+          aria-describedby={nicheHintId}
+          placeholder="Leadership coaching for first-time managers"
+          className="max-w-[420px]"
+        />
+        <p id={nicheHintId} className="m-0 text-meta text-text-muted">
+          In your own words — there is no list to pick from. We ask once, and only so Trend Scout
+          knows what to research. It never changes what you are shown or what you pay.
+        </p>
       </div>
 
       {/* Nearby niches ---------------------------------------------------- */}
@@ -179,6 +222,36 @@ export function NicheStep({
           We start here and raise it only while reach per post holds up.
         </p>
       </div>
+
+      <BaselineNotice />
+    </div>
+  )
+}
+
+/**
+ * 15 §1: key results are "proposed after a 14-day baseline + Niche Scan
+ * benchmarks".
+ *
+ * It sits at the end of the step that asks for the goal, because this is the
+ * moment someone is forming an expectation about what their numbers will be.
+ * The honest answer is that we do not know yet, and that saying so now costs
+ * less than a target invented on day one and missed on day thirty.
+ */
+function BaselineNotice() {
+  return (
+    <div className="flex flex-col gap-2 rounded-lg bg-surface-subtle p-4">
+      <h2 className="m-0 font-heading text-subtitle text-text">
+        Your first two weeks are a baseline
+      </h2>
+      <p className="m-0 text-meta text-text-muted">
+        We post, measure, and set no targets. After 14 days the Performance Analyst proposes key
+        results from what your account actually did, plus the benchmarks from your Niche Scan — and
+        you approve or change them.
+      </p>
+      <p className="m-0 text-caption text-text-muted">
+        Nobody can tell you on day one what your account will do. A number we made up today would be
+        a guess wearing a target&rsquo;s clothes.
+      </p>
     </div>
   )
 }

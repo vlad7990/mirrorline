@@ -50,11 +50,24 @@ export function cutMedia(cutId: string): React.ReactNode {
   if (reel === null) return undefined
   if (reel.videoSrc === undefined) return <ReelStill src={reel.posterSrc} />
   return (
-    <ReelMedia
-      posterSrc={reel.posterSrc}
-      startOffsetSeconds={startOffsetFor(cutId)}
-      videoSrc={reel.videoSrc}
-    />
+    <>
+      {/* The still sits *behind* the player rather than inside the player's
+          `poster` attribute, and that is a measurement rather than a taste.
+
+          A `poster` cannot be lazy: the browser fetches it at full size the
+          moment the element parses, wherever it sits on the page. Twelve of
+          them on the landing page is 917 KB — most of everything the home
+          page downloads — for a wall several screens below the fold.
+          `ReelStill` draws the same frame in the same box with
+          `loading="lazy"`, so a tile pays for its still when the reader is
+          nearly at it.
+
+          `preload="none"` already keeps the video file off the wire, so the
+          player on top costs nothing until it plays, and it covers this image
+          when it does. */}
+      <ReelStill src={reel.posterSrc} />
+      <ReelMedia startOffsetSeconds={startOffsetFor(cutId)} videoSrc={reel.videoSrc} />
+    </>
   )
 }
 

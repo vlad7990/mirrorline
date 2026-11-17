@@ -7,7 +7,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "pnpm --filter @mirrorline/web dev",
+    "dev": "node scripts/dev.mjs",
+    "dev:live": "node scripts/dev.mjs --live",
     "build": "pnpm --filter @mirrorline/web build",
     "start": "pnpm --filter @mirrorline/web start",
     "lint": "pnpm --filter @mirrorline/web lint",
@@ -15,6 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:copilot-live": "vitest run --config vitest.live.config.ts",
     "screenshots": "playwright test --project=screenshots",
     "licence-check": "node scripts/licence-check.mjs",
     "design:lint": "npx --yes @google/design.md lint DESIGN.md"
@@ -23,6 +25,7 @@
     "@axe-core/playwright": "4.11.0",
     "@playwright/test": "1.65.0",
     "@types/node": "22.10.5",
+    "sharp": "^0.35.5",
     "typescript": "5.7.3",
     "vitest": "5.1.0"
   }

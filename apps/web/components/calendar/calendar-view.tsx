@@ -28,12 +28,22 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
   type ReactNode,
   type Ref,
 } from 'react'
 
+import { useIsWide } from '@/lib/motion/use-is-wide'
+import { useScheduleMoves } from '@/lib/studio/schedule-moves-context'
+import {
+  applyMoves,
+  movedPost,
+  movedWeekPosts,
+  type PostMove,
+  timeSlotsFor,
+} from '@/lib/studio/schedule-moves'
+
 import { PostPanel } from './post-panel'
+import { type DropTarget, useChipDrag } from './use-chip-drag'
 import { WeekGrid } from './week-grid'
 
 /* -------------------------------------------------------------------------- */
@@ -44,10 +54,9 @@ const FIRST_DAY = weekSchedule.days[0] ?? null
 const TODAY_INDEX = weekSchedule.days.findIndex((day) => day.isToday)
 const TOMORROW = TODAY_INDEX >= 0 ? (weekSchedule.days[TODAY_INDEX + 1] ?? null) : null
 
-/** Tomorrow's chips back the batch bar; its counts come from this list. */
-const TOMORROW_POSTS: readonly ScheduledPost[] = TOMORROW
-  ? weekPosts.filter((post) => post.date === TOMORROW.date)
-  : []
+// Tomorrow's chips back the batch bar. The list used to be a module constant;
+// it is now derived per render, because a post dragged on or off tomorrow
+// changes who is waiting for approval and the bar has to say so.
 
 /** The mockup opens on the second chip of tomorrow's first platform row. */
 const DEFAULT_SELECTION_INDEX = 1
@@ -86,9 +95,6 @@ const MODE_NOTES: Readonly<Record<string, string>> = {
 
 /** How long a confirmation stays on screen. */
 const TOAST_MS = 4000
-/** The inline aside appears at this width; below it the drawer takes over. */
-const WIDE_QUERY = '(min-width: 1280px)'
-
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -100,30 +106,29 @@ interface ToastState {
   readonly description: string
 }
 
-function useIsWide(): boolean {
-  const subscribe = useMemo(
-    () => (onChange: () => void) => {
-      const list = window.matchMedia(WIDE_QUERY)
-      list.addEventListener('change', onChange)
-      return () => list.removeEventListener('change', onChange)
-    },
-    [],
-  )
-
-  return useSyncExternalStore(
-    subscribe,
-    () => window.matchMedia(WIDE_QUERY).matches,
-    // The server has no viewport; start narrow and let hydration correct it.
-    () => false,
-  )
-}
-
 /* -------------------------------------------------------------------------- */
 /* View                                                                        */
 /* -------------------------------------------------------------------------- */
 
+/** The days, in grid order, for the "Move to…" menu. */
+const DAY_OPTIONS = weekSchedule.days.map((day) => ({
+  value: day.date,
+  label: `${day.dayLabel} ${day.dayOfMonth}`,
+}))
+
 export function CalendarView() {
   const [overrides, setOverrides] = useState<StatusOverrides>({})
+  /**
+   * Reschedules made in this session, keyed by post.
+   *
+   * **Held in the studio layout rather than here**, since C3. They were local
+   * state while the calendar was the only thing that could reschedule
+   * anything; the co-pilot's Approve is the second, and it has to perform the
+   * same move rather than a second copy of it (18 §2.3). The lifetime is
+   * unchanged — a client-side navigation keeps them, a reload does not, which
+   * is what "not saved" promises.
+   */
+  const { moves, movePost } = useScheduleMoves()
   const [selectedPostId, setSelectedPostId] = useState<string | null>(DEFAULT_POST_ID)
   const [isDrawerOpen, setDrawerOpen] = useState(false)
   const [mode, setMode] = useState<string>(DEFAULT_MODE)
@@ -166,9 +171,54 @@ export function CalendarView() {
     setToast({ title: 'Sent back', description: 'It stays in needs review until you approve it.' })
   }, [])
 
+  /** The week as the grid should draw it, with this session's moves applied. */
+  const schedule = useMemo(() => applyMoves(weekSchedule, moves), [moves])
+  const posts = useMemo(() => movedWeekPosts(weekPosts, moves), [moves])
+
+  /**
+   * One place both paths land, so the drag and the menu cannot drift apart —
+   * same state change, same confirmation, same wording about saving.
+   */
+  const handleMove = useCallback(
+    (postId: string, move: PostMove) => {
+      // `movePost` reports whether anything changed. A drop onto the day a
+      // post is already in is not a move, and a toast for it would be the
+      // screen claiming to have done something it did not.
+      if (!movePost(postId, move)) return
+
+      setToast({
+        title: `Moved to ${DAY_LABEL_BY_DATE[move.date] ?? 'another day'}, ${move.timeLabel}`,
+        description: 'Sample data, not saved. Nothing has been rescheduled on your accounts.',
+      })
+    },
+    [movePost],
+  )
+
+  /**
+   * A drop changes the day and keeps the time, because a day column has no
+   * finer target inside it. Inventing a time from the drop's y position would
+   * be a number the reader did not choose.
+   */
+  const handleDrop = useCallback(
+    (postId: string, target: DropTarget) => {
+      const post = posts.find((candidate) => candidate.id === postId)
+      if (!post) return
+      handleMove(postId, { date: target.date, time24: post.time24, timeLabel: post.timeLabel })
+    },
+    [handleMove, posts],
+  )
+
+  const { drag, onChipPointerDown } = useChipDrag(handleDrop)
+
+  /** Tomorrow's set changes when a post is moved on or off that day. */
+  const tomorrowPosts = useMemo(
+    () => (TOMORROW ? posts.filter((post) => post.date === TOMORROW.date) : []),
+    [posts],
+  )
+
   const pendingTomorrow = useMemo(
-    () => TOMORROW_POSTS.filter((post) => (overrides[post.id] ?? post.status) === 'needs-review'),
-    [overrides],
+    () => tomorrowPosts.filter((post) => (overrides[post.id] ?? post.status) === 'needs-review'),
+    [overrides, tomorrowPosts],
   )
 
   const handleApproveAll = useCallback(() => {
@@ -185,7 +235,10 @@ export function CalendarView() {
     setApproveAllCount((previous) => previous + 1)
   }, [pendingTomorrow])
 
-  const selectedPost = selectedPostId ? (POST_BY_ID.get(selectedPostId) ?? null) : null
+  // Read through the moves, or the panel would keep describing the day the
+  // post was on before it was dragged.
+  const selectedBase = selectedPostId ? (POST_BY_ID.get(selectedPostId) ?? null) : null
+  const selectedPost = selectedBase ? movedPost(selectedBase, moves) : null
 
   const panel = selectedPost ? (
     <PostPanel
@@ -195,6 +248,9 @@ export function CalendarView() {
       dayLabel={DAY_LABEL_BY_DATE[selectedPost.date] ?? ''}
       onApprove={handleApprove}
       onSendBack={handleSendBack}
+      days={DAY_OPTIONS}
+      slots={timeSlotsFor(weekSchedule, selectedPost.platform)}
+      onMove={handleMove}
     />
   ) : (
     <p className="m-0 text-body text-text-muted">Choose a post on the calendar to review it.</p>
@@ -237,12 +293,22 @@ export function CalendarView() {
           <h2 id="week-grid-heading" className="sr-only">
             Posts this week, by platform
           </h2>
+          {/* Non-negotiable 7: demo data is labelled where it is shown. It
+              says "not saved" rather than only "sample", because the thing a
+              reader is about to do here is move a post — and a drag that
+              appears to work and is gone on reload is the dishonest part. */}
+          <p className="m-0 mb-2.5 text-caption text-text-muted">
+            Drag a post to another day, or use <strong className="font-semibold">Move to…</strong>{' '}
+            on the right. Sample data, not saved.
+          </p>
           <WeekGrid
-            schedule={weekSchedule}
+            schedule={schedule}
             highlightDate={TOMORROW?.date ?? null}
             statusOf={statusOf}
             selectedPostId={selectedPostId}
             onSelect={handleSelect}
+            drag={drag}
+            onChipPointerDown={onChipPointerDown}
           />
         </Card>
 
@@ -254,15 +320,42 @@ export function CalendarView() {
         </Card>
       </div>
 
+      {/* The ghost. `fixed` and `pointer-events-none`, so it never becomes
+          the element under the pointer and steals its own drop target. */}
+      {drag ? (
+        <div
+          aria-hidden="true"
+          data-drag-ghost="true"
+          className="pointer-events-none fixed z-50 w-[150px] -translate-x-1/2 -translate-y-1/2 rounded-md border border-ink bg-surface p-1 opacity-90 shadow-[0_8px_24px_rgba(0,0,0,0.28)]"
+          style={{ left: drag.x, top: drag.y }}
+        >
+          <span className="machine block text-[11px] font-bold leading-tight text-text">
+            {drag.timeLabel}
+          </span>
+          <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-[11px] leading-tight text-text">
+            {drag.title}
+          </span>
+          <span className="mt-0.5 block text-[9px] leading-tight text-text-muted">
+            {drag.over ? 'Drop to move' : 'Drop on a day in this row'}
+          </span>
+        </div>
+      ) : null}
+
       <BatchBar
-        readyCount={TOMORROW_POSTS.length}
+        readyCount={tomorrowPosts.length}
         pendingCount={pendingTomorrow.length}
         dayLabel={TOMORROW ? (DAY_LABEL_BY_DATE[TOMORROW.date] ?? '') : ''}
         messageRef={batchMessageRef}
         onApproveAll={handleApproveAll}
       />
 
-      {/* Below xl the same panel arrives as a focus-trapped, Escape-closable drawer. */}
+      {/* Below xl the same panel arrives as a focus-trapped, Escape-closable
+          drawer. The aside above is `hidden xl:block` — CSS — so this `open`
+          expression is the whole of this route's exposure to viewport width,
+          and `isDrawerOpen` starts `false`, so the first render is the same
+          tree at 390 as at 1440. That is the short form of why React #418
+          cannot be width-specific here; the long form is in
+          `lib/motion/use-is-wide.ts`, and the history is D55 and D63. */}
       <Dialog open={!isWide && isDrawerOpen} onOpenChange={setDrawerOpen}>
         <Drawer>
           <DialogTitle>Selected post</DialogTitle>

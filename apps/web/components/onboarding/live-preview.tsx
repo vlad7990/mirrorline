@@ -28,7 +28,11 @@ export function LivePreview({ colourId, fontValue, tone }: LivePreviewProps) {
   const font = findFont(fontValue)
 
   return (
-    <aside aria-label="Live preview" className="flex flex-col items-center gap-3">
+    /* `section`, not `aside`: this sits inside the onboarding `main`, and a
+       complementary landmark nested in another landmark is an axe `moderate`
+       — blocking since D75. A labelled `section` rather than a bare `div`
+       because "Live preview" is worth hearing before the swatches. */
+    <section aria-label="Live preview" className="flex flex-col items-center gap-3">
       <span className="eyebrow">Live preview</span>
 
       {/* DESIGN.md "Colors — Viewer": the preview sits on the lightbox, "the
@@ -70,6 +74,6 @@ export function LivePreview({ colourId, fontValue, tone }: LivePreviewProps) {
       <p className="m-0 max-w-[220px] text-center text-meta text-text-muted" aria-live="polite">
         {describeTone(tone)} Updates as you change your brand.
       </p>
-    </aside>
+    </section>
   )
 }

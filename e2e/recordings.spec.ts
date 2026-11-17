@@ -1,0 +1,248 @@
+/**
+ * The screen recordings spec 17 §5 asks for: 10–15s of each motion-v2 change,
+ * desktop and mobile, written to docs/screens-built/motion-v2/.
+ *
+ * **Deliberately not part of the normal suite.** It asserts almost nothing —
+ * the output is a video for a human to watch — and it costs a quarter of a
+ * minute per clip. Skipped unless `MOTION_RECORD` is set, so `pnpm test:e2e`
+ * stays fast and a recording failure can never read as a product failure:
+ *
+ *     MOTION_RECORD=1 pnpm exec playwright test e2e/recordings.spec.ts \
+ *       --project=chromium --project=mobile
+ *
+ * Scroll-driven motion cannot be captured by sitting still, so each clip
+ * drives the page the way a reader would: short steps with a pause between
+ * them. `scrollBy({ behavior: 'smooth' })` would hand the pacing to the
+ * browser and make the clip length unpredictable, so the steps are explicit.
+ *
+ * `screenshots.spec.ts` is the still-image sweep and disables animation. This
+ * is its opposite number and must not be folded into it.
+ */
+
+import { mkdirSync } from 'node:fs'
+import path from 'node:path'
+
+import { expect, test, type Page, type TestInfo } from '@playwright/test'
+
+const IS_RECORDING = Boolean(process.env.MOTION_RECORD)
+const OUTPUT_DIR = path.join(process.cwd(), 'docs', 'screens-built', 'motion-v2')
+
+/** ~12s of scrolling: 24 steps at 500ms. Inside spec 17's 10–15s window. */
+const SCROLL_STEPS = 24
+const STEP_PAUSE_MS = 500
+
+/**
+ * Videos are only finalised once the page closes, so the save happens after
+ * the close rather than at the end of the body. The project name is in the
+ * filename because the same clip is recorded at both viewports.
+ */
+async function save(page: Page, testInfo: TestInfo, clip: string) {
+  const video = page.video()
+  if (!video) throw new Error('no video: run with --project and video enabled')
+
+  mkdirSync(OUTPUT_DIR, { recursive: true })
+  await page.close()
+  await video.saveAs(path.join(OUTPUT_DIR, `${clip}-${testInfo.project.name}.webm`))
+}
+
+// Top-level, which Playwright requires: `test.use` inside a describe is a
+// runtime error, not a scoping nicety. Harmless for the rest of the suite
+// because the tests below are the only ones in this file and they skip
+// unless MOTION_RECORD is set.
+test.use({ video: { mode: 'on', size: { width: 1280, height: 800 } } })
+
+test.describe('motion-v2 recordings', () => {
+  test.skip(!IS_RECORDING, 'set MOTION_RECORD=1 to record; see the file header')
+
+  // Every step is a wait, so the default timeout cannot cover a clip plus the
+  // page load in front of it.
+  test.setTimeout(120_000)
+
+  test('home, scrolled end to end', async ({ page }, testInfo) => {
+    await page.goto('/')
+    // The hero must have settled first, or the opening second of the clip is a
+    // layout rather than the motion it exists to show.
+    await expect(page.locator('h1').first()).toBeVisible()
+
+    // One assertion, so a clip of a broken page fails instead of shipping.
+    // The rails are what this PR added and they are on every section.
+    // A condition rather than a `count()` reading, for the reason spelled out
+    // in motion.spec.ts: this page is behind a `<Suspense fallback={null}>`
+    // and is briefly empty after `load`.
+    await expect(page.locator('.section-rail').nth(5)).toBeAttached()
+
+    const step = await page.evaluate(() => Math.round(window.innerHeight * 0.55))
+    for (let index = 0; index < SCROLL_STEPS; index += 1) {
+      await page.mouse.wheel(0, step)
+      await page.waitForTimeout(STEP_PAUSE_MS)
+    }
+
+    await save(page, testInfo, 'home-rails-and-reveals')
+  })
+
+  test('the hero, settling and then scrolled', async ({ page }, testInfo) => {
+    await page.goto('/')
+    await expect(page.locator('h1').first()).toBeVisible()
+
+    // Hold on the hero first: the headline's line reveal and the inset
+    // preview's first loop both happen on load, and a clip that starts
+    // scrolling immediately misses the half of this PR that is not parallax.
+    await page.waitForTimeout(3_500)
+
+    // Then a slow drift down, which is where the three depths separate.
+    for (let index = 0; index < 18; index += 1) {
+      await page.mouse.wheel(0, 60)
+      await page.waitForTimeout(430)
+    }
+
+    await save(page, testInfo, 'hero-depth-and-headline')
+  })
+
+  test('the Output sequence, start to finish', async ({ page }, testInfo) => {
+    await page.goto('/')
+
+    const stage = page.locator('.output-stage')
+    await stage.scrollIntoViewIfNeeded()
+    // GSAP arms the stage a tick after paint on a wide screen. On the mobile
+    // project it never arms, and the clip is the snap row instead — which is
+    // the mobile version 17 §3 asks to see.
+    await page.waitForTimeout(1_200)
+
+    // Smaller steps than the home clip: this is 250vh of pinned sequence, and
+    // stepping it at the page's pace would skip whole stages between frames.
+    for (let index = 0; index < 30; index += 1) {
+      await page.mouse.wheel(0, 120)
+      await page.waitForTimeout(400)
+    }
+
+    // A clip of a broken section is worse than no clip, so the end state is
+    // asserted: every verdict legible by the time the sequence has run.
+    await expect(page.locator('[data-cut-frame] [data-status-chip]').first()).toBeVisible()
+
+    await save(page, testInfo, 'output-multiply-sequence')
+  })
+
+  test('the argument sections and the metrics preview', async ({ page }, testInfo) => {
+    await page.goto('/')
+
+    // Start at the 2026 cards and run through the contrast rows, the recipe
+    // and the metrics band — the four effects of PR4 in the order a reader
+    // meets them.
+    // The 2026 cards, which are the grid again (D44) — still the right place
+    // to start, because the contrast rows and the recipe follow them.
+    const start = page.locator('#changed-heading')
+    await start.scrollIntoViewIfNeeded()
+    await page.waitForTimeout(700)
+
+    for (let index = 0; index < 26; index += 1) {
+      await page.mouse.wheel(0, 150)
+      await page.waitForTimeout(450)
+    }
+
+    await save(page, testInfo, 'argument-and-metrics')
+  })
+
+  test('the account picker, switching', async ({ page }, testInfo) => {
+    await page.goto('/')
+
+    const track = page.locator('.choice-track').first()
+    await track.scrollIntoViewIfNeeded()
+    await expect(track).toHaveAttribute('data-hydrated', 'true')
+
+    const options = track.getByRole('radio')
+    // Back and forth, slowly enough that the pill is seen travelling rather
+    // than teleporting between two frames.
+    for (let index = 0; index < 8; index += 1) {
+      await options.nth(index % 2).click()
+      await page.waitForTimeout(1_200)
+    }
+
+    await save(page, testInfo, 'account-picker-pill')
+  })
+
+  test('the KPI figures ticking, and the submit button drawing its check', async ({
+    page,
+  }, testInfo) => {
+    // Nothing is stored: the POST is intercepted. The delay is what makes the
+    // spinner long enough to see at ordinary playback speed.
+    await page.route('**/api/niche-scan', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 2_200))
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true }),
+      })
+    })
+
+    // Part one: arriving on a Results tab ticks that tab's numbers. Two
+    // navigations, because the point is that it happens on *arrival* — one
+    // page load would not show that.
+    await page.goto('/app/results')
+    await page.waitForTimeout(2_600)
+    await page.goto('/app/results?tab=accounts')
+    await page.waitForTimeout(2_600)
+
+    // Part two: the submit button.
+    // Four steps now (19 v2 ★/niche-scan 2, D54), so the recording walks
+    // them. That is also the better recording: the morph becomes the end of a
+    // short sequence rather than something that happens to a form nobody
+    // watched being filled in.
+    await page.goto('/niche-scan')
+    await page.locator('#scan-niche').fill('A two-person bookkeeping practice for tradespeople')
+    await page.getByRole('button', { name: 'Next' }).click()
+    await page.waitForTimeout(400)
+    await page.getByRole('button', { name: 'Next' }).click()
+    await page.waitForTimeout(400)
+    await page.getByRole('button', { name: 'Next' }).click()
+    await page.waitForTimeout(400)
+    await page.locator('#scan-email').fill('someone@example.com')
+
+    const submit = page.locator('.morph-submit')
+    await submit.scrollIntoViewIfNeeded()
+    await page.waitForTimeout(900)
+    await submit.click()
+    // Through sending, the drawn mark, and the thank-you replacing the form.
+    await expect(page.getByRole('heading', { name: 'That is with us.' })).toBeVisible({
+      timeout: 15_000,
+    })
+    await page.waitForTimeout(1_200)
+
+    await save(page, testInfo, 'studio-ticks-and-form')
+  })
+
+  test('the oversized word drifting, and the pages changing', async ({ page }, testInfo) => {
+    await page.goto('/')
+
+    // Part one: the word. Approach the band from above so the drift is seen
+    // against content moving over it at its own, faster rate — the ratio is
+    // the effect, and a clip that starts level with the word shows neither.
+    const word = page.locator('.band-word')
+    await word.scrollIntoViewIfNeeded()
+    await page.mouse.wheel(0, -700)
+    await page.waitForTimeout(600)
+
+    for (let index = 0; index < 16; index += 1) {
+      await page.mouse.wheel(0, 110)
+      await page.waitForTimeout(420)
+    }
+
+    // Part two: three navigations, with a beat on each page so the clip shows
+    // the arrival rather than a blur of header.
+    //
+    // Whichever link happens to be on screen, rather than the header's: at
+    // 390px the header's are inside a drawer, and driving a drawer open and
+    // shut three times is a clip about a drawer. The transition is a property
+    // of the navigation, not of the control that started it, so the footer's
+    // copy of the same link records the same thing.
+    for (const href of ['/pricing', '/product', '/metrics']) {
+      const link = page.locator(`a[href="${href}"]:visible`).first()
+      await link.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(400)
+      await link.click()
+      await expect(page).toHaveURL(new RegExp(`${href}$`))
+      await page.waitForTimeout(1_400)
+    }
+
+    await save(page, testInfo, 'word-band-and-page-transitions')
+  })
+})

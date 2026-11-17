@@ -1,35 +1,33 @@
-node_modules/
-.next/
-.env
-.env.local
-.env.*.local
-.vercel/
-dist/
-coverage/
+
 __pycache__/
-.venv/
-automation/n8n/data/
-.DS_Store
-
-# Leads captured by the website demo form. Local only — this is contact data,
-# and it has no business in git.
 .data/
-
-# Playwright
-test-results/
-playwright-report/
-blob-report/
-.playwright/
-
-# Build caches
-*.tsbuildinfo
-.turbo/
-.vercel
+.DS_Store
+.env
+.env.*.local
+.env.local
 .env*
-
-# Engine v0. Rendered samples are client footage and can be hundreds of MB;
-# they are made on demand from a video and a brand file, so git never needs
-# them. uv.lock is NOT ignored — CI installs from it.
+.next/
+.playwright/
 .pytest_cache/
-services/pipeline/samples/
+.turbo/
+.venv/
+.vercel
+.vercel/
+*.tsbuildinfo
+# and it has no business in git.
+# Build caches
+# Engine v0. Rendered samples are client footage and can be hundreds of MB;
+# Leads captured by the website demo form. Local only — this is contact data,
+# Playwright
+# them. uv.lock is NOT ignored — CI installs from it.
+# they are made on demand from a video and a brand file, so git never needs
+automation/n8n/data/
+blob-report/
+coverage/
+dist/
+node_modules/
+playwright-report/
 services/pipeline/**/*.mp4
+services/pipeline/samples/
+test-results/
+.gstack/

@@ -4,7 +4,9 @@
 
 ## What we are building
 
-An AI content studio for **coaches, consultants and local service businesses**. A client uploads their own long videos (podcasts, webinars, talks). Mirrorline turns them, plus video formats rising in the client's niche, into original short vertical videos. A team of **seven AI agents** then posts them several times a day to the client's own Instagram, TikTok and YouTube accounts, through official APIs, and learns from the results.
+A multi-agent short-video growth service for **everyone**: any business or individual, in any industry, with a new or an existing account. It is **industry-agnostic** — we do not build industry pages, because the agents research each account's niche (the Niche Scan) and adapt to it. There are two ways in: the client **sends** their own long videos (podcasts, webinars, talks), or **we create** originals remade from formats growing in their niche — the structure only, never other people's footage or audio, with AI scenes always labelled. Either way a team of **seven AI agents** turns them into original short vertical videos and posts them several times a day to the client's own Instagram, TikTok and YouTube accounts, through official APIs, then learns from the results. Every account tracks its own goal through KPIs on its dashboard.
+
+> Corrected 2026-11-13 (D38). This paragraph used to read "for coaches, consultants and local service businesses", which `docs/specs/11 §5`, `13` and `16 §1` supersede. Segmentation is by account type and goal only, never by industry.
 
 Agents: Trend Scout · Remake Producer · Multiplier · Compliance · Client Concierge · Publisher · Performance Analyst (spec: `docs/specs/04_AGENTS_SPEC.md`).
 
@@ -48,6 +50,43 @@ Full plan: `docs/plan/30_DAY_PLAN.md`. Current phase: **Day 0–1, the overnight
 
 If sources conflict, the higher one wins. Log every decision in `docs/DECISIONS.md`.
 
+## Sources of truth for content, structure and scope
+
+Added 2026-11-13 at Step 0 of `docs/prompts/MASTER_PROMPT_v4.md`. The list
+above governs **design**; this one governs **what the product is, what it
+says, and which pages exist**. Higher wins:
+
+1. `docs/specs/09_SERVICES.md` — the services, the plans and their prices
+2. `docs/specs/16_SITE_MAP_AND_GAPS.md` — the site map, the home-page section
+   order, and which routes and app screens are New or Update
+3. `docs/specs/15_METRICS_AND_KPIS.md` — goals, the KPI tiers, the Results
+   tabs and the honesty rules
+4. `docs/specs/11_MARKET_RESEARCH.md` — P1–P10 and the evidence behind them
+5. `docs/specs/13_PERSONA_ALIGNMENT.md` — account types and goals, the only
+   segmentation we use
+6. `docs/specs/14_STORY_AND_FUNNEL.md` — the story beats, the funnel and the
+   events we track
+7. `docs/specs/12_NICHE_PLAYBOOK.md` — the Niche Scan, its allowed and banned
+   sources, and the internal starting recipes
+8. `docs/specs/10_SALES_FOCUS.md` — our own outreach, by account type and goal
+
+**The design is locked, and no spec in this list overrides it.** Where a
+content spec implies a visual change, the design wins and the conflict is
+logged. Only the layout fixes named in Step 2 of the master prompt are
+allowed; anything else visual is a bug to revert. `DESIGN.md`, the
+design-token files and the existing `@mirrorline/ui` components are not edited
+except to fix a bug.
+
+**Specs 01–08 are the earlier, narrower product** and are superseded by this
+list wherever they disagree — most of all on who we serve (`01`) and on colour
+and type (`02`). They remain correct on voice, the studio screens, the agents'
+mechanics, the reuse list and the mock data. Every conflict found at Step 0 is
+written up in `docs/DECISIONS.md` as **D38**, and what I understood from all of
+it is in `docs/RESEARCH_BRIEF.md`.
+
+Every pull request description must name the P-number(s), the story beat, or
+the KPI tier it serves.
+
 ## Stack
 
 - **Web:** Next.js (App Router) + TypeScript + Tailwind + shadcn/ui + lucide icons; pnpm.
@@ -83,7 +122,7 @@ docs/                Specs, plan, designs, decisions, progress
    - Demo data is labelled "Sample data" on public pages.
 8. **Old drives:** code from the GenAIUniq drives is NOT in this repo and must not be added until a written IP assignment exists. Then only modules on the reuse list in `docs/specs/07_CLAUDE_CODE_HANDOFF.md`.
 9. **Secrets:** never in code or commits; use `.env.local` (git-ignored). Never print secrets.
-10. **Licences:** dependencies must be MIT, Apache-2.0, BSD, ISC or MPL-2.0. AGPL tools (Postiz) run only as separate, unmodified services. FLUX.1 dev is not allowed. **One named exception: `gsap`**, on Vlad's decision (D33) — free for commercial use including all plugins, but not an OSI-permissive licence: Webflow may terminate it at their discretion, may amend the terms unilaterally, and bars use in tools competing with their visual animation builder. Pinned to that one package in `scripts/licence-check.mjs`; it widens nothing else.
+10. **Licences:** dependencies must be MIT, Apache-2.0, BSD, ISC or MPL-2.0. AGPL tools (Postiz) run only as separate, unmodified services. FLUX.1 dev is not allowed. **One named exception, and it is scoped: the GSAP family, on the public marketing site only** — `gsap` core, ScrollTrigger, SplitText and `@gsap/react` for `useGSAP`. Vlad's decision: D33 admitted it, **D41 scoped it**. Free for commercial use under the GSAP Standard No-Charge licence (https://gsap.com/standard-license/) and we are not reselling it — but it is not an OSI-permissive licence: Webflow may terminate it at their discretion, may amend the terms unilaterally, and bars use in tools competing with their visual animation builder. **Not allowed in the studio app, `packages/ui`, the Remotion templates, or any customer-facing animation tooling** — those stay on CSS and `motion` (MIT, D19). **ScrollSmoother and Lenis are banned everywhere**, marketing included: both replace native scroll. Enforced by two gates in `pnpm licence-check` — the allow-list pins the exception to those package names and that licence URL, and `scripts/gsap-scope.mjs` denies a GSAP import from outside the marketing scopes by default. It widens nothing else.
 11. **Money and production:** no paid API calls beyond test mode; no production deploys; no real social posting.
 
 ## Working rules (auto mode, unattended)

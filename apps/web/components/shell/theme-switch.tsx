@@ -40,7 +40,21 @@ export function ThemeSwitch({ className }: { className?: string }) {
       <legend className="sr-only">Theme</legend>
       <div className="flex gap-1 rounded-md border border-border bg-background p-1">
         {OPTIONS.map(({ value, label, Icon }) => (
-          <label key={value} className="flex-1">
+          // `relative` is not spacing. The input below is `sr-only`, which is
+          // `position: absolute`, so without a positioned ancestor it resolves
+          // against whatever is positioned further up the tree — or the
+          // initial containing block — and the hidden input ends up somewhere
+          // else on the page entirely. Measured in the footer before this:
+          // the input sat at the page origin rather than at its own segment.
+          //
+          // Nothing user-facing was broken by that — a click lands on the
+          // visible span and the label forwards it, and the keyboard never
+          // cared where the input was painted. What it breaks is anything
+          // that reasons about the control's position: a stray absolutely
+          // positioned element in an overflow container is the same failure
+          // `.scroll-x` guards against in theme.css, and there it widened the
+          // page.
+          <label key={value} className="relative flex-1">
             <input
               type="radio"
               name={groupName}

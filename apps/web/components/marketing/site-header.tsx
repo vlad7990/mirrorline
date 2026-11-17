@@ -13,33 +13,28 @@
  * announcement visible rather than letting it scroll away. The marketing
  * layout reserves the height with padding so nothing hides underneath.
  *
- * The announcement is the capacity line from D21, restyled. It is the one
- * piece of urgency we can honestly use: a fact about how many clients we will
- * take, not a claim about how many we have. See `PILOT_PLACES`.
+ * The announcement used to carry the capacity line from D21 — "4 places this
+ * month", from a constant that was never once edited. A scarcity figure that
+ * does not move is manufactured scarcity, which non-negotiable 7 forbids, so
+ * it is gone (D39). The strip stays, carrying two things that are true.
+ *
+ * The nav comes from `lib/site-map.ts`, filtered to routes that exist, so a
+ * preview never advertises a page that has not landed.
  */
 
-import { LogoWordmark, cn } from '@mirrorline/ui'
+import { Button, LogoWordmark, cn } from '@mirrorline/ui'
 import { ArrowRight, Menu } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import * as React from 'react'
 
 import { LeadDialogButton } from '@/app/(marketing)/components/lead-form'
+import { NAV_LINKS, NICHE_SCAN, liveLinks } from '@/lib/site-map'
 
-import { PILOT_PLACES } from './capacity-bar'
 import { Modal } from './modal'
 
-export interface NavLink {
-  readonly href: string
-  readonly label: string
-}
-
-export const NAV_LINKS: readonly NavLink[] = [
-  { href: '/product', label: 'Product' },
-  { href: '/agents', label: 'Agents' },
-  { href: '/trust', label: 'Trust' },
-  { href: '/pricing', label: 'Pricing' },
-]
+/** 16 §4's nav, minus anything whose route has not landed yet. */
+const VISIBLE_NAV_LINKS = liveLinks(NAV_LINKS)
 
 /** Past this, the nav row goes translucent. The handoff's number. */
 const BLUR_AFTER_PX = 40
@@ -105,24 +100,31 @@ export function SiteHeader() {
         />
       </div>
 
-      {PILOT_PLACES > 0 ? (
-        <aside
-          aria-label="Pilot availability"
-          className="flex min-h-10 items-center justify-center gap-2 bg-gold-gradient px-5 py-2 text-center"
+      {/* The announcement strip keeps the handoff's gold band and loses the
+          invented number. It used to read "4 places this month" from a
+          hard-coded `PILOT_PLACES = 4` that had never once been changed —
+          which is the manufactured scarcity non-negotiable 7 exists to
+          prevent, and the master prompt's "fake 4 places limit". What is left
+          is true without qualification: we are booking pilots, and the scan
+          costs nothing. */}
+      {/* A `div`, not an `aside`. It sat inside the `header` — a complementary
+          landmark nested in the banner — which axe files as `moderate` and the
+          gate ignored until D75. The strip is part of the banner rather than
+          something alongside it, and its `aria-label` only ever named a
+          landmark that should not have existed: the sentence reads perfectly
+          well in the header's own flow. */}
+      <div className="flex min-h-10 items-center justify-center gap-2 bg-gold-gradient px-5 py-2 text-center">
+        <p className="m-0 text-label font-semibold text-ink-900">
+          Now booking pilots · the Niche Scan is free
+        </p>
+        <Link
+          href="/pricing"
+          className="inline-flex items-center text-label font-semibold text-ink-900 underline-offset-4 hover:underline"
         >
-          <p className="m-0 text-label font-semibold text-ink-900">
-            Now booking pilots · <span className="machine">{PILOT_PLACES}</span>{' '}
-            {PILOT_PLACES === 1 ? 'place' : 'places'} this month
-          </p>
-          <Link
-            href="/pricing"
-            className="inline-flex items-center text-label font-semibold text-ink-900 underline-offset-4 hover:underline"
-          >
-            <span className="sr-only">See pricing</span>
-            <ArrowRight aria-hidden="true" className="size-4" strokeWidth={2.2} />
-          </Link>
-        </aside>
-      ) : null}
+          <span className="sr-only">See pricing</span>
+          <ArrowRight aria-hidden="true" className="size-4" strokeWidth={2.2} />
+        </Link>
+      </div>
 
       {/* The nav row. Opaque at rest so the hero does not bleed through on
           first paint; translucent once there is something to blur. */}
@@ -145,8 +147,8 @@ export function SiteHeader() {
             <LogoWordmark size={26} markClassName="text-gold-bright" />
           </Link>
 
-          <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
-            {NAV_LINKS.map((link) => {
+          <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
+            {VISIBLE_NAV_LINKS.map((link) => {
               const isActive = pathname === link.href
               return (
                 <Link
@@ -171,22 +173,31 @@ export function SiteHeader() {
             })}
           </nav>
 
-          <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden items-center gap-3 lg:flex">
             <Link
               href="/sign-in"
               className="inline-flex h-11 items-center px-2 text-label font-medium text-on-ink-900"
             >
               Sign in
             </Link>
-            <LeadDialogButton intent="demo" variant="gold">
-              Book a private demo
-            </LeadDialogButton>
+            {/* 14 §3: one main button for everyone, the free Niche Scan. Until
+                that route lands it stays the lead dialog, so the button is
+                never a link to a 404. */}
+            {NICHE_SCAN.isLive ? (
+              <Button asChild size="lg" variant="gold">
+                <Link href={NICHE_SCAN.href}>{NICHE_SCAN.label}</Link>
+              </Button>
+            ) : (
+              <LeadDialogButton intent="demo" variant="gold">
+                {NICHE_SCAN.label}
+              </LeadDialogButton>
+            )}
           </div>
 
           <button
             type="button"
             onClick={() => setIsDrawerOpen(true)}
-            className="press inline-grid size-11 place-items-center rounded-md border border-ink-line-strong bg-ink-700 text-on-ink-900 md:hidden"
+            className="press inline-grid size-11 place-items-center rounded-md border border-ink-line-strong bg-ink-700 text-on-ink-900 lg:hidden"
             aria-haspopup="dialog"
             aria-expanded={isDrawerOpen}
           >
@@ -204,7 +215,7 @@ export function SiteHeader() {
         closeLabel="Close the menu"
       >
         <nav aria-label="Main" className="flex flex-col gap-1">
-          {NAV_LINKS.map((link) => (
+          {VISIBLE_NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}

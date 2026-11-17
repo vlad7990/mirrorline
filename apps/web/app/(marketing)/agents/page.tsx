@@ -5,9 +5,16 @@
  * docs/specs/04_AGENTS_SPEC.md. Each agent gets what it does, what it will not
  * do (the spec's "Limits" column) and where it sits in the loop. The page ends
  * on the compliance gate, because that is the rule everything else depends on.
+ *
+ * **F6b moved it onto the F1 kit** (19 v3). Two of the ★ it was missing
+ * already existed elsewhere and simply were not on this page: the scroll-lit
+ * hand-off spine M8 built for home, and the sample activity log the mock data
+ * has carried from the start. Reusing both was the point — a second spine
+ * drawn for this page would be a second thing to keep in step with the agent
+ * list beside it.
  */
 
-import { agents, cuts } from '@mirrorline/mock'
+import { agentFeed, agents, cuts } from '@mirrorline/mock'
 import { Card, cn, StatusChip, VideoThumb, ViewerPanel } from '@mirrorline/ui'
 import { BarChart3, CalendarDays, Check, Scissors, ShieldCheck, Upload } from 'lucide-react'
 import type { Metadata } from 'next'
@@ -15,14 +22,19 @@ import * as React from 'react'
 
 import { LOOP_CLOSING_LINE, PUBLIC_AGENTS } from '@/components/marketing/agents'
 import { cutMedia, hasGeneratedMedia } from '@/components/marketing/cut-media'
+import { HeroInset, InsetCycle } from '@/components/marketing/kit/hero-inset'
+import { PAGE_CTAS, PageCta } from '@/components/marketing/kit/page-cta'
+import { PageHeroFrames } from '@/components/marketing/kit/page-hero-frames'
+import { PAGE_HERO_FRAMES, allocateFrames } from '@/components/marketing/kit/page-media'
 import {
   ComingSoonLabel,
   SampleDataLabel,
   Section,
   SectionHeading,
 } from '@/components/marketing/primitives'
-import { PageHero } from '@/components/marketing/page-hero'
-import { SiteCta } from '@/components/marketing/site-cta'
+
+/** Three for the wall, three for the corner card. Offset 6 belongs to /agents. */
+const [WALL_FRAMES = [], INSET_FRAMES = []] = allocateFrames([3, 3], PAGE_HERO_FRAMES.agents.offset)
 
 
 export const metadata: Metadata = {
@@ -72,7 +84,7 @@ const CLIENT_STEPS: readonly ClientStep[] = [
   {
     id: 'schedule',
     title: 'Schedule',
-    line: 'Approved videos land on a calendar across Instagram, TikTok and YouTube Shorts. You can move or cancel any of them.',
+    line: 'Approved videos land on a calendar across Instagram, TikTok and YouTube Shorts. You can move or cancel any of them. TikTok posts and YouTube uploads stay private until those platforms have approved our app.',
     Icon: CalendarDays,
   },
   {
@@ -86,7 +98,7 @@ const CLIENT_STEPS: readonly ClientStep[] = [
 export default function AgentsPage() {
   return (
     <>
-      <PageHero
+      <PageHeroFrames
         eyebrow="The agents"
         title={
           <>
@@ -94,14 +106,16 @@ export default function AgentsPage() {
           </>
         }
         lead="A format found on Monday becomes your own videos, posted through the week, and the results shape what gets made next. Each agent has one job, its own spend cap and its own log."
-        shot="agents-16x10"
-        shotAlt="The agents board: each agent with its own switch, spend cap and log, and Compliance locked on."
-        shotCaption="The agents board, on sample data from a fictional demo client."
+        frames={WALL_FRAMES}
         index={PUBLIC_AGENTS.map((agent) => ({
           number: String(agent.step).padStart(2, '0'),
           title: agent.name,
         }))}
-        marginNote="seven agents · one loop · one spend cap each"
+        inset={
+          <HeroInset caption="Three the loop produced, from three accounts">
+            <InsetCycle frames={INSET_FRAMES} />
+          </HeroInset>
+        }
       />
 
       <Section className="band-snow" aria-labelledby="agents-heading">
@@ -177,6 +191,54 @@ export default function AgentsPage() {
           <ComingSoonLabel />
           <p className="m-0 max-w-[68ch] text-body text-text-muted">{LOOP_CLOSING_LINE}</p>
         </div>
+      </Section>
+
+      {/* The hand-off spine is not here, and that was a change of mind.
+          19 v3 ★3 asked this page to reuse home's scroll-lit spine. Built, it
+          put the seven agents on the page a second time — the ordered list
+          above already carries the hand-off order — and took the page to
+          10,355px against §Shared rules' 4–8 screens at 1440×900. A section
+          that repeats the section above it and doubles the page is not a
+          missing visual; it is two of the same one. The ★ was wrong and v3
+          says so now. */}
+
+      {/* A day in the log -------------------------------------------------- */}
+      <Section aria-labelledby="log-heading">
+        <SectionHeading
+          headingClassName="text-site-h2 font-serif"
+          id="log-heading"
+          eyebrow="What it writes down"
+          title={
+            <>
+              Every agent keeps a log, <span className="gold-phrase">and you can read all of it.</span>
+            </>
+          }
+          lead="One day from a demo account, in order, with what it cost. A step that spends shows the figure; a step that only decides shows nothing, because inventing a cost for it would be the opposite of the point."
+          aside={<SampleDataLabel />}
+        />
+        <ol className="m-0 mt-8 flex list-none flex-col gap-0 p-0">
+          {agentFeed.map((entry, position) => (
+            <li
+              key={entry.id}
+              className="reveal-item grid gap-1 border-b border-border py-3 first:pt-0 last:border-b-0 last:pb-0 sm:grid-cols-12 sm:items-baseline sm:gap-4"
+              style={{ '--index': position } as React.CSSProperties}
+            >
+              <span className="machine text-mono text-text-muted sm:col-span-2">
+                {entry.timeLabel}
+              </span>
+              <span className="font-heading text-meta text-text sm:col-span-3">
+                {entry.agentName}
+              </span>
+              <span className="text-body text-text-muted sm:col-span-6">{entry.message}</span>
+              {/* Not gold. `text-gold-text` on this band is a serious axe
+                  contrast failure, caught on the first run — and the figure
+                  is a fact rather than an accent anyway. */}
+              <span className="machine text-mono text-text sm:col-span-1 sm:text-right">
+                {entry.costUsd === null ? '—' : `$${entry.costUsd.toFixed(2)}`}
+              </span>
+            </li>
+          ))}
+        </ol>
       </Section>
 
       <Section className="band-ink-alt" aria-labelledby="client-heading">
@@ -318,7 +380,7 @@ export default function AgentsPage() {
         </Card>
       </Section>
 
-      <SiteCta next={{ href: '/trust', label: 'Trust' }} />
+      <PageCta cta={PAGE_CTAS.agents} />
     </>
   )
 }

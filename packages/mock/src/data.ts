@@ -123,17 +123,29 @@ interface TrendRow {
   readonly fromNiche: string
   readonly growthPercent: number
   readonly fit: number
+  /** Views per follower in the scanned niche. See `Trend.viewsPerFollower`. */
+  readonly viewsPerFollower: number
   readonly beats: readonly string[]
   readonly whyItWorks: string
   readonly platform: Platform
 }
 
+/*
+ * `viewsPerFollower` deliberately does not track `growthPercent`.
+ *
+ * The fastest-growing format here is not always the one reaching furthest past
+ * its own audience, and the Niche Scan would be worth nothing if it were — a
+ * board where every column agrees is a board with one column on it. "Day in
+ * the life" is the case the screen exists to show: growing, and barely leaving
+ * the followers it already has.
+ */
 const TREND_ROWS: readonly TrendRow[] = [
   {
     format: 'The 3-word reframe',
     fromNiche: 'Leadership',
     growthPercent: 340,
     fit: 94,
+    viewsPerFollower: 3.2,
     beats: ['Hook question', 'common belief', '3-word reframe', 'one example', 'call to action'],
     whyItWorks: 'A question opens a loop and three words close it.',
     platform: 'tiktok',
@@ -143,6 +155,7 @@ const TREND_ROWS: readonly TrendRow[] = [
     fromNiche: 'Productivity',
     growthPercent: 210,
     fit: 88,
+    viewsPerFollower: 2.4,
     beats: ['Bold claim', '3 quick cuts', 'payoff', 'call to action'],
     whyItWorks: 'Subtraction feels braver than one more tip list.',
     platform: 'instagram',
@@ -152,6 +165,7 @@ const TREND_ROWS: readonly TrendRow[] = [
     fromNiche: 'Wellness',
     growthPercent: 180,
     fit: 81,
+    viewsPerFollower: 2.9,
     beats: ['Myth on screen', '"here\'s what\'s true"', 'proof', 'call to action'],
     whyItWorks: 'Naming the myth first earns the correction.',
     platform: 'tiktok',
@@ -161,6 +175,7 @@ const TREND_ROWS: readonly TrendRow[] = [
     fromNiche: 'Leadership',
     growthPercent: 160,
     fit: 86,
+    viewsPerFollower: 1.8,
     beats: ['POV text', '3 scenes', 'twist', 'lesson'],
     whyItWorks: 'A specific first day lets people see themselves in it.',
     platform: 'instagram',
@@ -170,6 +185,8 @@ const TREND_ROWS: readonly TrendRow[] = [
     fromNiche: 'Productivity',
     growthPercent: 120,
     fit: 64,
+    // Growing, and barely reaching anyone who does not already follow.
+    viewsPerFollower: 0.6,
     beats: ['Time-lapse', '3 captions', 'reflection'],
     whyItWorks: 'Speed shows the work without a single claim.',
     platform: 'youtube',
@@ -179,6 +196,7 @@ const TREND_ROWS: readonly TrendRow[] = [
     fromNiche: 'Coaching',
     growthPercent: 95,
     fit: 91,
+    viewsPerFollower: 2.1,
     beats: ['Question', 'why it works', 'how to ask it', 'call to action'],
     whyItWorks: 'One question is small enough to try tomorrow.',
     platform: 'instagram',
@@ -188,6 +206,7 @@ const TREND_ROWS: readonly TrendRow[] = [
     fromNiche: 'Coaching',
     growthPercent: 90,
     fit: 83,
+    viewsPerFollower: 1.4,
     beats: ['Question on screen', 'answer', 'example', 'call to action'],
     whyItWorks: 'Answering a real question borrows its curiosity.',
     platform: 'tiktok',
@@ -197,6 +216,7 @@ const TREND_ROWS: readonly TrendRow[] = [
     fromNiche: 'Wellness',
     growthPercent: 70,
     fit: 72,
+    viewsPerFollower: 1.1,
     beats: ['Before line', 'reframe', 'after line', 'invite'],
     whyItWorks: 'Two lines side by side make the shift obvious.',
     platform: 'youtube',
@@ -214,6 +234,7 @@ export const trends: readonly Trend[] = TREND_ROWS.map((row, position) => ({
   growthPercent: row.growthPercent,
   growthLabel: `+${row.growthPercent}%`,
   fit: row.fit,
+  viewsPerFollower: row.viewsPerFollower,
   beats: toBeats(row.beats),
   whyItWorks: row.whyItWorks,
   platform: row.platform,

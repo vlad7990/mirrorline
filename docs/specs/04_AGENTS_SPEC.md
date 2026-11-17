@@ -12,6 +12,77 @@ Seven agents work as one loop: a trend found on Monday becomes the client's own 
 | 6 | Publisher | Post several times a day to each platform at the best times | Approved posts, the posting plan | Published posts with platform IDs | Postiz API, official platform APIs (Instagram Graph API, TikTok Content Posting API, YouTube Data API) | Client-owned accounts only; starts at 1–3 posts a day per platform; far below platform limits (Instagram allows 100 API posts per 24 hours); TikTok posts stay private until the app is audited |
 | 7 | Performance Analyst | Learn what works and feed it back | Platform insights, link clicks, conversions | Rankings of hooks, formats and times; next week's plan | Claude, platform insights APIs, the client's link tracking | Reports honest numbers; no inflated or projected figures shown as actuals |
 
+## The metric each agent owns (15 §6)
+
+Every agent produces a measurement as well as a result. This table is what
+makes the dashboard possible: a KPI with no agent behind it is a number nobody
+is accountable for, and the 15 §3 tiers map onto it exactly.
+
+| Agent | Metric job | Tier it feeds |
+|---|---|---|
+| Trend Scout | Benchmarks from the Niche Scan — views per follower, typical hold, typical length — which seed the first targets | Seeds the targets in tiers 2 and 3 |
+| Remake Producer | Tags every video with format, hook type, length and CTA, so results can be compared | Makes tiers 2–4 comparable |
+| Multiplier | The same tags on every cut, for the same reason | Makes tiers 2–4 comparable |
+| Compliance | Originality Gate pass rate, items rewritten, AI-labelled share, compliance blocks | 6 · Quality and safety |
+| Publisher | Posts published, posts on schedule, posting times | 1 · Production |
+| Performance Analyst | Baseline, targets, every KPI calculation, alerts, the weekly note, next week's plan | 5 · Return, and the rollup of all seven |
+| Client Concierge | Sends the weekly ledger and the note; collects the outcomes no platform can see ("did that lead buy?") | 4 · Outcome, the manual half |
+
+**Nothing is tagged after the fact.** The Producer and the Multiplier write the
+format, hook, length and CTA at the moment a video is made. Tagging later means
+guessing, and a leaderboard built on guesses ranks the guesser.
+
+## The Niche Scan: where Trend Scout may look (12 §1)
+
+**Allowed, and nothing else:**
+
+- TikTok Creative Center — trending hashtags, songs, top ads by industry
+- Meta Ad Library — what others run as ads
+- YouTube Data API search — public Shorts, view counts, publish dates
+- The client's own Instagram, TikTok and YouTube insights, via official APIs
+- Manual review by our strategist of up to 30 public examples
+
+**Never:** scraping private data, logging into other accounts, downloading or
+storing other creators' videos or audio, or bulk collection tools. The two
+named scripts from the predecessor project — `tt_collect.py` and
+`ig_account_dump.py` — stay banned and are not in this repo.
+
+**What a scan stores: links and descriptions, never media.** Per example, in
+`trends`: url, platform, account-size bucket, posted date, views, views per
+follower, growth velocity, format name, hook type, length, beats, CTA type, why
+it works, and the fit score for this client. The `source_note` column records
+where the scan looked, per row — an audit of our sources has to be answerable
+from the data rather than from memory.
+
+**"Best" in a niche is views per follower over 30 days, not follower count.** A
+4,000-follower account getting 40,000 views a video is a better model than a
+two-million-follower account coasting, and ranking by raw views would recommend
+the coaster.
+
+## The Originality Gate: blocks and rewrites
+
+The Compliance agent's first check, and the one that decides whether a draft
+exists at all.
+
+1. The draft is compared against the beat structure of the source format and
+   against the client's own last 90 posts. The second comparison matters as
+   much as the first: a client repeating themselves is a client whose reach
+   falls, and the platforms treat it the same way.
+2. **Over the similarity limit, the draft does not go forward as written.** It
+   goes back to the Remake Producer with the offending lines named, and is
+   rewritten. The gate does not warn and continue, and there is no override —
+   not from the Remake studio and not from anywhere else.
+3. A draft that fails twice is **blocked**, and the Concierge is told. Two
+   failures mean the recipe is too close to its source to remake, not that the
+   writer was unlucky.
+4. The result is shown to the client with the number, the limit, and what the
+   gate did — including the draft it sent back. A gate whose failures are
+   invisible is indistinguishable from a gate that never fires, which is
+   precisely what the predecessor project had.
+
+The pass rate and the count of rewritten items are tier 6 KPIs, so the gate's
+own behaviour is measured rather than assumed.
+
 ## Shared rules for every agent
 
 - Every action is written to the agent log with time, input, output, cost and reason.

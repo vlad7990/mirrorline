@@ -21,3 +21,764 @@
 /* No @theme inline font override here any more. theme.css owns the families
    and already points --font-heading / --font-body / --font-mono at the Geist
    variables that layout.tsx puts on <html>, with literal fallbacks. */
+
+/*
+ * The footer's link groups: collapsed on a phone, plain lists above it.
+ *
+ * `<details>` is the whole mechanism, so the footer ships no JavaScript. What
+ * is left is teaching it to stop being a disclosure widget at `md`, and that
+ * takes two rules rather than one because browsers do not agree on how a
+ * closed `<details>` hides its content:
+ *
+ *   - Current engines use a `::details-content` pseudo-element carrying
+ *     `content-visibility: hidden` (Chrome 131+, Safari 18.4+, Firefox 139+).
+ *   - Older ones apply the UA rule
+ *     `details:not([open]) > *:not(summary) { display: none }`.
+ *
+ * Overriding both covers every engine in use. The summary stays visible from
+ * `md` up — it is the column heading — but stops being a control: the chevron
+ * is hidden by a utility class and the pointer events go with it, so a click
+ * lands on a heading and does nothing rather than folding a column away on a
+ * desktop.
+ */
+.footer-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+@media (min-width: 48rem) {
+  .footer-group::details-content {
+    content-visibility: visible;
+    block-size: auto;
+  }
+
+  .footer-group > :not(summary) {
+    display: block;
+  }
+
+  .footer-group > summary {
+    pointer-events: none;
+  }
+}
+
+/*
+ * The inner-page kit (19_INNER_PAGES v2).
+ *
+ * Two utilities, both motion, both app-level rather than design-system level:
+ * theme.css is the design system and is locked, and neither of these is a
+ * token or a shared primitive — they are how two components in
+ * `components/marketing/kit/` move.
+ *
+ * Both follow the house rule from theme.css: the still state is the default,
+ * and movement lives inside `prefers-reduced-motion: no-preference`. A reader
+ * who asks for stillness gets a working page with none of it, rather than a
+ * page that needs its own reduced-motion branch written for it.
+ */
+
+/* ---------------------------------------------------------------------------
+   The hero inset's looping card.
+
+   19 v2 fixed the budget: there are not enough credits for nine generated
+   loops (Kling is 7.5 a clip against the 37 we had), so the "looping sample"
+   in a page hero is a cross-fade through three stills we already shipped. It
+   costs nothing, decodes nothing, and every frame in it is a real generated
+   frame that is already labelled.
+
+   The default state shows the first frame and hides the rest, so with motion
+   off the card is a photograph rather than an empty box. That is the whole
+   reduced-motion story: no second rule, nothing to keep in sync.
+   --------------------------------------------------------------------------- */
+.inset-cycle-frame {
+  opacity: 0;
+}
+
+.inset-cycle-frame:first-child {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .inset-cycle-frame {
+    /* A negative delay starts the animation partway through its own cycle,
+       which is what spaces three frames evenly across one 12s loop without
+       three different keyframe sets. --index is set per child by the
+       component, exactly as `.stagger` and `.reveal-item` want it. */
+    animation: mirrorline-inset-cycle 12s linear infinite;
+    animation-delay: calc(var(--index, 0) * -4s);
+  }
+}
+
+/* Each frame holds for a quarter of the loop and spends 8% fading at each
+   end. The fades deliberately overlap the neighbour's — frame 2 is already
+   rising at 33% while frame 1 is still full — because a gap between them
+   shows the box behind, and a card that blinks to empty reads as broken. */
+@keyframes mirrorline-inset-cycle {
+  0% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  33% {
+    opacity: 1;
+  }
+  41% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The reel strip's hover push.
+
+   19 §Shared rules asks for "the hover-loop reels from PR E". The frames in
+   `public/samples/` are stills, not loops, and the credit budget says they
+   stay stills — so hover gets the slow push D45 put on the marquee instead of
+   playback it cannot do. It is the same intent (the strip answers a pointer)
+   at none of the cost, and it never implies footage that is not there.
+
+   Keyed to `:focus-within` as well as `:hover`, because a strip whose frames
+   are links is reachable by keyboard and a keyboard user should see the same
+   thing a mouse user does.
+   --------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  .reel-push img {
+    transition: transform var(--dur-reveal) var(--ease-out);
+  }
+
+  .reel-push:hover img,
+  .reel-push:focus-within img {
+    transform: scale(1.06);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The article card's hover lift (19 v2 ★/resources item 2).
+
+   On the card's wrapper rather than on the `Card` itself, because the shadow
+   has to grow outside the card's own `overflow-hidden` — which is there to
+   keep the cover's corners inside the rounded edge, and would otherwise clip
+   the lift it is supposed to show.
+
+   `:focus-within` for the reason `.reel-push` has it: the title inside each
+   card is a link, so a keyboard user arrives here and should see what a mouse
+   user sees. Transform and box-shadow only, so it stays off the main thread
+   and moves no layout.
+   --------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  .card-lift {
+    transition:
+      transform var(--dur-reveal) var(--ease-out),
+      box-shadow var(--dur-reveal) var(--ease-out);
+  }
+
+  .card-lift:hover,
+  .card-lift:focus-within {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgb(0 0 0 / 0.14);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The article page's reading-progress line (19 v2 ★/resources item 7).
+
+   Scroll-driven and CSS-only: `animation-timeline: scroll(root block)` ties
+   the fill to the document's own scroll position, which the browser runs off
+   the main thread. The alternatives were a scroll listener (banned here: it
+   fires every frame) or a library for what is one transform.
+
+   **The whole thing lives inside `@supports`, and that is the interesting
+   part.** A progress bar is only honest if it tracks something. Where
+   `animation-timeline` is unsupported the fill would sit frozen at one end —
+   either permanently empty, which reads as "you have read none of this" at
+   the foot of the article, or permanently full, which reads as the opposite.
+   Both are worse than no bar. So where it cannot work the track is not drawn
+   at all and the element collapses to nothing, which is also what happens
+   under `prefers-reduced-motion`: a line chasing the scroll is movement
+   nobody asked for.
+   --------------------------------------------------------------------------- */
+.reading-progress {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .reading-progress {
+      position: sticky;
+      /* Under the site header, which is `fixed` at z-40 and would otherwise
+         cover this entirely. The offset is passed in as a variable because
+         the height is `HEADER_HEIGHT_PX` in site-chrome.ts, and a second
+         hand-written copy of it here is how the two drift apart. */
+      top: var(--reading-progress-top, 0px);
+      z-index: 20;
+      display: block;
+      height: 2px;
+      /* The track. Faint, because the filled part is the signal and a strong
+         rule across the top of every article is a border nobody asked for. */
+      background-color: var(--color-border);
+    }
+
+    .reading-progress-fill {
+      display: block;
+      height: 100%;
+      background-color: var(--color-gold);
+      transform-origin: 0 50%;
+      transform: scaleX(0);
+      animation: mirrorline-reading-progress linear forwards;
+      animation-timeline: scroll(root block);
+    }
+  }
+}
+
+@keyframes mirrorline-reading-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   A meter that fills to its figure as it comes into view.
+
+   /product's Originality Gate demo (19 v2) shows a similarity reading against
+   a limit, and a bar that is simply *there* reads as a static infographic. It
+   should arrive at its number the way the CountUp figures beside it do.
+
+   The width is the still state and the animation only grows *into* it, which
+   matters for the same reason `mirrorline-reveal` carries its warning: a
+   view-timeline animation holds its start state, so a bar parked at the start
+   of its range would sit at zero for as long as it stayed there — reading as
+   0% similarity, which is a different and much more flattering claim than the
+   true one. With motion off, or with no `animation-timeline` support, the bar
+   is full-width-to-its-figure from the first paint.
+   --------------------------------------------------------------------------- */
+.meter-fill {
+  width: var(--fill);
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .meter-fill {
+      animation: mirrorline-meter-fill linear both;
+      animation-timeline: view();
+      /* Ends early, like the reveals: the fill is for arriving. A bar still
+         creeping while the reader is on the next paragraph is a progress bar
+         for nothing. */
+      animation-range: entry 10% cover 40%;
+    }
+  }
+}
+
+@keyframes mirrorline-meter-fill {
+  from {
+    width: 0;
+  }
+  to {
+    width: var(--fill);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The gold sweep on a chosen plan (19 v2 ★2, /pricing).
+
+   A band of light that crosses the card once when it becomes the selection,
+   and then is gone. It runs on a timer rather than a scroll timeline because
+   it answers a click: the reader did something, and this is the
+   acknowledgement.
+
+   **The selection is never conveyed by the sweep.** It is decorative and
+   `aria-hidden`; the card carries `aria-checked` and a permanent gold border,
+   both of which survive reduced motion, a repaint and a screen reader. The
+   same rule the choice pill on /faq is built under — a moving thing may
+   confirm a state and must never be the only thing holding it.
+   --------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  .plan-sweep::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(
+      100deg,
+      transparent 20%,
+      rgba(245, 184, 61, 0.26) 48%,
+      transparent 76%
+    );
+    /* Starts off the left edge and ends off the right. `both` would hold it
+       parked over the card; `forwards` on a one-shot that ends transparent is
+       the same thing, so neither is used and the default fill lets it
+       disappear. */
+    animation: mirrorline-plan-sweep 900ms var(--ease-out);
+  }
+}
+
+@keyframes mirrorline-plan-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The gold sweep across the closing CTA (17 §1 M12).
+
+   The plan sweep above answers a click, so it runs on a timer. This one
+   answers an *arrival*, so it runs on `view()` — the same scroll-driven
+   mechanism every reveal on this site already uses, and 17's own rule to
+   reach for CSS first.
+
+   **"Once" means once per arrival, not once per session**, and that is a
+   decision rather than an oversight. A view timeline is scrubbed by scroll
+   position, so scrolling back up replays it — exactly as `.reveal` and
+   `.reveal-item` do everywhere else on the page. Making it fire literally
+   once would mean an IntersectionObserver and a piece of state, for a
+   decorative shimmer on a button, on pages held to Lighthouse 90.
+
+   **The band is clipped by its own box, never by an ancestor of the button.**
+   `overflow: hidden` on a wrapper would crop the button's focus ring, and 17
+   §Accessibility is explicit that focus states are never animated away. So
+   the overlay is a *sibling* of the button: it clips its own moving band and
+   has nothing to say about the ring the button paints.
+
+   Transform only, per 17's performance budget. --------------------------- */
+.cta-sweep-band {
+  /* Present in every browser so the box is always the right shape; only the
+     moving band below is gated. `rounded-full` matches the gold variant's
+     pill in `packages/ui` — the one shape this overlay has to agree with. */
+  border-radius: 9999px;
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .cta-sweep-band::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      /* White rather than gold: the button is already a gold gradient, and a
+         gold band over it is invisible. This is the light crossing it. */
+      background: linear-gradient(
+        100deg,
+        transparent 35%,
+        rgba(255, 255, 255, 0.45) 50%,
+        transparent 65%
+      );
+      animation: mirrorline-cta-sweep linear both;
+      animation-timeline: view();
+      /* Finishes while the CTA is still arriving, so the button is at rest by
+         the time somebody has read the line above it and reached for it. */
+      animation-range: entry 25% cover 34%;
+    }
+  }
+}
+
+@keyframes mirrorline-cta-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The website co-pilot's panel.
+
+   18 §2.4: "the panel slides in; the stream types. Both drop under
+   prefers-reduced-motion, where the answer simply appears." This is the first
+   half. It lives in a no-preference block like every other movement on the
+   site, so a reader who asked for stillness gets the panel with no entrance
+   rather than a reduced-motion branch written specially for it.
+
+   Nothing waits on this animation: the panel is a plain conditional render
+   with no Presence wrapper, so there is no `animationend` to miss and no
+   closed panel left mounted. Compare the accordion, where the opposite is
+   true and the duration collapses instead of the animation being removed.
+   --------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  .copilot-panel {
+    animation: mirrorline-copilot-panel-in 220ms var(--ease-out);
+  }
+}
+
+@keyframes mirrorline-copilot-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Milo.
+
+   The mascot's five states, as CSS on a `data-milo-state` attribute. Image
+   swap plus transforms, which is the whole brief for now — and the reason it
+   is an attribute rather than five class names is that a Rive file replacing
+   this later drives the same five names and nothing above it changes.
+
+   Every movement is inside a no-preference block, so stillness is the default
+   rather than an animation somebody has to remember to switch off. Under
+   reduced motion Milo simply sits there, which is exactly right: he is a
+   picture, and the panel beside him carries every word that matters.
+
+   Nothing here waits on an `animationend`. A state can change mid-animation —
+   `thinking` to `answering` happens on the first token — so each one has to be
+   interruptible, and a transform that is simply replaced is.
+   --------------------------------------------------------------------------- */
+.milo {
+  /* The ink field the renders were lit for, so a slow connection shows the
+     right colour rather than a white box the size of the mascot. */
+  background-color: var(--color-ink-900);
+  /* Transforms only. Animating anything that lays out would reflow the
+     launcher it sits in, sixty times a second, for a decoration. */
+  will-change: transform;
+}
+
+/* ---------------------------------------------------------------------------
+   The dock: where Milo stands, on every public page.
+
+   `bottom` is one sum, and every term in it is a rule rather than a taste:
+
+     --milo-gap             16px on a phone, 24px from 1024px up.
+     safe-area-inset-bottom the home indicator and the browser's own bottom
+                            bar, which otherwise cut a 72px mascot in half.
+     --cookie-banner-height published by the banner while it is up, so Milo
+                            rides above it. Absent the rest of the time.
+     --milo-cta-lift        set by `useCtaClearance` when a primary CTA is
+                            about to end up underneath him.
+
+   z-index 60 puts him over the cookie banner (50) and far over the hero's
+   floating cut cards, which sit at -8 behind the headline.
+   --------------------------------------------------------------------------- */
+.milo-dock {
+  --milo-gap: 1rem;
+
+  position: fixed;
+  right: var(--milo-gap);
+  bottom: calc(var(--milo-gap) + env(safe-area-inset-bottom, 0px));
+  /* **The two movable terms are a transform, not part of `bottom`, and that
+     is a measurement.** Written into `bottom` they cost 0.005 of CLS on the
+     home page: the cookie banner publishes its height a moment after
+     hydration, Milo steps up, and a fixed element changing position is a
+     layout shift like any other. A transform moves no layout at all, so the
+     same step costs nothing and animates on the compositor. */
+  transform: translateY(
+    calc(-1 * (var(--cookie-banner-height, 0px) + var(--milo-cta-lift, 0px)))
+  );
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.625rem;
+  /* Only ever as wide as what is inside it: a full-width fixed box here
+     would swallow clicks across the foot of every page. */
+  width: max-content;
+  max-width: calc(100vw - var(--milo-gap) * 2);
+  /* The dock catches nothing; only what is in it does. Its own box includes
+     the gap between the label and the mascot, and a fixed element at z-60
+     quietly eating clicks in the corner of every page is the hardest kind of
+     bug to see. The panel sits under this dock, and that is how it was found. */
+  pointer-events: none;
+  /* Stepping aside for a banner or a CTA should read as a step rather than a
+     jump — for somebody who asked for motion. */
+  transition: transform 220ms var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .milo-dock {
+    transition: none;
+  }
+}
+
+@media (width >= 64rem) {
+  .milo-dock {
+    --milo-gap: 1.5rem;
+  }
+}
+
+/* The launcher is the mascot. No pill, no plate: a button whose whole face is
+   Milo, with the words beside him where a desktop has room for them. */
+.milo-launcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  /* The dock passes pointers through; the button takes them. */
+  pointer-events: auto;
+  /* Explicit, because a bare <button> inherits none of the site's type. */
+  color: var(--color-gold-bright);
+}
+
+/* `display` on a class beats `hidden`'s on a class of equal specificity when
+   it comes later, so the attribute has to be answered here by name. */
+.milo-launcher[hidden] {
+  display: none;
+}
+
+.milo-launcher:focus-visible {
+  outline: none;
+}
+
+/* The ring is on the face rather than on the button, so the resting ring and
+   the focus ring are different shapes around different boxes and neither has
+   to know about the other. `box-shadow` rather than `border`, because a
+   border would change the box and with it the size Milo is drawn at. */
+.milo-launcher-face {
+  position: relative;
+  display: block;
+  border-radius: 9999px;
+  box-shadow:
+    0 0 0 2px color-mix(in oklab, var(--color-gold-bright) 55%, transparent),
+    0 0 0 6px color-mix(in oklab, var(--color-gold-deep) 18%, transparent),
+    0 18px 40px -18px rgb(0 0 0 / 0.75);
+  transition: box-shadow 200ms var(--ease-out);
+}
+
+.milo-launcher:hover .milo-launcher-face {
+  box-shadow:
+    0 0 0 2px var(--color-gold-bright),
+    0 0 0 8px color-mix(in oklab, var(--color-gold-deep) 26%, transparent),
+    0 20px 44px -18px rgb(0 0 0 / 0.8);
+}
+
+/* Two rings rather than one: the ink ring separates the gold from whatever
+   the page is doing behind it, so the focus state reads on a photograph as
+   well as on a flat band. 17 §Accessibility: focus is never animated away. */
+.milo-launcher:focus-visible .milo-launcher-face {
+  box-shadow:
+    0 0 0 3px var(--color-ink-900),
+    0 0 0 6px var(--color-gold-bright);
+}
+
+/* The three sizes the brief names. The image fills its face, and the face is
+   what these move, so the `srcset` in `MiloAvatar` and these widths describe
+   one box. */
+.milo-launcher-image {
+  display: block;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 9999px;
+}
+
+@media (width >= 40rem) {
+  .milo-launcher-image {
+    width: 5.5rem;
+    height: 5.5rem;
+  }
+}
+
+@media (width >= 64rem) {
+  .milo-launcher-image {
+    width: 7rem;
+    height: 7rem;
+  }
+}
+
+/* The AI label, on the mascot rather than beside him.
+
+   18 §3.3 asks for it on the launcher, and the pill that used to carry it is
+   gone. It sits on the face at every size — including the 72px phone, where
+   the "Ask Milo" words are not shown — because a label that only appears on a
+   desktop is the disclaimer-in-a-footer the rule was written against. */
+.milo-launcher-tag {
+  position: absolute;
+  left: 50%;
+  bottom: -0.35rem;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--color-gold-bright) 55%, transparent);
+  background-color: var(--color-ink-900);
+  color: var(--color-gold-bright);
+  font-family: var(--font-sans);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  padding: 0.2rem 0.4rem;
+}
+
+@media (width >= 64rem) {
+  .milo-launcher-tag {
+    font-size: 0.625rem;
+    padding: 0.22rem 0.5rem;
+  }
+}
+
+/* Desktop only. At 390px these words would cost a third of the screen to say
+   what the button's accessible name already says. */
+.milo-launcher-label {
+  display: none;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--color-gold-deep) 45%, transparent);
+  background-color: color-mix(in oklab, var(--color-ink-900) 92%, transparent);
+  padding: 0.3rem 0.7rem;
+  /* Before Milo in the flow, so the words sit to his left and the mascot
+     stays hard against the corner he is anchored to. */
+  order: -1;
+}
+
+@media (width >= 64rem) {
+  .milo-launcher-label {
+    display: inline-block;
+  }
+}
+
+/* The greeting. The entrance is motion; being there is not — under reduced
+   motion the bubble simply exists, which is what the brief asks for. */
+.milo-greeting {
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .milo-greeting {
+    animation: mirrorline-milo-say 260ms var(--ease-out) 1;
+  }
+}
+
+@keyframes mirrorline-milo-say {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Idle: a slow rise and fall, far enough to notice and not far enough to
+     draw the eye off the page. Four seconds, because anything quicker reads
+     as impatience next to a button somebody has not pressed yet. */
+  .milo[data-milo-state='idle'] {
+    animation: mirrorline-milo-float 4s var(--ease-in-out-quint) infinite;
+  }
+
+  /* Greeting: once. The wave is in the render; this is the arrival. The
+     session-once rule is held in the component that sets the state, not here,
+     because CSS cannot know what a session is. */
+  .milo[data-milo-state='greeting'] {
+    animation: mirrorline-milo-greet 900ms var(--ease-out) 1;
+  }
+
+  /* Thinking: the soft gold pulse. A glow rather than a spinner — a spinner
+     is a progress claim, and a streamed answer has no progress to report. */
+  .milo[data-milo-state='thinking'] {
+    animation: mirrorline-milo-think 1.6s ease-in-out infinite;
+  }
+
+  /* Answering: the smallest of the four. Words are arriving beside him and
+     the mascot must not compete with them for attention. */
+  .milo[data-milo-state='answering'] {
+    animation: mirrorline-milo-answer 1.1s ease-in-out infinite;
+  }
+
+  /* Declined: a single shake of the head, then still. Not red, not an alarm
+     — 18 §3.1 calls the handoff a success state, and the expression should
+     agree with the sentence underneath it. */
+  .milo[data-milo-state='declined'] {
+    animation: mirrorline-milo-decline 520ms var(--ease-out) 1;
+  }
+}
+
+@keyframes mirrorline-milo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4%);
+  }
+}
+
+@keyframes mirrorline-milo-greet {
+  0% {
+    transform: scale(0.88) rotate(-6deg);
+  }
+  55% {
+    transform: scale(1.04) rotate(3deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes mirrorline-milo-think {
+  0%,
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-accent) 0%, transparent);
+  }
+  50% {
+    transform: translateY(-2%);
+    box-shadow: 0 0 18px 2px color-mix(in oklab, var(--color-accent) 38%, transparent);
+  }
+}
+
+@keyframes mirrorline-milo-answer {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-1.5%) scale(1.015);
+  }
+}
+
+@keyframes mirrorline-milo-decline {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-4deg);
+  }
+  75% {
+    transform: rotate(4deg);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The studio co-pilot makes room for itself.
+
+   18 §2.4 asks for "a focus-trapped dialog on narrow screens and an inline
+   aside from xl up". A `fixed` panel is an overlay however it is styled —
+   on /app/calendar the first build of it covered the post panel it was
+   supposed to sit alongside — so above xl the content has to move.
+
+   The attribute is set on <html> by `studio-copilot.tsx`, because the studio
+   layout is a server component and cannot hold the open state. Below xl
+   nothing happens: there the panel is a modal and covering the page is what
+   it is for.
+
+   The transition is in a no-preference block like every other movement here;
+   under reduced motion the column simply is narrower.
+   --------------------------------------------------------------------------- */
+@media (min-width: 1280px) {
+  html[data-copilot-open='true'] main#main {
+    /* The panel's 21.25rem plus the 1.5rem it sits in from the edge. */
+    padding-right: 24.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (min-width: 1280px) {
+  main#main {
+    transition: padding-right var(--duration-dropdown, 200ms) var(--ease-out);
+  }
+}

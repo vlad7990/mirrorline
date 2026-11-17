@@ -48,6 +48,16 @@ export function TrendCard({ trend }: TrendCardProps) {
 
       <p className="m-0 text-body text-text-muted">{trend.whyItWorks}</p>
 
+      {/* 12 §Niche Scan: the benchmark that makes formats comparable across
+          accounts of different sizes. A format averaging 50,000 views on an
+          account with 500,000 followers is not working, and a raw view count
+          cannot say so — which is why this sits beside the fit score rather
+          than a view total. */}
+      <p className="m-0 text-meta text-text-muted">
+        <span className="machine text-text">{trend.viewsPerFollower.toFixed(1)}×</span> views per
+        follower in this niche
+      </p>
+
       <div className="mt-auto flex items-center gap-3 pt-1">
         <span className="shrink-0 font-body text-meta text-text-muted">{fitLabel}</span>
         <ProgressBar
