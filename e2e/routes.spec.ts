@@ -9,12 +9,13 @@
 import { expect, test } from '@playwright/test'
 
 import { onlyProject } from './helpers/project-gate'
-import { ROUTES } from './helpers/routes'
+import { prepareSessionFor, ROUTES } from './helpers/routes'
 
 onlyProject('chromium', 'Route shape is viewport-independent; the chromium project owns it.')
 
 for (const route of ROUTES) {
   test(`${route.name} (${route.path}) is a well-formed page`, async ({ page }) => {
+    await prepareSessionFor(page, route)
     const response = await page.goto(route.path)
 
     expect(response, `no response for ${route.path}`).not.toBeNull()

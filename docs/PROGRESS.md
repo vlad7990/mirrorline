@@ -6,6 +6,77 @@
 
 ---
 
+## Handoff — 17 November 2026, evening (the e2e suite has a session: D84, and the red test is green again)
+
+**Branch** `backend/b1-auth` · pushed. **PR #1 untouched.** No PR for this
+branch yet.
+
+### What this piece did
+
+Vlad chose option 1 and declined switching email confirmation off. So:
+
+- **`e2e/auth.setup.ts`** — a Playwright *setup project*. Creates a confirmed
+  account through the admin API (no mail, so no rate limit), **signs in through
+  the real form**, and saves `storageState`. The other three projects list it
+  in `dependencies` and reuse the session.
+- **`e2e/global-teardown.ts`** — deletes every account whose address starts
+  `e2e+`, and the workspaces they own, **across all runs rather than just this
+  one**. A crashed run never reaches its own cleanup. Workspaces go first:
+  deleting the user cascades to `profiles` and so to `memberships`, which
+  would strand the workspace with no owner and no policy to reach it.
+- **`e2e/sign-up-ui.spec.ts`** — one real UI sign-up, asserting the "check
+  your email" screen, which **skips with the reason attached on a 429** and
+  fails on anything else. The rights-checkbox enforcement moved here from the
+  demo path, so non-negotiable 1 is still tested — where the form is.
+- **D84** records all of it, including that **adding Resend SMTP once there is
+  a domain removes the rate limit and the skip stops happening**.
+
+### The part that was bigger than it looked
+
+The red test was never the problem. `e2e/helpers/routes.ts` feeds 21 studio
+and onboarding routes into the shared route, responsive, axe and screenshot
+specs, so **the whole suite needed a session**, and the auth routes in that
+same list needed the opposite.
+
+`prepareSessionFor(page, route)` in `helpers/routes.ts` is the answer: clear
+cookies for an `area: 'auth'` route, and **restore the saved session for any
+other**. Both halves are load-bearing, and the second one only became obvious
+after four screenshot tests failed: `screenshots.spec.ts` captures every screen
+inside **one** test, in order, so clearing cookies at `/sign-in` signed the
+page out for every screen captured afterwards — and a screenshot that is
+merely wrong still looks like a result.
+
+### One assertion was narrowed, deliberately
+
+`copilot-site.spec.ts` asserted `cookies()` was `[]` — "the question is stored
+nowhere". That was a true expression of §3.3 for exactly as long as nothing in
+the product could set a cookie. It now asserts **no cookie carries the
+question**, which is what the spec actually asks and will not break the next
+time something legitimate needs one.
+
+### Reference screenshots
+
+`sign-in` and `sign-up` legitimately changed — two provider buttons gone, a
+"Remember me" checkbox and a magic-link button arrived — and the files shrank
+8–13 KB each, which is consistent with that. The `index` and `agents` deltas
+are the capture noise this suite has always had (±100 bytes on `agents`,
+swings both ways on the animated home page).
+
+### Next: B1's remaining three, untouched
+
+Deliberately not started — the context budget went on the suite, which was the
+right call because leaving it red would have hidden the next regression.
+
+1. **Workspace creation** — the bootstrap is applied and proved; what is left
+   is onboarding writing the niche and the real goal
+   (`goals.outcome_text` in the user's own words), and a second workspace for
+   somebody who wants one.
+2. **The Settings delete control** — `delete_workspace` is applied and proved;
+   this is the typed confirmation and the dialog that offers the export first.
+3. **The data export** — rows, read as the user.
+
+---
+
 ## Handoff — 17 November 2026, late (auth is real: sessions, five flows, 44/44 against the database — and one e2e test is knowingly red)
 
 **Branch** `backend/b1-auth` · `0f55987` · pushed. **PR #1 untouched.** No PR

@@ -163,7 +163,24 @@ test.describe('an article page', () => {
 /* /sign-in and /sign-up                                                       */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Both describes below run **signed out**, deliberately.
+ *
+ * Since B1 the suite's default is a saved session (`e2e/auth.setup.ts`), and
+ * the proxy redirects a signed-in visitor away from `/sign-in` and `/sign-up`
+ * — correct behaviour, and it would leave these tests asserting against the
+ * studio. Clearing cookies puts them back on the pages they are about.
+ *
+ * The assertions themselves did not change. They were written against a form
+ * that checked nothing, and they pass unaltered against one that does: the
+ * failed sign-in below is now a real refusal from Supabase, flattened into the
+ * same sentence on purpose.
+ */
 test.describe('/sign-in', () => {
+  test.beforeEach(async ({ context }) => {
+    await context.clearCookies()
+  })
+
   test('a failed sign-in says so without saying which half was wrong', async ({ page }) => {
     await page.goto('/sign-in')
 
@@ -212,6 +229,10 @@ test.describe('/sign-in', () => {
 })
 
 test.describe('/sign-up', () => {
+  test.beforeEach(async ({ context }) => {
+    await context.clearCookies()
+  })
+
   test('will not create a workspace until the rights box is ticked', async ({ page }) => {
     await page.goto('/sign-up')
 

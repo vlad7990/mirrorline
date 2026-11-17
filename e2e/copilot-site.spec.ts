@@ -299,7 +299,24 @@ test.describe('what it keeps', () => {
     expect(stored.session).not.toContain('followers')
     expect(stored.local).not.toContain('copilot')
     expect(stored.session).not.toContain('copilot')
-    expect(await page.context().cookies()).toEqual([])
+    /**
+     * **No cookie carries the conversation** — which is what §3.3 asks, and is
+     * narrower than what this line used to say.
+     *
+     * It was `toEqual([])`: no cookies at all. That was a true expression of
+     * "stored nowhere" for as long as nothing in the product could set a
+     * cookie, and it stopped being one when B1 gave the app a session. It was
+     * failing on the session cookie of a signed-in visitor, which says nothing
+     * whatsoever about the copilot.
+     *
+     * Asserting the absence of the *question* rather than the absence of
+     * *cookies* is what the spec actually requires, and it will not break again
+     * the next time something legitimate needs one.
+     */
+    const cookies = await page.context().cookies()
+    const cookieDump = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join('\n')
+    expect(cookieDump).not.toContain('followers')
+    expect(cookieDump).not.toContain('copilot')
 
     await page.reload()
     await openPanel(page)

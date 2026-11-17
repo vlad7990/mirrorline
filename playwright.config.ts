@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+import { STUDIO_STORAGE_STATE } from './e2e/helpers/test-accounts';
+
 const BASE_URL = 'http://localhost:3000';
 const DESKTOP_VIEWPORT = { width: 1440, height: 900 };
 const MOBILE_VIEWPORT = { width: 390, height: 844 };
@@ -41,10 +43,39 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
+  /**
+   * Sweep the test accounts out of the shared preview database, pass or fail.
+   * D76 put every preview on one project, so rows left here pile up where real
+   * work happens. See `e2e/global-teardown.ts`.
+   */
+  globalTeardown: './e2e/global-teardown.ts',
   projects: [
+    /**
+     * Sign in once, before anything else.
+     *
+     * `/app/*` is behind a session now (B1), and `helpers/routes.ts` feeds 21
+     * studio and onboarding routes into the shared route, responsive, a11y and
+     * screenshot specs — so without this they all redirect to `/sign-in`.
+     *
+     * **The session is the default for every project**, which is safe because
+     * the marketing pages render the same either way: nothing in the site
+     * header is session-aware yet. The exception is the auth pages themselves,
+     * where a signed-in visitor is redirected away on purpose — the specs that
+     * test `/sign-in` and `/sign-up` clear their cookies first, and say why.
+     */
+    {
+      name: 'setup',
+      testMatch: /auth\.setup\.ts/,
+      use: { ...devices['Desktop Chrome'], viewport: DESKTOP_VIEWPORT },
+    },
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'], viewport: DESKTOP_VIEWPORT },
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: DESKTOP_VIEWPORT,
+        storageState: STUDIO_STORAGE_STATE,
+      },
     },
     {
       // `pnpm screenshots` targets this project. e2e/screenshots.spec.ts sets
@@ -53,11 +84,21 @@ export default defineConfig({
       // a project whose dependency failed, which meant one failing responsive
       // assertion silently produced no reference PNGs at all.
       name: 'screenshots',
-      use: { ...devices['Desktop Chrome'], viewport: DESKTOP_VIEWPORT },
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: DESKTOP_VIEWPORT,
+        storageState: STUDIO_STORAGE_STATE,
+      },
     },
     {
       name: 'mobile',
-      use: { ...devices['Desktop Chrome'], viewport: MOBILE_VIEWPORT },
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: MOBILE_VIEWPORT,
+        storageState: STUDIO_STORAGE_STATE,
+      },
     },
   ],
   webServer: {

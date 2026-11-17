@@ -5800,3 +5800,76 @@ cost cannot be quoted and the project cannot be created until the connector is
 re-authorised with "Mirrorline" granted. **Nothing was created in Stratum as a
 workaround** — a project in the wrong organisation is the exact outcome this
 decision exists to prevent.
+
+## 2026-11-17 · D84 · The e2e suite gets a session, and the one test that sends mail is allowed to skip
+
+Vlad's decision, choosing between three options after B1 put `/app/*` behind a
+session and left the whole-journey test red: **a Playwright setup project
+creates a confirmed account through the admin API, signs in, and saves
+`storageState`; the studio specs reuse it.** Email confirmation **stays on** —
+the option to switch it off was declined.
+
+**The problem was bigger than the one red test.** `e2e/helpers/routes.ts` feeds
+21 studio and onboarding routes into the shared route, responsive, axe and
+screenshot specs, and eleven spec files navigate under `/app`. Every one of
+those redirects to `/sign-in` without a session, so this was never a
+demo-path problem.
+
+**The session is the default for every project**, with the auth specs clearing
+their cookies. A separate authenticated project cannot work here, because the
+shared specs iterate *mixed* routes — one list holding both `/pricing` and
+`/app/home`. Defaulting to signed-in is safe today for a reason worth writing
+down: **nothing in the site header is session-aware yet**, so the marketing
+pages and their reference screenshots render identically either way. The day a
+header grows an account menu, that assumption needs revisiting — and the
+screenshots will say so.
+
+**It signs in through the form, not the API.** Minting a session and writing
+the cookies by hand would be faster and would test nothing. Through the page,
+the one thing every other spec now depends on is asserted before any of them
+run — and when it breaks, the failure arrives in `auth.setup.ts` rather than as
+two hundred confusing redirects.
+
+### Accounts are tagged, and the sweep is by prefix
+
+Every test address is `e2e+<runId>-<label>@<domain>`, and the global teardown
+deletes **every** address starting `e2e+` rather than only the current run's. A
+crashed run never reaches its own cleanup, and a teardown that tidies only
+after itself slowly fills the database it exists to protect — which matters
+because D76 put every preview on one shared project.
+
+**Workspaces are deleted before users.** Removing the auth user cascades to
+`profiles` and therefore to `memberships`; the workspace it pointed at would
+survive as an orphan — readable by nobody, deletable through no policy, and
+resident for good.
+
+### The sign-up test may skip, and that is the honest answer
+
+One spec still submits the real form and asserts the "check your email"
+screen. It **skips, with the reason attached, when Supabase answers
+`429 email rate limit exceeded`** — and fails on anything else.
+
+That is not leniency. D79 keeps auth mail on Supabase's built-in sender, which
+allows a handful of messages an hour, and each sign-up spends one. Two runs in
+quick succession and the second gets a 429: **a fact about the sender, not
+about our code.** A test that goes red meaning "try again in an hour" teaches
+people to ignore red tests, which costs more than the coverage is worth.
+
+The skip is precise rather than broad. The UI shows one deliberately opaque
+sentence for every unexpected failure, so on the failure path the spec asks
+Supabase directly and skips only for the rate limit.
+
+**Adding Resend SMTP once there is a real name and domain removes the limit,
+and this skip stops happening.** The same revisit D79 already names, now with
+one more reason attached.
+
+### Two findings this turned up, both worth keeping
+
+- **GoTrue refuses `@example.com`** on the public sign-up endpoint —
+  `Email address … is invalid` — while the admin API accepts it. The reserved
+  domain this repo uses in every placeholder cannot be used to sign up.
+- **The domain the suite does use is unverified.** `mirrorline-test.dev` is a
+  plausible domain nobody here owns, chosen so a typo cannot deliver mail to a
+  stranger. It could not be tested against the public endpoint because the
+  sender was rate-limited at the time — the limitation obstructing the test of
+  its own workaround. `E2E_SIGNUP_DOMAIN` overrides it.
