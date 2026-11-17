@@ -5752,3 +5752,51 @@ The credential report it returns **has no field a value can travel in**, and a
 test serialises the whole thing and asserts the secret is absent — because the
 instruction was to verify the keys without printing them, and "I was careful"
 is not a mechanism.
+
+## 2026-11-17 · D83 · Mirrorline's Supabase is its own Pro organisation, and that is worth more than the $25 it costs
+
+Vlad's decision, and his approval of the cost: **a separate Supabase
+organisation named "Mirrorline", on the Pro plan at $25/month, rather than a
+project inside Stratum.** This supersedes D81's "free organisation" — he chose
+to pay for separation instead of taking the free tier.
+
+**It is the better call, for reasons that outlast the price.** D81 was solving
+for "not $10 a month". This solves for something else:
+
+- **One access token per organisation.** A Supabase token scoped to Stratum
+  reaches `spik-ai`, `Mandate`, `stratum-alpha` and two paused projects. Every
+  credential this project handed to a CI job, a preview deployment or an agent
+  would have been a credential that could touch four other products. Now the
+  worst case of a leaked Mirrorline key is Mirrorline.
+- **A mistake stays inside one blast radius.** B1's migrations have never run
+  anywhere — there is no Docker and no `psql` on this machine, so the SQL is
+  reviewed by reading only, and the first apply is the first time a Postgres
+  sees it. That is a thing to do in a database holding nothing else.
+- **The bill says what it is for.** $25 against "Mirrorline" is a number this
+  project can be judged by. The same $10 inside Stratum would have been a line
+  nobody could attribute.
+- **Production later gets a sibling, not a stranger.** D76 says production
+  gets its own project; now it gets one in the same organisation, under the
+  same plan, with its own keys.
+
+**The preview project itself should add nothing**, because Pro includes a
+$10/month compute credit and a Micro instance is $10/month. *Should* — the
+cost gets quoted before the project is created, and the instruction is to stop
+and ask if the quote exceeds $10/month extra. Reading a price list is not the
+same as asking the API.
+
+**Non-negotiable 11 is unchanged, and worth restating.** "No paid API calls
+beyond test mode; no production deploys" is about spending on inference and
+shipping to the public. A database subscription is neither. The honest framing
+is simply that **this project now carries a standing bill of $25/month where
+it previously carried none** — written down here so it is a decision rather
+than a surprise on a statement.
+
+**What blocked acting on it, immediately.** The Supabase MCP connection is
+authorised for **Stratum only**: `list_organizations` returns Stratum alone,
+and all five visible projects carry `organization_id:
+bfomdugfdcxxcneocihl`. The new organisation is invisible from here, so the
+cost cannot be quoted and the project cannot be created until the connector is
+re-authorised with "Mirrorline" granted. **Nothing was created in Stratum as a
+workaround** — a project in the wrong organisation is the exact outcome this
+decision exists to prevent.
