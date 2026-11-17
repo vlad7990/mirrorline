@@ -39,8 +39,9 @@ this one said "no serious violations" in its own test names, which reads as
 
 ### 2. The pull request
 
-`v4/site-and-metrics` → `main`, opened with a summary of the whole v4 phase and
-links into `DECISIONS.md` and this file. **All gates were run on the head
+**https://github.com/vlad7990/mirrorline/pull/1** — `v4/site-and-metrics` →
+`main`, opened with a summary of the whole v4 phase and links into
+`DECISIONS.md` and this file. **All gates were run on the head
 commit** and the results are in the PR body. It is yours to review and merge —
 I have not merged it and will not.
 
