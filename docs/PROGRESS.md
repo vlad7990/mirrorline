@@ -6,7 +6,102 @@
 
 ---
 
-## Handoff — 17 November 2026, evening (the schema is applied and the policies are proved: 33/33 against the real database)
+## Handoff — 17 November 2026, late (auth is real: sessions, five flows, 44/44 against the database — and one e2e test is knowingly red)
+
+**Branch** `backend/b1-auth` · `0f55987` · pushed. **PR #1 untouched.** No PR
+for this branch yet.
+
+### What works now
+
+Sign-in, sign-up, magic link, sign-out, password reset, and sessions that
+survive a reload. `/app/*` is behind a session for the first time.
+
+| Gate | Result |
+|---|---|
+| lint, typecheck, build, licence-check | green (439 packages) |
+| `pnpm test` | **855** unit (was 818; +37 redirect rules) |
+| `pnpm test:rls-db` | **44/44** — 33 RLS + 11 auth flows |
+| `pnpm test:e2e` | **one test red, knowingly** — see below |
+
+### The one red test, stated rather than buried
+
+**`e2e/demo-path.spec.ts:76`.** It drives the sign-up form and expects
+`/app/onboarding`; the whole-journey test then walks the studio. Both now need
+an authenticated session, and sign-up no longer walks through on its own.
+Everything else in that spec file and all of `resources-and-auth.spec.ts`
+passes **against real auth** — including the failed sign-in and the forgotten
+password, which now fail and confirm for real reasons.
+
+Three ways to fix it, and the choice is Vlad's because it touches D76:
+
+1. **A Playwright setup project** that creates a confirmed user through the
+   admin API, signs in, and saves `storageState` for the studio specs. Proper,
+   and it writes run-namespaced users into the **shared** preview database on
+   every e2e run — which is the contamination D76 warned about, survivable
+   only because the db suites already namespace and tear down.
+2. **Switch email confirmation off** on the project. Then sign-up returns a
+   session and the journey walks through as before. It is a project setting,
+   not a migration, and it weakens accounts — an unconfirmed address could
+   sign in.
+3. **A second Supabase project for tests**, so e2e never touches the preview
+   database. Cleanest, and it is another $10–25/month.
+
+### Decisions worth knowing before touching this
+
+- **`@supabase/ssr` is in.** Two modules in this repo avoid the SDK on purpose
+  and say why; that reasoning does not survive sessions. A cookie session is a
+  protocol — two tokens, rotated, written on every response, racing between
+  parallel requests — and the failure mode is one visitor being served
+  another's session out of a CDN cache. MIT, licence-check green.
+- **The middleware fails closed.** No keys means `/app/*` redirects to
+  sign-in rather than rendering. A preview with no credentials should look
+  signed out, not wide open.
+- **`ensure_workspace_for_current_user`, not `create_…`.** A double-clicked
+  button, a retried action and a magic link opened twice all call it; it hands
+  back the existing workspace instead of making a second.
+- **The onboarding choices travel in user metadata.** With confirmation on,
+  `signUp` returns no session, so sign-up *cannot* create the workspace —
+  `/auth/callback` does it on the first request that has one. The new
+  `workspaces.audience`, `.stage` and `.initial_goal_type` columns receive
+  them, reusing the `who`/`account` parameter names the public site already
+  uses.
+- **The Google and Apple buttons are gone.** §1 rules out social login, so
+  neither could ever have worked — two dead controls at the top of the page,
+  which is what D80 was about. A magic link replaced them.
+- **Every auth error is one sentence.** Unknown address, wrong password and
+  unconfirmed account are indistinguishable, and a db test asserts Supabase
+  returns the *same* status and message for an unknown address as for a wrong
+  password — so our single message is not hiding a difference the response
+  already leaked.
+
+### Three findings from testing against the real project
+
+1. **GoTrue refuses `@example.com`** on public sign-up — `Email address … is
+   invalid` — while the admin API accepts it. The reserved domain the repo uses
+   for every example cannot be used to sign up.
+2. **The built-in email sender is rate-limited, and one test run exhausts
+   it**: every subsequent sign-up gets `429 email rate limit exceeded`. This is
+   D79's accepted limitation arriving sooner than expected, and it is why the
+   db suite creates accounts through the admin API. **What that suite therefore
+   cannot prove is that the public sign-up endpoint accepts a real address** —
+   that needs a sending domain or confirmation off.
+3. **Signing up an existing address returns a plain 200 with no session**, not
+   "already registered". Deliberate anti-enumeration, and stronger than the
+   message `signUpWithPassword` was ready to show. A test asserted the opposite
+   and the failure was the better answer; the branch stays for projects with
+   confirmation off, and the test will notice if the behaviour changes.
+
+### Next, in the order Vlad asked for
+
+1. **Workspace creation** — the bootstrap exists and is proved; what is left is
+   onboarding writing the niche and the real goal (`goals.outcome_text` in the
+   user's own words), and a second workspace for somebody who wants one.
+2. **The Settings delete control** — `delete_workspace` is written, applied and
+   proved; this is the typed confirmation and the dialog that offers the export
+   first.
+3. **The data export** — rows, read as the user.
+
+And **the e2e decision above**, which blocks a green suite.
 
 **Branch** `backend/b1-auth` · `6a09246` · pushed. **PR #1 untouched, still
 open and unmerged** — `main` carries only its own older marketing history, and
