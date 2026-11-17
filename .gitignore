@@ -29,5 +29,9 @@ node_modules/
 playwright-report/
 services/pipeline/**/*.mp4
 services/pipeline/samples/
+# Supabase CLI scratch state. It holds a version stamp today and a linked
+# project ref and access token once `supabase link` is run, which is the
+# version of this directory that must never reach a commit.
+supabase/.temp/
 test-results/
 .gstack/

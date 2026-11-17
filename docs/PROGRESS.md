@@ -6,6 +6,107 @@
 
 ---
 
+## Handoff — 16 November 2026, late night (B1 is blocked: the keys are not there, and the Supabase project does not exist yet)
+
+**Branch** `backend/b1-auth`, branched from `v4/site-and-metrics` because **PR
+#1 is still open and unmerged** — untouched, as instructed. **No PR opened for
+this branch yet**: B1 is not done.
+
+### The blocker, checked three ways
+
+I was asked to verify the keys before anything else. They are not there, and
+the reason is upstream of the keys:
+
+1. **`apps/web/.env.local` holds one variable, `ANTHROPIC_API_KEY`.** No
+   Supabase names at all. The file was last written 15 November.
+2. **The Vercel project's Preview environment holds one variable,
+   `ANTHROPIC_API_KEY`.** No Supabase names there either.
+3. **There is no `mirrorline-preview` Supabase project.** Five projects exist
+   on the organisation — none of them is it, and none is named for this
+   product.
+
+So D76's shared preview database has not been created, which is why there are
+no keys to put anywhere. **Nothing was printed to check this**: the counts
+above are variable *names* and value *lengths*.
+
+`GET /api/health/supabase` on the dev server answers **503** with
+`isComplete: false` and all three credentials `isPresent: false` — the app's
+own answer, not my grep.
+
+### What I could not do, and did not fake
+
+- **No migration was applied.** Not the existing one, not B1's two. There is no
+  project to apply them to, no project ref and no database password.
+- **No RLS test was run.** Workspace A versus B, anonymous, service role — all
+  three need a real instance, and `BACKEND_PHASE.md` §1 is explicit that a
+  mocked RLS test proves nothing. I did not write a mocked one to have
+  something green.
+- **The SQL is unvalidated.** There is **no Docker and no `psql` on this
+  machine**, so I could not stand up a local Supabase to even parse it. The
+  two migration files are reviewed-by-reading only, and that is the honest
+  status of them.
+
+### What landed anyway, because it is needed either way
+
+**All six gates green: lint, typecheck, 815 unit (was 797), build,
+licence-check. No new dependency.**
+
+- **`supabase/migrations/20261116230000_profiles_and_memberships.sql`** —
+  `profiles` keyed to `auth.users`, `memberships` with an `owner`/`member`
+  role, `is_member_of` / `is_owner_of` as `security definer` functions (a
+  policy on `memberships` that queries `memberships` recurses), a trigger that
+  writes a profile so the app never has to, `delete_workspace` for D80's
+  deletion including the auth user when it was their last workspace, and a
+  deferred constraint trigger so a workspace cannot lose its last owner.
+- **`supabase/migrations/20261116230100_rls_policies.sql`** — policies for all
+  thirteen tables. **Reads broad, writes narrow**: a member reads everything in
+  their workspace; a member writes only goals, objectives, key results and an
+  alert acknowledgement. `metric_snapshots`, `ledger_weekly`,
+  `social_accounts` and `trends` are read-only to the browser because a
+  measurement a user typed is not a measurement (15 §8). Three
+  `security definer` helpers for the tables that reach a workspace through a
+  parent. **`leads` keeps no policy at all** and that is its finished state.
+- **`apps/web/lib/supabase/env.ts` + 18 tests** — reports which credentials
+  are present and which variable name supplied each, with **no field a key can
+  travel in**; one test serialises the whole report and asserts the secret is
+  absent.
+- **`apps/web/app/api/health/supabase/route.ts`** — four checks: GoTrue
+  answers; the service role can read a seeded table; **the anon key reads zero
+  rows** (the check passes on an empty result and fails on a populated one);
+  and `memberships` exists, which is how "the migrations are applied" stops
+  being an assumption. 404 in a production deployment.
+
+### A real mismatch in the plan, found by writing this
+
+**`lib/leads/scan-store.ts` reads `SUPABASE_URL`. §7 of the plan asks for
+`NEXT_PUBLIC_SUPABASE_URL`.** Those are different variables. Setting only the
+prefixed one would leave the Niche Scan writing to a JSON file while the rest
+of the app talked to the database — a split brain with no error message.
+
+`env.ts` accepts both names and **warns about the gap** rather than silently
+preferring one; two of the 18 tests are that warning. **Set both**, or set
+`SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_URL` to the same value.
+
+### Next step: a database has to exist
+
+One of three, and it is Vlad's call:
+
+1. **I create `mirrorline-preview`** (`us-east-1`, free tier) through the
+   Supabase MCP, then apply all three migrations and the seed through it — no
+   project ref or password needed, and no CLI. **Not done without a yes**: it
+   creates a cloud resource on the organisation's account.
+2. **Vlad creates it** and puts the three keys in `apps/web/.env.local` and
+   Vercel Preview, then I apply the migrations.
+3. **Vlad applies the SQL by hand** in the dashboard's SQL editor — the two
+   files plus `supabase/seed.sql`, migration order first — which is the path
+   `supabase/README.md:39` already documents.
+
+After any of them: the health route goes green, and then the RLS tests, the
+auth wiring, the deletion and the export. **None of that is written yet** and
+none of it should be written against a database that does not exist.
+
+---
+
 ## Handoff — 16 November 2026, late night (the five answers landed, the backend plan says what was decided, and B1 waits on one confirmation)
 
 **Branch** `v4/site-and-metrics` · pushed. Clean tree. **PR #1 is still open
