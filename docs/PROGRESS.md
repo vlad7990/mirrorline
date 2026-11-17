@@ -6,6 +6,91 @@
 
 ---
 
+## Handoff — 17 November 2026 (B1's database half is written and unapplied; it waits on one free Supabase organisation)
+
+**Branch** `backend/b1-auth` · pushed. **PR #1 untouched, still open** — the
+only open PR. **No PR for this branch yet**: B1 is not finished.
+
+### The one thing that has to happen, and only Vlad can do it
+
+**Create a new Supabase organisation on the free plan**, then tell me its name.
+
+Why: the existing organisation **Stratum is on Pro with five projects**, and
+Supabase quotes **$10/month** for another one. There is only one organisation
+on the account, so there is no free tier to put this in. Vlad's call was to
+make a free organisation rather than start a recurring bill for a preview
+database (**D81**). The MCP can create projects but **cannot create
+organisations**, so the dashboard is the only way.
+
+After that I create `mirrorline-preview` in it (`us-east-1`, $0), apply the
+three migrations and the seed, run the RLS suite, and hand over the project URL
+and the publishable/anon key. **Vlad copies the service-role key into
+`apps/web/.env.local` and Vercel Preview**; I never see the dashboard.
+
+### Why B1 did not start: the keys were not the problem, the database was
+
+Checked three ways, nothing printed:
+
+1. `apps/web/.env.local` — one variable, `ANTHROPIC_API_KEY`.
+2. The Vercel project's Preview environment — the same one variable.
+3. **No `mirrorline-preview` project exists.** Five projects on Stratum; none
+   is it.
+
+`GET /api/health/supabase` on the dev server answers **503**, all three
+credentials `isPresent: false` — the app's own verdict rather than my grep.
+
+### What is written, gated and pushed
+
+**All six gates green: lint, typecheck, 815 unit (was 797), build,
+licence-check. No new dependency** — PostgREST and GoTrue over `fetch`, the
+precedent `scan-store.ts` set.
+
+| File | What it is |
+|---|---|
+| `supabase/migrations/20261116230000_profiles_and_memberships.sql` | `profiles` keyed to `auth.users`, `memberships` with an owner/member role, `is_member_of`/`is_owner_of` as `security definer` (a policy on `memberships` querying `memberships` recurses), a trigger that writes the profile, `delete_workspace` for D80, and a deferred trigger so a workspace keeps an owner. |
+| `supabase/migrations/20261116230100_rls_policies.sql` | Policies for all thirteen tables. **Reads broad, writes narrow**: a member writes only goals, objectives, key results and an alert acknowledgement. Measurements are read-only to the browser (15 §8). `leads` keeps no policy — its finished state. |
+| `apps/web/lib/supabase/env.ts` + 18 tests | Which credentials are present and under which name, with **no field a key can travel in**; one test serialises the report and asserts the secret is absent. |
+| `apps/web/lib/supabase/rest.ts` | PostgREST + GoTrue calls that take their credential as a parameter, so the same request can be made as the service role, as a user, and anonymously. |
+| `apps/web/app/api/health/supabase/route.ts` | Four checks: GoTrue answers, the service role reads a seeded table, **the anon key reads zero rows**, and `memberships` exists. 404 in production. |
+| `apps/web/lib/supabase/rls.db.test.ts` + `vitest.db.config.ts` | **32 tests, written and queued**, `pnpm test:rls-db`. |
+
+### The RLS suite is written but has never run
+
+**32 tests** covering: A cannot read B (by listing *and* by known id — RLS has
+to make a known id useless), A cannot rename B's workspace, **A cannot add
+itself to B's workspace** (one insert is the whole access model if it is
+allowed), anonymous reads nothing across all thirteen tables, the service role
+reads everything, a member authors the goal cascade and cannot write a
+measurement, and D80's deletion — **zero rows across every table**, the owner's
+auth user gone because it was their last workspace, A's account surviving
+because it is not.
+
+With no keys it **fails loudly** rather than skipping: `Supabase is not
+configured — not set: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY…`. That is
+deliberate; §1 rules out a mocked RLS test, so `pnpm test` is configured not to
+collect this file at all and cannot report it green.
+
+**Status of the SQL: reviewed by reading only.** There is no Docker and no
+`psql` on this machine, so none of it has been parsed by a Postgres. Expect to
+fix something on first apply.
+
+### D82 — a real mismatch in the plan, found by writing the code
+
+**`scan-store.ts` reads `SUPABASE_URL`; §7 asked for
+`NEXT_PUBLIC_SUPABASE_URL`.** Setting only the prefixed name leaves the Niche
+Scan writing to a JSON file while the rest of the app uses the database, with
+no error. `env.ts` accepts both and names whichever is missing. **Set both.**
+
+### Then, to finish B1
+
+Not written yet, and deliberately not written against a database that does not
+exist: the sign-in/sign-up server actions, the workspace-creation transaction
+(a workspace and its owner membership appear together or not at all), the
+Settings delete-workspace control behind a typed confirmation, and **"Export my
+data"** — the rows, as the user, which §2 files under B2 and D80 ties to this.
+
+---
+
 ## Handoff — 16 November 2026, late night (B1 is blocked: the keys are not there, and the Supabase project does not exist yet)
 
 **Branch** `backend/b1-auth`, branched from `v4/site-and-metrics` because **PR

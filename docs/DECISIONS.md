@@ -5688,3 +5688,67 @@ One ordering consequence worth naming: `/legal/cancellation-refunds` says the
 export keeps working **after** you cancel, so **export is gated on having an
 account, never on subscription status** — and §8 proves it with a test that
 cancels, passes the period end, and exports anyway.
+
+## 2026-11-17 · D81 · The preview database costs $10 a month on the organisation we have, so it goes in one we do not have yet
+
+Vlad's decision: **create a new free Supabase organisation and put
+`mirrorline-preview` in that**, rather than paying for a project on the
+existing one.
+
+**D76 said "one shared `mirrorline-preview` project, region `us-east-1`" and I
+wrote that down as though it were free.** It is not. The organisation is
+**Stratum**, on the **Pro** plan with five projects already, and Supabase
+quotes **$10/month** for another one. There is exactly one organisation on the
+account, so there was no free tier to fall back into.
+
+That matters more than ten dollars. **Non-negotiable 11 is "no paid API calls
+beyond test mode; no production deploys"**, and the project has so far cost
+nothing at all — a recurring charge for a database that exists only to serve
+previews would have been the first standing bill, taken on without being asked
+for. Which is why the cost was quoted and nothing was created.
+
+**The free tier is per organisation, not per account**, and the Supabase MCP
+cannot create an organisation — so this is the one step that has to happen in
+the dashboard. D76 is otherwise unchanged: one shared project, `us-east-1`,
+production gets its own later.
+
+**What the asking turned up, which is the real finding.** Verifying the keys
+first was supposed to be a formality. Instead: `apps/web/.env.local` held one
+variable and it was `ANTHROPIC_API_KEY`; the Vercel project's Preview
+environment held the same one variable; and **no `mirrorline-preview` project
+existed anywhere on the account.** The keys were not missing — the database
+was. `GET /api/health/supabase` said so in a 503 with all three credentials
+`isPresent: false`, which is the app's own answer rather than mine.
+
+The lesson is cheap and worth keeping: **"the keys are in" is a claim to
+check, not a precondition to accept**, and the check costs one request.
+
+## 2026-11-17 · D82 · Two names for the Supabase URL, because the shipped code and the plan each picked a different one
+
+`lib/leads/scan-store.ts` reads **`SUPABASE_URL`**. `BACKEND_PHASE.md` §7 asks
+for **`NEXT_PUBLIC_SUPABASE_URL`**, because the browser needs it too. I wrote
+§7 without checking what the code already read.
+
+Setting only the prefixed name would have produced the worst available
+outcome: **the Niche Scan still writing to a JSON file while every other part
+of the app talked to the database** — no error, no warning, and the first
+symptom a lead on disk instead of in `leads`.
+
+`lib/supabase/env.ts` accepts both, prefers the unprefixed one (it is what
+ships today), **and warns about whichever is missing**:
+
+- only `NEXT_PUBLIC_SUPABASE_URL` set → "`SUPABASE_URL` is unset, so
+  `lib/leads/scan-store.ts` still writes to a file";
+- only `SUPABASE_URL` set → "`NEXT_PUBLIC_SUPABASE_URL` is unset, so the
+  browser cannot read the URL".
+
+Two of the module's 18 tests are those sentences. **The alternative was to
+rename the variable in `scan-store.ts`** and have one name — tidier, and it
+would have meant changing working code to match a document I had got wrong.
+The report is the smaller change and it is the one that tells a person what
+happened.
+
+The credential report it returns **has no field a value can travel in**, and a
+test serialises the whole thing and asserts the secret is absent — because the
+instruction was to verify the keys without printing them, and "I was careful"
+is not a mechanism.
