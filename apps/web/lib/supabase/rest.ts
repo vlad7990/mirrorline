@@ -211,13 +211,18 @@ export async function adminCreateUser(
   serviceRoleKey: string,
   email: string,
   password: string,
+  metadata: Readonly<Record<string, unknown>> = {},
 ): Promise<CreatedUser> {
   const response = await fetch(`${url}/auth/v1/admin/users`, {
     method: 'POST',
     // `apikey` only — see the header note. GoTrue's admin endpoints accept the
     // secret key there, and it must not travel as a bearer token.
     headers: { apikey: serviceRoleKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password, email_confirm: true }),
+    // `user_metadata` lands in `raw_user_meta_data`, which is what
+    // `handle_new_user` reads for the profile and `ensureWorkspace` reads for
+    // the carried choices. So a user made this way walks the same path a real
+    // sign-up does, minus the confirmation mail.
+    body: JSON.stringify({ email, password, email_confirm: true, user_metadata: metadata }),
     cache: 'no-store',
   })
 
@@ -276,6 +281,114 @@ export async function signIn(
   }
 
   return body.access_token
+}
+
+export interface SignUpOutcome {
+  readonly status: number
+  readonly userId: string | null
+  /** True when the project returned a session, i.e. email confirmation is off. */
+  readonly hasSession: boolean
+  readonly accessToken: string | null
+  readonly errorMessage: string | null
+}
+
+/**
+ * The **real** sign-up endpoint, with the publishable key — the same request a
+ * browser makes.
+ *
+ * Deliberately not the admin API: `adminCreateUser` skips confirmation and
+ * therefore skips the thing worth testing. This tells us what a visitor
+ * actually gets, including whether the project is set to confirm addresses,
+ * which decides whether sign-up can create the workspace or the callback has
+ * to.
+ */
+export async function authSignUp(
+  url: string,
+  anonKey: string,
+  email: string,
+  password: string,
+  data: Readonly<Record<string, unknown>> = {},
+): Promise<SignUpOutcome> {
+  const response = await fetch(`${url}/auth/v1/signup`, {
+    method: 'POST',
+    headers: { apikey: anonKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, data }),
+    cache: 'no-store',
+  })
+
+  const body = (await response.json()) as {
+    id?: unknown
+    user?: { id?: unknown } | null
+    access_token?: unknown
+    msg?: unknown
+    error_description?: unknown
+  }
+
+  // GoTrue answers two shapes here: the user at the top level when there is no
+  // session, and `{ user, access_token }` when there is.
+  const topLevelId = typeof body.id === 'string' ? body.id : null
+  const nestedId = typeof body.user?.id === 'string' ? body.user.id : null
+  const accessToken = typeof body.access_token === 'string' ? body.access_token : null
+
+  const described = typeof body.error_description === 'string' ? body.error_description : undefined
+  const messaged = typeof body.msg === 'string' ? body.msg : undefined
+
+  return {
+    status: response.status,
+    userId: topLevelId ?? nestedId,
+    hasSession: accessToken !== null,
+    accessToken,
+    errorMessage: response.ok ? null : (described ?? messaged ?? `HTTP ${response.status}`),
+  }
+}
+
+/**
+ * Confirm an address without a mailbox.
+ *
+ * The suite cannot read email, and D79 leaves auth mail on Supabase's
+ * rate-limited sender, so a test that waited for a confirmation link would
+ * either hang or exhaust the hourly limit. This is the admin equivalent of
+ * clicking it — used *after* the real sign-up has been exercised, so the thing
+ * under test is still the real endpoint.
+ */
+export async function adminConfirmEmail(
+  url: string,
+  serviceRoleKey: string,
+  userId: string,
+): Promise<boolean> {
+  const response = await fetch(`${url}/auth/v1/admin/users/${userId}`, {
+    method: 'PUT',
+    headers: { apikey: serviceRoleKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email_confirm: true }),
+    cache: 'no-store',
+  })
+
+  return response.ok
+}
+
+/** A sign-in that is expected to fail, reported rather than thrown. */
+export async function trySignIn(
+  url: string,
+  anonKey: string,
+  email: string,
+  password: string,
+): Promise<{ status: number; ok: boolean; errorMessage: string | null }> {
+  const response = await fetch(`${url}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: { apikey: anonKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+    cache: 'no-store',
+  })
+
+  const body = (await response.json()) as { error_description?: unknown; msg?: unknown }
+  const described = typeof body.error_description === 'string' ? body.error_description : undefined
+  const messaged = typeof body.msg === 'string' ? body.msg : undefined
+
+  return {
+    status: response.status,
+    ok: response.ok,
+    errorMessage: response.ok ? null : (described ?? messaged ?? null),
+  }
 }
 
 /** Does this auth user still exist? The deletion test's final question. */

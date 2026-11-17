@@ -15,6 +15,7 @@
  */
 
 import type { Metadata } from 'next'
+import * as React from 'react'
 
 import { SignInForm } from '../components/auth-forms'
 
@@ -24,5 +25,12 @@ export const metadata: Metadata = {
 }
 
 export default function SignInPage() {
-  return <SignInForm />
+  // The form reads `next` and `notice` from the URL, so it calls
+  // `useSearchParams` — which Next requires inside a Suspense boundary on a
+  // statically rendered page. The page stays static; only the form waits.
+  return (
+    <React.Suspense fallback={<div className="min-h-[30rem]" aria-hidden="true" />}>
+      <SignInForm />
+    </React.Suspense>
+  )
 }
