@@ -71,12 +71,20 @@ export interface SupabaseEnvReport {
 type Env = Readonly<Record<string, string | undefined>>
 
 /**
- * A Supabase JWT is three dot-separated segments and comfortably over a
- * hundred characters. This checks for a placeholder like `your-key-here`, not
- * for validity — only Supabase can say whether a well-formed key is the right
- * one, which is what the health check is for.
+ * The project uses Supabase's **new API key format** — `sb_publishable_…` for
+ * the browser, `sb_secret_…` for the server — not the legacy JWTs.
+ *
+ * They are far shorter than a JWT: the service-role key here is 41 characters,
+ * so the previous "at least 40" floor sat one character away from rejecting a
+ * valid key. The check is on the prefix now, with a floor only to catch an
+ * empty-ish placeholder. **Legacy `eyJ…` keys are still accepted** — nothing
+ * in the app switches to them, and refusing one would gate a key that works.
  */
-const MIN_KEY_LENGTH = 40
+const KEY_PREFIX = { publishable: 'sb_publishable_', secret: 'sb_secret_' } as const
+const LEGACY_JWT_PREFIX = 'eyJ'
+const MIN_KEY_LENGTH = 20
+
+type KeyKind = keyof typeof KEY_PREFIX
 
 function firstPresent(env: Env, names: readonly string[]): { source: string | null; value: string } {
   for (const name of names) {
@@ -108,22 +116,48 @@ function reportUrl(env: Env): CredentialReport {
   return { names: URL_NAMES, source, isPresent: true, shapeProblem }
 }
 
-function reportKey(env: Env, names: readonly string[]): CredentialReport {
+/**
+ * The verdict on a key, and **the one check here that is about safety rather
+ * than tidiness**: a `sb_secret_…` value sitting in a `NEXT_PUBLIC_` variable
+ * is a server key compiled into the browser bundle. Next.js inlines anything
+ * so prefixed, so the mistake ships silently and the key is then public
+ * forever. The shape tells the two apart unambiguously, so it is worth
+ * refusing rather than warning about.
+ */
+function reportKey(env: Env, names: readonly string[], kind: KeyKind): CredentialReport {
   const { source, value } = firstPresent(env, names)
   if (source === null) {
     return { names, source: null, isPresent: false, shapeProblem: null }
   }
 
-  const shapeProblem = value.length < MIN_KEY_LENGTH ? `${source} is too short to be a key` : null
+  const problem = ((): string | null => {
+    if (value.startsWith(KEY_PREFIX.secret) && kind === 'publishable') {
+      return `${source} holds a secret key — a NEXT_PUBLIC_ variable is compiled into the browser bundle`
+    }
+    if (value.startsWith(KEY_PREFIX.publishable) && kind === 'secret') {
+      return `${source} holds a publishable key, which cannot act as the service role`
+    }
+    if (value.length < MIN_KEY_LENGTH) {
+      return `${source} is too short to be a key`
+    }
+    if (
+      !value.startsWith(KEY_PREFIX[kind]) &&
+      !value.startsWith(LEGACY_JWT_PREFIX)
+    ) {
+      return `${source} is neither a ${KEY_PREFIX[kind]}… key nor a legacy JWT`
+    }
 
-  return { names, source, isPresent: true, shapeProblem }
+    return null
+  })()
+
+  return { names, source, isPresent: true, shapeProblem: problem }
 }
 
 /** Describe what is configured. Safe to serialise anywhere. */
 export function describeSupabaseEnv(env: Env = process.env): SupabaseEnvReport {
   const url = reportUrl(env)
-  const anonKey = reportKey(env, ANON_KEY_NAMES)
-  const serviceRoleKey = reportKey(env, SERVICE_ROLE_NAMES)
+  const anonKey = reportKey(env, ANON_KEY_NAMES, 'publishable')
+  const serviceRoleKey = reportKey(env, SERVICE_ROLE_NAMES, 'secret')
 
   const nameWarnings: string[] = []
 

@@ -17,12 +17,26 @@
  * express that. It also means nothing in this file can reach for the
  * service-role key on its own.
  *
- * `apikey` identifies the project; `Authorization: Bearer` is the identity
- * Postgres sees. For the service role they are the same string. For a signed-in
- * user the `apikey` is the anon key and the bearer is their access token —
- * **that pairing is what makes RLS apply to them**, and sending the
- * service-role key as the apikey instead would bypass every policy in the
- * previous migration.
+ * ============================================================================
+ * The new key format, and the one rule that matters
+ * ============================================================================
+ *
+ * This project uses Supabase's current API keys — `sb_publishable_…` and
+ * `sb_secret_…` — not the legacy JWTs. With those:
+ *
+ * - **Every key goes in the `apikey` header**, the publishable one and the
+ *   secret one alike.
+ * - **`Authorization: Bearer` carries a user's session JWT and nothing else.**
+ *   The secret key is never sent as a bearer token. The legacy format
+ *   tolerated it because the key *was* a JWT; `sb_secret_…` is not, and putting
+ *   it there means putting a server credential into the header that proxies,
+ *   access logs and error reporters all treat as an end-user token.
+ *
+ * So: the service role is `apiKey: <secret>, accessToken: null`. Anonymous is
+ * `apiKey: <publishable>, accessToken: null`. A signed-in user is
+ * `apiKey: <publishable>, accessToken: <their JWT>` — **that pairing is what
+ * makes RLS apply to them**, and passing the secret key as the apikey instead
+ * would bypass every policy in the previous migration.
  */
 
 export interface RestResponse<T = unknown> {
@@ -49,8 +63,10 @@ function headers(credentials: RestCredentials, extra: Record<string, string> = {
     ...extra,
   }
 
-  // No bearer at all is how an anonymous request is made. PostgREST then
-  // treats the apikey's own role — `anon` — as the identity.
+  // No bearer at all is how both an anonymous request and a service-role
+  // request are made: the `apikey` header carries the credential and PostgREST
+  // takes the role from it. A bearer appears only when there is a user session
+  // JWT to put in it.
   if (credentials.accessToken !== null) {
     base.Authorization = `Bearer ${credentials.accessToken}`
   }
@@ -198,11 +214,9 @@ export async function adminCreateUser(
 ): Promise<CreatedUser> {
   const response = await fetch(`${url}/auth/v1/admin/users`, {
     method: 'POST',
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      'Content-Type': 'application/json',
-    },
+    // `apikey` only — see the header note. GoTrue's admin endpoints accept the
+    // secret key there, and it must not travel as a bearer token.
+    headers: { apikey: serviceRoleKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, email_confirm: true }),
     cache: 'no-store',
   })
@@ -224,7 +238,7 @@ export async function adminDeleteUser(
 ): Promise<void> {
   await fetch(`${url}/auth/v1/admin/users/${userId}`, {
     method: 'DELETE',
-    headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
+    headers: { apikey: serviceRoleKey },
     cache: 'no-store',
   })
 }
@@ -271,7 +285,7 @@ export async function adminUserExists(
   userId: string,
 ): Promise<boolean> {
   const response = await fetch(`${url}/auth/v1/admin/users/${userId}`, {
-    headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
+    headers: { apikey: serviceRoleKey },
     cache: 'no-store',
   })
 

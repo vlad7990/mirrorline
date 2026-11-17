@@ -13,15 +13,20 @@ import {
   serverSupabaseConfig,
 } from './env'
 
-/** Long enough to pass the placeholder check, and obviously not a key. */
-const FAKE_KEY = `fake.${'x'.repeat(60)}`
+/**
+ * The project's real keys are Supabase's new format — `sb_publishable_…` and
+ * `sb_secret_…` — and these fakes carry the same prefixes, because the prefix
+ * is exactly what `reportKey` judges. Both are obviously not keys.
+ */
+const FAKE_PUBLISHABLE = `sb_publishable_${'x'.repeat(30)}`
+const FAKE_SECRET = `sb_secret_${'x'.repeat(30)}`
 const FAKE_URL = 'https://example.supabase.co'
 
 const COMPLETE_ENV = {
   SUPABASE_URL: FAKE_URL,
   NEXT_PUBLIC_SUPABASE_URL: FAKE_URL,
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: FAKE_KEY,
-  SUPABASE_SERVICE_ROLE_KEY: FAKE_KEY,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: FAKE_PUBLISHABLE,
+  SUPABASE_SERVICE_ROLE_KEY: FAKE_SECRET,
 } as const
 
 describe('describeSupabaseEnv', () => {
@@ -56,8 +61,50 @@ describe('describeSupabaseEnv', () => {
     // Assert — the whole report, serialised, must not contain the secret. This
     // is what makes the type's missing `value` field a guarantee rather than an
     // intention.
-    expect(JSON.stringify(report)).not.toContain(FAKE_KEY)
+    expect(JSON.stringify(report)).not.toContain(FAKE_SECRET)
+    expect(JSON.stringify(report)).not.toContain(FAKE_PUBLISHABLE)
     expect(JSON.stringify(report)).not.toContain('xxxx')
+  })
+
+  test('refuses a secret key placed in a NEXT_PUBLIC_ variable', () => {
+    // Arrange — the mistake that cannot be warned about after the fact: Next
+    // inlines every NEXT_PUBLIC_ value into the browser bundle, so a secret key
+    // here is public the moment it builds.
+    const env = { ...COMPLETE_ENV, NEXT_PUBLIC_SUPABASE_ANON_KEY: FAKE_SECRET }
+
+    // Act
+    const report = describeSupabaseEnv(env)
+
+    // Assert
+    expect(report.isComplete).toBe(false)
+    expect(report.anonKey.shapeProblem).toContain('holds a secret key')
+    expect(report.anonKey.shapeProblem).not.toContain(FAKE_SECRET)
+  })
+
+  test('refuses a publishable key used as the service role', () => {
+    // Arrange — the quieter half of the same swap: it would connect, and then
+    // every server read would be filtered by RLS as though it were a browser.
+    const env = { ...COMPLETE_ENV, SUPABASE_SERVICE_ROLE_KEY: FAKE_PUBLISHABLE }
+
+    // Act
+    const report = describeSupabaseEnv(env)
+
+    // Assert
+    expect(report.isComplete).toBe(false)
+    expect(report.serviceRoleKey.shapeProblem).toContain('cannot act as the service role')
+  })
+
+  test('accepts a legacy JWT key, because it still works', () => {
+    // Arrange — the project uses the new format and nothing switches back, but
+    // gating a working key would be a gate on the wrong thing.
+    const env = { ...COMPLETE_ENV, SUPABASE_SERVICE_ROLE_KEY: `eyJ${'y'.repeat(100)}` }
+
+    // Act
+    const report = describeSupabaseEnv(env)
+
+    // Assert
+    expect(report.serviceRoleKey.shapeProblem).toBeNull()
+    expect(report.isComplete).toBe(true)
   })
 
   test('records which variable name supplied the URL', () => {
@@ -87,8 +134,8 @@ describe('describeSupabaseEnv', () => {
     // prefixed name.
     const env = {
       NEXT_PUBLIC_SUPABASE_URL: FAKE_URL,
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: FAKE_KEY,
-      SUPABASE_SERVICE_ROLE_KEY: FAKE_KEY,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: FAKE_PUBLISHABLE,
+      SUPABASE_SERVICE_ROLE_KEY: FAKE_SECRET,
     }
 
     // Act
@@ -103,8 +150,8 @@ describe('describeSupabaseEnv', () => {
     // Arrange
     const env = {
       SUPABASE_URL: FAKE_URL,
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: FAKE_KEY,
-      SUPABASE_SERVICE_ROLE_KEY: FAKE_KEY,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: FAKE_PUBLISHABLE,
+      SUPABASE_SERVICE_ROLE_KEY: FAKE_SECRET,
     }
 
     // Act
@@ -173,7 +220,7 @@ describe('serverSupabaseConfig', () => {
     const config = serverSupabaseConfig(COMPLETE_ENV)
 
     // Assert
-    expect(config).toEqual({ url: FAKE_URL, serviceRoleKey: FAKE_KEY })
+    expect(config).toEqual({ url: FAKE_URL, serviceRoleKey: FAKE_SECRET })
   })
 
   test('strips a trailing slash, so callers can concatenate a path safely', () => {
@@ -189,7 +236,7 @@ describe('serverSupabaseConfig', () => {
 
   test('is null when the anon key is set but the service-role key is not', () => {
     // Arrange
-    const env = { SUPABASE_URL: FAKE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY: FAKE_KEY }
+    const env = { SUPABASE_URL: FAKE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY: FAKE_PUBLISHABLE }
 
     // Act / Assert
     expect(serverSupabaseConfig(env)).toBeNull()
@@ -200,7 +247,7 @@ describe('anonSupabaseConfig', () => {
   test('is null when the service-role key is set but the anon key is not', () => {
     // Arrange — the asymmetry matters: a server that can read everything is not
     // a browser that can read its own rows.
-    const env = { SUPABASE_URL: FAKE_URL, SUPABASE_SERVICE_ROLE_KEY: FAKE_KEY }
+    const env = { SUPABASE_URL: FAKE_URL, SUPABASE_SERVICE_ROLE_KEY: FAKE_SECRET }
 
     // Act / Assert
     expect(anonSupabaseConfig(env)).toBeNull()
@@ -211,7 +258,7 @@ describe('anonSupabaseConfig', () => {
     const config = anonSupabaseConfig(COMPLETE_ENV)
 
     // Assert
-    expect(config).toEqual({ url: FAKE_URL, anonKey: FAKE_KEY })
+    expect(config).toEqual({ url: FAKE_URL, anonKey: FAKE_PUBLISHABLE })
   })
 })
 

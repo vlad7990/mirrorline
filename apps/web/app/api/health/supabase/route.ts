@@ -109,9 +109,11 @@ async function checkAuth(url: string, apiKey: string): Promise<Check> {
 }
 
 async function checkServiceRoleRead(url: string, key: string): Promise<Check> {
+  // `apikey` only. The keys are `sb_secret_…`, not JWTs, and a secret key must
+  // never travel as a bearer token — `lib/supabase/rest.ts` explains why.
   const { status, body, error } = await getJson(
     `${url}/rest/v1/kpi_definitions?select=key&limit=1`,
-    { apikey: key, Authorization: `Bearer ${key}` },
+    { apikey: key },
   )
 
   if (error !== null) {
@@ -143,9 +145,12 @@ async function checkServiceRoleRead(url: string, key: string): Promise<Check> {
 }
 
 async function checkAnonIsRefused(url: string, anonKey: string): Promise<Check> {
+  // The publishable key in `apikey`, and **no bearer** — a bearer is a user's
+  // session JWT, and there is no user here. This is what an anonymous visitor
+  // sends, which is the whole point of the check.
   const { status, body, error } = await getJson(
     `${url}/rest/v1/kpi_definitions?select=key&limit=1`,
-    { apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+    { apikey: anonKey },
   )
 
   if (error !== null) {
@@ -176,7 +181,6 @@ async function checkAnonIsRefused(url: string, anonKey: string): Promise<Check> 
 async function checkB1Migrations(url: string, key: string): Promise<Check> {
   const { status, error } = await getJson(`${url}/rest/v1/memberships?select=id&limit=1`, {
     apikey: key,
-    Authorization: `Bearer ${key}`,
   })
 
   if (error !== null) {

@@ -1,0 +1,28 @@
+# Supabase CLI configuration.
+#
+# Added when the preview database first existed (D83). The repo had no
+# `config.toml` because until then nothing had ever been applied — the schema
+# was a file nobody had run.
+#
+# **Deliberately minimal.** `supabase init` generates a hundred lines of
+# defaults for a local Docker stack; almost none of it is true here, because
+# there is no local stack (no Docker on the machine this was built on) and
+# every default it writes is one more thing that can quietly disagree with the
+# hosted project. What is here is the two facts the CLI cannot infer.
+#
+# Nothing in this file is a secret: `project_id` is the project ref, which
+# appears in every dashboard URL and in the project's own hostname. Keys live
+# in `apps/web/.env.local` and in Vercel, never in the repo.
+
+project_id = "qypakxvxnjmsvxmxiynf"
+
+[db.seed]
+# So `supabase db push --remote --include-seed` applies the shared KPI
+# definitions. `supabase/README.md` assumed a `psql "$DATABASE_URL" -f …`, and
+# there is no `psql` here — a documented step that cannot be run is a step
+# that will not be run.
+#
+# `seed.sql` is idempotent (`on conflict (key) do update`), which is what makes
+# it safe to pass this flag on every push rather than having to remember when.
+enabled = true
+sql_paths = ["./seed.sql"]

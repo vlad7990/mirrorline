@@ -169,7 +169,11 @@ beforeAll(async () => {
   const anon = requireAnonSupabaseConfig()
 
   url = server.url
-  serviceRole = { url, apiKey: server.serviceRoleKey, accessToken: server.serviceRoleKey }
+  // `accessToken: null` for both. The keys are `sb_secret_…` and
+  // `sb_publishable_…`, which travel in `apikey`; a bearer token here would put
+  // a server credential in the header meant for a user's session JWT. Only
+  // `asUser()` sets a bearer, and what it sets is a real session token.
+  serviceRole = { url, apiKey: server.serviceRoleKey, accessToken: null }
   anonymous = { url, apiKey: anon.anonKey, accessToken: null }
 
   await createUser('a')
@@ -236,7 +240,7 @@ afterAll(async () => {
   for (const workspaceId of workspaceIds.values()) {
     await fetch(`${url}/rest/v1/workspaces?id=eq.${workspaceId}`, {
       method: 'DELETE',
-      headers: { apikey: serviceRole.apiKey, Authorization: `Bearer ${serviceRole.apiKey}` },
+      headers: { apikey: serviceRole.apiKey },
     }).catch(() => null)
   }
 
@@ -350,6 +354,20 @@ describe('anonymous reads nothing', () => {
 
     // Assert — either refused outright or allowed and empty. Both are "reads
     // nothing"; what must never happen is a row coming back.
+    expect(response.rows).toHaveLength(0)
+  })
+
+  test('the anon key is accepted, so an empty result is RLS and not a rejection', async () => {
+    // Arrange — "reads nothing" passes just as well when the key is refused,
+    // and those are very different facts. A 200 means PostgREST accepted the
+    // publishable key, resolved the `anon` role, and **the policies are what
+    // emptied the result**. Without this assertion a broken credential would
+    // look like working security.
+    const response = await restSelect(anonymous, 'workspaces?select=id&limit=5')
+
+    // Assert
+    expect(response.status).toBe(200)
+    expect(response.errorCode).toBeNull()
     expect(response.rows).toHaveLength(0)
   })
 
