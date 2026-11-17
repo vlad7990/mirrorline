@@ -8,9 +8,13 @@
 
 ## Handoff — 16 November 2026, late night (the site phase is closed: a PR is open for review, and the backend phase is planned)
 
-**Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.
-**A pull request into `main` is open and waiting on Vlad. Nothing merged,
-nothing promoted.**
+**Branch** `v4/site-and-metrics` · **last commit** `e20dca1` · pushed. Clean
+tree. **PR #1 into `main` is open and unmerged, waiting on Vlad's review.
+Nothing merged, nothing promoted.**
+
+**The site/prototype phase is closed.** What is left on this branch is the
+review; the next piece of work is the backend, and it does not start until the
+answers in §4 arrive.
 
 ### 1. The axe gate lost its floor (D75)
 
@@ -37,17 +41,21 @@ reported it instead**. A gate another tool can embarrass is not a gate — and
 this one said "no serious violations" in its own test names, which reads as
 "no violations" to anybody skimming CI.
 
-### 2. The pull request
+### 2. The pull request — open, unmerged
 
 **https://github.com/vlad7990/mirrorline/pull/1** — `v4/site-and-metrics` →
 `main`, opened with a summary of the whole v4 phase and links into
-`DECISIONS.md` and this file. **All gates were run on the head
-commit** and the results are in the PR body. It is yours to review and merge —
-I have not merged it and will not.
+`DECISIONS.md` and this file. **All six gates were run on the head commit**
+and the results are in the PR body: lint, typecheck, 797 unit, build,
+licence-check, 396 e2e, plus axe 90/90 and Lighthouse ≥ 90 on all 25 public
+routes.
 
-### 3. `docs/plan/BACKEND_PHASE.md`
+**It is Vlad's to review and merge. I have not merged it and will not**, and
+nothing here is promoted to production.
 
-Plan only; nothing built. Five steps — auth + RLS, the studio off sample data,
+### 3. `docs/plan/BACKEND_PHASE.md` — written, plan only, nothing built
+
+Five steps — auth + RLS, the studio off sample data,
 Stripe test-mode checkout, the Niche Scan writing for real, the pipeline behind
 the engine adapter — with **posting kept off until the Meta, TikTok and YouTube
 audits pass**, which is the part that is entirely yours.
@@ -64,18 +72,48 @@ decision: do previews share a database or get one per branch. Two things
 CLAUDE.md promises that do not exist: `automation/n8n/`, and any Stripe code at
 all.
 
+### 4. Next step: fold Vlad's decisions into the backend plan
+
+**This is where the next session starts, and it is an edit to
+`docs/plan/BACKEND_PHASE.md` rather than any code.** Five answers are
+outstanding, all of them in §7 of that file:
+
+1. **Previews: one shared database, or one per branch?** The plan assumes a
+   single shared `mirrorline-preview` project unless told otherwise. Everything
+   in B1 depends on this, because it decides what the RLS tests run against.
+2. **Stripe products: do I create Pilot and Creator in the test dashboard, or
+   does Vlad, and send the two price ids?** The plan assumes I create them, so
+   the ids sit beside the prices in `pricing-tiers.ts`.
+3. **n8n: is there a self-hosted instance already**, or do I add the
+   `automation/n8n/` docker-compose CLAUDE.md's layout already promises — and
+   **where should a scan notification actually land** (email, Slack, Telegram)?
+4. **Auth email: Supabase's built-in sender, or our own domain?** The second
+   needs an SMTP provider and a verified domain.
+5. **The keys themselves** — Supabase ×3 + project ref, Stripe ×3, n8n URL and
+   a new shared secret. Into `apps/web/.env.local` and the Vercel project's
+   environment variables; never into a chat.
+
+Once those land: update §7 and §1 of the plan to say what was decided rather
+than what was assumed, then B1 — and nothing before B1, because until a request
+carries a user there is no policy to write.
+
 ### Checks
 
 Lint, typecheck, **797 unit**, build and licence-check green. Axe **90/90** at
-the new threshold. The full e2e run is in the PR body.
+the new threshold. The full e2e run (**396 passed**) is in the PR body.
 
-### The queue
+### Also queued, and neither blocks the backend
 
 1. **`/resources/[slug]` accessibility 96** — one page, never audited. Now that
    the gate blocks `moderate`, check whether this is one of its rules.
 2. **`/legal/privacy`'s LCP element is the cookie banner**, a fixed overlay
    rather than page content.
-3. **The backend phase**, once the keys arrive.
+
+### Standing, and the long pole
+
+**The Meta, TikTok and YouTube app reviews.** None of it is code, all of it is
+Vlad's, and the posting half of the backend phase is blocked on all three. The
+sooner they are filed, the sooner B5 means anything.
 
 ---
 
