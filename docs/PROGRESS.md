@@ -6,6 +6,97 @@
 
 ---
 
+## Handoff — 17 November 2026, evening (the schema is applied and the policies are proved: 33/33 against the real database)
+
+**Branch** `backend/b1-auth` · `6a09246` · pushed. **PR #1 untouched, still
+open and unmerged** — `main` carries only its own older marketing history, and
+`v4/site-and-metrics` is not merged into it.
+
+### B1's database half is done and verified
+
+| Step | Result |
+|---|---|
+| Three migrations → `mirrorline-preview` | **Applied**, `npx supabase db push --remote` |
+| `supabase/seed.sql` | **Applied** — the twelve shared KPI definitions |
+| What the first real Postgres parse found | **Nothing.** Both new migrations ran unchanged |
+| `/api/health/supabase` locally | **200, `ok: true`**, all four checks |
+| `/api/health/supabase` on the preview | **200, `ok: true`**, all four checks |
+| `pnpm test:rls-db` | **33/33 passed**, first run |
+
+The project is `qypakxvxnjmsvxmxiynf` (`mirrorline-preview`, `us-east-1`) in
+the **Mirrorline** organisation (D83). Its ref is in `supabase/config.toml`;
+the keys are in `apps/web/.env.local` and Vercel **Preview only** — confirmed
+against the Vercel API: all five variables target `preview`,
+`hiddenProductionEnvCount: 0`, and `SUPABASE_SERVICE_ROLE_KEY` is stored
+sensitive/secret.
+
+### What the 33 tests actually prove
+
+Workspace A cannot read B **by listing or by known id** — RLS has to make a
+known id useless, not merely unguessable. A cannot rename B's workspace (the
+update returns zero rows). A cannot add itself to B's workspace (`42501`).
+Anonymous reads nothing across all thirteen tables. The service role reads
+everything. A member authors the goal cascade and **cannot write a
+measurement** (15 §8). D80's deletion leaves **zero rows across every table**,
+takes the owner's auth user because it was their last workspace, and leaves
+A's account alone; a member cannot delete, nor can an anonymous caller.
+
+**One test exists only to stop a false pass.** "Anonymous reads nothing" is
+also satisfied by a *rejected* key, which is a completely different fact. So a
+test asserts the anonymous request is **HTTP 200, no error code, zero rows** —
+proving the policies emptied the result rather than the credential failing.
+Without it a broken key would have looked like working security.
+
+### The new key format changed how every request is made
+
+The keys are `sb_publishable_…` and `sb_secret_…`, **not JWTs**. So:
+
+- **Every key travels in the `apikey` header**, and `Authorization: Bearer`
+  carries only a user's session JWT. **Eight call sites were sending the
+  secret key as a bearer token** — correct for a legacy JWT, wrong for
+  `sb_secret_…`, which would have put a server credential in the header that
+  proxies, access logs and error reporters all treat as an end-user token.
+- **`env.ts` judges the prefix, not the length.** The old floor was 40
+  characters and the real secret key is 41 — one character from rejecting a
+  valid key.
+- It gained the check worth having: **a `sb_secret_…` value in a
+  `NEXT_PUBLIC_` variable is refused**, because Next inlines those into the
+  browser bundle and that leak is permanent. Three new tests; 818 unit total.
+
+### Two things to know before touching the database again
+
+1. **`supabase db push` defaults to the *local* stack**, not the linked
+   project — a dry run caught it trying to reach `127.0.0.1:54322`. **Always
+   pass `--remote`.** The CLI also refuses hosted changes in an agent run
+   without `--yes`.
+2. **`supabase/config.toml` is new and deliberately minimal** — `project_id`
+   and a seed path. `supabase/README.md` told you to apply the seed with
+   `psql "$DATABASE_URL" -f …`, and there is no `psql` here; a documented step
+   that cannot be run will not be run. `--include-seed` replaces it, and it is
+   safe on every push because the seed is `on conflict … do update`.
+
+### Next: B1's app layer, none of it written
+
+Stopped here deliberately rather than starting it thin. In order:
+
+1. **Sign-in and sign-up server actions.** `/sign-in` and `/sign-up` are
+   finished screens with no server behind them; they keep their markup and
+   gain actions. Email + password and a magic link; auth mail stays on
+   Supabase's built-in sender (D79).
+2. **Workspace creation as one transaction.** A workspace and its owner
+   membership appear together or not at all — which is why there is no
+   `insert` policy on `workspaces`. It wants a `security definer` function
+   beside `delete_workspace`, so the same suite can prove it.
+3. **The Settings delete-workspace control**, behind a typed confirmation,
+   calling `delete_workspace` — the policy half is already done and proved.
+4. **"Export my data"** — the rows, read as the user. §2 files it under B2;
+   D80 ties it to this phase.
+
+Everything in 1–4 can now be tested against a real instance as it is written,
+which was not true this morning.
+
+---
+
 ## Handoff — 17 November 2026 (B1's database half is written and unapplied; it waits on one free Supabase organisation)
 
 **Branch** `backend/b1-auth` · pushed. **PR #1 untouched, still open** — the
