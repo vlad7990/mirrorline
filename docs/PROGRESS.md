@@ -6,6 +6,78 @@
 
 ---
 
+## Handoff — 16 November 2026, late night (the site phase is closed: a PR is open for review, and the backend phase is planned)
+
+**Branch** `v4/site-and-metrics` · **last commit** below · pushed. Clean tree.
+**A pull request into `main` is open and waiting on Vlad. Nothing merged,
+nothing promoted.**
+
+### 1. The axe gate lost its floor (D75)
+
+It fails on **`moderate`** now, as well as serious and critical. `minor` still
+only prints.
+
+It surfaced **one rule across 48 of the 90 audits**:
+`landmark-complementary-is-top-level`, an `<aside>` inside another landmark.
+Three elements, three different right answers:
+
+- the header's announcement strip was an `aside` inside the `header` — it is
+  part of the banner, so it is a `div` now, and its `aria-label` went with it;
+- the studio home's right column and the onboarding live preview are genuinely
+  part of their screens, inside `main` — both are labelled `<section>`s, which
+  keeps the name a bare `div` would have thrown away.
+
+**Nothing visual changed**: all three were semantic wrappers. The suite is now
+**90 audits, zero violations at moderate or above**, and nothing printed at
+minor either.
+
+Why it mattered is in D75: `heading-order` is `moderate`, so when the legal
+pages shipped an `h1 → h3` yesterday the gate went green and **Lighthouse
+reported it instead**. A gate another tool can embarrass is not a gate — and
+this one said "no serious violations" in its own test names, which reads as
+"no violations" to anybody skimming CI.
+
+### 2. The pull request
+
+`v4/site-and-metrics` → `main`, opened with a summary of the whole v4 phase and
+links into `DECISIONS.md` and this file. **All gates were run on the head
+commit** and the results are in the PR body. It is yours to review and merge —
+I have not merged it and will not.
+
+### 3. `docs/plan/BACKEND_PHASE.md`
+
+Plan only; nothing built. Five steps — auth + RLS, the studio off sample data,
+Stripe test-mode checkout, the Niche Scan writing for real, the pipeline behind
+the engine adapter — with **posting kept off until the Meta, TikTok and YouTube
+audits pass**, which is the part that is entirely yours.
+
+**The honest surprise in writing it: most of the groundwork is already here.**
+The eleven-table migration exists with **RLS on and not one policy**; the seed
+exists; `lib/leads/scan-store.ts` is already an adapter that picks Supabase or
+a JSON file at runtime, and already carries the n8n notifier. So the phase is
+mostly policies, sessions and credentials rather than schema.
+
+**§7 lists exactly what I need from you** — Supabase (three keys + project
+ref), Stripe test mode (three keys), n8n (URL + a new shared secret), and one
+decision: do previews share a database or get one per branch. Two things
+CLAUDE.md promises that do not exist: `automation/n8n/`, and any Stripe code at
+all.
+
+### Checks
+
+Lint, typecheck, **797 unit**, build and licence-check green. Axe **90/90** at
+the new threshold. The full e2e run is in the PR body.
+
+### The queue
+
+1. **`/resources/[slug]` accessibility 96** — one page, never audited. Now that
+   the gate blocks `moderate`, check whether this is one of its rules.
+2. **`/legal/privacy`'s LCP element is the cookie banner**, a fixed overlay
+   rather than page content.
+3. **The backend phase**, once the keys arrive.
+
+---
+
 ## Handoff — 16 November 2026, night (Milo is large, always there, and says hello once a visit)
 
 **Branch** `v4/site-and-metrics` · **last commit** `552d6e3` · pushed. Clean

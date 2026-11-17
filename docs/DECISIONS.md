@@ -5482,3 +5482,45 @@ on a `requestAnimationFrame` and lifts Milo past the highest offender. The
 marker is `data-primary-cta` on four components rather than a list of class
 names, because "primary CTA" is a fact about intent — `variant="gold"` is also
 on a hero link nothing ever covers.
+
+---
+
+## 2026-11-16 · D75 · The accessibility gate loses its floor, and what was under it was one element on every page
+
+Vlad's decision: axe fails on `moderate` now, not only on `serious` and
+`critical`.
+
+**The gate had been caught by a second tool.** `/legal/privacy` and
+`/legal/terms` shipped a contents list whose headings jumped `h1 → h3`.
+`heading-order` is filed `moderate`, so the suite went green across all 90
+audits and **Lighthouse reported it instead**, as accessibility 98 on both
+pages (D73). A gate another tool can embarrass is not a gate — and this one
+also said "has no serious axe violations" in its own test names, which reads
+to anybody skimming CI as "has no violations".
+
+`minor` still only prints. The line is where axe itself draws it: `moderate`
+and above describe something a person meets; `minor` is largely advice about
+markup that already works. Everything found is printed either way.
+
+### What the tighter gate surfaced: one rule, 48 of 90 audits
+
+`landmark-complementary-is-top-level` — "Aside should not be contained in
+another landmark" — on every marketing route in both themes, plus the studio
+home and the onboarding screen. Three elements, and each wanted a different
+answer:
+
+- **The announcement strip** in `site-header.tsx` was an `<aside
+  aria-label="What we are offering now">` inside the `<header>`. It is part of
+  the banner rather than something alongside it, so it is a `div` now. The
+  label only ever named a landmark that should not have existed; the sentence
+  reads perfectly well in the header's own flow.
+- **The studio home's right-hand column** and **the onboarding live preview**
+  are genuinely part of their screens, inside `main`. Both are labelled
+  `<section>`s now — a `region` is legal inside `main` and **keeps the name**,
+  which is the half worth having. Bare `div`s would have traded one
+  accessibility complaint for a quieter one.
+
+Nothing visual changed on any page: all three were semantic wrappers.
+
+**90 audits, zero violations at `moderate` or above, and nothing printed at
+`minor` either.** The suite now says what its name says.

@@ -84,7 +84,10 @@ test('the whole demo path holds up', async ({ page }) => {
     }),
   ).toHaveAttribute('aria-current', 'step')
 
-  const preview = page.getByRole('complementary', { name: 'Live preview', exact: true })
+  // `region`, not `complementary`: this was an `aside` inside `main`, which is
+  // a landmark inside a landmark and an axe `moderate` — blocking since D75.
+  // It is a labelled `section` now, which keeps the name this locator needs.
+  const preview = page.getByRole('region', { name: 'Live preview', exact: true })
   // The frame sits on the viewer mat (DESIGN.md "Colors — Viewer"), so the
   // brand colour is on the inner card, not the outer div. Anchor on the one
   // element that carries it as an inline style.
@@ -171,7 +174,7 @@ test('the whole demo path holds up', async ({ page }) => {
   await expect(page.getByRole('status').filter({ hasText: 'Approved' })).toBeVisible()
 
   await expect(
-    page.getByRole('complementary', { name: 'Agents and results', exact: true }),
+    page.getByRole('region', { name: 'Agents and results', exact: true }),
   ).toContainText('2.1× average views')
 
   /* --- 6. Upload and multiply ------------------------------------------- */

@@ -107,10 +107,13 @@ export function SiteHeader() {
           prevent, and the master prompt's "fake 4 places limit". What is left
           is true without qualification: we are booking pilots, and the scan
           costs nothing. */}
-      <aside
-        aria-label="What we are offering now"
-        className="flex min-h-10 items-center justify-center gap-2 bg-gold-gradient px-5 py-2 text-center"
-      >
+      {/* A `div`, not an `aside`. It sat inside the `header` — a complementary
+          landmark nested in the banner — which axe files as `moderate` and the
+          gate ignored until D75. The strip is part of the banner rather than
+          something alongside it, and its `aria-label` only ever named a
+          landmark that should not have existed: the sentence reads perfectly
+          well in the header's own flow. */}
+      <div className="flex min-h-10 items-center justify-center gap-2 bg-gold-gradient px-5 py-2 text-center">
         <p className="m-0 text-label font-semibold text-ink-900">
           Now booking pilots · the Niche Scan is free
         </p>
@@ -121,7 +124,7 @@ export function SiteHeader() {
           <span className="sr-only">See pricing</span>
           <ArrowRight aria-hidden="true" className="size-4" strokeWidth={2.2} />
         </Link>
-      </aside>
+      </div>
 
       {/* The nav row. Opaque at rest so the hero does not bleed through on
           first paint; translucent once there is something to blur. */}

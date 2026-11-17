@@ -77,10 +77,16 @@ export default function HomePage() {
           <TodayCard />
         </div>
 
-        <aside aria-label="Agents and results" className="flex min-w-0 flex-col gap-5">
+        {/* A labelled `section` — a `region` — rather than an `aside`. These
+            cards are part of the screen's own content rather than something
+            tangential to it, and an `aside` inside `main` is a complementary
+            landmark nested in another landmark (axe `moderate`, blocking since
+            D75). `section` keeps the name, which is what made the grouping
+            worth having. */}
+        <section aria-label="Agents and results" className="flex min-w-0 flex-col gap-5">
           <AgentActivityCard />
           <LearningLoopCard />
-        </aside>
+        </section>
       </div>
     </div>
   )
