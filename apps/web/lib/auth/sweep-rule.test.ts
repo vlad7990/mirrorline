@@ -18,11 +18,25 @@ const TEST_ACCOUNT_PREFIX = 'e2e+'
 const RUN_ID_TIMESTAMP_LENGTH = 8
 const STALE_ACCOUNT_AGE_MS = 2 * 60 * 60 * 1000
 
+/** Mirrors `runIdFromTestEmail` in `e2e/helpers/test-accounts.ts`. */
+function runIdFromTestEmail(email: string): string | null {
+  const local = email.split('@')[0] ?? ''
+
+  // `e2e+<runId>-<label>@…` — made through the admin API, which sends no mail.
+  if (local.startsWith(TEST_ACCOUNT_PREFIX)) {
+    return local.slice(TEST_ACCOUNT_PREFIX.length).split('-')[0] ?? ''
+  }
+
+  // `<base>+e2e-<runId>-signup@…` — the UI sign-up account, which lives on a
+  // real mailbox somebody owns (`E2E_SIGNUP_EMAIL`).
+  return local.match(/\+e2e-([^-@]+)-/)?.[1] ?? null
+}
+
 /** Mirrors `shouldDeleteTestAccount` in `e2e/helpers/test-accounts.ts`. */
 function shouldDeleteTestAccount(email: string, currentRunId: string | null, now: number): boolean {
-  if (!email.startsWith(TEST_ACCOUNT_PREFIX)) return false
+  const runId = runIdFromTestEmail(email)
+  if (runId === null) return false
 
-  const runId = email.slice(TEST_ACCOUNT_PREFIX.length).split('-')[0] ?? ''
   if (currentRunId !== null && runId === currentRunId) return true
 
   // The shape check is load-bearing: `parseInt('not', 36)` succeeds, so
@@ -91,5 +105,46 @@ describe('the e2e account sweep', () => {
   test('refuses to guess about an id it cannot parse', () => {
     // Arrange — an unrecognised shape is left alone rather than assumed stale.
     expect(shouldDeleteTestAccount('e2e+not-a-run-id@x.dev', null, NOW)).toBe(false)
+  })
+
+  /**
+   * The UI sign-up account lives on a mailbox somebody actually owns
+   * (`E2E_SIGNUP_EMAIL`), so its local part starts with a person's name and
+   * carries the tag in a plus suffix. The sweep has to recognise that shape —
+   * and, far more importantly, has to keep ignoring the untagged address on
+   * the very same mailbox.
+   */
+  describe('the plus-addressed sign-up account', () => {
+    test('is deleted when it belongs to this run', () => {
+      const runId = runIdAt(NOW - 1_000)
+
+      expect(shouldDeleteTestAccount(`you+e2e-${runId}-signup@example.com`, runId, NOW)).toBe(true)
+    })
+
+    test('is deleted when it is stale debris from a crashed run', () => {
+      const ancient = runIdAt(NOW - STALE_ACCOUNT_AGE_MS - 60_000)
+
+      expect(shouldDeleteTestAccount(`you+e2e-${ancient}-signup@example.com`, null, NOW)).toBe(true)
+    })
+
+    test("is left alone when it belongs to another run happening now", () => {
+      const mine = runIdAt(NOW - 1_000)
+      const theirs = runIdAt(NOW - 10 * 60 * 1000)
+
+      expect(shouldDeleteTestAccount(`you+e2e-${theirs}-signup@example.com`, mine, NOW)).toBe(false)
+    })
+
+    test('never endangers the real mailbox it is a tag on', () => {
+      // The one that would be unforgivable: the owner's actual address, and
+      // their other plus-addresses, share a local-part prefix with ours.
+      const ancient = runIdAt(NOW - STALE_ACCOUNT_AGE_MS - 60_000)
+
+      expect(shouldDeleteTestAccount('you@example.com', null, NOW)).toBe(false)
+      expect(shouldDeleteTestAccount('you+newsletters@example.com', null, NOW)).toBe(false)
+      expect(shouldDeleteTestAccount('you+mirrorline@example.com', null, NOW)).toBe(false)
+
+      // Not ours either: the tag has to be `+e2e-`, not merely contain "e2e".
+      expect(shouldDeleteTestAccount(`you+my-e2e-${ancient}@example.com`, null, NOW)).toBe(false)
+    })
   })
 })

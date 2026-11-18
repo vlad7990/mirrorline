@@ -40,13 +40,15 @@ import { redirect } from 'next/navigation'
 import { SIGN_IN_PATH } from '@/lib/auth/redirect-rules'
 import { STUDIO_HOME } from '@/lib/routes'
 import { createSupabaseServerClient } from '@/lib/supabase/server-client'
-import { getOwnedWorkspace } from '@/lib/workspace/current-workspace'
 import { parseOnboardingSubmission } from '@/lib/workspace/onboarding-input'
 
 import { type OnboardingFormState } from './onboarding-form-state'
 
 /** One sentence for anything the person cannot fix by retyping a field. */
 const SAVE_FAILED = 'We could not save your setup just now. Please try again.'
+
+/** SQLSTATE raised by `save_onboarding` when the caller owns no workspace. */
+const NO_WORKSPACE_CODE = '45002'
 
 const NO_WORKSPACE =
   'We could not find your workspace. Sign in again and we will pick this up where you left off.'
@@ -76,52 +78,32 @@ export async function saveOnboarding(
   // sentence goes straight back to them.
   if (!parsed.ok) return fail(parsed.message)
 
-  const workspace = await getOwnedWorkspace()
-
-  // No session at all is a different answer from a session with no workspace,
-  // and only the first one is worth a redirect.
-  if (workspace === null) {
-    const supabase = await createSupabaseServerClient()
-    const { data } = await supabase.auth.getUser()
-    if (data.user === null) redirect(SIGN_IN_PATH)
-    return fail(NO_WORKSPACE)
-  }
-
   const { niche, audience, stage, goalType, outcomeText } = parsed.value
   const supabase = await createSupabaseServerClient()
 
-  const updated = await supabase
-    .from('workspaces')
-    .update({ niche, audience, stage, initial_goal_type: goalType })
-    .eq('id', workspace.id)
+  // One call. See the migration's note: this used to be four PostgREST
+  // round trips plus the token verification in front of each client, and under
+  // a full parallel test run it took longer than twenty seconds.
+  const { error } = await supabase.rpc('save_onboarding', {
+    p_niche: niche,
+    p_audience: audience,
+    p_stage: stage,
+    p_goal_type: goalType,
+    p_outcome_text: outcomeText,
+  })
 
-  if (updated.error !== null) return fail(SAVE_FAILED)
+  if (error !== null) {
+    // `45002` — a valid session that owns no workspace. Distinguished from no
+    // session at all, because only one of the two is worth a redirect, and
+    // from a fault, because only one of the three is the person's to act on.
+    if (error.code === NO_WORKSPACE_CODE) {
+      const { data } = await supabase.auth.getUser()
+      if (data.user === null) redirect(SIGN_IN_PATH)
+      return fail(NO_WORKSPACE)
+    }
 
-  // See the note at the top: a partial unique index is not a conflict target,
-  // so the existing primary goal is found and edited rather than upserted.
-  const existing = await supabase
-    .from('goals')
-    .select('id')
-    .eq('workspace_id', workspace.id)
-    .eq('is_primary', true)
-    .maybeSingle()
-
-  if (existing.error !== null) return fail(SAVE_FAILED)
-
-  const written =
-    existing.data === null
-      ? await supabase.from('goals').insert({
-          workspace_id: workspace.id,
-          goal_type: goalType,
-          outcome_text: outcomeText,
-          is_primary: true,
-        })
-      : await supabase
-          .from('goals')
-          .update({ goal_type: goalType, outcome_text: outcomeText })
-          .eq('id', existing.data.id)
-
-  if (written.error !== null) return fail(SAVE_FAILED)
+    return fail(SAVE_FAILED)
+  }
 
   redirect(STUDIO_HOME)
 }

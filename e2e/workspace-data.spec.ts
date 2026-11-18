@@ -125,7 +125,14 @@ test.describe('onboarding writes the niche and the goal', () => {
     await page.getByLabel('What would success look like?').fill(outcome)
 
     await page.getByRole('button', { name: 'Open my studio' }).click()
-    await expect(page).toHaveURL(/\/app\/home$/)
+
+    // **Longer than the five-second default, on purpose.** The submit is a
+    // server action that makes several sequential round trips to a Postgres in
+    // another region before it can redirect — find the workspace, update it,
+    // look for the primary goal, write it. Against the default budget this
+    // assertion passed alone and failed in a full run, which is a flake in the
+    // test rather than a fault in the app.
+    await expect(page).toHaveURL(/\/app\/home$/, { timeout: 20_000 })
 
     // Now the part the redirect could not tell us.
     const body = await (await request.get('/api/export')).json()

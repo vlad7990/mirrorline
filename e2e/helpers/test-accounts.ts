@@ -141,7 +141,52 @@ export const STUDIO_STORAGE_STATE = '.playwright/auth/studio.json'
 /** Every test address starts with this. The teardown sweeps on it. */
 export const TEST_ACCOUNT_PREFIX = 'e2e+'
 
-export const SIGNUP_DOMAIN = process.env.E2E_SIGNUP_DOMAIN ?? 'mirrorline-test.dev'
+/**
+ * The placeholder domain for accounts made through the **admin API**, which
+ * sends no mail at all. `E2E_SIGNUP_DOMAIN` overrides it.
+ *
+ * `.invalid` is reserved by RFC 2606 and can never be registered or resolve,
+ * so these addresses cannot reach a stranger even by accident. The previous
+ * default was `mirrorline-test.dev` — a plausible domain nobody here owns,
+ * chosen on the same reasoning but weaker in one way that mattered: `.dev` is
+ * registrable, so "nobody owns it" was true on the day it was written rather
+ * than true by construction.
+ */
+export const SIGNUP_DOMAIN = process.env.E2E_SIGNUP_DOMAIN ?? 'e2e.invalid'
+
+/**
+ * The one address the **UI sign-up form** may use, which does send real mail.
+ *
+ * Unset by default and there is no fallback on purpose: a default here would be
+ * a guess about whose inbox receives a confirmation email, and the only safe
+ * guess is none. `sign-up-ui.spec.ts` skips with a reason when this is absent.
+ *
+ * Set it to a plus-address on a mailbox you own — `you+mirrorline@example.com`.
+ */
+export const SIGNUP_UI_EMAIL = process.env.E2E_SIGNUP_EMAIL ?? null
+
+/**
+ * A per-run address derived from `E2E_SIGNUP_EMAIL`, or `null` when unset.
+ *
+ * **Why not use the configured address as given.** It is one fixed address, so
+ * a second run would hit "a user with this email already exists" and the test
+ * would fail on its own leftovers. Plus-addressing gives every run its own
+ * address that still lands in the same inbox.
+ *
+ * Any existing tag is dropped first: `you+mirrorline@example.com` becomes
+ * `you+e2e-<runId>-signup@example.com`, not a second `+` the stricter
+ * providers reject. The `e2e-<runId>-` shape is what lets
+ * `shouldDeleteTestAccount` recognise and sweep these too.
+ */
+export function signupUiEmail(runId: string, label = 'signup'): string | null {
+  if (SIGNUP_UI_EMAIL === null) return null
+
+  const [local, domain] = SIGNUP_UI_EMAIL.split('@')
+  if (!local || !domain) return null
+
+  const base = local.split('+')[0]
+  return `${base}+e2e-${runId}-${label}@${domain}`
+}
 
 /**
  * One id per run, so parallel runs on the shared database cannot collide.
@@ -216,14 +261,36 @@ export const STALE_ACCOUNT_AGE_MS = 2 * 60 * 60 * 1000
  * An address whose id does not parse is treated as **not** stale: the sweep
  * refuses to guess about something it does not recognise.
  */
+/**
+ * The run id inside a test address, or `null` if this is not one of ours.
+ *
+ * **Two shapes, because there are two ways an account gets made.** Admin-API
+ * accounts own their whole local part and start with the tag. The UI sign-up
+ * account lives on a real mailbox somebody owns (`E2E_SIGNUP_EMAIL`), so its
+ * local part begins with a stranger's name and carries the tag in a plus
+ * suffix instead. Matching only the first shape would leave every UI sign-up
+ * account behind — on a real inbox, which is the worst place to accumulate
+ * them.
+ */
+function runIdFromTestEmail(email: string): string | null {
+  const local = email.split('@')[0] ?? ''
+
+  // `e2e+<runId>-<label>@…`
+  if (local.startsWith(TEST_ACCOUNT_PREFIX)) {
+    return local.slice(TEST_ACCOUNT_PREFIX.length).split('-')[0] ?? ''
+  }
+
+  // `<base>+e2e-<runId>-signup@…`
+  return local.match(/\+e2e-([^-@]+)-/)?.[1] ?? null
+}
+
 export function shouldDeleteTestAccount(
   email: string,
   currentRunId: string | null,
   now: number,
 ): boolean {
-  if (!email.startsWith(TEST_ACCOUNT_PREFIX)) return false
-
-  const runId = email.slice(TEST_ACCOUNT_PREFIX.length).split('-')[0] ?? ''
+  const runId = runIdFromTestEmail(email)
+  if (runId === null) return false
 
   if (currentRunId !== null && runId === currentRunId) return true
 
@@ -293,6 +360,71 @@ export async function createConfirmedUser(
   return { id: body.id, email }
 }
 
+/**
+ * The workspace a given user owns, read with the service role.
+ *
+ * Service role on purpose: this is used to check what is **actually in the
+ * database** before and after a deletion, and reading it as the user would
+ * make an empty answer ambiguous — RLS returning nothing looks identical to
+ * the rows being gone. The point of the check is to tell those two apart.
+ */
+export async function findOwnedWorkspaceId(
+  config: SupabaseTestConfig,
+  userId: string,
+): Promise<string | null> {
+  const response = await fetch(
+    `${config.url}/rest/v1/memberships?user_id=eq.${userId}&role=eq.owner&select=workspace_id&limit=1`,
+    { headers: adminHeaders(config) },
+  )
+
+  if (!response.ok) return null
+
+  const rows = (await response.json()) as readonly { workspace_id?: unknown }[]
+  const id = rows[0]?.workspace_id
+
+  return typeof id === 'string' ? id : null
+}
+
+/** The tables a workspace cascades through, for proving a deletion was total. */
+const WORKSPACE_CHILD_TABLES = [
+  'memberships',
+  'goals',
+  'social_accounts',
+  'ledger_weekly',
+  'alerts',
+  'trends',
+] as const
+
+/**
+ * How many rows still reference this workspace, table by table, service role.
+ *
+ * Returned as a map rather than a total so a failure names the table that kept
+ * its rows. A single number would say "something survived" and leave the next
+ * person to find out what.
+ */
+export async function workspaceRowCounts(
+  config: SupabaseTestConfig,
+  workspaceId: string,
+): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {}
+
+  const workspace = await fetch(
+    `${config.url}/rest/v1/workspaces?id=eq.${workspaceId}&select=id`,
+    { headers: adminHeaders(config) },
+  )
+  counts.workspaces = workspace.ok ? ((await workspace.json()) as unknown[]).length : -1
+
+  for (const table of WORKSPACE_CHILD_TABLES) {
+    const response = await fetch(
+      `${config.url}/rest/v1/${table}?workspace_id=eq.${workspaceId}&select=id`,
+      { headers: adminHeaders(config) },
+    )
+    counts[table] = response.ok ? ((await response.json()) as unknown[]).length : -1
+  }
+
+  return counts
+}
+
 /** Every tagged account currently in the project, across all runs. */
 async function listTestUsers(config: SupabaseTestConfig): Promise<readonly AdminUser[]> {
   const found: AdminUser[] = []
@@ -311,10 +443,14 @@ async function listTestUsers(config: SupabaseTestConfig): Promise<readonly Admin
     const users = body.users ?? []
 
     for (const user of users) {
+      // `runIdFromTestEmail`, not a prefix check: the UI sign-up account lives
+      // on a real mailbox and carries its tag in a plus suffix, so a prefix
+      // check here would hide it from the sweep that is about to decide
+      // whether it is stale.
       if (
         typeof user.id === 'string' &&
         typeof user.email === 'string' &&
-        user.email.startsWith(TEST_ACCOUNT_PREFIX)
+        runIdFromTestEmail(user.email) !== null
       ) {
         found.push({ id: user.id, email: user.email })
       }

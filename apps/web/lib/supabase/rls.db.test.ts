@@ -506,6 +506,35 @@ describe('deleting a workspace deletes it (D80)', () => {
     expect(response.ok).toBe(false)
   })
 
+  test('B, the owner, cannot delete workspace B while C is still a member', async () => {
+    // `memberships.workspace_id` is `on delete cascade`, so before this rule
+    // existed the owner's delete simply succeeded and **C's access vanished
+    // with no notice** — their membership row went with the workspace, their
+    // account survived, and nothing ever told them. Vlad's call for B1: refuse,
+    // and say why.
+
+    // Act
+    const response = await restRpc(asUser(user('b').token), 'delete_workspace', {
+      p_workspace_id: workspace('b'),
+    })
+
+    // Assert — a named code rather than prose matching, so the message can be
+    // reworded without breaking the caller that has to recognise this case.
+    expect(response.ok).toBe(false)
+    expect(response.errorCode).toBe('45001')
+    expect(response.errorMessage ?? '').toContain('other member')
+
+    // Nothing was removed on the way to refusing.
+    const stillThere = await restSelect(serviceRole, `workspaces?id=eq.${workspace('b')}&select=id`)
+    expect(stillThere.rows).toHaveLength(1)
+
+    const cStillMember = await restSelect(
+      serviceRole,
+      `memberships?workspace_id=eq.${workspace('b')}&user_id=eq.${user('c').id}&select=id`,
+    )
+    expect(cStillMember.rows, "C's membership was removed by a refused delete").toHaveLength(1)
+  })
+
   test('D, the owner, deletes workspace D and every row goes with it', async () => {
     // Act
     const response = await restRpc(asUser(user('d').token), 'delete_workspace', {

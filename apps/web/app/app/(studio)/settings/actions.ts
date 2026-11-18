@@ -48,6 +48,17 @@ const MISMATCH = 'That is not the workspace name. Type it exactly as it is shown
 
 const DELETE_FAILED = 'We could not delete the workspace just now. Nothing has been removed.'
 
+/**
+ * SQLSTATE `45001`, raised by `delete_workspace` when somebody else is still a
+ * member. Matched on the code rather than the message so the wording on either
+ * side can change independently — see the migration's note.
+ */
+const HAS_OTHER_MEMBERS_CODE = '45001'
+
+const HAS_OTHER_MEMBERS =
+  'This workspace has other members, so it cannot be deleted yet. Remove them from the Team ' +
+  'card first, or transfer ownership to one of them. Nothing has been removed.'
+
 function fail(message: string): DeleteWorkspaceState {
   return { status: 'error', message }
 }
@@ -69,10 +80,15 @@ export async function deleteWorkspaceAction(
   const supabase = await createSupabaseServerClient()
   const { error } = await supabase.rpc('delete_workspace', { p_workspace_id: workspace.id })
 
-  // Nothing has been removed: the function is one statement to Postgres, so a
-  // failure leaves the workspace whole. The message says so, because "could
+  // Nothing has been removed: the function counts the other members before it
+  // deletes anything, and is one statement to Postgres either way, so a
+  // failure leaves the workspace whole. Both messages say so, because "could
   // not delete" otherwise leaves somebody wondering how much of it went.
-  if (error !== null) return fail(DELETE_FAILED)
+  if (error !== null) {
+    // A refusal the person can act on, told apart from a fault they cannot.
+    if (error.code === HAS_OTHER_MEMBERS_CODE) return fail(HAS_OTHER_MEMBERS)
+    return fail(DELETE_FAILED)
+  }
 
   try {
     await supabase.auth.signOut()

@@ -6111,3 +6111,108 @@ delete it mid-run and the failures would surface in whichever file ran next. The
 tests prove the gate — that the control exists, offers the export, and cannot be
 satisfied by the right name in the wrong case — and leave the deletion itself to
 `rls.db.test.ts`, which has a throwaway user to spend.
+
+> **Superseded in part, 18 November 2026.** The last paragraph is no longer
+> true: `e2e/workspace-delete.spec.ts` now creates its own throwaway account and
+> carries the deletion all the way through. See D89.
+
+## 2026-11-18 · D89 · An owner may not delete a workspace out from under its other members
+
+Found by answering a question in review rather than by a test failing, which is
+worth recording on its own: *what happens when a workspace has other members and
+the owner deletes it?*
+
+**It succeeded, and their access disappeared without a word.**
+`memberships.workspace_id` is `on delete cascade`, so the single
+`delete from public.workspaces` inside `delete_workspace` took every other
+member's row with it. Their accounts survived — the `auth.users` deletion only
+ever applied to the caller — so nothing looked broken from their side. They
+simply had no workspace any more, were never told, and had no record that one
+had existed.
+
+That is the worst shape a data-loss bug can take: silent, remote, and
+indistinguishable from never having had access.
+
+### The decision
+
+Vlad's call for B1: **refuse, and say why.** `delete_workspace` now counts the
+other members before deleting anything and raises if there are any.
+
+Transferring ownership, removing members, and deleting with their consent are
+all real features and none of them is B1. Refusing is the smallest honest thing
+available, and the only option that cannot destroy somebody's data while the
+larger question is still open. The refusal is also cheap to reverse later; a
+silent cascade is not.
+
+### Two details worth keeping
+
+**A custom SQLSTATE, `45001`.** Class 45 is unused by PostgreSQL. The server
+action has to tell this refusal apart from a genuine fault so it can offer a
+different sentence — "remove the other members first" rather than "something
+went wrong" — and matching on the message text would mean the prose could never
+be reworded without breaking the caller. The code is the contract; the message
+is for people. The ownership check above it keeps the default `P0001`, because
+nothing needs to distinguish it.
+
+**The rule is stated on the card, not only on failure.** Somebody reading
+Settings should learn that a shared workspace cannot be deleted *before* they
+type a workspace name to find out.
+
+### What now proves the deletion
+
+`e2e/workspace-delete.spec.ts` creates a throwaway account through the admin API
+(no mail), signs it in through the real form in its own browser context, deletes
+it through the real control, and then checks three things: every table keyed by
+`workspace_id` is empty, the workspace row is gone, and the account can no
+longer sign in.
+
+The row counts are read with the **service role**, deliberately. Reading as the
+user would be circular — after the deletion there is no session, so RLS returns
+nothing whether the rows were destroyed or merely hidden. The service role is
+the only reader that can tell those apart, which is the entire claim.
+
+The sign-in check goes through the front door rather than an admin lookup, and
+asserts the same deliberately uninformative failure sentence every wrong
+password gets. A deleted account must not be distinguishable from a wrong
+password, or the form becomes a way to enumerate addresses.
+
+## 2026-11-18 · D90 · Test addresses: `.invalid` for the admin API, a real mailbox you own for the one test that sends mail
+
+D79 and D84 left the suite signing up at `mirrorline-test.dev` — "a plausible
+domain nobody here owns", chosen so a typo could not deliver mail to a stranger.
+Vlad's objection in review is the right one: **`.dev` is registrable**, so
+"nobody owns it" was true on the day it was written rather than true by
+construction, and the UI sign-up test really does send mail there.
+
+Two paths, told apart by whether anything is actually posted:
+
+**Accounts made through the admin API send no mail**, so their addresses only
+have to be inert. The default is now `e2e.invalid` — RFC 2606 reserves
+`.invalid`, so it can never be registered and never resolves. That is the same
+intent as before, made structural. `E2E_SIGNUP_DOMAIN` still overrides it.
+
+**The UI sign-up test posts the real form and triggers a real confirmation
+email.** It now requires `E2E_SIGNUP_EMAIL`, a mailbox somebody owns, and
+**skips with a full explanation when it is unset**. There is deliberately no
+fallback: any default here would be a guess about whose inbox receives the mail,
+and the only safe guess is none.
+
+### Two things that fell out of it
+
+**The address has to vary per run.** The configured address is one fixed
+address, so a second run would fail on its own leftovers with "a user with this
+email already exists". Each run derives `you+e2e-<runId>-signup@…` by dropping
+any existing tag first — `you+mirrorline@…` becomes `you+e2e-…@…`, not a second
+`+` that stricter providers reject.
+
+**The sweep had to learn a second shape, and this was the dangerous part.** It
+recognised accounts by the `e2e+` prefix, which the plus-addressed form does not
+have — so every UI sign-up account would have accumulated, in somebody's real
+inbox. It now extracts the run id from either shape.
+
+The risk that creates is obvious and had to be tested directly: a sweep that
+matches a tag *inside* a local part is one bad regex away from deleting the
+owner's actual account. `sweep-rule.test.ts` now asserts that `you@example.com`,
+`you+newsletters@example.com` and `you+mirrorline@example.com` are all
+untouchable, and that `you+my-e2e-<ancient>@…` does not match either — the tag
+has to be `+e2e-`, not merely contain "e2e".

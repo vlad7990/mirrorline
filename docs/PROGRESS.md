@@ -6,6 +6,90 @@
 
 ---
 
+## Handoff — 18 November 2026 (PR #2's four review items are done; one of them found a silent data-loss bug)
+
+**Branch** `backend/b1-auth` · **PR #2 open, not merged.** Gates: lint,
+typecheck, **894 unit**, build, licence-check, **49 RLS/db** — all green.
+
+### 1. `pnpm test:rls-db` against the final app layer
+
+**49 passed, 2 files, 0 failed.** Up from 44: the new member-guard case and
+four for `save_onboarding`. Full per-test list is pasted in the PR.
+
+### 2. `mirrorline-test.dev` is gone (D90)
+
+Two paths now, told apart by whether anything is actually posted:
+
+- **Admin-API accounts send no mail**, so their addresses only have to be
+  inert. Default is now `e2e.invalid` — RFC 2606 reserves `.invalid`, so it can
+  never be registered. Same intent as before, made structural rather than
+  true-on-the-day-it-was-written.
+- **The UI sign-up test posts the real form**, so it needs `E2E_SIGNUP_EMAIL`
+  and **skips with a full explanation when unset**. No fallback: any default
+  would be a guess about whose inbox gets the mail.
+
+Set it to a plus-address you own. Each run derives
+`you+e2e-<runId>-signup@…` (dropping any existing tag first), because the
+configured address is fixed and a second run would otherwise fail on its own
+leftovers.
+
+**The part that needed care:** the sweep recognised accounts by the `e2e+`
+prefix, which the plus-addressed form does not have — so every UI sign-up
+account would have accumulated in your real inbox. It now reads either shape,
+and `sweep-rule.test.ts` asserts that `you@…`, `you+newsletters@…` and
+`you+mirrorline@…` are all untouchable.
+
+### 3. A throwaway account deletes itself, end to end
+
+`e2e/workspace-delete.spec.ts`: creates its own account through the admin API,
+signs in through the real form in its own browser context, deletes through the
+real control, then proves every `workspace_id` table is empty, the workspace row
+is gone, and the account can no longer sign in.
+
+Row counts are read with the **service role** deliberately — after the deletion
+there is no session, so reading as the user would return nothing whether the
+rows were destroyed or merely hidden.
+
+### 4. What happened with other members — it was a real bug (D89)
+
+**It succeeded, and their access disappeared without a word.**
+`memberships.workspace_id` is `on delete cascade`, so the one
+`delete from public.workspaces` took every other member's row with it. Their
+accounts survived, so nothing looked broken from their side; they simply had no
+workspace, were never told, and had no record one had existed.
+
+Now blocked, as you asked: `delete_workspace` counts the other members first and
+raises `45001`. The action maps that code to its own sentence, and the card says
+the rule **before** the attempt rather than only on failure.
+
+### The thing I did not expect to find
+
+Fixing the above made the full suite fail twice on the onboarding submit — a
+flake I had introduced in the first place, and had "fixed" once by raising a
+timeout. The second failure, past twenty seconds, said that was the wrong
+diagnosis.
+
+The action was doing **four PostgREST calls plus two GoTrue token
+verifications** — six network hops to another region — for one logical write.
+Under seven parallel workers that is genuinely slow. It is now a single
+`save_onboarding` RPC, which is also the more correct shape for the same reason
+`ensure_workspace_for_current_user` is one: a failure between the workspace
+update and the goal insert left a workspace whose niche and goal disagreed, with
+nothing to notice it.
+
+Raising the timeout again would have hidden that.
+
+### Still needs you
+
+1. **Merge PR #2.** Merging is the only thing that deploys (D85).
+2. **Set `E2E_SIGNUP_EMAIL`** in the environment you run e2e from. Until then
+   the one UI sign-up test skips, loudly, with the reason attached.
+3. **Screenshot noise, unchanged.** `index`, `agents`, `app-upload` and
+   `sign-up--390--dark` drift between runs. Only screens that legitimately
+   changed are committed.
+
+---
+
 ## Handoff — 17 November 2026, night (B1 is complete and green; the PR is open and waiting for you to merge it)
 
 **Branch** `backend/b1-auth` · rebased onto `main` · **PR open, not merged.**

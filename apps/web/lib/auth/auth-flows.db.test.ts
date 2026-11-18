@@ -294,3 +294,113 @@ describe('a new user sees only their own workspace', () => {
     expect(workspaces.rows).toHaveLength(1)
   }, 45_000)
 })
+
+/**
+ * `save_onboarding` is `security definer`, so it runs with RLS switched off.
+ * That makes "it only ever touches the caller's own workspace" a property of
+ * the function body rather than of a policy — which is exactly the kind of
+ * claim that needs a test rather than a comment.
+ */
+describe('save_onboarding', () => {
+  const NICHE = 'Independent bakery in Leeds'
+  const OUTCOME = 'Fifty walk-ins a week'
+
+  test('writes the niche and the goal onto the caller’s own workspace', async () => {
+    // Arrange
+    const token = await signIn(url, anonKey, signUpEmail, password)
+
+    // Act
+    const response = await restRpc(asUser(token), 'save_onboarding', {
+      p_niche: NICHE,
+      p_audience: 'business',
+      p_stage: 'existing',
+      p_goal_type: 'leads',
+      p_outcome_text: OUTCOME,
+    })
+
+    // Assert
+    expect(response.ok).toBe(true)
+
+    const workspaces = await restSelect(
+      asUser(token),
+      'workspaces?select=niche,audience,stage,initial_goal_type',
+    )
+    expect(workspaces.rows[0]).toMatchObject({
+      niche: NICHE,
+      audience: 'business',
+      stage: 'existing',
+      initial_goal_type: 'leads',
+    })
+
+    const goals = await restSelect(asUser(token), 'goals?select=goal_type,outcome_text,is_primary')
+    expect(goals.rows).toHaveLength(1)
+    expect(goals.rows[0]).toMatchObject({
+      goal_type: 'leads',
+      outcome_text: OUTCOME,
+      is_primary: true,
+    })
+  }, 45_000)
+
+  test('called twice, edits the one goal rather than making a second', async () => {
+    // `goals_one_primary_per_workspace` is a partial unique index, which is
+    // why the function reads before it writes. Walking back through the wizard
+    // to change an answer must not collide.
+    const token = await signIn(url, anonKey, signUpEmail, password)
+
+    const response = await restRpc(asUser(token), 'save_onboarding', {
+      p_niche: NICHE,
+      p_audience: 'individual',
+      p_stage: 'new',
+      p_goal_type: 'bookings',
+      p_outcome_text: 'Twenty bookings a month',
+    })
+
+    expect(response.ok).toBe(true)
+
+    const goals = await restSelect(asUser(token), 'goals?select=goal_type,outcome_text,is_primary')
+    expect(goals.rows).toHaveLength(1)
+    expect(goals.rows[0]).toMatchObject({
+      goal_type: 'bookings',
+      outcome_text: 'Twenty bookings a month',
+    })
+  }, 45_000)
+
+  test('refuses an empty outcome, which `goals.outcome_text` could not store', async () => {
+    const token = await signIn(url, anonKey, signUpEmail, password)
+
+    const response = await restRpc(asUser(token), 'save_onboarding', {
+      p_niche: NICHE,
+      p_audience: 'business',
+      p_stage: 'existing',
+      p_goal_type: 'leads',
+      p_outcome_text: '   ',
+    })
+
+    // The form checks this too; the function is reachable without the form.
+    expect(response.ok).toBe(false)
+    expect(response.errorCode).toBe('45003')
+  }, 45_000)
+
+  test('refuses a caller who owns no workspace, and touches nobody else’s', async () => {
+    // The neighbour owns nothing. Because the function takes no workspace id,
+    // there is no way for them to aim it at somebody else's — this asserts
+    // that the refusal happens and that the owner's rows are untouched by it.
+    const neighbourToken = await signIn(url, anonKey, neighbourEmail, otherPassword)
+
+    const response = await restRpc(asUser(neighbourToken), 'save_onboarding', {
+      p_niche: 'Somebody else’s niche',
+      p_audience: 'business',
+      p_stage: 'new',
+      p_goal_type: 'sales',
+      p_outcome_text: 'Should never be written',
+    })
+
+    expect(response.ok).toBe(false)
+    expect(response.errorCode).toBe('45002')
+
+    // The owner's workspace still says what the previous test left it saying.
+    const ownerGoals = await restSelect(serviceRole, 'goals?select=outcome_text')
+    const outcomes = ownerGoals.rows.map((row) => (row as { outcome_text: string }).outcome_text)
+    expect(outcomes).not.toContain('Should never be written')
+  }, 45_000)
+})

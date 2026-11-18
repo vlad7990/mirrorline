@@ -150,7 +150,10 @@ test('the whole demo path holds up', async ({ page }) => {
 
   /* --- 5. Home ----------------------------------------------------------- */
 
-  await expect(page).toHaveURL(/\/app\/home$/)
+  // Generous on purpose: the submit is a server action making several
+  // sequential round trips to a remote Postgres before it redirects. The
+  // five-second default is a budget for a page transition, not for a write.
+  await expect(page).toHaveURL(/\/app\/home$/, { timeout: 20_000 })
   await expect(heading(page, 'Good morning, Maya')).toBeVisible()
   await expect(
     page.getByText('3 posts are out, 3 more go today. 3 cuts need your eye.'),

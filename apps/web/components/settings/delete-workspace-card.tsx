@@ -90,6 +90,15 @@ export function DeleteWorkspaceCard({ workspace }: DeleteWorkspaceCardProps) {
         an export first, and this cannot be undone.
       </p>
 
+      {/* Said before the attempt, not only after it fails. The rule exists
+          because deleting would otherwise cascade away other members' access
+          without telling them, and somebody reading this card should know the
+          answer before they type a workspace name to find out. */}
+      <p className="m-0 text-meta text-text-muted">
+        A workspace with other members cannot be deleted. Remove them from the Team card first, or
+        transfer ownership to one of them.
+      </p>
+
       {workspace === null ? (
         <p className="m-0 text-meta text-text-muted">Only the owner of a workspace can delete it.</p>
       ) : (

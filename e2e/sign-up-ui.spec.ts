@@ -1,8 +1,10 @@
 import { expect, test } from '@playwright/test'
 
 import {
+  deleteTestAccounts,
   newRunId,
   probeSignUp,
+  signupUiEmail,
   supabaseConfig,
   testEmail,
   testPassword,
@@ -73,9 +75,23 @@ test.describe('/sign-up, submitted for real', () => {
     test.skip(config === null, 'No Supabase keys in apps/web/.env.local')
     if (config === null) return
 
-    // Arrange
+    // **This is the only test that sends real mail**, so it is the only one
+    // that may not invent an address. Every other account here is made through
+    // the admin API, which sends nothing and so can use the unregistrable
+    // `.invalid` placeholder.
     const runId = newRunId()
-    const email = testEmail(runId, 'signup')
+    const email = signupUiEmail(runId)
+
+    test.skip(
+      email === null,
+      'E2E_SIGNUP_EMAIL is not set. This test submits the real sign-up form, which sends a ' +
+        'confirmation email — so it needs an address on a mailbox you own (a plus-address is ' +
+        'ideal: you+mirrorline@example.com). Set E2E_SIGNUP_EMAIL and re-run. Without it there ' +
+        'is no address we can mail without guessing whose inbox it reaches.',
+    )
+    if (email === null) return
+
+    // Arrange
     const password = testPassword(runId)
 
     await page.goto('/sign-up')
@@ -102,12 +118,22 @@ test.describe('/sign-up, submitted for real', () => {
       // workspace is not created until the link is followed; `/auth/callback`
       // is what does it.
       await expect(page.getByText('Check your email for a link to confirm')).toBeVisible()
+
+      // **Clean up immediately, not at teardown.** The address lives in
+      // somebody's real inbox, and the configured base address is fixed — so
+      // an account left behind would also make the next run fail with "a user
+      // with this email already exists". The sweep still catches it if this
+      // line is never reached.
+      await deleteTestAccounts(config, runId)
       return
     }
 
     // The UI shows one deliberately opaque sentence for every unexpected
     // failure, which is right for a person and useless here. Ask the source.
-    const probe = await probeSignUp(config, testEmail(runId, 'probe'), password)
+    //
+    // The probe goes to the same owned mailbox, one label along: it hits the
+    // public endpoint too, so it must not be an address we do not own either.
+    const probe = await probeSignUp(config, signupUiEmail(runId, 'probe') ?? email, password)
 
     test.skip(
       probe.isRateLimited,
