@@ -486,6 +486,77 @@ closes, at 828.
 3. **`E2E_SIGNUP_EMAIL`** is still unset, so the one UI sign-up test skips.
 4. **The axe-at-390px gap** from the previous note is unchanged and still worth
    a B1.5 item.
+## Handoff — 18 November 2026, afternoon (B2.1 as WIP, two sample-data bugs, and the skip audit)
+
+**Branch** `backend/b2-studio` (from `backend/b1-auth`, since rebased onto
+`main` once PR #2 merged).
+
+**This note's original §1 was a STOP** — onboarding's submit was broken and PR #2
+was not to be merged. Both are resolved: the cause is **D91**, the fix is in
+`main`, and the evening handoff above carries the account. That §1 is not
+preserved here because its diagnosis was wrong in a way worth not re-reading —
+the action was never *called*, rather than failing to settle. What follows is
+the part of this note that was B2's own, and still stands.
+
+### 2. B2.1 — committed as WIP, not green
+
+`5995e36` on `backend/b2-studio`. Lint, typecheck, **914 unit tests**, build —
+all pass. **No end-to-end verification**, because every goals test has to
+complete onboarding first.
+
+- Goals and the Results goals-tab read the real workspace (`readGoalCascade` +
+  the pure `buildGoalCascade`, 20 tests).
+- **`KeyResult.current` is now `number | null`.** `metric_snapshots` is empty
+  until B6, so there is no current value for any real workspace. A `0` would
+  claim we read the account and found nothing; the baseline would claim nothing
+  changed. Screens render "Not measured yet" and `keyResultPace` has an
+  `unmeasured` state.
+- The target write is real: `key_results.target`, as the user, with
+  `key_results_update_members` as the only check. `.select()` on the update so
+  a row RLS filtered out reports not-found rather than a silent success.
+- `e2e/goals-persist.spec.ts` is written (4 tests) and was **blocked entirely by
+  the submit bug** (D91), because every goals test has to finish onboarding
+  first. Runnable now that the fix is in `main`.
+
+### 3. Two bugs this turned up, both fixed in `5995e36`
+
+- **The Results goals-tab rendered `SAMPLE_CASCADE` unlabelled to signed-in
+  clients.** `GoalsBoard` defaults to the demo cascade when handed none — right
+  for the marketing site, wrong in the studio. A client would have seen somebody
+  else's goal with nothing saying so, which is precisely what non-negotiable 7's
+  "Sample data" label exists to prevent.
+- **A workspace with a goal but no key results showed no outcome at all.** The
+  outcome card only rendered when a `leads` key result existed, so every new
+  workspace saw its own goal missing from its own Goals screen.
+
+Neither screen falls back to sample data now; no goal shows an empty state that
+links back to onboarding.
+
+### 4. The 826 e2e skips — audited, and one gap worth knowing
+
+Asked whether the skips hide coverage. **They do not**, and the arithmetic
+closes exactly: **802** project-matrix (`onlyProject`) + **21**
+`recordings.spec.ts` (opt-in via `MOTION_RECORD`, 7 tests × 3 projects, records
+videos for a human and asserts almost nothing) + **3** the `E2E_SIGNUP_EMAIL`
+skip = **826**. Every spec passes in exactly one project; I checked that
+invariant per file.
+
+**The one real gap: axe never runs at 390px.** All four axe-using specs
+(`a11y`, `copilot-site`, `copilot-studio`, `home-sections`) are chromium-only,
+and `responsive.spec.ts` — which `a11y.spec.ts`'s skip reason cites as owning
+390px — asserts horizontal-scroll and the sidebar/drawer swap, **never axe**.
+So touch targets, focus order through the mobile drawer, and aria on the
+hamburger nav are unverified. The skip is intentional; its stated reason
+overstates what covers it. Worth a B1.5 item and a corrected comment.
+
+### Still needs you
+
+1. **`E2E_SIGNUP_EMAIL`** is still unset, so the one UI sign-up test skips.
+
+The two items that were here — "do not merge PR #2" and "PR #2 is still open,
+so b2-studio's PR will carry B1's commits" — are both spent. PR #2 merged as
+`cbdda37` on 19 November, and `backend/b2-studio` was rebased onto `main`
+immediately after, so it now carries only B2's own commits.
 
 ---
 
