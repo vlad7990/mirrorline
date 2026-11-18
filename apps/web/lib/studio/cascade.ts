@@ -33,7 +33,15 @@ export interface KeyResult {
   /** Where the account stood when the baseline closed. */
   readonly baseline: number
   readonly target: number
-  readonly current: number
+  /**
+   * The latest measurement, or **`null` when nothing has measured it yet**.
+   *
+   * Null is not a missing value to paper over with a zero. A real workspace
+   * has no `metric_snapshots` until the ingestion in B6 runs, and "0 of 120
+   * leads" is a claim about an account we have not read — exactly the kind of
+   * invented figure non-negotiable 7 forbids. The screens render the absence.
+   */
+  readonly current: number | null
   readonly unitLabel: string
   /** "14-day baseline + niche benchmarks". Shown beside the number. */
   readonly basis: string
@@ -140,7 +148,7 @@ export const SAMPLE_CASCADE: GoalCascade = {
  * "Behind" is not a failure state and is deliberately not red anywhere — it is
  * six weeks into a quarter.
  */
-export type PaceState = 'ahead' | 'on-pace' | 'behind'
+export type PaceState = 'ahead' | 'on-pace' | 'behind' | 'unmeasured'
 
 /**
  * Five percentage points rather than zero, so a key result that is
@@ -150,6 +158,11 @@ export type PaceState = 'ahead' | 'on-pace' | 'behind'
 const PACE_TOLERANCE = 0.05
 
 export function keyResultPace(keyResult: KeyResult, periodElapsed: number): PaceState {
+  // Nothing has measured this yet, so there is no pace to be ahead or behind
+  // of. Returning 'on-pace' would be the comfortable answer and a false one:
+  // it would paint an unmeasured key result as healthy.
+  if (keyResult.current === null) return 'unmeasured'
+
   const span = keyResult.target - keyResult.baseline
   // A key result asking for no movement is already met; dividing by it would
   // produce Infinity and paint the card "ahead" by accident.
@@ -168,6 +181,7 @@ export const PACE_LABELS: Readonly<Record<PaceState, string>> = {
   ahead: 'Ahead of pace',
   'on-pace': 'On pace',
   behind: 'Behind pace',
+  unmeasured: 'Not measured yet',
 }
 
 /* -------------------------------------------------------------------------- */

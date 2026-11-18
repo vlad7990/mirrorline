@@ -18,7 +18,8 @@ import * as React from 'react'
 export interface GoalProgressProps {
   /** The outcome in the user's own words, from onboarding (15 §1). */
   readonly outcome: string
-  readonly current: number
+  /** `null` when nothing has measured this yet — rendered, never zeroed. */
+  readonly current: number | null
   readonly target: number
   /** "leads", "bookings", "new followers". Lower case, plural. */
   readonly unitLabel: string
@@ -60,10 +61,18 @@ export function GoalProgress({
   className,
 }: GoalProgressProps) {
   const safeTarget = target > 0 ? target : 1
-  const fraction = Math.max(0, Math.min(1, current / safeTarget))
+  // **An unmeasured goal draws no bar and claims no percentage.** `null` here
+  // means nothing has read this account yet; rendering 0% would say we looked
+  // and found nothing, which is a different and untrue statement.
+  const isMeasured = current !== null
+  const fraction = isMeasured ? Math.max(0, Math.min(1, current / safeTarget)) : 0
   const percent = Math.round(fraction * 100)
   const headingId = React.useId()
   const Heading = headingLevel === 2 ? 'h2' : 'h3'
+
+  const readout = isMeasured
+    ? `${percent}% of the ${target.toLocaleString('en-US')} ${unitLabel} target, ${periodLabel}`
+    : `Not measured yet. The target is ${target.toLocaleString('en-US')} ${unitLabel}, ${periodLabel}.`
 
   return (
     <section aria-labelledby={headingId} className={cn('flex flex-col gap-3', className)}>
@@ -72,8 +81,17 @@ export function GoalProgress({
           {outcome}
         </Heading>
         <p className="machine m-0 text-mono text-text-muted">
-          <span className="text-text">{current.toLocaleString('en-US')}</span> of{' '}
-          {target.toLocaleString('en-US')} {unitLabel} · {periodLabel}
+          {isMeasured ? (
+            <>
+              <span className="text-text">{current.toLocaleString('en-US')}</span> of{' '}
+              {target.toLocaleString('en-US')} {unitLabel} · {periodLabel}
+            </>
+          ) : (
+            <>
+              <span className="text-text">Not measured yet</span> · target{' '}
+              {target.toLocaleString('en-US')} {unitLabel} · {periodLabel}
+            </>
+          )}
         </p>
       </div>
 
@@ -83,7 +101,7 @@ export function GoalProgress({
           is loading. */}
       <div
         role="img"
-        aria-label={`${percent}% of the ${target.toLocaleString('en-US')} ${unitLabel} target, ${periodLabel}`}
+        aria-label={readout}
         className="h-1.5 w-full overflow-hidden rounded-full bg-surface-subtle"
       >
         {/* `bar-grow` scales from the left and leaves the inline width as the

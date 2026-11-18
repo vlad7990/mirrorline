@@ -11,12 +11,17 @@
  * sits with the figure rather than in a tooltip.
  *
  * The edit controls are real inputs rather than a dialog, because the screen's
- * job is to make a target feel adjustable. They do not persist yet — the goals
- * tables land in PR9 — and the form says so instead of silently discarding a
- * change.
+ * job is to make a target feel adjustable. **They persist as of B2** — see
+ * `target-form.tsx`, which is the only client component here so this board can
+ * stay a server component and be read from the database by both the Goals
+ * screen and the Results tab.
+ *
+ * A key result whose `current` is `null` has not been measured yet and says so.
+ * `metric_snapshots` stays empty until B6's ingestion, and a zero there would
+ * be a reading we never took.
  */
 
-import { Button, Card, Divider, Input, Label, cn } from '@mirrorline/ui'
+import { Button, Card, Divider, cn } from '@mirrorline/ui'
 
 import {
   CUSTOM_KPI_ENTRY_LABELS,
@@ -30,12 +35,16 @@ import {
 } from '@/lib/studio/cascade'
 
 import { GoalProgress } from '../kpi/goal-progress'
+import { TargetForm } from './target-form'
 
 /** The pace word's colour. Behind is amber, never red — see `insights.ts`. */
 const PACE_CLASS = {
   ahead: 'text-on-success-soft',
   'on-pace': 'text-text-muted',
   behind: 'text-on-warning-soft',
+  // Muted, like "on pace", but it is not a verdict — nothing has read this
+  // account yet, and colouring it would imply we had an opinion.
+  unmeasured: 'text-text-muted',
 } as const
 
 export interface GoalsBoardProps {
@@ -51,11 +60,18 @@ export function GoalsBoard({
 
   return (
     <div className="flex flex-col gap-5">
-      {headline ? (
-        <Card as="section" aria-labelledby="outcome-heading" className="flex flex-col gap-4">
-          <h2 id="outcome-heading" className="m-0 font-heading text-title text-text">
-            Your outcome
-          </h2>
+      {/* **The outcome is shown whether or not a headline key result exists.**
+          It used to render only when one did, which meant a workspace that had
+          finished onboarding but had no key results yet — every new workspace,
+          until the Analyst proposes some — saw a screen with its own goal
+          missing from it. The outcome is the user's own sentence; it is the
+          one thing here that is always true. */}
+      <Card as="section" aria-labelledby="outcome-heading" className="flex flex-col gap-4">
+        <h2 id="outcome-heading" className="m-0 font-heading text-title text-text">
+          Your outcome
+        </h2>
+
+        {headline ? (
           <GoalProgress
             outcome={cascade.outcome}
             current={headline.current}
@@ -64,8 +80,16 @@ export function GoalsBoard({
             periodElapsed={cascade.periodElapsed}
             periodLabel={cascade.periodLabel}
           />
-        </Card>
-      ) : null}
+        ) : (
+          <div className="flex flex-col gap-2">
+            <p className="m-0 font-heading text-subtitle text-text">{cascade.outcome}</p>
+            <p className="m-0 text-meta text-text-muted">
+              No key results yet. After a 14-day baseline the Performance Analyst proposes the
+              measurements for this, and they appear here for you to change.
+            </p>
+          </div>
+        )}
+      </Card>
 
       {cascade.objectives.map((objective) => (
         <Card
@@ -118,7 +142,6 @@ function KeyResultRow({
   periodElapsed: number
 }) {
   const pace = keyResultPace(keyResult, periodElapsed)
-  const inputId = `target-${keyResult.id}`
 
   return (
     <div className="flex flex-col gap-2">
@@ -128,31 +151,24 @@ function KeyResultRow({
       </div>
 
       <p className="machine m-0 text-mono text-text-muted">
-        <span className="text-text">{keyResult.current.toLocaleString('en-US')}</span> of{' '}
+        {keyResult.current === null ? (
+          <>
+            <span className="text-text">Not measured yet</span> · target{' '}
+          </>
+        ) : (
+          <>
+            <span className="text-text">{keyResult.current.toLocaleString('en-US')}</span> of{' '}
+          </>
+        )}
         {keyResult.target.toLocaleString('en-US')} {keyResult.unitLabel} · from{' '}
         {keyResult.baseline.toLocaleString('en-US')} at baseline · due {keyResult.due}
       </p>
 
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor={inputId}>Target</Label>
-          <Input
-            id={inputId}
-            name={inputId}
-            type="number"
-            inputMode="numeric"
-            defaultValue={keyResult.target}
-            className="machine w-32"
-          />
-        </div>
-        <Button variant="secondary">Propose a new target</Button>
-      </div>
-
-      {/* 15 §1: a proposal, with its origin stated. Never "guaranteed". */}
-      <p className="m-0 text-caption text-text-muted">
-        Proposed from your {keyResult.basis}. It is a proposal you can change, not a promise we have
-        made. Changes are not saved yet — the goals tables land with the database.
-      </p>
+      <TargetForm
+        keyResultId={keyResult.id}
+        target={keyResult.target}
+        basis={keyResult.basis}
+      />
     </div>
   )
 }

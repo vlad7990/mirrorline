@@ -425,6 +425,88 @@ export async function workspaceRowCounts(
   return counts
 }
 
+/**
+ * Give a workspace one objective and one key result, with the service role.
+ *
+ * **Fixture, not product behaviour.** Nothing writes objectives or key results
+ * yet — the Performance Analyst proposes them, and that agent is not built. So
+ * a test that wants to edit a target has to put one there first, and doing it
+ * with the service role keeps the fixture out of the thing being tested: the
+ * UI edit that follows runs as the user, under RLS, exactly as a client's
+ * would.
+ *
+ * `leads` is deliberate: `GoalsBoard` finds its headline bar by that KPI key,
+ * so seeding it exercises the outcome bar as well as the key-result row.
+ */
+export async function seedGoalCascade(
+  config: SupabaseTestConfig,
+  options: { readonly target: number; readonly userId: string },
+): Promise<{ readonly keyResultId: string } | null> {
+  const headers = { ...adminHeaders(config), Prefer: 'return=representation' }
+
+  // **Scoped to this user's workspace.** Selecting the first primary goal in
+  // the project would seed whichever workspace happened to be created first,
+  // and every test here would then assert against somebody else's rows.
+  const workspaceId = await findOwnedWorkspaceId(config, options.userId)
+  if (workspaceId === null) return null
+
+  const goals = (await (
+    await fetch(
+      `${config.url}/rest/v1/goals?select=id&is_primary=eq.true&workspace_id=eq.${workspaceId}&limit=1`,
+      { headers: adminHeaders(config) },
+    )
+  ).json()) as readonly { id?: unknown }[]
+
+  const goalId = goals[0]?.id
+  if (typeof goalId !== 'string') return null
+
+  const objectives = (await (
+    await fetch(`${config.url}/rest/v1/objectives`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify([{ goal_id: goalId, text: 'Publish daily and answer every comment' }]),
+    })
+  ).json()) as readonly { id?: unknown }[]
+
+  const objectiveId = objectives[0]?.id
+  if (typeof objectiveId !== 'string') return null
+
+  const keyResults = (await (
+    await fetch(`${config.url}/rest/v1/key_results`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify([
+        {
+          objective_id: objectiveId,
+          kpi_key: 'leads',
+          baseline: 10,
+          target: options.target,
+          basis: '14-day baseline + niche benchmarks',
+          due: '2027-01-06',
+        },
+      ]),
+    })
+  ).json()) as readonly { id?: unknown }[]
+
+  const keyResultId = keyResults[0]?.id
+  return typeof keyResultId === 'string' ? { keyResultId } : null
+}
+
+/** The stored target, read with the service role so RLS cannot mask a failure. */
+export async function readKeyResultTarget(
+  config: SupabaseTestConfig,
+  keyResultId: string,
+): Promise<number | null> {
+  const rows = (await (
+    await fetch(`${config.url}/rest/v1/key_results?id=eq.${keyResultId}&select=target`, {
+      headers: adminHeaders(config),
+    })
+  ).json()) as readonly { target?: unknown }[]
+
+  const target = rows[0]?.target
+  return target === undefined || target === null ? null : Number(target)
+}
+
 /** Every tagged account currently in the project, across all runs. */
 async function listTestUsers(config: SupabaseTestConfig): Promise<readonly AdminUser[]> {
   const found: AdminUser[] = []
