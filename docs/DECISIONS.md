@@ -6440,3 +6440,212 @@ Nothing in the workflow runs until Vlad sets the repository variable
 secrets. Until then its preflight job prints a notice naming exactly what is
 missing — **it does not skip quietly**, because a safety gate that is off and
 looks green is the failure mode this repo keeps rediscovering.
+
+> Superseded in part by **D94**: production and preview are separate projects
+> as of 19 November, so the "What is true today" section above is history. The
+> gate is now load-bearing.
+
+## 2026-11-19 · D94 · Production has its own Supabase project, and the lesson is that the CLI could reach it from anywhere
+
+**Vlad's decision, and an explicit one-time approval to act on it.** Created
+`mirrorline-production` — ref `uvwedufzjldfahlqtisk`, organisation
+**Mirrorline** (`bfbiwjsedjhxhwbsddtb`), region `us-east-1`, **Micro** compute.
+Preview stays `mirrorline-preview` (`qypakxvxnjmsvxmxiynf`) in the same
+organisation. This is the split D76 reserved and D93 was waiting for, and it
+unblocks B2.2.
+
+### The organisation was named wrong, and asking was right
+
+The instruction said "org Mirrorline (the Pro org, not Stratum)". **D81 says the
+opposite**: Mirrorline was created as a *new free* organisation precisely so the
+preview database would not cost $10/month, and **Stratum** is the Pro one with
+five projects. Two things hung on which was true — `--size micro` is not offered
+on the free plan, and free caps at two active projects.
+
+So nothing was created until it was asked. The answer: Mirrorline **has since
+been upgraded to Pro**, so both the name and the compute size were right and
+D81's description is simply out of date. The create accepted `--size micro`,
+which is the proof — a free organisation would have rejected it.
+
+Worth keeping because the instinct it rewards is cheap: a parenthetical that
+contradicts the decision log is worth one question, not a guess. Guessing
+Stratum would have put production in the wrong organisation and started a bill;
+guessing Mirrorline-is-still-free would have downgraded production to Nano,
+which pauses after a week of inactivity.
+
+### The database password was never seen, and never needed
+
+Asked for and honoured: the password was not generated here, not printed, and
+not stored. Vlad pasted it from his password manager into a `read -rs` prompt in
+his own terminal, so the typed command line held `"$PGPW"` rather than a value
+and shell history stayed clean.
+
+**Then it turned out not to matter.** `supabase link` never prompted for a
+password, and `db push` still connected — the first line of its output is
+`Initialising login role...`. This CLI authenticates to Postgres by minting a
+temporary login role through the **Management API**, using the personal access
+token already in the keychain. The password is not on that path at all.
+
+Which is a finding with two faces:
+
+- **Convenient.** Nothing in this task needed a credential handed over, so none
+  was.
+- **The actual risk, and the reason for the rule below.** The CLI login reaches
+  **production from any local workdir**. Pointing `supabase/config.toml` at
+  preview is *not* a boundary — it is a default. One `supabase link
+  --project-ref` in any directory, or one `--project-ref` flag, and a session is
+  talking to the production database with no password, no approval and no trace
+  in the repo.
+
+### The rule
+
+**Production is touched only through the gated workflow
+(`.github/workflows/migrate-production.yml`, D93) or under an explicit one-time
+approval from Vlad. Never from a local link.**
+
+Not "prefer the workflow" — never. The gate is worth nothing if the thing it
+gates can be walked around by a CLI that is already authenticated, and it is
+already authenticated.
+
+Which is why the scratch workdir used for this work — `prod-main`, outside the
+repo, holding its own `config.toml`, the six migrations and the link state — was
+**deleted as the last step**, link state and all. It existed for one task and
+should not outlive it. The repo's own `supabase/config.toml` still reads
+`project_id = "qypakxvxnjmsvxmxiynf"` and `git status -- supabase/` is clean, so
+nothing a future session runs by habit can reach production.
+
+**And the e2e suite must never be pointed at it.** It creates real auth users
+and its teardown deletes `e2e+`-tagged accounts. D93 called that "not a live
+hazard" because the two databases were the same one and the sweep is narrow;
+now that they are separate, the correct statement is simpler — production is not
+a test target, and no test suite was run against it during this work.
+
+### Two things nearly went wrong, both from the same mistake
+
+**1. A closed stdin answers `Y`, so "no `--yes`" is not a safety gate.**
+
+The plan was to run `supabase config push` *without* `--yes` so it would print
+its diff and stop for review. That reasoning was wrong. Every `supabase`
+command here ran with `</dev/null` to stop it hanging on a prompt, and the push
+output shows what that does:
+
+    Do you want to push these migrations to the remote database?
+     • …
+     [Y/n]
+    Applying migration 20261113120000_metrics_and_goals.sql...
+
+Nobody answered that. EOF was taken as the default, which is **`Y`**. It was the
+intended outcome for `db push`, so it did no harm — and it would have applied
+the auth config before anyone saw the diff.
+
+**The fix is to answer, not to omit.** `yes n | supabase config push` prints the
+diff and applies nothing; `yes y | …` applies it. Omitting `--yes` in a
+non-interactive shell is indistinguishable from passing it.
+
+**2. A minimal `config.toml` is not a minimal push.**
+
+The first version of the production `config.toml` listed only the two URLs that
+needed changing, on the assumption that unspecified keys would be left alone.
+**They are not.** `config push` fills every key it knows with the CLI's own
+default and asserts that too. Feeding it `n` showed what the short file would
+have done to a project nobody had configured:
+
+| Key | Remote had | CLI default would have set |
+|---|---|---|
+| `[mfa.totp] enroll_enabled` | `true` | `false` |
+| `[mfa.totp] verify_enabled` | `true` | `false` |
+| `[email] max_frequency` | `1m0s` | `1s` |
+| `[email] otp_length` | `8` | `6` |
+
+Two of those weaken the project — TOTP enrolment off, and the email rate limit
+relaxed sixtyfold, which is the very limit the e2e suite's 429-skip exists
+because of (D84). None was asked for. Every value was then pinned to what the
+remote already had, so the applied diff was exactly two lines:
+
+    -site_url = "http://localhost:3000"
+    +site_url = "https://mirrorline-eosin.vercel.app"
+    -additional_redirect_urls = []
+    +additional_redirect_urls = ["https://mirrorline-eosin.vercel.app/**"]
+
+Both near-misses are the same error in different clothes: **treating absence as
+safety.** An unanswered prompt is not a refusal and an unlisted setting is not a
+preserved one. Where the default is the dangerous direction, say the safe thing
+out loud.
+
+### Auth mirrors preview, and that was verifiable after all
+
+Email confirmation **ON** (Vlad's call, D84), built-in SMTP at the default rate
+limit, stock templates. Those were taken from the record rather than a live read
+of preview — the Supabase MCP connection is scoped to the Stratum organisation
+only, so it cannot see either Mirrorline project.
+
+The diff then confirmed it from the other end: `enable_confirmations = true`,
+`max_frequency = "1m0s"`, `jwt_expiry = 3600`, refresh-token rotation and an
+empty `[email.template]` all reported as **already matching**. Preview's
+settings and a fresh project's defaults are the same settings, so the only
+genuine deltas were the two URLs.
+
+### Verified, not assumed
+
+Six migrations, staged from `origin/main` by `git archive` rather than from the
+working tree, each checked against its `origin/main` blob hash — so no
+`backend/b2-studio` work in progress could ride along. `supabase/` on that
+branch turned out to be byte-identical to `origin/main` anyway, but the
+constraint is now provable rather than lucky.
+
+| Check | Expected | Found |
+|---|---|---|
+| `migration list` local ↔ remote | all six agree | all six agree |
+| tables in `public` | 13 | 13 |
+| tables with RLS | 13 | 13 |
+| tables without RLS | none | none |
+| policies in `public` | 24 | 24 |
+| `kpi_definitions` rows | 12 | 12 |
+| distinct KPI tiers | 7 | 7 |
+
+The last four came from a read-only query Vlad ran in the production SQL
+editor, because `supabase db dump` shells out to `pg_dump` in Docker and there
+is no Docker on this machine, and `inspect db` in CLI 2.48.3 has no RLS or
+policy command. Asserting RLS from "the migration applied without error" would
+have been inference dressed as verification.
+
+### The CI secret is named for production now
+
+`migrate-production.yml` read `secrets.SUPABASE_ACCESS_TOKEN`. It now reads
+**`SUPABASE_PRODUCTION_ACCESS_TOKEN`**, matching the two secrets beside it. The
+old name was the one the CLI picks up from the environment by default, and that
+convenience was the problem: an unprefixed name reads like one account-wide
+credential, while this workflow is the one place that must only ever reach
+`mirrorline-production`. It is still handed to the CLI *as*
+`SUPABASE_ACCESS_TOKEN` in the job's `env:`, because that is what the CLI reads;
+only the secret it comes from is production-scoped.
+
+**One possible simplification, deliberately not made.** Since the Management API
+path needs no database password, `SUPABASE_PRODUCTION_DB_PASSWORD` may be
+unnecessary in CI. It stays wired in and documented: that is one local
+observation, and the password is the break-glass credential if the API path ever
+fails. Vlad agreed to leave it. Removing it is a change to make on evidence from
+CI, not from here.
+
+### Still Vlad's, and the half-done state to avoid
+
+1. **Re-scope the four Vercel variables** — `SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+   `SUPABASE_SERVICE_ROLE_KEY` — so the existing values become **Preview only**
+   and production gets `uvwedufzjldfahlqtisk`'s. Both URL names are needed:
+   `lib/leads/scan-store.ts` reads `SUPABASE_URL` while the browser needs the
+   `NEXT_PUBLIC_` one, and setting one leaves the Niche Scan writing to a JSON
+   file while the rest of the app talks to the database — a split brain with no
+   error message. Half-done the other way (production URL, preview key) fails
+   looking exactly like an auth bug.
+2. **The keys were never read here.** `supabase projects api-keys` was not run;
+   the keys come from
+   `…/project/uvwedufzjldfahlqtisk/settings/api-keys`. The project uses
+   Supabase's **new** key format (`sb_publishable_…`, `sb_secret_…`) per
+   `lib/supabase/env.ts`, so "publishable" maps to
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY` and "secret" to `SUPABASE_SERVICE_ROLE_KEY`.
+   The project URL — `https://uvwedufzjldfahlqtisk.supabase.co` — is not a
+   secret.
+3. **Arm the gate** (D93): the `production` Environment with himself as required
+   reviewer, `PRODUCTION_MIGRATIONS_ENABLED=true`, and the three
+   `SUPABASE_PRODUCTION_*` secrets.

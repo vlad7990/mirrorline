@@ -6,6 +6,143 @@
 
 ---
 
+## Handoff — 19 November 2026, late (production has its own database; preview and production are separate; B2.2 is unpaused once the Vercel variables are split)
+
+**Branch** `backend/b2-studio` · **no PR yet.** Modified and uncommitted:
+`.github/workflows/migrate-production.yml`, `docs/DECISIONS.md`,
+`docs/PROGRESS.md`. No code changed, so no gates were re-run — the last full
+run (previous handoff) stands: lint, typecheck, 931 unit, build, licence-check,
+migration-safety green; full e2e 410 passed / 836 skipped / zero failures.
+
+**This supersedes §1 and item 1 of "Still needs you" in the handoff below.**
+The production Supabase project exists. **D94** records all of it.
+
+### 1. What exists now
+
+| | Project | Ref | Compute |
+|---|---|---|---|
+| Preview | `mirrorline-preview` | `qypakxvxnjmsvxmxiynf` | — |
+| Production | `mirrorline-production` | `uvwedufzjldfahlqtisk` | Micro |
+
+Both in the **Mirrorline** organisation (`bfbiwjsedjhxhwbsddtb`), `us-east-1`.
+Vlad had upgraded that organisation to Pro since D81 described it as the free
+one — which is why `--size micro` was accepted. Created by Vlad in his own
+terminal from a one-liner, so the database password was never generated, seen
+or printed here.
+
+Applied to production: **the six migrations on `origin/main`**, staged with
+`git archive` and each verified against its `origin/main` blob hash, so no
+`b2-studio` work in progress could ride along. Plus `seed.sql`. Verified:
+
+| Check | Found |
+|---|---|
+| `migration list` local ↔ remote | all six agree |
+| tables in `public` | **13** |
+| tables with RLS | **13**, none without |
+| policies in `public` | **24** |
+| `kpi_definitions` rows / tiers | **12** / **7** |
+
+Auth: Site URL `https://mirrorline-eosin.vercel.app`, redirect
+`https://mirrorline-eosin.vercel.app/**`. Everything else — email confirmation
+ON, `max_frequency = "1m0s"`, `otp_length = 8`, TOTP MFA on, stock templates —
+confirmed already matching, so the applied diff was two lines.
+
+**No test suite was run against production, and none ever should be.** The e2e
+suite creates real auth users and its teardown deletes `e2e+` accounts.
+
+### 2. The one thing left before B2.2 — and it is Vlad's
+
+**Re-scope the four Vercel variables.** They still carry
+`target: ["production", "preview"]` with a single value, so **production is
+still serving the preview database until this is done.** Everything above is
+inert until then.
+
+In Vercel → Settings → Environment Variables, **Production only**:
+
+| Variable | Value |
+|---|---|
+| `SUPABASE_URL` | `https://uvwedufzjldfahlqtisk.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_URL` | same |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | the `sb_publishable_…` key |
+| `SUPABASE_SERVICE_ROLE_KEY` | the `sb_secret_…` key |
+
+Then untick **Production** on the four existing ones so they are Preview-only.
+Keys from `…/project/uvwedufzjldfahlqtisk/settings/api-keys` — they were never
+read into a session; `supabase projects api-keys` was not run. The URL is not a
+secret. The project is on Supabase's **new** key format per
+`lib/supabase/env.ts`, so publishable → anon-key variable, secret →
+service-role variable.
+
+**Do not leave this half-done.** Both URL names are needed:
+`lib/leads/scan-store.ts` reads `SUPABASE_URL` while the browser needs the
+`NEXT_PUBLIC_` one, so setting one leaves the Niche Scan writing to a JSON file
+while the rest of the app talks to the database — a split brain with no error
+message. A production URL beside a preview key fails looking exactly like an
+auth bug.
+
+### 3. The rule that came out of this, and it is the important part
+
+**Production is touched only through the gated workflow or under an explicit
+one-time approval. Never from a local link.**
+
+The reason is a discovery: **`supabase link` never asked for the database
+password, and `db push` connected anyway.** The CLI mints a temporary login role
+through the Management API using the personal access token already in the
+keychain. So the password is not on the path at all — and the CLI can reach
+production **from any local workdir**. Pointing `supabase/config.toml` at
+preview is a default, not a boundary.
+
+The scratch workdir used for this work was therefore **deleted, link state and
+all**, as the last step. Confirmed afterwards: the repo's
+`supabase/config.toml` still reads `project_id = "qypakxvxnjmsvxmxiynf"` and
+`git status -- supabase/` is clean.
+
+### 4. Two near-misses worth not repeating
+
+**A closed stdin answers `Y`.** Every `supabase` call here used `</dev/null` so
+it could not hang on a prompt — and EOF is taken as the prompt's default, which
+is `Y`. The plan had been to run `config push` *without* `--yes` so it would
+stop for review; it would have applied the auth config unreviewed. **Omitting
+`--yes` in a non-interactive shell is indistinguishable from passing it.** Feed
+the answer: `yes n | supabase config push` shows the diff and applies nothing.
+
+**A minimal `config.toml` is not a minimal push.** `config push` fills every key
+it knows with the CLI's own default and asserts that too. The first, two-URL
+version of the file would have turned **TOTP enrolment off** and relaxed the
+email rate limit from `1m0s` to `1s` — the limit the e2e 429-skip exists
+because of. Caught by the `n`, then every value pinned to the remote's.
+
+Both are the same error: **treating absence as safety.** An unanswered prompt is
+not a refusal; an unlisted setting is not a preserved one.
+
+### 5. CI
+
+`migrate-production.yml` now reads **`SUPABASE_PRODUCTION_ACCESS_TOKEN`**
+instead of `SUPABASE_ACCESS_TOKEN`, so all three secrets carry the
+`PRODUCTION_` prefix. It is still passed to the CLI *as* `SUPABASE_ACCESS_TOKEN`
+in the job's `env:`, because that is the variable the CLI reads. The two
+comment blocks that described the shared-project world were rewritten.
+
+**A simplification noted and deliberately not made:** since the Management API
+path needs no database password, `SUPABASE_PRODUCTION_DB_PASSWORD` may be
+unnecessary in CI. Left wired in by agreement — one local observation is not
+evidence about the Actions runner, and it is the break-glass credential if the
+API path fails. Store it somewhere retrievable.
+
+### Still needs you
+
+1. **The four Vercel variables** (§2). **B2.2 stays paused until this is done** —
+   not for the gate's sake, but because production is still pointed at preview.
+2. **Arm the gate** (D93): the `production` Environment with yourself as
+   required reviewer, `PRODUCTION_MIGRATIONS_ENABLED=true`, and the three
+   `SUPABASE_PRODUCTION_*` secrets.
+3. **Commit these three files.** Nothing here is committed yet.
+4. **PR #3** (`docs/plan-v2`) is still open; **D-b — where the renderer runs** —
+   is the remaining blocking decision.
+5. **`E2E_SIGNUP_EMAIL`** still unset, so the one UI sign-up test skips.
+
+---
+
 ## Handoff — 19 November 2026 (B1 merged; the migration gate is built and inert; B2.2 is paused for the production database)
 
 **Branch** `backend/b2-studio`, rebased onto `main` · pushed · **no PR yet.**
