@@ -163,7 +163,24 @@ test.describe('an article page', () => {
 /* /sign-in and /sign-up                                                       */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Both describes below run **signed out**, deliberately.
+ *
+ * Since B1 the suite's default is a saved session (`e2e/auth.setup.ts`), and
+ * the proxy redirects a signed-in visitor away from `/sign-in` and `/sign-up`
+ * — correct behaviour, and it would leave these tests asserting against the
+ * studio. Clearing cookies puts them back on the pages they are about.
+ *
+ * The assertions themselves did not change. They were written against a form
+ * that checked nothing, and they pass unaltered against one that does: the
+ * failed sign-in below is now a real refusal from Supabase, flattened into the
+ * same sentence on purpose.
+ */
 test.describe('/sign-in', () => {
+  test.beforeEach(async ({ context }) => {
+    await context.clearCookies()
+  })
+
   test('a failed sign-in says so without saying which half was wrong', async ({ page }) => {
     await page.goto('/sign-in')
 
@@ -204,6 +221,17 @@ test.describe('/sign-in', () => {
   test('the example address is neutral: no invented person, no real mail host', async ({ page }) => {
     await page.goto('/sign-in')
 
+    // **Wait for the field, not the page.** The example address lives in this
+    // field's hint, and the whole form sits inside the Suspense boundary
+    // `sign-in/page.tsx` needs for `useSearchParams` — whose fallback is an
+    // empty `aria-hidden` div. `innerText()` is a one-shot read with no retry,
+    // so taken before the boundary streams it returns a page with no form in
+    // it at all: `toContain` fails, and the two `not.toContain` assertions
+    // pass for the worst possible reason. Waiting on the email field is
+    // waiting for the boundary, and it is the cheapest assertion the fallback
+    // cannot satisfy.
+    await expect(page.getByRole('textbox', { name: 'Email', exact: true })).toBeVisible()
+
     const body = await page.locator('body').innerText()
     expect(body).toContain('you@your-business.example')
     expect(body).not.toContain('@gmail')
@@ -212,6 +240,10 @@ test.describe('/sign-in', () => {
 })
 
 test.describe('/sign-up', () => {
+  test.beforeEach(async ({ context }) => {
+    await context.clearCookies()
+  })
+
   test('will not create a workspace until the rights box is ticked', async ({ page }) => {
     await page.goto('/sign-up')
 

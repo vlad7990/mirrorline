@@ -104,15 +104,28 @@ test.describe('the launcher is always there', () => {
     const banner = page.getByRole('dialog', { name: 'We are not tracking you' })
     await expect(banner).toBeVisible()
 
-    const dock = await page.locator('[data-milo-dock]').boundingBox()
-    const bar = await banner.boundingBox()
-    expect(dock).not.toBeNull()
-    expect(bar).not.toBeNull()
+    const dock = page.locator('[data-milo-dock]')
+    await expect(dock).toBeVisible()
 
     // Clear of its top edge, not merely painted over it: a mascot sitting on
     // the consent buttons is the dark pattern §3.3 worried about, and
     // z-index alone would produce exactly that.
-    expect(dock!.y + dock!.height).toBeLessThanOrEqual(bar!.y + 1)
+    //
+    // **Polled, because the step up is a 220ms transition.** `.milo-dock`
+    // lifts by `--cookie-banner-height`, which globals.css notes the banner
+    // "publishes a moment after hydration" — deliberately a `transform` so the
+    // step costs no CLS. `boundingBox()` does not retry, so a single read can
+    // land either before the variable is published or mid-transition, and then
+    // reports the dock still over the banner. The assertion is unchanged; only
+    // its patience is. `toPass` settles on the resting position rather than
+    // racing the compositor.
+    await expect(async () => {
+      const dockBox = await dock.boundingBox()
+      const barBox = await banner.boundingBox()
+      expect(dockBox).not.toBeNull()
+      expect(barBox).not.toBeNull()
+      expect(dockBox!.y + dockBox!.height).toBeLessThanOrEqual(barBox!.y + 1)
+    }).toPass({ timeout: 5_000 })
   })
 })
 
@@ -201,19 +214,29 @@ test.describe('the size, and the room around him', () => {
     const cta = page.locator('[data-primary-cta]').first()
     await cta.scrollIntoViewIfNeeded()
     await page.mouse.wheel(0, 240)
-    await page.waitForTimeout(500)
 
-    const dock = await page.locator('[data-milo-dock]').boundingBox()
-    const button = await cta.boundingBox()
-    expect(dock).not.toBeNull()
-    expect(button).not.toBeNull()
+    const dock = page.locator('[data-milo-dock]')
+    await expect(dock).toBeVisible()
 
-    const overlaps =
-      dock!.x < button!.x + button!.width &&
-      dock!.x + dock!.width > button!.x &&
-      dock!.y < button!.y + button!.height &&
-      dock!.y + dock!.height > button!.y
-    expect(overlaps).toBe(false)
+    // Polled for the same reason as the cookie-banner test above: the lift is
+    // `--milo-cta-lift` on a 220ms `transform`, and the scroll that provokes
+    // it has to be observed before it can be applied. This replaced a flat
+    // `waitForTimeout(500)` — which passed by being longer than the
+    // transition rather than by knowing it had ended, and so would have
+    // started failing the moment the duration or the scroll cost changed.
+    await expect(async () => {
+      const dockBox = await dock.boundingBox()
+      const buttonBox = await cta.boundingBox()
+      expect(dockBox).not.toBeNull()
+      expect(buttonBox).not.toBeNull()
+
+      const overlaps =
+        dockBox!.x < buttonBox!.x + buttonBox!.width &&
+        dockBox!.x + dockBox!.width > buttonBox!.x &&
+        dockBox!.y < buttonBox!.y + buttonBox!.height &&
+        dockBox!.y + dockBox!.height > buttonBox!.y
+      expect(overlaps).toBe(false)
+    }).toPass({ timeout: 5_000 })
   })
 })
 
@@ -299,7 +322,24 @@ test.describe('what it keeps', () => {
     expect(stored.session).not.toContain('followers')
     expect(stored.local).not.toContain('copilot')
     expect(stored.session).not.toContain('copilot')
-    expect(await page.context().cookies()).toEqual([])
+    /**
+     * **No cookie carries the conversation** — which is what §3.3 asks, and is
+     * narrower than what this line used to say.
+     *
+     * It was `toEqual([])`: no cookies at all. That was a true expression of
+     * "stored nowhere" for as long as nothing in the product could set a
+     * cookie, and it stopped being one when B1 gave the app a session. It was
+     * failing on the session cookie of a signed-in visitor, which says nothing
+     * whatsoever about the copilot.
+     *
+     * Asserting the absence of the *question* rather than the absence of
+     * *cookies* is what the spec actually requires, and it will not break again
+     * the next time something legitimate needs one.
+     */
+    const cookies = await page.context().cookies()
+    const cookieDump = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join('\n')
+    expect(cookieDump).not.toContain('followers')
+    expect(cookieDump).not.toContain('copilot')
 
     await page.reload()
     await openPanel(page)

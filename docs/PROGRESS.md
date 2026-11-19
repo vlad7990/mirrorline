@@ -6,6 +6,789 @@
 
 ---
 
+## Handoff — 18 November 2026, evening (the onboarding submit is fixed, and PR #2 is clear to merge)
+
+**Branch** `backend/b1-auth` · **PR #2 open, not merged — merging is Vlad's.**
+Gates: lint, typecheck, **894 unit**, build — all green. **Full e2e twice:
+406 passed / 828 skipped, both runs, zero failures** (12.9m and 12.8m).
+
+The previous note said to stop and not merge PR #2 until onboarding submitted.
+It does now. Here is what it was, because the diagnosis in that note was wrong.
+
+### 1. The submit was never sent — the action was never called
+
+Not "the server action never settles". A Playwright trace of the failing run
+contains **no POST to `/app/onboarding` at all**, while the DOM shows React
+owning the form (`action="javascript:throw new Error('A React form was
+unexpectedly submitted…')"` — its hydration sentinel), the button `type=submit`,
+enabled, inside the form, all five fields populated, and the pending state
+applied after the click. Hydrated, click handled, nothing sent.
+
+That is why **no server error was ever printed** and why `save_onboarding` timed
+at 109ms was never the suspect it looked like. Both of those facts in the old
+note were true; the conclusion drawn from them was not.
+
+### 2. What it actually was: mirroring the step was a navigation
+
+`step-context.tsx` wrote `?step=` with `router.replace`, which is a
+**navigation**. From Next 15.5.29's action queue
+(`next/dist/client/components/app-router-instance.js`):
+
+- `dispatchAction` calls `setState(deferredPromise)` for every action except
+  `ACTION_RESTORE`, and `useActionQueue` does `use(state)` on it — so a
+  navigation in flight **suspends the whole router**;
+- a second navigation dispatched before the first commits marks the first
+  `discarded`, and `handleResult` returns **early** for a discarded action: it
+  neither resolves that promise nor advances the queue;
+- that branch never reassigns `actionQueue.last`, so `last` still points at the
+  dead node, and the form's server action — not a navigation — is appended
+  behind it and never runs.
+
+Two quick Continues and a Submit is the whole recipe. Proven by isolation: with
+the RSC response held open and **two** replaces, zero POSTs and the exact
+reported symptom; with **one** replace, the POST fires and lands on `/app/home`.
+
+### 3. Why it "passed at the review commit"
+
+Pure latency, not a code change. The race is lost only when the second Continue
+beats the first RSC round trip home, and that trip goes through `middleware.ts`,
+which verifies the token with Supabase **over the network**.
+
+Checked rather than assumed: `demo-path.spec.ts` was run at the exact PR #2
+review commit `593cbd6` and **failed there too**, same assertion. So nothing in
+the repo changed between the green run and the red one, and **there was nothing
+to bisect**. It also explains why raising the timeout hid it and the symptom
+returned worse: the submit was not slow, it was absent.
+
+### 4. The fix, and what it must not break
+
+`window.history.replaceState`. Next patches it, copies its own history state
+across and dispatches `ACTION_RESTORE`, which `dispatchAction` handles
+**synchronously** — no promise, no queue entry — so `usePathname` and
+`useSearchParams` still hold the step, with nothing for a later action to queue
+behind.
+
+The URL still has to carry the step: `e2e/helpers/routes.ts` deep-links
+`?step=2` and `?step=3`, and a reload must come back to the right panel. So
+"stop writing the URL" was never an option. The RSC request removed fetched a
+byte-identical 8,352-byte payload every time in any case — the route is static.
+
+### 5. The guard counts navigations instead of racing them
+
+`e2e/onboarding-submit.spec.ts`. The obvious test — hold the navigation open and
+submit underneath it — **is not reliably red**: Next can serve a static route
+from its prefetch cache, so nothing is pending to wedge, and six runs of that
+test stayed green on the broken code. It was written, measured and thrown away;
+a test that passes before the fix guards nothing.
+
+What is deterministic is the cause: stepping twice must issue **no**
+step-bearing RSC request. Four before the fix, none after, three runs each way.
+The spec also asserts the URL reaches `?step=3`, so the fix cannot decay into
+not writing the URL, and that the submit reaches `/app/home`, so a wedge
+arriving by another route still goes red.
+
+`demo-path.spec.ts` is green again at **3.0s**, against 7.3s before the bug —
+two wasted round trips went with it.
+
+### 6. What changed in the suite's arithmetic
+
+**406 passed / 828 skipped**, against the old baseline of 405 / 826. The new
+spec adds one run plus two `onlyProject` skips, so the previous note's skip
+audit (802 project-matrix + 21 `recordings` + 3 `E2E_SIGNUP_EMAIL` = 826) still
+closes, at 828.
+
+### Still needs you
+
+1. **PR #2 is ready to merge, and merging is yours** (D85). Nothing here
+   deploys or promotes.
+2. **`backend/b2-studio` carried the stale STOP note** telling the next session
+   not to merge PR #2; it is retracted in its own commit on that branch. B2.1's
+   `e2e/goals-persist.spec.ts` was blocked entirely by this bug and should now
+   be run.
+3. **`E2E_SIGNUP_EMAIL`** is still unset, so the one UI sign-up test skips.
+4. **The axe-at-390px gap** from the previous note is unchanged and still worth
+   a B1.5 item.
+
+---
+
+## Handoff — 18 November 2026 (PR #2's four review items are done; one of them found a silent data-loss bug)
+
+**Branch** `backend/b1-auth` · **PR #2 open, not merged.** Gates: lint,
+typecheck, **894 unit**, build, licence-check, **49 RLS/db** — all green.
+
+### 1. `pnpm test:rls-db` against the final app layer
+
+**49 passed, 2 files, 0 failed.** Up from 44: the new member-guard case and
+four for `save_onboarding`. Full per-test list is pasted in the PR.
+
+### 2. `mirrorline-test.dev` is gone (D90)
+
+Two paths now, told apart by whether anything is actually posted:
+
+- **Admin-API accounts send no mail**, so their addresses only have to be
+  inert. Default is now `e2e.invalid` — RFC 2606 reserves `.invalid`, so it can
+  never be registered. Same intent as before, made structural rather than
+  true-on-the-day-it-was-written.
+- **The UI sign-up test posts the real form**, so it needs `E2E_SIGNUP_EMAIL`
+  and **skips with a full explanation when unset**. No fallback: any default
+  would be a guess about whose inbox gets the mail.
+
+Set it to a plus-address you own. Each run derives
+`you+e2e-<runId>-signup@…` (dropping any existing tag first), because the
+configured address is fixed and a second run would otherwise fail on its own
+leftovers.
+
+**The part that needed care:** the sweep recognised accounts by the `e2e+`
+prefix, which the plus-addressed form does not have — so every UI sign-up
+account would have accumulated in your real inbox. It now reads either shape,
+and `sweep-rule.test.ts` asserts that `you@…`, `you+newsletters@…` and
+`you+mirrorline@…` are all untouchable.
+
+### 3. A throwaway account deletes itself, end to end
+
+`e2e/workspace-delete.spec.ts`: creates its own account through the admin API,
+signs in through the real form in its own browser context, deletes through the
+real control, then proves every `workspace_id` table is empty, the workspace row
+is gone, and the account can no longer sign in.
+
+Row counts are read with the **service role** deliberately — after the deletion
+there is no session, so reading as the user would return nothing whether the
+rows were destroyed or merely hidden.
+
+### 4. What happened with other members — it was a real bug (D89)
+
+**It succeeded, and their access disappeared without a word.**
+`memberships.workspace_id` is `on delete cascade`, so the one
+`delete from public.workspaces` took every other member's row with it. Their
+accounts survived, so nothing looked broken from their side; they simply had no
+workspace, were never told, and had no record one had existed.
+
+Now blocked, as you asked: `delete_workspace` counts the other members first and
+raises `45001`. The action maps that code to its own sentence, and the card says
+the rule **before** the attempt rather than only on failure.
+
+### The thing I did not expect to find
+
+Fixing the above made the full suite fail twice on the onboarding submit — a
+flake I had introduced in the first place, and had "fixed" once by raising a
+timeout. The second failure, past twenty seconds, said that was the wrong
+diagnosis.
+
+The action was doing **four PostgREST calls plus two GoTrue token
+verifications** — six network hops to another region — for one logical write.
+Under seven parallel workers that is genuinely slow. It is now a single
+`save_onboarding` RPC, which is also the more correct shape for the same reason
+`ensure_workspace_for_current_user` is one: a failure between the workspace
+update and the goal insert left a workspace whose niche and goal disagreed, with
+nothing to notice it.
+
+Raising the timeout again would have hidden that.
+
+### Still needs you
+
+1. **Merge PR #2.** Merging is the only thing that deploys (D85).
+2. **Set `E2E_SIGNUP_EMAIL`** in the environment you run e2e from. Until then
+   the one UI sign-up test skips, loudly, with the reason attached.
+3. **Screenshot noise, unchanged.** `index`, `agents`, `app-upload` and
+   `sign-up--390--dark` drift between runs. Only screens that legitimately
+   changed are committed.
+
+---
+
+## Handoff — 17 November 2026, night (B1 is complete and green; the PR is open and waiting for you to merge it)
+
+**Branch** `backend/b1-auth` · rebased onto `main` · **PR open, not merged.**
+Gates: lint, typecheck, **890 unit**, build, licence-check — all green. Full
+e2e: **404 passed, 824 skipped, 0 failed.**
+
+### The rebase, which is now meaningful
+
+PR #1 merged at 19:34 UTC as `4a81a14`. After `git rebase origin/main` the
+branch is **10 commits ahead and 0 behind, and all 10 are B1** — v4's commits
+reach it through `main` rather than through its own history, so the PR carries
+B1 alone. That was the whole point of waiting.
+
+### The three flakes — two were a different bug (D87)
+
+The brief said all three were the auth page reading `body.innerText()` before
+the Suspense boundary streamed. **That was right about one of them.**
+
+- `resources-and-auth.spec.ts:221` — exactly as described, now waits on the
+  email field's role. Worth knowing why it mattered: read early, `toContain`
+  failed while **both `not.toContain` assertions passed** on an empty page.
+- `copilot-site.spec.ts:102` and `:194` — no auth page, no `innerText`. Both
+  compare the Milo dock's `boundingBox()` while `.milo-dock` is mid
+  `transform 220ms`. One-shot reads of a moving element; now polled with
+  `toPass`, assertions unchanged.
+
+**What the green runs do not prove.** The baseline before any fix was already
+green, so these were fixed by diagnosis, not reproduction. The third flake's
+identity did not survive — the handoff only ever named two and "one more", and
+the green run wiped `test-results/`. `:194` is an inference from shape. If a
+third flake appears outside `copilot-site.spec.ts`, it has not been dealt with.
+
+### D85 split
+
+D85 was carrying two decisions on one number. **D85** keeps the production
+policy; **D86** takes the service-role bundle check. D85's claim that PR #1 was
+still open is corrected.
+
+### B1's app layer (D88)
+
+1. **Workspace creation.** Onboarding writes `niche`, the 2×2 and the primary
+   goal. It is an *update*: `ensure_workspace_for_current_user` already made
+   the workspace at sign-in with `niche: null`. The goal is read-then-write,
+   not upserted — `goals_one_primary_per_workspace` is a *partial* unique index
+   and so is not a conflict target PostgREST can name.
+2. **The Settings delete control.** Typed confirmation, re-checked on the
+   server, with the export offered **inside the dialog** above the field —
+   `delete_workspace` takes the `auth.users` row when it is the last workspace,
+   so afterwards there is no account left to download anything with.
+3. **The data export.** `GET /api/export`, twelve tables read **as the user**,
+   so RLS decides the contents. `leads` is excluded by construction.
+
+**One thing you should look at.** `goals.outcome_text` is `not null` and step 3
+had no field for it, so I added "What would success look like?" — and left it
+the **only field in the wizard with no sample value**. Prefilling it would put
+a sentence nobody wrote into the one column the schema calls "the user's own
+words" and that the Results Ledger quotes back. The consequence is that the
+last step now gates on it, and "Open my studio" became a submit button rather
+than a link, because navigating away would discard the answers.
+
+### How the writes are proved, since a redirect proves nothing
+
+A redirect only shows the action reached its last line. I checked the database
+directly first and saw `niche=null` with no goal row — which looked like a
+silent failure and was not: that was a *different* workspace the sweep had
+spared ("left 1 alone"), while this run's own rows had already been cascaded by
+teardown. The rows therefore cannot be inspected after a run, by design.
+
+So the proof is in the suite: `workspace-data.spec.ts` completes onboarding and
+reads the niche and outcome back through `/api/export` — one B1 feature
+witnessing another, as the same user, under the same policies.
+
+**Nothing in the suite confirms a deletion.** The shared session (D84) is the
+account every other spec depends on, so a test that confirmed the dialog would
+delete it mid-run. The tests prove the gate — the control exists, offers the
+export, and refuses the right name in the wrong case — and leave the deletion
+to `rls.db.test.ts`.
+
+### Still needs you
+
+1. **Merge the PR.** Merging is the only thing that deploys (D85), and it is
+   not mine to do.
+2. **The e2e sign-up domain is still unverified.** `mirrorline-test.dev`
+   (`E2E_SIGNUP_DOMAIN` overrides). Resend SMTP on a real domain settles it
+   (D79, D84).
+3. **Screenshot noise, unchanged.** `index`, `agents`, `app-upload` and
+   `sign-up--390--dark` drift between runs without changing. Left uncommitted
+   again. Only the eight that legitimately changed are committed —
+   `app-onboarding-step3` and `app-settings`, both opened and checked. If this
+   keeps happening the comparison wants a small pixel threshold.
+
+---
+
+## Handoff — 17 November 2026, evening (B1's auth half is done; three things need Vlad before B1 finishes)
+
+**Branch** `backend/b1-auth` · pushed · **no PR yet.** Gates: lint, typecheck,
+**861 unit**, build, licence-check — all green.
+
+### Done since the last note
+
+- **The e2e suite has a session** (D84) — setup project signs in through the
+  real form, saves `storageState`, three projects reuse it.
+- **The sweep is safe on a shared database.** Teardown deletes **this run's**
+  accounts plus any `e2e+` account **older than two hours**, and leaves
+  everything else alone. Six unit tests
+  (`apps/web/lib/auth/sweep-rule.test.ts`).
+- **D85** — production policy, and CLAUDE.md non-negotiable 11 rewritten.
+- **D86** — **the service-role key is not in either bundle**, checked against a
+  fresh build: `.next/static` 87 files, `.next/server` 325 files, absent from
+  both. This was written inside D85 at first and now has its own number, because
+  "who may deploy" and "where the secret ends up" are two decisions.
+
+### Three things that need you
+
+1. **PR #1 is not merged.** `gh pr view 1` says `OPEN`, `mergedAt: null`, and
+   `origin/main` is still `2959de5`. The rebase was therefore a no-op —
+   **`origin/main` is already an ancestor of `backend/b1-auth`**, zero commits
+   behind. This branch descends from `v4/site-and-metrics` and carries all 117
+   of its commits, so **a PR from it today would contain the whole v4 phase as
+   well as B1.** Merge PR #1 first and that problem disappears.
+2. **Three e2e flakes in the full run** — 397 passed, 3 failed, and **all three
+   pass in isolation** (`copilot-site.spec.ts:102`,
+   `resources-and-auth.spec.ts:221`, one more). Suspected: the new Suspense
+   boundary on the auth pages means `body.innerText()` can be read before the
+   form streams in. Not yet fixed, and not pretended to be fixed.
+3. **The e2e sign-up domain is still unverified.** `mirrorline-test.dev`
+   (`E2E_SIGNUP_DOMAIN` overrides). GoTrue refuses `@example.com`, and the
+   rate limit blocked testing alternatives. Resend SMTP on a real domain
+   settles it (D79, D84).
+
+### Next, in the order you asked for
+
+1. **Workspace creation** — the bootstrap RPC is applied and proved; what is
+   left is onboarding writing the niche and the real goal
+   (`goals.outcome_text`, in the user's own words).
+2. **The Settings delete control** — `delete_workspace` is applied and proved;
+   this is the typed confirmation and the dialog that offers the export first.
+3. **The data export** — rows, read as the user.
+
+Then open `backend/b1-auth` as its own PR.
+
+### Open decisions
+
+- **Screenshot noise**: `index`, `agents`, `product` and `resources` drift
+  between runs without changing. Left uncommitted. If it keeps happening, the
+  comparison needs a small pixel threshold rather than repeated re-commits.
+- **Email confirmation stays on** (your call), so the sign-up spec skips
+  whenever the sender is spent.
+
+---
+
+## Handoff — 17 November 2026, evening (the e2e suite has a session: D84, and the red test is green again)
+
+**Branch** `backend/b1-auth` · pushed. **PR #1 untouched.** No PR for this
+branch yet.
+
+### What this piece did
+
+Vlad chose option 1 and declined switching email confirmation off. So:
+
+- **`e2e/auth.setup.ts`** — a Playwright *setup project*. Creates a confirmed
+  account through the admin API (no mail, so no rate limit), **signs in through
+  the real form**, and saves `storageState`. The other three projects list it
+  in `dependencies` and reuse the session.
+- **`e2e/global-teardown.ts`** — deletes every account whose address starts
+  `e2e+`, and the workspaces they own, **across all runs rather than just this
+  one**. A crashed run never reaches its own cleanup. Workspaces go first:
+  deleting the user cascades to `profiles` and so to `memberships`, which
+  would strand the workspace with no owner and no policy to reach it.
+- **`e2e/sign-up-ui.spec.ts`** — one real UI sign-up, asserting the "check
+  your email" screen, which **skips with the reason attached on a 429** and
+  fails on anything else. The rights-checkbox enforcement moved here from the
+  demo path, so non-negotiable 1 is still tested — where the form is.
+- **D84** records all of it, including that **adding Resend SMTP once there is
+  a domain removes the rate limit and the skip stops happening**.
+
+### The part that was bigger than it looked
+
+The red test was never the problem. `e2e/helpers/routes.ts` feeds 21 studio
+and onboarding routes into the shared route, responsive, axe and screenshot
+specs, so **the whole suite needed a session**, and the auth routes in that
+same list needed the opposite.
+
+`prepareSessionFor(page, route)` in `helpers/routes.ts` is the answer: clear
+cookies for an `area: 'auth'` route, and **restore the saved session for any
+other**. Both halves are load-bearing, and the second one only became obvious
+after four screenshot tests failed: `screenshots.spec.ts` captures every screen
+inside **one** test, in order, so clearing cookies at `/sign-in` signed the
+page out for every screen captured afterwards — and a screenshot that is
+merely wrong still looks like a result.
+
+### One assertion was narrowed, deliberately
+
+`copilot-site.spec.ts` asserted `cookies()` was `[]` — "the question is stored
+nowhere". That was a true expression of §3.3 for exactly as long as nothing in
+the product could set a cookie. It now asserts **no cookie carries the
+question**, which is what the spec actually asks and will not break the next
+time something legitimate needs one.
+
+### Reference screenshots
+
+`sign-in` and `sign-up` legitimately changed — two provider buttons gone, a
+"Remember me" checkbox and a magic-link button arrived — and the files shrank
+8–13 KB each, which is consistent with that. The `index` and `agents` deltas
+are the capture noise this suite has always had (±100 bytes on `agents`,
+swings both ways on the animated home page).
+
+### Next: B1's remaining three, untouched
+
+Deliberately not started — the context budget went on the suite, which was the
+right call because leaving it red would have hidden the next regression.
+
+1. **Workspace creation** — the bootstrap is applied and proved; what is left
+   is onboarding writing the niche and the real goal
+   (`goals.outcome_text` in the user's own words), and a second workspace for
+   somebody who wants one.
+2. **The Settings delete control** — `delete_workspace` is applied and proved;
+   this is the typed confirmation and the dialog that offers the export first.
+3. **The data export** — rows, read as the user.
+
+---
+
+## Handoff — 17 November 2026, late (auth is real: sessions, five flows, 44/44 against the database — and one e2e test is knowingly red)
+
+**Branch** `backend/b1-auth` · `0f55987` · pushed. **PR #1 untouched.** No PR
+for this branch yet.
+
+### What works now
+
+Sign-in, sign-up, magic link, sign-out, password reset, and sessions that
+survive a reload. `/app/*` is behind a session for the first time.
+
+| Gate | Result |
+|---|---|
+| lint, typecheck, build, licence-check | green (439 packages) |
+| `pnpm test` | **855** unit (was 818; +37 redirect rules) |
+| `pnpm test:rls-db` | **44/44** — 33 RLS + 11 auth flows |
+| `pnpm test:e2e` | **one test red, knowingly** — see below |
+
+### The one red test, stated rather than buried
+
+**`e2e/demo-path.spec.ts:76`.** It drives the sign-up form and expects
+`/app/onboarding`; the whole-journey test then walks the studio. Both now need
+an authenticated session, and sign-up no longer walks through on its own.
+Everything else in that spec file and all of `resources-and-auth.spec.ts`
+passes **against real auth** — including the failed sign-in and the forgotten
+password, which now fail and confirm for real reasons.
+
+Three ways to fix it, and the choice is Vlad's because it touches D76:
+
+1. **A Playwright setup project** that creates a confirmed user through the
+   admin API, signs in, and saves `storageState` for the studio specs. Proper,
+   and it writes run-namespaced users into the **shared** preview database on
+   every e2e run — which is the contamination D76 warned about, survivable
+   only because the db suites already namespace and tear down.
+2. **Switch email confirmation off** on the project. Then sign-up returns a
+   session and the journey walks through as before. It is a project setting,
+   not a migration, and it weakens accounts — an unconfirmed address could
+   sign in.
+3. **A second Supabase project for tests**, so e2e never touches the preview
+   database. Cleanest, and it is another $10–25/month.
+
+### Decisions worth knowing before touching this
+
+- **`@supabase/ssr` is in.** Two modules in this repo avoid the SDK on purpose
+  and say why; that reasoning does not survive sessions. A cookie session is a
+  protocol — two tokens, rotated, written on every response, racing between
+  parallel requests — and the failure mode is one visitor being served
+  another's session out of a CDN cache. MIT, licence-check green.
+- **The middleware fails closed.** No keys means `/app/*` redirects to
+  sign-in rather than rendering. A preview with no credentials should look
+  signed out, not wide open.
+- **`ensure_workspace_for_current_user`, not `create_…`.** A double-clicked
+  button, a retried action and a magic link opened twice all call it; it hands
+  back the existing workspace instead of making a second.
+- **The onboarding choices travel in user metadata.** With confirmation on,
+  `signUp` returns no session, so sign-up *cannot* create the workspace —
+  `/auth/callback` does it on the first request that has one. The new
+  `workspaces.audience`, `.stage` and `.initial_goal_type` columns receive
+  them, reusing the `who`/`account` parameter names the public site already
+  uses.
+- **The Google and Apple buttons are gone.** §1 rules out social login, so
+  neither could ever have worked — two dead controls at the top of the page,
+  which is what D80 was about. A magic link replaced them.
+- **Every auth error is one sentence.** Unknown address, wrong password and
+  unconfirmed account are indistinguishable, and a db test asserts Supabase
+  returns the *same* status and message for an unknown address as for a wrong
+  password — so our single message is not hiding a difference the response
+  already leaked.
+
+### Three findings from testing against the real project
+
+1. **GoTrue refuses `@example.com`** on public sign-up — `Email address … is
+   invalid` — while the admin API accepts it. The reserved domain the repo uses
+   for every example cannot be used to sign up.
+2. **The built-in email sender is rate-limited, and one test run exhausts
+   it**: every subsequent sign-up gets `429 email rate limit exceeded`. This is
+   D79's accepted limitation arriving sooner than expected, and it is why the
+   db suite creates accounts through the admin API. **What that suite therefore
+   cannot prove is that the public sign-up endpoint accepts a real address** —
+   that needs a sending domain or confirmation off.
+3. **Signing up an existing address returns a plain 200 with no session**, not
+   "already registered". Deliberate anti-enumeration, and stronger than the
+   message `signUpWithPassword` was ready to show. A test asserted the opposite
+   and the failure was the better answer; the branch stays for projects with
+   confirmation off, and the test will notice if the behaviour changes.
+
+### Next, in the order Vlad asked for
+
+1. **Workspace creation** — the bootstrap exists and is proved; what is left is
+   onboarding writing the niche and the real goal (`goals.outcome_text` in the
+   user's own words), and a second workspace for somebody who wants one.
+2. **The Settings delete control** — `delete_workspace` is written, applied and
+   proved; this is the typed confirmation and the dialog that offers the export
+   first.
+3. **The data export** — rows, read as the user.
+
+And **the e2e decision above**, which blocks a green suite.
+
+**Branch** `backend/b1-auth` · `6a09246` · pushed. **PR #1 untouched, still
+open and unmerged** — `main` carries only its own older marketing history, and
+`v4/site-and-metrics` is not merged into it.
+
+### B1's database half is done and verified
+
+| Step | Result |
+|---|---|
+| Three migrations → `mirrorline-preview` | **Applied**, `npx supabase db push --remote` |
+| `supabase/seed.sql` | **Applied** — the twelve shared KPI definitions |
+| What the first real Postgres parse found | **Nothing.** Both new migrations ran unchanged |
+| `/api/health/supabase` locally | **200, `ok: true`**, all four checks |
+| `/api/health/supabase` on the preview | **200, `ok: true`**, all four checks |
+| `pnpm test:rls-db` | **33/33 passed**, first run |
+
+The project is `qypakxvxnjmsvxmxiynf` (`mirrorline-preview`, `us-east-1`) in
+the **Mirrorline** organisation (D83). Its ref is in `supabase/config.toml`;
+the keys are in `apps/web/.env.local` and Vercel **Preview only** — confirmed
+against the Vercel API: all five variables target `preview`,
+`hiddenProductionEnvCount: 0`, and `SUPABASE_SERVICE_ROLE_KEY` is stored
+sensitive/secret.
+
+### What the 33 tests actually prove
+
+Workspace A cannot read B **by listing or by known id** — RLS has to make a
+known id useless, not merely unguessable. A cannot rename B's workspace (the
+update returns zero rows). A cannot add itself to B's workspace (`42501`).
+Anonymous reads nothing across all thirteen tables. The service role reads
+everything. A member authors the goal cascade and **cannot write a
+measurement** (15 §8). D80's deletion leaves **zero rows across every table**,
+takes the owner's auth user because it was their last workspace, and leaves
+A's account alone; a member cannot delete, nor can an anonymous caller.
+
+**One test exists only to stop a false pass.** "Anonymous reads nothing" is
+also satisfied by a *rejected* key, which is a completely different fact. So a
+test asserts the anonymous request is **HTTP 200, no error code, zero rows** —
+proving the policies emptied the result rather than the credential failing.
+Without it a broken key would have looked like working security.
+
+### The new key format changed how every request is made
+
+The keys are `sb_publishable_…` and `sb_secret_…`, **not JWTs**. So:
+
+- **Every key travels in the `apikey` header**, and `Authorization: Bearer`
+  carries only a user's session JWT. **Eight call sites were sending the
+  secret key as a bearer token** — correct for a legacy JWT, wrong for
+  `sb_secret_…`, which would have put a server credential in the header that
+  proxies, access logs and error reporters all treat as an end-user token.
+- **`env.ts` judges the prefix, not the length.** The old floor was 40
+  characters and the real secret key is 41 — one character from rejecting a
+  valid key.
+- It gained the check worth having: **a `sb_secret_…` value in a
+  `NEXT_PUBLIC_` variable is refused**, because Next inlines those into the
+  browser bundle and that leak is permanent. Three new tests; 818 unit total.
+
+### Two things to know before touching the database again
+
+1. **`supabase db push` defaults to the *local* stack**, not the linked
+   project — a dry run caught it trying to reach `127.0.0.1:54322`. **Always
+   pass `--remote`.** The CLI also refuses hosted changes in an agent run
+   without `--yes`.
+2. **`supabase/config.toml` is new and deliberately minimal** — `project_id`
+   and a seed path. `supabase/README.md` told you to apply the seed with
+   `psql "$DATABASE_URL" -f …`, and there is no `psql` here; a documented step
+   that cannot be run will not be run. `--include-seed` replaces it, and it is
+   safe on every push because the seed is `on conflict … do update`.
+
+### Next: B1's app layer, none of it written
+
+Stopped here deliberately rather than starting it thin. In order:
+
+1. **Sign-in and sign-up server actions.** `/sign-in` and `/sign-up` are
+   finished screens with no server behind them; they keep their markup and
+   gain actions. Email + password and a magic link; auth mail stays on
+   Supabase's built-in sender (D79).
+2. **Workspace creation as one transaction.** A workspace and its owner
+   membership appear together or not at all — which is why there is no
+   `insert` policy on `workspaces`. It wants a `security definer` function
+   beside `delete_workspace`, so the same suite can prove it.
+3. **The Settings delete-workspace control**, behind a typed confirmation,
+   calling `delete_workspace` — the policy half is already done and proved.
+4. **"Export my data"** — the rows, read as the user. §2 files it under B2;
+   D80 ties it to this phase.
+
+Everything in 1–4 can now be tested against a real instance as it is written,
+which was not true this morning.
+
+---
+
+## Handoff — 17 November 2026 (B1's database half is written and unapplied; it waits on one free Supabase organisation)
+
+**Branch** `backend/b1-auth` · pushed. **PR #1 untouched, still open** — the
+only open PR. **No PR for this branch yet**: B1 is not finished.
+
+### The one thing that has to happen, and only Vlad can do it
+
+**Create a new Supabase organisation on the free plan**, then tell me its name.
+
+Why: the existing organisation **Stratum is on Pro with five projects**, and
+Supabase quotes **$10/month** for another one. There is only one organisation
+on the account, so there is no free tier to put this in. Vlad's call was to
+make a free organisation rather than start a recurring bill for a preview
+database (**D81**). The MCP can create projects but **cannot create
+organisations**, so the dashboard is the only way.
+
+After that I create `mirrorline-preview` in it (`us-east-1`, $0), apply the
+three migrations and the seed, run the RLS suite, and hand over the project URL
+and the publishable/anon key. **Vlad copies the service-role key into
+`apps/web/.env.local` and Vercel Preview**; I never see the dashboard.
+
+### Why B1 did not start: the keys were not the problem, the database was
+
+Checked three ways, nothing printed:
+
+1. `apps/web/.env.local` — one variable, `ANTHROPIC_API_KEY`.
+2. The Vercel project's Preview environment — the same one variable.
+3. **No `mirrorline-preview` project exists.** Five projects on Stratum; none
+   is it.
+
+`GET /api/health/supabase` on the dev server answers **503**, all three
+credentials `isPresent: false` — the app's own verdict rather than my grep.
+
+### What is written, gated and pushed
+
+**All six gates green: lint, typecheck, 815 unit (was 797), build,
+licence-check. No new dependency** — PostgREST and GoTrue over `fetch`, the
+precedent `scan-store.ts` set.
+
+| File | What it is |
+|---|---|
+| `supabase/migrations/20261116230000_profiles_and_memberships.sql` | `profiles` keyed to `auth.users`, `memberships` with an owner/member role, `is_member_of`/`is_owner_of` as `security definer` (a policy on `memberships` querying `memberships` recurses), a trigger that writes the profile, `delete_workspace` for D80, and a deferred trigger so a workspace keeps an owner. |
+| `supabase/migrations/20261116230100_rls_policies.sql` | Policies for all thirteen tables. **Reads broad, writes narrow**: a member writes only goals, objectives, key results and an alert acknowledgement. Measurements are read-only to the browser (15 §8). `leads` keeps no policy — its finished state. |
+| `apps/web/lib/supabase/env.ts` + 18 tests | Which credentials are present and under which name, with **no field a key can travel in**; one test serialises the report and asserts the secret is absent. |
+| `apps/web/lib/supabase/rest.ts` | PostgREST + GoTrue calls that take their credential as a parameter, so the same request can be made as the service role, as a user, and anonymously. |
+| `apps/web/app/api/health/supabase/route.ts` | Four checks: GoTrue answers, the service role reads a seeded table, **the anon key reads zero rows**, and `memberships` exists. 404 in production. |
+| `apps/web/lib/supabase/rls.db.test.ts` + `vitest.db.config.ts` | **32 tests, written and queued**, `pnpm test:rls-db`. |
+
+### The RLS suite is written but has never run
+
+**32 tests** covering: A cannot read B (by listing *and* by known id — RLS has
+to make a known id useless), A cannot rename B's workspace, **A cannot add
+itself to B's workspace** (one insert is the whole access model if it is
+allowed), anonymous reads nothing across all thirteen tables, the service role
+reads everything, a member authors the goal cascade and cannot write a
+measurement, and D80's deletion — **zero rows across every table**, the owner's
+auth user gone because it was their last workspace, A's account surviving
+because it is not.
+
+With no keys it **fails loudly** rather than skipping: `Supabase is not
+configured — not set: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY…`. That is
+deliberate; §1 rules out a mocked RLS test, so `pnpm test` is configured not to
+collect this file at all and cannot report it green.
+
+**Status of the SQL: reviewed by reading only.** There is no Docker and no
+`psql` on this machine, so none of it has been parsed by a Postgres. Expect to
+fix something on first apply.
+
+### D82 — a real mismatch in the plan, found by writing the code
+
+**`scan-store.ts` reads `SUPABASE_URL`; §7 asked for
+`NEXT_PUBLIC_SUPABASE_URL`.** Setting only the prefixed name leaves the Niche
+Scan writing to a JSON file while the rest of the app uses the database, with
+no error. `env.ts` accepts both and names whichever is missing. **Set both.**
+
+### Then, to finish B1
+
+Not written yet, and deliberately not written against a database that does not
+exist: the sign-in/sign-up server actions, the workspace-creation transaction
+(a workspace and its owner membership appear together or not at all), the
+Settings delete-workspace control behind a typed confirmation, and **"Export my
+data"** — the rows, as the user, which §2 files under B2 and D80 ties to this.
+
+---
+
+## Handoff — 16 November 2026, late night (B1 is blocked: the keys are not there, and the Supabase project does not exist yet)
+
+**Branch** `backend/b1-auth`, branched from `v4/site-and-metrics` because **PR
+#1 is still open and unmerged** — untouched, as instructed. **No PR opened for
+this branch yet**: B1 is not done.
+
+### The blocker, checked three ways
+
+I was asked to verify the keys before anything else. They are not there, and
+the reason is upstream of the keys:
+
+1. **`apps/web/.env.local` holds one variable, `ANTHROPIC_API_KEY`.** No
+   Supabase names at all. The file was last written 15 November.
+2. **The Vercel project's Preview environment holds one variable,
+   `ANTHROPIC_API_KEY`.** No Supabase names there either.
+3. **There is no `mirrorline-preview` Supabase project.** Five projects exist
+   on the organisation — none of them is it, and none is named for this
+   product.
+
+So D76's shared preview database has not been created, which is why there are
+no keys to put anywhere. **Nothing was printed to check this**: the counts
+above are variable *names* and value *lengths*.
+
+`GET /api/health/supabase` on the dev server answers **503** with
+`isComplete: false` and all three credentials `isPresent: false` — the app's
+own answer, not my grep.
+
+### What I could not do, and did not fake
+
+- **No migration was applied.** Not the existing one, not B1's two. There is no
+  project to apply them to, no project ref and no database password.
+- **No RLS test was run.** Workspace A versus B, anonymous, service role — all
+  three need a real instance, and `BACKEND_PHASE.md` §1 is explicit that a
+  mocked RLS test proves nothing. I did not write a mocked one to have
+  something green.
+- **The SQL is unvalidated.** There is **no Docker and no `psql` on this
+  machine**, so I could not stand up a local Supabase to even parse it. The
+  two migration files are reviewed-by-reading only, and that is the honest
+  status of them.
+
+### What landed anyway, because it is needed either way
+
+**All six gates green: lint, typecheck, 815 unit (was 797), build,
+licence-check. No new dependency.**
+
+- **`supabase/migrations/20261116230000_profiles_and_memberships.sql`** —
+  `profiles` keyed to `auth.users`, `memberships` with an `owner`/`member`
+  role, `is_member_of` / `is_owner_of` as `security definer` functions (a
+  policy on `memberships` that queries `memberships` recurses), a trigger that
+  writes a profile so the app never has to, `delete_workspace` for D80's
+  deletion including the auth user when it was their last workspace, and a
+  deferred constraint trigger so a workspace cannot lose its last owner.
+- **`supabase/migrations/20261116230100_rls_policies.sql`** — policies for all
+  thirteen tables. **Reads broad, writes narrow**: a member reads everything in
+  their workspace; a member writes only goals, objectives, key results and an
+  alert acknowledgement. `metric_snapshots`, `ledger_weekly`,
+  `social_accounts` and `trends` are read-only to the browser because a
+  measurement a user typed is not a measurement (15 §8). Three
+  `security definer` helpers for the tables that reach a workspace through a
+  parent. **`leads` keeps no policy at all** and that is its finished state.
+- **`apps/web/lib/supabase/env.ts` + 18 tests** — reports which credentials
+  are present and which variable name supplied each, with **no field a key can
+  travel in**; one test serialises the whole report and asserts the secret is
+  absent.
+- **`apps/web/app/api/health/supabase/route.ts`** — four checks: GoTrue
+  answers; the service role can read a seeded table; **the anon key reads zero
+  rows** (the check passes on an empty result and fails on a populated one);
+  and `memberships` exists, which is how "the migrations are applied" stops
+  being an assumption. 404 in a production deployment.
+
+### A real mismatch in the plan, found by writing this
+
+**`lib/leads/scan-store.ts` reads `SUPABASE_URL`. §7 of the plan asks for
+`NEXT_PUBLIC_SUPABASE_URL`.** Those are different variables. Setting only the
+prefixed one would leave the Niche Scan writing to a JSON file while the rest
+of the app talked to the database — a split brain with no error message.
+
+`env.ts` accepts both names and **warns about the gap** rather than silently
+preferring one; two of the 18 tests are that warning. **Set both**, or set
+`SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_URL` to the same value.
+
+### Next step: a database has to exist
+
+One of three, and it is Vlad's call:
+
+1. **I create `mirrorline-preview`** (`us-east-1`, free tier) through the
+   Supabase MCP, then apply all three migrations and the seed through it — no
+   project ref or password needed, and no CLI. **Not done without a yes**: it
+   creates a cloud resource on the organisation's account.
+2. **Vlad creates it** and puts the three keys in `apps/web/.env.local` and
+   Vercel Preview, then I apply the migrations.
+3. **Vlad applies the SQL by hand** in the dashboard's SQL editor — the two
+   files plus `supabase/seed.sql`, migration order first — which is the path
+   `supabase/README.md:39` already documents.
+
+After any of them: the health route goes green, and then the RLS tests, the
+auth wiring, the deletion and the export. **None of that is written yet** and
+none of it should be written against a database that does not exist.
+
+---
+
 ## Handoff — 16 November 2026, late night (the five answers landed, the backend plan says what was decided, and B1 waits on one confirmation)
 
 **Branch** `v4/site-and-metrics` · pushed. Clean tree. **PR #1 is still open

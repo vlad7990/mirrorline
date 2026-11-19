@@ -5688,3 +5688,616 @@ One ordering consequence worth naming: `/legal/cancellation-refunds` says the
 export keeps working **after** you cancel, so **export is gated on having an
 account, never on subscription status** — and §8 proves it with a test that
 cancels, passes the period end, and exports anyway.
+
+## 2026-11-17 · D81 · The preview database costs $10 a month on the organisation we have, so it goes in one we do not have yet
+
+Vlad's decision: **create a new free Supabase organisation and put
+`mirrorline-preview` in that**, rather than paying for a project on the
+existing one.
+
+**D76 said "one shared `mirrorline-preview` project, region `us-east-1`" and I
+wrote that down as though it were free.** It is not. The organisation is
+**Stratum**, on the **Pro** plan with five projects already, and Supabase
+quotes **$10/month** for another one. There is exactly one organisation on the
+account, so there was no free tier to fall back into.
+
+That matters more than ten dollars. **Non-negotiable 11 is "no paid API calls
+beyond test mode; no production deploys"**, and the project has so far cost
+nothing at all — a recurring charge for a database that exists only to serve
+previews would have been the first standing bill, taken on without being asked
+for. Which is why the cost was quoted and nothing was created.
+
+**The free tier is per organisation, not per account**, and the Supabase MCP
+cannot create an organisation — so this is the one step that has to happen in
+the dashboard. D76 is otherwise unchanged: one shared project, `us-east-1`,
+production gets its own later.
+
+**What the asking turned up, which is the real finding.** Verifying the keys
+first was supposed to be a formality. Instead: `apps/web/.env.local` held one
+variable and it was `ANTHROPIC_API_KEY`; the Vercel project's Preview
+environment held the same one variable; and **no `mirrorline-preview` project
+existed anywhere on the account.** The keys were not missing — the database
+was. `GET /api/health/supabase` said so in a 503 with all three credentials
+`isPresent: false`, which is the app's own answer rather than mine.
+
+The lesson is cheap and worth keeping: **"the keys are in" is a claim to
+check, not a precondition to accept**, and the check costs one request.
+
+## 2026-11-17 · D82 · Two names for the Supabase URL, because the shipped code and the plan each picked a different one
+
+`lib/leads/scan-store.ts` reads **`SUPABASE_URL`**. `BACKEND_PHASE.md` §7 asks
+for **`NEXT_PUBLIC_SUPABASE_URL`**, because the browser needs it too. I wrote
+§7 without checking what the code already read.
+
+Setting only the prefixed name would have produced the worst available
+outcome: **the Niche Scan still writing to a JSON file while every other part
+of the app talked to the database** — no error, no warning, and the first
+symptom a lead on disk instead of in `leads`.
+
+`lib/supabase/env.ts` accepts both, prefers the unprefixed one (it is what
+ships today), **and warns about whichever is missing**:
+
+- only `NEXT_PUBLIC_SUPABASE_URL` set → "`SUPABASE_URL` is unset, so
+  `lib/leads/scan-store.ts` still writes to a file";
+- only `SUPABASE_URL` set → "`NEXT_PUBLIC_SUPABASE_URL` is unset, so the
+  browser cannot read the URL".
+
+Two of the module's 18 tests are those sentences. **The alternative was to
+rename the variable in `scan-store.ts`** and have one name — tidier, and it
+would have meant changing working code to match a document I had got wrong.
+The report is the smaller change and it is the one that tells a person what
+happened.
+
+The credential report it returns **has no field a value can travel in**, and a
+test serialises the whole thing and asserts the secret is absent — because the
+instruction was to verify the keys without printing them, and "I was careful"
+is not a mechanism.
+
+## 2026-11-17 · D83 · Mirrorline's Supabase is its own Pro organisation, and that is worth more than the $25 it costs
+
+Vlad's decision, and his approval of the cost: **a separate Supabase
+organisation named "Mirrorline", on the Pro plan at $25/month, rather than a
+project inside Stratum.** This supersedes D81's "free organisation" — he chose
+to pay for separation instead of taking the free tier.
+
+**It is the better call, for reasons that outlast the price.** D81 was solving
+for "not $10 a month". This solves for something else:
+
+- **One access token per organisation.** A Supabase token scoped to Stratum
+  reaches `spik-ai`, `Mandate`, `stratum-alpha` and two paused projects. Every
+  credential this project handed to a CI job, a preview deployment or an agent
+  would have been a credential that could touch four other products. Now the
+  worst case of a leaked Mirrorline key is Mirrorline.
+- **A mistake stays inside one blast radius.** B1's migrations have never run
+  anywhere — there is no Docker and no `psql` on this machine, so the SQL is
+  reviewed by reading only, and the first apply is the first time a Postgres
+  sees it. That is a thing to do in a database holding nothing else.
+- **The bill says what it is for.** $25 against "Mirrorline" is a number this
+  project can be judged by. The same $10 inside Stratum would have been a line
+  nobody could attribute.
+- **Production later gets a sibling, not a stranger.** D76 says production
+  gets its own project; now it gets one in the same organisation, under the
+  same plan, with its own keys.
+
+**The preview project itself should add nothing**, because Pro includes a
+$10/month compute credit and a Micro instance is $10/month. *Should* — the
+cost gets quoted before the project is created, and the instruction is to stop
+and ask if the quote exceeds $10/month extra. Reading a price list is not the
+same as asking the API.
+
+**Non-negotiable 11 is unchanged, and worth restating.** "No paid API calls
+beyond test mode; no production deploys" is about spending on inference and
+shipping to the public. A database subscription is neither. The honest framing
+is simply that **this project now carries a standing bill of $25/month where
+it previously carried none** — written down here so it is a decision rather
+than a surprise on a statement.
+
+**What blocked acting on it, immediately.** The Supabase MCP connection is
+authorised for **Stratum only**: `list_organizations` returns Stratum alone,
+and all five visible projects carry `organization_id:
+bfomdugfdcxxcneocihl`. The new organisation is invisible from here, so the
+cost cannot be quoted and the project cannot be created until the connector is
+re-authorised with "Mirrorline" granted. **Nothing was created in Stratum as a
+workaround** — a project in the wrong organisation is the exact outcome this
+decision exists to prevent.
+
+## 2026-11-17 · D84 · The e2e suite gets a session, and the one test that sends mail is allowed to skip
+
+Vlad's decision, choosing between three options after B1 put `/app/*` behind a
+session and left the whole-journey test red: **a Playwright setup project
+creates a confirmed account through the admin API, signs in, and saves
+`storageState`; the studio specs reuse it.** Email confirmation **stays on** —
+the option to switch it off was declined.
+
+**The problem was bigger than the one red test.** `e2e/helpers/routes.ts` feeds
+21 studio and onboarding routes into the shared route, responsive, axe and
+screenshot specs, and eleven spec files navigate under `/app`. Every one of
+those redirects to `/sign-in` without a session, so this was never a
+demo-path problem.
+
+**The session is the default for every project**, with the auth specs clearing
+their cookies. A separate authenticated project cannot work here, because the
+shared specs iterate *mixed* routes — one list holding both `/pricing` and
+`/app/home`. Defaulting to signed-in is safe today for a reason worth writing
+down: **nothing in the site header is session-aware yet**, so the marketing
+pages and their reference screenshots render identically either way. The day a
+header grows an account menu, that assumption needs revisiting — and the
+screenshots will say so.
+
+**It signs in through the form, not the API.** Minting a session and writing
+the cookies by hand would be faster and would test nothing. Through the page,
+the one thing every other spec now depends on is asserted before any of them
+run — and when it breaks, the failure arrives in `auth.setup.ts` rather than as
+two hundred confusing redirects.
+
+### Accounts are tagged, and the sweep is by prefix
+
+Every test address is `e2e+<runId>-<label>@<domain>`, and the global teardown
+deletes **every** address starting `e2e+` rather than only the current run's. A
+crashed run never reaches its own cleanup, and a teardown that tidies only
+after itself slowly fills the database it exists to protect — which matters
+because D76 put every preview on one shared project.
+
+**Workspaces are deleted before users.** Removing the auth user cascades to
+`profiles` and therefore to `memberships`; the workspace it pointed at would
+survive as an orphan — readable by nobody, deletable through no policy, and
+resident for good.
+
+### The sign-up test may skip, and that is the honest answer
+
+One spec still submits the real form and asserts the "check your email"
+screen. It **skips, with the reason attached, when Supabase answers
+`429 email rate limit exceeded`** — and fails on anything else.
+
+That is not leniency. D79 keeps auth mail on Supabase's built-in sender, which
+allows a handful of messages an hour, and each sign-up spends one. Two runs in
+quick succession and the second gets a 429: **a fact about the sender, not
+about our code.** A test that goes red meaning "try again in an hour" teaches
+people to ignore red tests, which costs more than the coverage is worth.
+
+The skip is precise rather than broad. The UI shows one deliberately opaque
+sentence for every unexpected failure, so on the failure path the spec asks
+Supabase directly and skips only for the rate limit.
+
+**Adding Resend SMTP once there is a real name and domain removes the limit,
+and this skip stops happening.** The same revisit D79 already names, now with
+one more reason attached.
+
+### Two findings this turned up, both worth keeping
+
+- **GoTrue refuses `@example.com`** on the public sign-up endpoint —
+  `Email address … is invalid` — while the admin API accepts it. The reserved
+  domain this repo uses in every placeholder cannot be used to sign up.
+- **The domain the suite does use is unverified.** `mirrorline-test.dev` is a
+  plausible domain nobody here owns, chosen so a typo cannot deliver mail to a
+  stranger. It could not be tested against the public endpoint because the
+  sender was rate-limited at the time — the limitation obstructing the test of
+  its own workaround. `E2E_SIGNUP_DOMAIN` overrides it.
+
+## 2026-11-17 · D85 · Production exists, and the rule about it got stricter rather than looser
+
+Vlad's decision: **Vercel's production branch is `main`, and the production URL
+is `mirrorline-eosin.vercel.app`.** Production has its own environment
+variables, which he adds. Deployment protection stays on until launch.
+
+Non-negotiable 11 used to read "no production deploys", and it meant it
+literally: there was no production, so deploying to it was impossible rather
+than forbidden. Now there is one, and the rule has to say something harder:
+
+- **I never deploy and never promote.** Not by CLI, not by dashboard, not by
+  API.
+- **I never merge to `main`.** Every change reaches production through a pull
+  request Vlad reviews and merges — and **merging is the only thing that
+  deploys**, which is what makes "do not merge" the whole of the rule rather
+  than one clause of it.
+- **Preview deployments stay mine**, freely, behind protection.
+
+The thing worth noticing is that this is a *tightening*. "No production
+deploys" was a statement about capability; "deploying is somebody else's job"
+is a statement about authority, and it survives the capability arriving.
+
+### What `main` contains, now that PR #1 has merged
+
+**Resolved the same day this was written.** PR #1
+(`v4/site-and-metrics` → `main`) merged at 19:34 UTC on 17 November 2026 as
+merge commit `4a81a14`, and `origin/main` moved `2959de5` → `4a81a14`.
+
+When this entry was first written the merge had not happened, and that made the
+rebase meaningless in a way worth recording: `origin/main` was **already an
+ancestor of `backend/b1-auth`**, so there was nothing to rebase onto. Because
+the branch descends from `v4/site-and-metrics`, it carried all 117 of that
+branch's commits, and a PR from it would have contained the entire v4 phase as
+well as B1.
+
+The merge is what fixed that, and it fixed it without any work on this branch.
+`v4`'s commits now reach `backend/b1-auth` through `main` rather than through
+its own history, so after `git rebase origin/main` the branch stands at
+**exactly 10 commits ahead and 0 behind** — the B1 commits and nothing else.
+A PR from it now contains B1 alone, which is the whole point of having waited.
+
+## 2026-11-17 · D86 · The service-role key is absent from both bundles, and a test is what keeps it that way
+
+Split out of D85 on 17 November 2026. It had been written as a subsection of
+the production-policy decision because the two were settled in the same
+sitting, but they are not the same decision and the shared number made both
+harder to cite: D85 is a rule about **who may deploy**, and this is a finding
+about **where a secret ends up**. Each now stands on its own. Nothing in the
+substance below changed in the split.
+
+Asked to confirm the secret never reaches the browser, against a **fresh**
+build:
+
+- `apps/web/.next/static` — **87 files, key absent.**
+- `apps/web/.next/server` — **325 files, key absent.**
+- Source references to `SUPABASE_SERVICE_ROLE_KEY`: `lib/supabase/env.ts` (the
+  reader), its test (synthetic values), `lib/leads/scan-store.ts` (server-side
+  lead writer) and `e2e/helpers/test-accounts.ts` (setup and teardown).
+
+The publishable key is absent from both bundles too, which surprised me until
+it was obvious: **nothing in the browser talks to Supabase yet.** Every call
+goes through a server action, a route handler or the proxy, so even the public
+key is only ever read server-side. The day a client component needs it, it
+will appear in `.next/static` — and that is correct, because RLS is what
+protects the data (`rls.db.test.ts`), not the obscurity of that key.
+
+`lib/supabase/env.ts` also **refuses** a `sb_secret_…` value found in a
+`NEXT_PUBLIC_` variable, with a test, because Next inlines those into the
+bundle and the leak would be permanent. The scan confirms today; that check is
+what keeps it true tomorrow.
+
+## 2026-11-17 · D87 · Two of the three e2e flakes were a different bug from the one reported, and the third is not recoverable
+
+The brief named three flakes and one cause: the auth pages read
+`body.innerText()` before the Suspense boundary streams in. **That was right
+about one of them.** Applying it to all three would have shipped one fix and
+two guesses, so each was diagnosed on its own.
+
+### The one the brief described
+
+`resources-and-auth.spec.ts:221` asserts the example address
+`you@your-business.example` appears on `/sign-in`. That string lives in the
+email field's **hint**, and the whole form sits inside the boundary
+`sign-in/page.tsx` needs for `useSearchParams`, whose fallback is an empty
+`aria-hidden` div. `innerText()` takes one reading and never retries, so before
+the boundary resolves it returns a page with no form in it.
+
+The failure mode is worse than a false red, and that is the reason to record
+it: `toContain` fails, while **both `not.toContain` assertions pass** — on an
+empty page, for no reason at all. A run where the boundary was slow but the
+copy was wrong would have reported exactly one of the two problems. It now
+waits on `getByRole('textbox', { name: 'Email', exact: true })`, the cheapest
+assertion the fallback cannot satisfy.
+
+### The two that had nothing to do with auth
+
+`copilot-site.spec.ts:102` never visits an auth page and never reads
+`innerText`. It compares the Milo dock's `boundingBox()` with the cookie
+banner's. `.milo-dock` lifts by `--cookie-banner-height` through
+`transform 220ms`, and `globals.css` says in its own comment that the banner
+"publishes its height a moment after hydration" — the transform was chosen
+*over* `bottom` precisely so that late publish costs no CLS. `boundingBox()`
+does not retry, so one reading lands either before the variable is published or
+midway through the transition, and reports the mascot still sitting on the
+consent buttons.
+
+`copilot-site.spec.ts:194` is the same shape — the other vertical dock
+comparison, lifted by `--milo-cta-lift` on the same transition — and it was
+being held together by a flat `waitForTimeout(500)`. That passed by outlasting
+the transition rather than by knowing it had ended, which is a test that works
+until somebody changes a duration.
+
+Both now wrap the unchanged assertion in `toPass`. **Only the patience
+changed**, not what is being claimed.
+
+### What the two green runs do and do not prove
+
+The baseline run before any fix was **green**: 400 passed, 816 skipped, nothing
+failed. The two runs after the fix were also green (400 passed, 13.2m and
+13.0m). So:
+
+- The auth race and the two geometry races were fixed **by diagnosis**, against
+  code that can be read and reasoned about.
+- They were **not** fixed by reproduction, because none of the three reproduced
+  on demand. Three green runs cannot distinguish "fixed" from "did not fire".
+- **The third flake's identity is gone.** The handoff only ever named two and
+  "one more", and the green baseline wiped `test-results/`. `:194` is an
+  inference from shape, not an identification. If a third flake outside
+  `copilot-site.spec.ts` returns, this entry is the reason not to assume it was
+  already dealt with.
+
+The general lesson is the one worth carrying: **`innerText()`, `textContent()`
+and `boundingBox()` are one-shot reads in a suite where almost everything else
+retries.** They are where races hide, and a grep for them is a faster way to
+find the next flake than waiting for it.
+
+## 2026-11-17 · D88 · B1's app layer: onboarding saves, Settings deletes, and the export is read as the user
+
+The three remaining B1 pieces, and the choices inside each that were not
+obvious.
+
+### Onboarding updates; it does not create
+
+`ensure_workspace_for_current_user` already runs at sign-in and sign-up, so the
+workspace exists before anybody sees the wizard — with a name, and with `niche`
+null because sign-up never asked. So "workspace creation from onboarding" is
+really **filling in what the bootstrap left open**, plus the one row the
+bootstrap could not write: the goal.
+
+That is why it needs no service role and no new RPC. `workspaces_update_owner`
+and `goals_insert_members` already permit it as the signed-in user.
+
+**The goal is read-then-write rather than an upsert.**
+`goals_one_primary_per_workspace` is a *partial* unique index — one row per
+workspace `where is_primary` — and a partial index is not a conflict target
+PostgREST can name. An `on_conflict` would have had to pretend the constraint
+was something else. Reading first also makes a second pass through the wizard
+edit the one goal instead of colliding, and leaves the genuine race (two tabs)
+to the index, which is the right place for it.
+
+### The outcome is the only field with no sample value
+
+Every other field in the wizard opens on the demo workspace's data, labelled
+"Sample data" per non-negotiable 7. `outcomeText` opens **empty**, and the last
+step cannot be completed until it is written.
+
+The reason is narrow and worth stating: `goals.outcome_text` is described in the
+schema as "the outcome in the user's own words", and the Results Ledger quotes
+it back to them. A prefilled value would put a sentence nobody wrote into the
+one column that claims authorship. Being consistent with the other fields would
+have meant forging the one field where authorship is the point.
+
+This also turned the last step's action from a `Link` into a submit button.
+"Open my studio" used to navigate away, which was correct while the wizard saved
+nothing — and would now silently discard the three answers the step exists to
+collect.
+
+### The export is read as the user, and `leads` is absent
+
+Every query behind `/api/export` runs on the caller's own session, so **RLS
+decides what comes out** rather than a hand-maintained filter. The export cannot
+include a co-member's private row, and it cannot drift from the policies: if
+`rls.db.test.ts` passes, the export is correct by construction. The service-role
+key would have made it one simpler query and would have been the wrong tool — an
+exporter that can read everything has to be *trusted* to filter (D86).
+
+`leads` is deliberately not in the list. `rls_policies.sql` puts RLS on it with
+no policy at all, because "a lead is a stranger who filled in the Niche Scan
+form, and it belongs to us rather than to any workspace". Reading it as the user
+returns nothing, so listing it would add a permanently empty key to everybody's
+export — which reads as *"Mirrorline holds no leads"* rather than *"this is not
+yours"*. Twelve tables are listed; each is present even when empty, so "nothing
+here" stays distinguishable from "not exported".
+
+### The delete offers the export inside its own dialog
+
+`delete_workspace` cascades every table carrying a `workspace_id` and, when it
+was the user's last, deletes their `auth.users` row (D80). **After confirming
+there is no account left to download anything with.** So the export is offered
+above the confirmation field, not on a neighbouring card: that is the difference
+between an export existing and an export being offered.
+
+Two smaller things:
+
+- **The typed name is checked again on the server.** The button disables until
+  it matches, and that is a courtesy to the person rather than a control on the
+  request — a `disabled` attribute lives in the browser. The workspace id is
+  never taken from the form either; it comes from `getOwnedWorkspace()`, and
+  `delete_workspace` re-asks the ownership question anyway.
+- **The workspace name is in the dialog, not on the card.** `/app/settings` is a
+  captured screen and the e2e session's workspace is named `E2E <runId>` — a new
+  name every run. On the card it would make the settings screenshot differ from
+  itself on every comparison.
+
+### `getOwnedWorkspace` filters on `user_id`, and that is load-bearing
+
+`memberships_select_own_workspaces` reads `using (is_member_of(workspace_id))`,
+which is the right policy and means a select on `memberships` returns **every**
+membership row in every workspace I belong to — including other people's
+`owner` rows. `.eq('role', 'owner')` alone would have handed back a colleague's
+ownership of a shared workspace. RLS decides which rows may be *seen*; only that
+filter decides which one is *mine*.
+
+### How the writes are proved
+
+A redirect proves the action reached its last line, not that a row exists — and
+the rows cannot be inspected after a run, because the teardown sweeps the test
+account and cascades its workspace by design. So `workspace-data.spec.ts`
+completes onboarding and then **reads the values back through `/api/export`**:
+one B1 feature witnessing another, as the same user, under the same policies.
+
+Nothing in the suite confirms a deletion. The shared session (D84) is the
+account every other spec depends on, so a test that confirmed the dialog would
+delete it mid-run and the failures would surface in whichever file ran next. The
+tests prove the gate — that the control exists, offers the export, and cannot be
+satisfied by the right name in the wrong case — and leave the deletion itself to
+`rls.db.test.ts`, which has a throwaway user to spend.
+
+> **Superseded in part, 18 November 2026.** The last paragraph is no longer
+> true: `e2e/workspace-delete.spec.ts` now creates its own throwaway account and
+> carries the deletion all the way through. See D89.
+
+## 2026-11-18 · D89 · An owner may not delete a workspace out from under its other members
+
+Found by answering a question in review rather than by a test failing, which is
+worth recording on its own: *what happens when a workspace has other members and
+the owner deletes it?*
+
+**It succeeded, and their access disappeared without a word.**
+`memberships.workspace_id` is `on delete cascade`, so the single
+`delete from public.workspaces` inside `delete_workspace` took every other
+member's row with it. Their accounts survived — the `auth.users` deletion only
+ever applied to the caller — so nothing looked broken from their side. They
+simply had no workspace any more, were never told, and had no record that one
+had existed.
+
+That is the worst shape a data-loss bug can take: silent, remote, and
+indistinguishable from never having had access.
+
+### The decision
+
+Vlad's call for B1: **refuse, and say why.** `delete_workspace` now counts the
+other members before deleting anything and raises if there are any.
+
+Transferring ownership, removing members, and deleting with their consent are
+all real features and none of them is B1. Refusing is the smallest honest thing
+available, and the only option that cannot destroy somebody's data while the
+larger question is still open. The refusal is also cheap to reverse later; a
+silent cascade is not.
+
+### Two details worth keeping
+
+**A custom SQLSTATE, `45001`.** Class 45 is unused by PostgreSQL. The server
+action has to tell this refusal apart from a genuine fault so it can offer a
+different sentence — "remove the other members first" rather than "something
+went wrong" — and matching on the message text would mean the prose could never
+be reworded without breaking the caller. The code is the contract; the message
+is for people. The ownership check above it keeps the default `P0001`, because
+nothing needs to distinguish it.
+
+**The rule is stated on the card, not only on failure.** Somebody reading
+Settings should learn that a shared workspace cannot be deleted *before* they
+type a workspace name to find out.
+
+### What now proves the deletion
+
+`e2e/workspace-delete.spec.ts` creates a throwaway account through the admin API
+(no mail), signs it in through the real form in its own browser context, deletes
+it through the real control, and then checks three things: every table keyed by
+`workspace_id` is empty, the workspace row is gone, and the account can no
+longer sign in.
+
+The row counts are read with the **service role**, deliberately. Reading as the
+user would be circular — after the deletion there is no session, so RLS returns
+nothing whether the rows were destroyed or merely hidden. The service role is
+the only reader that can tell those apart, which is the entire claim.
+
+The sign-in check goes through the front door rather than an admin lookup, and
+asserts the same deliberately uninformative failure sentence every wrong
+password gets. A deleted account must not be distinguishable from a wrong
+password, or the form becomes a way to enumerate addresses.
+
+## 2026-11-18 · D90 · Test addresses: `.invalid` for the admin API, a real mailbox you own for the one test that sends mail
+
+D79 and D84 left the suite signing up at `mirrorline-test.dev` — "a plausible
+domain nobody here owns", chosen so a typo could not deliver mail to a stranger.
+Vlad's objection in review is the right one: **`.dev` is registrable**, so
+"nobody owns it" was true on the day it was written rather than true by
+construction, and the UI sign-up test really does send mail there.
+
+Two paths, told apart by whether anything is actually posted:
+
+**Accounts made through the admin API send no mail**, so their addresses only
+have to be inert. The default is now `e2e.invalid` — RFC 2606 reserves
+`.invalid`, so it can never be registered and never resolves. That is the same
+intent as before, made structural. `E2E_SIGNUP_DOMAIN` still overrides it.
+
+**The UI sign-up test posts the real form and triggers a real confirmation
+email.** It now requires `E2E_SIGNUP_EMAIL`, a mailbox somebody owns, and
+**skips with a full explanation when it is unset**. There is deliberately no
+fallback: any default here would be a guess about whose inbox receives the mail,
+and the only safe guess is none.
+
+### Two things that fell out of it
+
+**The address has to vary per run.** The configured address is one fixed
+address, so a second run would fail on its own leftovers with "a user with this
+email already exists". Each run derives `you+e2e-<runId>-signup@…` by dropping
+any existing tag first — `you+mirrorline@…` becomes `you+e2e-…@…`, not a second
+`+` that stricter providers reject.
+
+**The sweep had to learn a second shape, and this was the dangerous part.** It
+recognised accounts by the `e2e+` prefix, which the plus-addressed form does not
+have — so every UI sign-up account would have accumulated, in somebody's real
+inbox. It now extracts the run id from either shape.
+
+The risk that creates is obvious and had to be tested directly: a sweep that
+matches a tag *inside* a local part is one bad regex away from deleting the
+owner's actual account. `sweep-rule.test.ts` now asserts that `you@example.com`,
+`you+newsletters@example.com` and `you+mirrorline@example.com` are all
+untouchable, and that `you+my-e2e-<ancient>@…` does not match either — the tag
+has to be `+e2e-`, not merely contain "e2e".
+
+## 2026-11-18 · D91 · The onboarding submit was never sent, and mirroring a step must not be a navigation
+
+Onboarding's last step stopped completing. The button stayed on "Saving your
+setup…", the URL never left `/app/onboarding`, and the test waiting on the
+redirect timed out. It was recorded as "the server action never settles" and it
+blocked PR #2.
+
+**That diagnosis was wrong, and wrong in a way worth keeping.** The action did
+not fail to settle — it was **never called**. A Playwright trace of the failing
+run contains no POST to `/app/onboarding` at all, while the DOM shows React
+owning the form (`action="javascript:throw new Error('A React form was
+unexpectedly submitted…')"`, its hydration sentinel) and the pending state
+applied. So the form was hydrated, the click was handled, and nothing was sent.
+That is why no server error was ever printed against the dev server, and why
+`save_onboarding` timed at 109ms was never the suspect it looked like. Two
+earlier diagnoses of this symptom were also wrong; this one is recorded with the
+evidence attached so it does not become a third.
+
+### What it actually was
+
+`step-context.tsx` mirrored the step into `?step=` with `router.replace`, which
+is a **navigation**. From Next's own action queue
+(`next/dist/client/components/app-router-instance.js`, 15.5.29):
+
+- `dispatchAction` calls `setState(deferredPromise)` for every action except
+  `ACTION_RESTORE`, and `useActionQueue` does `use(state)` on it — so a
+  navigation in flight **suspends the whole router**;
+- a second navigation dispatched before the first commits sets
+  `pending.discarded = true`, and `handleResult` returns **early** for a
+  discarded action: it neither resolves that promise nor calls
+  `runRemainingActions`;
+- that branch sets `newAction.next = pending.next` but never reassigns
+  `actionQueue.last`, so `last` still points at the discarded node;
+- the form's server action is not a navigation, so it is appended to
+  `actionQueue.last.next` — behind the dead node — and never runs, while React
+  stays suspended on its deferred promise.
+
+Two quick Continues and a Submit is the whole recipe.
+
+### Why it "passed on Monday"
+
+Pure latency. The race is lost only when the second Continue beats the first RSC
+round trip home, and that round trip goes through `middleware.ts`, which
+verifies the token with Supabase **over the network**. Remote, variable latency
+decided it. Verified rather than assumed: `demo-path.spec.ts` was run at the
+exact PR #2 review commit (`593cbd6`) and **failed there too**, same assertion —
+so nothing in the repo changed between the green run and the red one, and there
+was nothing to bisect. It also explains why raising the timeout hid it and the
+symptom came back worse: the submit was not slow, it was absent.
+
+### The fix
+
+`window.history.replaceState`. Next patches it, copies its own history state
+across (`copyNextJsInternalHistoryState`) and dispatches `ACTION_RESTORE`, which
+`dispatchAction` handles **synchronously** — creating no promise and no queue
+entry — so `usePathname` and `useSearchParams` still hold the step, with no
+round trip to stall on and nothing for a later action to queue behind.
+
+The URL still has to carry the step: `e2e/helpers/routes.ts` deep-links
+`?step=2` and `?step=3`, and a reload must return to the panel the reader was
+on. So not writing the URL was never an option — writing it without navigating
+is. The RSC request this removes fetched a byte-identical 8,352-byte payload
+every time in any case: the route is static, and the step is a client concern
+the server has no opinion about.
+
+### The guard, and why it counts instead of racing
+
+The obvious test — hold the navigation open and submit underneath it — **is not
+reliably red**. Next can serve a static route's payload from its prefetch cache,
+in which case no navigation is pending and there is nothing to wedge; six runs
+of that test stayed green on the broken code. A test that passes before the fix
+guards nothing, and `demo-path.spec.ts` is already the proof that racing real
+latency is a coin toss.
+
+`e2e/onboarding-submit.spec.ts` asserts the cause instead of the symptom:
+stepping twice must issue **no** step-bearing RSC request. That is deterministic
+— four before the fix, none after, three runs each way — and narrow enough that
+an unrelated prefetch added later will not trip it. It asserts the URL still
+reaches `?step=3`, so the fix cannot quietly become "stop writing the URL", and
+it asserts the submit reaches `/app/home`, so a wedge arriving by some other
+route still goes red.
+
+`demo-path.spec.ts` is green again, in **3.0s** rather than the 7.3s it used to
+take, because two wasted round trips went with the bug.

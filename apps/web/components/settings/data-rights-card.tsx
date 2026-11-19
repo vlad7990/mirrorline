@@ -86,13 +86,15 @@ export function DataRightsCard({ onNotice }: DataRightsCardProps) {
           Export all my files
         </Button>
 
-        <Button
-          variant="secondary"
-          onClick={() =>
-            onNotice('Export is not connected', 'This preview has no file to send you yet.')
-          }
-        >
-          Export my data
+        {/* Connected, as of B1. The file export above still is not: that one
+            needs the rendered videos, which live nowhere yet. This one is
+            rows, and the rows exist. */}
+        <Button asChild variant="secondary">
+          {/* A plain anchor rather than a Link: the response is a download,
+              not a route, so there is nothing for the client router to do. */}
+          <a href="/api/export" download>
+            Export my data
+          </a>
         </Button>
 
         <Button

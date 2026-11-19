@@ -21,7 +21,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 
 import { onlyProject } from './helpers/project-gate'
-import { ROUTES } from './helpers/routes'
+import { prepareSessionFor, ROUTES } from './helpers/routes'
 import { THEMES, gotoWithTheme, type ThemeName } from './helpers/theme'
 
 onlyProject('chromium', 'One pass at the desktop viewport; responsive.spec.ts owns 390px.')
@@ -74,6 +74,7 @@ for (const theme of THEMES) {
     test(`${route.name} (${route.path}) has no axe violations above minor in ${theme}`, async ({
       page,
     }) => {
+      await prepareSessionFor(page, route)
       await auditRoute(page, route.path, theme)
     })
   }

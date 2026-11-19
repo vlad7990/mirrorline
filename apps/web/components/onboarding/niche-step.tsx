@@ -21,8 +21,10 @@
  * target with an ::after overlay rather than growing the chip.
  */
 
-import { Input, Label, SegmentedControl, Select, cn } from '@mirrorline/ui'
+import { Input, Label, SegmentedControl, Select, Textarea, cn } from '@mirrorline/ui'
 import * as React from 'react'
+
+import { OUTCOME_MAX_LENGTH } from '@/lib/workspace/onboarding-input'
 
 import {
   AUDIENCE_OPTIONS,
@@ -43,6 +45,14 @@ export interface NicheStepProps {
   onNearbyNichesChange: (nearbyNiches: readonly string[]) => void
   goal: string
   onGoalChange: (goal: string) => void
+  /**
+   * The outcome in the client's own words — `goals.outcome_text`, which is
+   * `not null`. The goal `Select` above says which of the seven KPI sets
+   * applies; this says what the person actually wants, and nothing else in
+   * onboarding asks for it.
+   */
+  outcomeText: string
+  onOutcomeTextChange: (outcomeText: string) => void
   goalLink: string
   onGoalLinkChange: (goalLink: string) => void
   postsPerDay: string
@@ -60,6 +70,8 @@ export function NicheStep({
   onNearbyNichesChange,
   goal,
   onGoalChange,
+  outcomeText,
+  onOutcomeTextChange,
   goalLink,
   onGoalLinkChange,
   postsPerDay,
@@ -68,6 +80,8 @@ export function NicheStep({
   const nicheId = React.useId()
   const nicheHintId = `${nicheId}-hint`
   const goalId = React.useId()
+  const outcomeId = React.useId()
+  const outcomeHintId = `${outcomeId}-hint`
   const linkId = React.useId()
   const cadenceId = React.useId()
   const cadenceHintId = `${cadenceId}-hint`
@@ -205,6 +219,25 @@ export function NicheStep({
             onChange={(event) => onGoalLinkChange(event.target.value)}
           />
         </div>
+      </div>
+
+      {/* The outcome, in the client's own words ---------------------------- */}
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={outcomeId}>What would success look like?</Label>
+        <Textarea
+          id={outcomeId}
+          name="outcomeText"
+          value={outcomeText}
+          onChange={(event) => onOutcomeTextChange(event.target.value)}
+          aria-describedby={outcomeHintId}
+          maxLength={OUTCOME_MAX_LENGTH}
+          placeholder="Ten qualified enquiries a month from people who already trust me"
+          className="max-w-[520px]"
+        />
+        <p id={outcomeHintId} className="m-0 text-meta text-text-muted">
+          In your own words, and in your own numbers. The goal above decides which KPIs your
+          dashboard shows; this is what we are aiming at, quoted back to you on the Results Ledger.
+        </p>
       </div>
 
       {/* Cadence ---------------------------------------------------------- */}

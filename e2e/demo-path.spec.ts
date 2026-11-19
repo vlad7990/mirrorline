@@ -50,30 +50,29 @@ function heading(page: Page, name: string) {
 test('the whole demo path holds up', async ({ page }) => {
   test.setTimeout(WALK_TIMEOUT_MS)
 
-  /* --- 1. Sign up -------------------------------------------------------- */
+  /* --- 1. Already signed in --------------------------------------------- */
 
+  /**
+   * This journey used to begin by filling in the sign-up form, which worked
+   * because the form checked nothing and walked into the studio. B1 made it
+   * real, and two things follow:
+   *
+   * - **`/sign-up` now redirects a signed-in visitor away.** The `setup`
+   *   project signs in and saves the session every project reuses, so arriving
+   *   here lands in the studio rather than on the form.
+   * - **Signing up for real cannot be part of this journey.** It sends a
+   *   confirmation mail through a rate-limited sender (D79, D84), so repeating
+   *   it every run would fail on the sender rather than on anything we wrote.
+   *
+   * The form has its own spec: `sign-up-ui.spec.ts` submits it signed out and
+   * asserts the "check your email" screen, and the rights-checkbox enforcement
+   * that used to live here moved there with it. **Nothing about
+   * non-negotiable 1 stopped being tested** — it is tested where the form is.
+   */
   await page.goto('/sign-up')
-  await expect(heading(page, 'Set up your studio')).toBeVisible()
+  await expect(page).toHaveURL(/\/app\//)
 
-  await page.getByLabel('Your name').fill('Maya Torres')
-  await page.getByLabel('Work email').fill('maya@mayatorres.example')
-  await page.getByLabel('Workspace name').fill('Maya Torres Coaching')
-  await page.getByLabel('Password', { exact: true }).fill('a short sentence works well')
-
-  const rightsOnSignUp = page.getByRole('checkbox', { name: RIGHTS_LABEL })
-  await expect(rightsOnSignUp).not.toBeChecked()
-
-  // Non-negotiable 1 is enforced on the way in, not just described.
-  await page.getByRole('button', { name: 'Create your workspace' }).click()
-  // Next.js ships its own role="alert" route announcer, so filter by the copy.
-  await expect(
-    page.getByRole('alert').filter({ hasText: 'We can only work from material you own' }),
-  ).toBeVisible()
-  await expect(page).toHaveURL(/\/sign-up$/)
-
-  await rightsOnSignUp.check()
-  await page.getByRole('button', { name: 'Create your workspace' }).click()
-  await expect(page).toHaveURL(/\/app\/onboarding/)
+  await page.goto('/app/onboarding')
 
   /* --- 2. Onboarding step 1: brand, with the live preview ---------------- */
 
@@ -133,11 +132,28 @@ test('the whole demo path holds up', async ({ page }) => {
     await expect(page.getByRole('button', { name: `Remove ${nearby}` })).toBeVisible()
   }
 
-  await page.getByRole('link', { name: 'Open my studio' }).click()
+  // **The last step saves now, so it has to be completable.** "Open my studio"
+  // was a link while onboarding was a prefilled demo that wrote nothing; it is
+  // a submit button that writes the niche and the goal. The outcome is the one
+  // field with no sample value — `goals.outcome_text` is the user's own words,
+  // so prefilling it would forge them — which makes it the one field this
+  // journey has to type.
+  const openStudio = page.getByRole('button', { name: 'Open my studio' })
+  await expect(openStudio).toBeDisabled()
+
+  await page
+    .getByLabel('What would success look like?')
+    .fill('Ten qualified enquiries a month from people who already trust me')
+
+  await expect(openStudio).toBeEnabled()
+  await openStudio.click()
 
   /* --- 5. Home ----------------------------------------------------------- */
 
-  await expect(page).toHaveURL(/\/app\/home$/)
+  // Generous on purpose: the submit is a server action making several
+  // sequential round trips to a remote Postgres before it redirects. The
+  // five-second default is a budget for a page transition, not for a write.
+  await expect(page).toHaveURL(/\/app\/home$/, { timeout: 20_000 })
   await expect(heading(page, 'Good morning, Maya')).toBeVisible()
   await expect(
     page.getByText('3 posts are out, 3 more go today. 3 cuts need your eye.'),

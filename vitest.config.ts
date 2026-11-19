@@ -27,6 +27,11 @@ export default defineConfig({
     // own config and its own script (`pnpm test:copilot-live`) so that this
     // suite stays free, hermetic and runnable in CI. Excluded here rather
     // than named out of `include`, because `apps/web/**/*.test.ts` matches it.
-    exclude: ['**/node_modules/**', 'e2e/**', '**/*.live.test.ts'],
+    //
+    // `*.db.test.ts` is excluded for a different reason: it needs a real
+    // Supabase project and writes rows to it (`pnpm test:rls-db`,
+    // `vitest.db.config.ts`). BACKEND_PHASE.md §1 rules out a mocked RLS
+    // test, so this suite must not be able to collect one and call it green.
+    exclude: ['**/node_modules/**', 'e2e/**', '**/*.live.test.ts', '**/*.db.test.ts'],
   },
 });

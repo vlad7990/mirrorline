@@ -67,7 +67,18 @@ export default function SignUpPage() {
             approve it.
           </p>
         </div>
-        <SignUpForm />
+        {/* The form reads `who`, `account` and `goal` from the URL, so it
+            calls `useSearchParams` — which Next requires inside a Suspense
+            boundary on a statically rendered page, and the build says so
+            rather than letting it slide. The page stays static; only the form
+            waits for the parameters.
+
+            The fallback is empty space the form's own height rather than a
+            spinner: it resolves in the same tick, and a flash of "Loading…"
+            above a sign-up form reads as something broken. */}
+        <React.Suspense fallback={<div className="min-h-[34rem]" aria-hidden="true" />}>
+          <SignUpForm />
+        </React.Suspense>
       </div>
 
       <section aria-labelledby="next-heading" className="flex flex-col gap-4">

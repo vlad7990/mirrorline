@@ -9,9 +9,48 @@
  *
  * The layout draws the progress indicator and the page draws the panels, so the
  * state sits in a context above both.
+ *
+ * ============================================================================
+ * The mirror writes the URL; it must never *navigate*
+ * ============================================================================
+ *
+ * This used to be `router.replace`, and that one word cost two days. The step
+ * is already in React state — the panels are swapped by `setStep`, not by the
+ * router — so the URL write is a mirror of state we have already applied, kept
+ * only so a reload and `helpers/routes.ts`'s `?step=2` deep links land on the
+ * right panel. `router.replace` makes that cosmetic write a **navigation**, and
+ * a navigation can stall the whole router:
+ *
+ * - Next dispatches every non-restore action by calling
+ *   `setState(deferredPromise)`, and `useActionQueue` does `use(state)` on it,
+ *   so a navigation in flight **suspends the router** until it settles.
+ * - A second navigation dispatched before the first commits marks the first
+ *   `discarded`. `handleResult` returns early for a discarded action, so it
+ *   neither resolves that promise nor advances the queue — and the navigate
+ *   branch never reassigns `actionQueue.last`, which still points at the dead
+ *   node. The next non-navigation action is appended behind it and never runs.
+ * - The next non-navigation action here is the form's **server action**. So two
+ *   quick Continues followed by Submit left `saveOnboarding` queued behind a
+ *   promise that could not resolve: no POST was ever sent, the URL never left
+ *   `/app/onboarding`, and the button sat on "Saving your setup…" for ever.
+ *
+ * Whether the race was lost came down to whether the second click beat the
+ * first RSC round trip home — and that round trip goes through `middleware.ts`,
+ * which verifies the token with Supabase over the network. Remote, variable
+ * latency decided it, which is why the same commit passed one day and failed
+ * the next, and why raising a timeout only hid it.
+ *
+ * `window.history.replaceState` is the write without the navigation. Next
+ * patches it (`app-router.js`), copies its own history state across and
+ * dispatches `ACTION_RESTORE` — which `dispatchAction` handles
+ * **synchronously**, creating no promise and no queue entry — so `usePathname`
+ * and `useSearchParams` still hold the new value, with no round trip to stall
+ * on and nothing for a later action to queue behind. The RSC request it used to
+ * make fetched a byte-identical payload every time anyway: this route is
+ * static, and the step is a client concern the server has no opinion about.
  */
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import * as React from 'react'
 
 export type StepNumber = 1 | 2 | 3
@@ -63,7 +102,6 @@ export interface OnboardingStepProviderProps {
 }
 
 export function OnboardingStepProvider({ children }: OnboardingStepProviderProps) {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const requestedStep = parseStep(searchParams.get('step'))
   const [step, setStep] = React.useState<StepNumber>(requestedStep)
@@ -73,14 +111,13 @@ export function OnboardingStepProvider({ children }: OnboardingStepProviderProps
     setStep(requestedStep)
   }, [requestedStep])
 
-  const goToStep = React.useCallback(
-    (next: StepNumber) => {
-      setStep(next)
-      // replace, not push: the wizard is one screen, not three history entries.
-      router.replace(`${ONBOARDING_PATH}?step=${next}`, { scroll: false })
-    },
-    [router],
-  )
+  const goToStep = React.useCallback((next: StepNumber) => {
+    setStep(next)
+    // replace, not push: the wizard is one screen, not three history entries.
+    // And `history.replaceState`, not `router.replace`: see the note at the top
+    // — mirroring the step must not dispatch a navigation.
+    window.history.replaceState(null, '', `${ONBOARDING_PATH}?step=${next}`)
+  }, [])
 
   const value = React.useMemo<OnboardingStepContextValue>(
     () => ({

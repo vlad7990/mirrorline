@@ -8,6 +8,7 @@ import { AppearanceCard } from './appearance-card'
 import { ConnectedAccountsCard } from './connected-accounts-card'
 import { CustomKpisCard } from './custom-kpis-card'
 import { DataRightsCard } from './data-rights-card'
+import { DeleteWorkspaceCard } from './delete-workspace-card'
 import { PlanCard } from './plan-card'
 import { RepostWatchCard } from './repost-watch-card'
 import { TeamCard } from './team-card'
@@ -31,7 +32,16 @@ interface Notice {
 /** How long the confirmation stays up before it clears itself. */
 const TOAST_MS = 5000
 
-export function SettingsBoard() {
+export interface SettingsBoardProps {
+  /**
+   * The workspace this viewer owns, read on the server by the page. `null`
+   * when they own none — the delete card says so rather than offering a
+   * control that would be refused.
+   */
+  readonly workspace: { readonly id: string; readonly name: string } | null
+}
+
+export function SettingsBoard({ workspace }: SettingsBoardProps) {
   const [accountList, setAccountList] = useState<readonly SocialAccount[]>(initialAccounts)
   const [notice, setNotice] = useState<Notice | null>(null)
 
@@ -130,6 +140,7 @@ export function SettingsBoard() {
         <TeamCard onNotice={handleNotice} />
         <AppearanceCard />
         <DataRightsCard onNotice={handleNotice} />
+        <DeleteWorkspaceCard workspace={workspace} />
       </div>
 
       <Toast

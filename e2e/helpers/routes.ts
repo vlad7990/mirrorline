@@ -6,6 +6,10 @@
  * one file. The slug is the screenshot file-name stem, so it must stay stable.
  */
 
+import type { Page } from '@playwright/test'
+
+import { readStoredCookies } from './test-accounts'
+
 export type RouteArea = 'marketing' | 'auth' | 'studio' | 'onboarding'
 
 export interface RouteEntry {
@@ -22,6 +26,46 @@ export interface RouteEntry {
 
 /** The remake studio is one route per trend; trend-01 is the board's first card. */
 export const REMAKE_TREND_ID = 'trend-01'
+
+/**
+ * Put the browser in the right session state for a route, before navigating.
+ *
+ * Since B1 the suite runs signed in by default (D84) — `/app/*` needs a
+ * session, and this one list holds both `/pricing` and `/app/home`, so a
+ * per-project split could not express it.
+ *
+ * **The auth routes are the exception, and they are in this list too.** A
+ * signed-in visitor is redirected away from `/sign-in` and `/sign-up` on
+ * purpose, so iterating them with a session asserts against the studio
+ * instead: `routes.spec.ts` found the wrong `<h1>`, `responsive.spec.ts`
+ * measured the wrong page, and `screenshots.spec.ts` captured the studio under
+ * a file named `sign-in`. That last one is the dangerous version, because a
+ * screenshot that is merely *wrong* still looks like a result.
+ *
+ * Every shared spec calls this immediately before `goto`, so the rule lives
+ * next to the route table that provokes it rather than in four places.
+ */
+export async function prepareSessionFor(page: Page, route: { area: RouteArea }): Promise<void> {
+  const context = page.context()
+
+  if (route.area === 'auth') {
+    await context.clearCookies()
+    return
+  }
+
+  // **Restore, not just clear.** `screenshots.spec.ts` captures every screen
+  // inside one test, in order: clearing cookies for `/sign-in` there signed the
+  // page out for everything captured after it, and four screenshot tests came
+  // back as studio pages rendered as sign-in redirects. Putting the session
+  // back makes the loop order-independent, which a sequential capture needs.
+  const cookies = await context.cookies()
+  const hasSession = cookies.some((cookie) => cookie.name.startsWith('sb-'))
+
+  if (!hasSession) {
+    const stored = readStoredCookies()
+    if (stored.length > 0) await context.addCookies(stored)
+  }
+}
 
 export const ROUTES: readonly RouteEntry[] = [
   {

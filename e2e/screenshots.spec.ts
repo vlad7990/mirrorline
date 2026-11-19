@@ -13,7 +13,7 @@ import path from 'node:path'
 import { expect, test } from '@playwright/test'
 
 import { onlyProject } from './helpers/project-gate'
-import { ALL_SCREENS } from './helpers/routes'
+import { ALL_SCREENS, prepareSessionFor } from './helpers/routes'
 import { THEME_STORAGE_KEY, THEMES, expectResolvedTheme } from './helpers/theme'
 
 onlyProject('screenshots', 'The sweep sets its own viewports; one project is enough.')
@@ -120,6 +120,7 @@ for (const viewport of VIEWPORTS) {
       )
 
       for (const screen of SCREENS) {
+        await prepareSessionFor(page, screen)
         await page.goto(screen.path)
         await expect(page.getByRole('heading', { level: 1, name: screen.h1 })).toBeVisible()
         await expectResolvedTheme(page, theme)

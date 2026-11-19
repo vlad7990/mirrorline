@@ -11,7 +11,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { onlyProject } from './helpers/project-gate'
-import { ROUTES, STUDIO_SHELL_ROUTES } from './helpers/routes'
+import { prepareSessionFor, ROUTES, STUDIO_SHELL_ROUTES } from './helpers/routes'
 
 onlyProject('mobile', 'This spec is about the 390x844 viewport the mobile project sets.')
 
@@ -33,6 +33,7 @@ async function expectNoHorizontalScroll(page: Page): Promise<void> {
 
 for (const route of ROUTES) {
   test(`${route.name} (${route.path}) does not scroll sideways at 390px`, async ({ page }) => {
+    await prepareSessionFor(page, route)
     await page.goto(route.path)
     // Wait for the heading rather than a timeout: layout is settled once the
     // page's own content is on screen.
@@ -107,6 +108,7 @@ test('the drawer traps focus and Escape closes it', async ({ page }) => {
 
 test('every studio route offers the mobile menu trigger', async ({ page }) => {
   for (const route of STUDIO_SHELL_ROUTES) {
+    await prepareSessionFor(page, route)
     await page.goto(route.path)
     await expect(
       page.getByRole('button', { name: 'Open menu' }),
