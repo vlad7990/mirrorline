@@ -6675,6 +6675,113 @@ CI, not from here.
 
 ---
 
+## 2026-11-19 · D95 · The calendar's schema: a move is an edit plus an audit, and the database decides which columns a move may touch
+
+B2.2's first milestone. `supabase/migrations/20261119030000_scheduled_posts_and_moves.sql`
+and `…040000_append_only_grants.sql`, proved by twelve new tests in
+`apps/web/lib/supabase/rls.db.test.ts`.
+
+### The plan's apparent contradiction is two tables, not one mistake
+
+`BACKEND_PHASE.md` §2 item 2 says both *"it needs a `scheduled_posts` table and
+a `post_moves` write"* and *"a move is an edit to a row, not a new row"*. Both
+are true, of different tables: `scheduled_posts.scheduled_date` and
+`.scheduled_time24` are **mutated**, so the calendar shows one post moved rather
+than two posts with one of them stale; `post_moves` is an **append-only** record
+of who moved what, from where, when.
+
+### Local date and time, not an instant
+
+`scheduled_at timestamptz` is the right column for a publisher and **cannot be
+filled honestly yet.** Turning "Tuesday 2:15 pm" into an instant needs a
+workspace time zone, there is no such column, and nobody has been asked for one.
+Defaulting to UTC would silently reschedule every post for every user outside
+it — a data bug that looks like a product decision.
+
+So the columns are `scheduled_date date` and `scheduled_time24 text` with a
+`check` regex, which is what the user actually chose. The conversion becomes a
+real decision when posting is switched on (§6 keeps it off) and there is a time
+zone to make it with. **Deferring a decision beats inventing the input to it.**
+
+`ScheduledPost` in `@mirrorline/mock` also carries `platformLabel`,
+`statusLabel` and `timeLabel`. **None is a column**: each is a pure function of
+`platform`, `status` and `scheduled_time24`, and two fields that can disagree is
+a bug with a schema for a home.
+
+### The audit is written by a trigger, not by the application
+
+`record_post_move()` fires `after update` and appends to `post_moves` in the
+same statement, so no code path can move a post and forget to say so. An audit
+the application remembers to write stays complete until somebody adds a second
+way to move a post — and the co-pilot's `move-post` approval is already a second
+caller of exactly this operation.
+
+It returns early unless the date or the time actually changed, so a retitle is
+not recorded as a move; an audit full of non-moves is one nobody reads.
+`moved_by` is **nullable on purpose** — null means "not a signed-in user": the
+service role, a migration, a fixture. Not-null would make the honest answer
+unrepresentable and invite a sentinel user id.
+
+### RLS decides rows; grants decide columns
+
+The update policy alone would let a member retitle a post or change its
+platform. `schedule-moves.ts` is explicit that moving across a platform row
+*"would mean 'post this to TikTok instead', which is a different decision under
+different rules"*, and that sentence deserves to be true in the database rather
+than only in a comment. So:
+
+    revoke update on public.scheduled_posts from authenticated;
+    grant update (scheduled_date, scheduled_time24) on public.scheduled_posts to authenticated;
+
+There is **no insert and no delete policy** on `scheduled_posts`. Nobody authors
+a post in this phase — the pipeline will, through the service role — so a member
+may move one and may not create or destroy one. An absent policy denies; that is
+the design, not an omission. `with check` repeats the `using` expression so a
+member cannot move a post *into* another workspace by patching `workspace_id`.
+
+### What the test caught, and why it needed a second migration
+
+The append-only claim was false when first written. `post_moves` had a select
+policy and no insert, update or delete policy — but **Supabase grants every
+`public` table to `authenticated` by default, and the grant is checked before
+the policy.** So an UPDATE was permitted, RLS filtered it to zero rows, and
+PostgREST answered **200 with an empty array**.
+
+For a post that is correct: B2.1's rule is that a filtered row reads as
+not-found. For an audit table it is wrong — an attempt to rewrite history should
+be an error somebody can see, not a no-op reporting success. INSERT already
+failed loudly (a missing insert policy *is* a 42501), which is why only two of
+the three verbs were quiet.
+
+The fix is `revoke insert, update, delete on public.post_moves from
+authenticated` (and `insert, delete` on `scheduled_posts` for the same
+loudness). **It went in a second migration rather than an edit**, because
+`…030000` had already been applied: editing an applied migration leaves every
+database that ran it disagreeing with the file, which is the drift a migration
+history exists to prevent.
+
+Worth recording that **the test was right and the schema was wrong.** The
+assertion encoded the guarantee that was intended; the migration under-delivered
+it. Weakening the assertion to match would have left an audit table anyone could
+quietly fail to rewrite.
+
+### Proved, in that order
+
+The twelve tests were written and run **before** the migration was applied, and
+failed with `Could not find the table 'public.scheduled_posts'` — so they
+genuinely exercise the migration rather than passing regardless. Applied to
+`mirrorline-preview` only; production gets it through D93's gated workflow, and
+`pnpm migration-safety` reports all eight migrations additive.
+
+Gates: lint, typecheck, **931 unit**, **61 RLS/DB**, build, licence-check,
+migration-safety — all green.
+
+### What this milestone deliberately does not do
+
+The studio still reads `@mirrorline/mock`. The schema exists and is proved; the
+read path, the server action and the context wiring are the next milestone, and
+until they land the calendar is unchanged and still says "Sample data, not
+saved" — which remains honest.
 ## 2026-11-21 · D104 · The gate was a GitHub feature we do not have, so the order changed instead: migrate first, then merge
 
 **Vlad's decision, and he found the fault before the gate was ever armed.** D93

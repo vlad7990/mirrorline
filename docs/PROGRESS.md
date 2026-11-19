@@ -94,6 +94,96 @@ B2.2's tests. The B2 branch's count stands separately.
 
 **Dropped from this list:** the Vercel promotion check. Migrating before the
 merge removes the window it was for (D104).
+## Handoff — 19 November 2026, later (B2.2 milestone 1: the calendar's schema is in and proved; the read and write paths are next)
+
+**Branch** `backend/b2-studio` · pushed · **no PR yet.**
+Gates: lint, typecheck, **931 unit**, **61 RLS/DB**, build, licence-check,
+migration-safety (8 additive) — all green. Full e2e not re-run: no app code
+changed this milestone.
+
+**B2.2 is under way rather than paused.** The handoff below said it waited on
+the Vercel split; it does not, for the schema — see §3.
+
+### 1. What landed: two migrations and twelve tests (D95)
+
+- `20261119030000_scheduled_posts_and_moves.sql` — `scheduled_posts`,
+  `post_moves`, the `record_post_move()` trigger, RLS, and the column grant.
+- `20261119040000_append_only_grants.sql` — the revokes that make the audit
+  refuse rather than silently no-op.
+- Twelve tests in `apps/web/lib/supabase/rls.db.test.ts`, under
+  *"a member moves a post, and only moves it"*.
+
+**Applied to `mirrorline-preview` only.** Production gets them through D93's
+gated workflow. Repo link verified as `qypakxvxnjmsvxmxiynf` before each push.
+
+The three design calls, all in D95: **local date + `time24`, not
+`timestamptz`** (no workspace time zone exists, and defaulting to UTC would
+silently reschedule posts for everyone outside it); **no derivable columns** —
+`platformLabel`, `statusLabel`, `timeLabel` are functions of other fields;
+**the audit is written by a trigger**, so no code path can move a post and
+forget to record it.
+
+**RLS decides rows, grants decide columns.** `authenticated` may update exactly
+`scheduled_date` and `scheduled_time24` — so a member can move a post and
+cannot retitle it or change its platform. No insert or delete policy at all:
+the pipeline authors posts through the service role.
+
+### 2. The bug worth knowing about before you write another policy
+
+The append-only claim was **false when first written**, and the test caught it.
+Supabase grants every `public` table to `authenticated` by default, and **the
+grant is checked before the policy** — so with no update policy, an UPDATE was
+permitted, RLS filtered it to zero rows, and PostgREST returned **200 with an
+empty array**. Silent success on an audit table.
+
+Fixed by revoking the verbs rather than by weakening the assertion: the test
+encoded the guarantee that was intended, and the schema under-delivered it. It
+needed a **second migration** because the first was already applied, and
+editing an applied migration leaves databases disagreeing with the file.
+
+### 3. Next milestone, and the one dependency it has
+
+In order:
+
+1. **The read path** — `lib/workspace/read-week-schedule.ts`, building a
+   `WeekSchedule` from `scheduled_posts` rows. Derives `timeLabel`,
+   `platformLabel`, `statusLabel`. The studio stops reading `@mirrorline/mock`;
+   the marketing site keeps it (non-negotiable 7).
+2. **The server action** — one `update` on the two granted columns, with
+   `.select()` so a filtered row reports not-found rather than silent success
+   (B2.1's third inherited rule). The trigger writes the audit, so the action
+   does **not** insert into `post_moves`.
+3. **Wire `schedule-moves-context.tsx`** to it. **The pure functions in
+   `schedule-moves.ts` do not change** — `movePost` gains persistence, not new
+   behaviour. Its header comment and the context's ("Nothing is persisted, and
+   that is the product") both become wrong and must be rewritten, not left.
+4. **An e2e persistence spec**, modelled on `goals-persist.spec.ts`: move a
+   post, reload, it is still moved.
+5. Remove the calendar's "Sample data, not saved" note **last**, when it stops
+   being true.
+
+**The dependency:** a post has to exist to be moved, and nothing authors one —
+by design. The e2e spec will need a service-role fixture, the way
+`auth.setup.ts` mints confirmed users. Decide that before writing step 4.
+
+### 4. Why the Vercel split does not block this
+
+The schema is additive and no production code references the two new tables, so
+applying them to preview — which production still reads until you re-scope the
+variables — changes nothing production serves. **That reasoning does not extend
+to a destructive migration**, and `pnpm migration-safety` is what keeps it from
+having to.
+
+### Still needs you
+
+1. **The four Vercel variables** (previous handoff §2). Production still serves
+   the preview database until then.
+2. **Arm the gate** (D93): the `production` Environment with yourself as
+   required reviewer, `PRODUCTION_MIGRATIONS_ENABLED=true`, three
+   `SUPABASE_PRODUCTION_*` secrets.
+3. **PR #3** (`docs/plan-v2`) still open; **D-b — where the renderer runs** —
+   still the blocking decision.
+4. **`E2E_SIGNUP_EMAIL`** still unset, so the one UI sign-up test skips.
 
 ---
 

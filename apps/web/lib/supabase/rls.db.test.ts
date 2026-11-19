@@ -40,6 +40,7 @@ import {
   adminCreateUser,
   adminDeleteUser,
   adminUserExists,
+  restDelete,
   restInsert,
   restRpc,
   restSelect,
@@ -162,6 +163,18 @@ async function seedGoal(workspaceId: string): Promise<string> {
   return firstRowId(goal, 'goal')
 }
 
+/**
+ * One scheduled post per workspace, for B2.2's move tests. Keyed by the
+ * workspace letter, like `workspaceIds`.
+ */
+const scheduledPostIds = new Map<string, string>()
+
+function scheduledPost(letter: string): string {
+  const id = scheduledPostIds.get(letter)
+  if (!id) throw new Error(`no scheduled post fixture for workspace ${letter}`)
+  return id
+}
+
 beforeAll(async () => {
   // Throws a sentence naming the variable and the file. That is the whole of
   // the "no credentials" experience, by design.
@@ -231,6 +244,27 @@ beforeAll(async () => {
       platform: 'tiktok',
     },
   ])
+
+  // B2.2: one post on each of A's and B's calendars. Authored by the service
+  // role because no policy lets a user create one — the pipeline will, and a
+  // member may only *move* what is already there.
+  for (const letter of ['a', 'b']) {
+    const post = await restInsert<Row>(serviceRole, 'scheduled_posts', [
+      {
+        workspace_id: workspace(letter),
+        platform: 'instagram',
+        title: `post ${runId}`,
+        scheduled_date: '2026-11-17',
+        scheduled_time24: '09:00',
+      },
+    ])
+    if (!post.ok) {
+      throw new Error(
+        `could not seed a scheduled post for ${letter}: ${post.errorMessage ?? post.status}`,
+      )
+    }
+    scheduledPostIds.set(letter, post.rows[0]?.id ?? '')
+  }
 }, 60_000)
 
 afterAll(async () => {
@@ -474,6 +508,215 @@ describe('a member authors the goal cascade, and nothing else', () => {
 
     // Assert
     expect(response.ok).toBe(false)
+  })
+})
+
+/**
+ * B2.2 — a member may move a post and may do nothing else to it (D95).
+ *
+ * The column grant is the unusual part and the reason several of these exist:
+ * RLS decides rows, so without `grant update (scheduled_date,
+ * scheduled_time24)` the update policy would also permit a retitle or a
+ * platform change. These tests are what make that claim true rather than
+ * commented.
+ */
+describe('a member moves a post, and only moves it', () => {
+  test('C, a member of B, reads B’s scheduled posts', async () => {
+    // Act
+    const posts = await restSelect<Row>(
+      asUser(user('c').token),
+      `scheduled_posts?workspace_id=eq.${workspace('b')}&select=id`,
+    )
+
+    // Assert
+    expect(posts.ok).toBe(true)
+    expect(posts.rows.map((row) => row.id)).toContain(scheduledPost('b'))
+  })
+
+  test("A cannot read B's scheduled posts", async () => {
+    // Act
+    const posts = await restSelect<Row>(
+      asUser(user('a').token),
+      `scheduled_posts?id=eq.${scheduledPost('b')}&select=id`,
+    )
+
+    // Assert — RLS hides it, so this is an empty result and not an error.
+    expect(posts.ok).toBe(true)
+    expect(posts.rows).toHaveLength(0)
+  })
+
+  test('an anonymous reader sees no scheduled posts', async () => {
+    // Act
+    const posts = await restSelect<Row>(anonymous, 'scheduled_posts?select=id&limit=1')
+
+    // Assert
+    expect(posts.ok).toBe(true)
+    expect(posts.rows).toHaveLength(0)
+  })
+
+  test('C moves B’s post, and the row comes back so the move is provable', async () => {
+    // Act
+    const moved = await restUpdate<Row>(
+      asUser(user('c').token),
+      `scheduled_posts?id=eq.${scheduledPost('b')}`,
+      { scheduled_date: '2026-11-19', scheduled_time24: '14:15' },
+    )
+
+    // Assert — one row matched. A zero-row "success" is the silent failure
+    // B2.1's third inherited rule exists to catch.
+    expect(moved.ok).toBe(true)
+    expect(moved.rows).toHaveLength(1)
+  })
+
+  test('the move wrote exactly one audit row, naming who moved it', async () => {
+    // Act
+    const moves = await restSelect<{
+      readonly moved_by: string | null
+      readonly from_date: string
+      readonly from_time24: string
+      readonly to_date: string
+      readonly to_time24: string
+    }>(
+      asUser(user('c').token),
+      `post_moves?scheduled_post_id=eq.${scheduledPost('b')}` +
+        '&select=moved_by,from_date,from_time24,to_date,to_time24',
+    )
+
+    // Assert — the trigger wrote it, so this is not a second write the
+    // application could have forgotten.
+    expect(moves.rows).toHaveLength(1)
+    expect(moves.rows[0]).toMatchObject({
+      moved_by: user('c').id,
+      from_date: '2026-11-17',
+      from_time24: '09:00',
+      to_date: '2026-11-19',
+      to_time24: '14:15',
+    })
+  })
+
+  test("A cannot move B's post, and gets nothing rather than an error", async () => {
+    // Act
+    const moved = await restUpdate<Row>(
+      asUser(user('a').token),
+      `scheduled_posts?id=eq.${scheduledPost('b')}`,
+      { scheduled_date: '2026-12-25', scheduled_time24: '08:00' },
+    )
+
+    // Assert — zero rows is the shape the server action reads as not-found.
+    expect(moved.ok).toBe(true)
+    expect(moved.rows).toHaveLength(0)
+  })
+
+  test('a member cannot retitle a post — only the two schedule columns are granted', async () => {
+    // Act
+    const response = await restUpdate(
+      asUser(user('c').token),
+      `scheduled_posts?id=eq.${scheduledPost('b')}`,
+      { title: `renamed by C ${runId}` },
+    )
+
+    // Assert
+    expect(response.ok).toBe(false)
+    expect(response.errorCode).toBe('42501')
+  })
+
+  test('a member cannot move a post to another platform', async () => {
+    // Act — `schedule-moves.ts`: across a row is a publishing decision, not a
+    // scheduling one.
+    const response = await restUpdate(
+      asUser(user('c').token),
+      `scheduled_posts?id=eq.${scheduledPost('b')}`,
+      { platform: 'tiktok' },
+    )
+
+    // Assert
+    expect(response.ok).toBe(false)
+    expect(response.errorCode).toBe('42501')
+  })
+
+  test('a member cannot create a scheduled post', async () => {
+    // Act — there is no insert policy. The pipeline authors posts.
+    const response = await restInsert(asUser(user('c').token), 'scheduled_posts', [
+      {
+        workspace_id: workspace('b'),
+        platform: 'instagram',
+        title: `invented by C ${runId}`,
+        scheduled_date: '2026-11-20',
+        scheduled_time24: '10:00',
+      },
+    ])
+
+    // Assert
+    expect(response.ok).toBe(false)
+    expect(response.errorCode).toBe('42501')
+  })
+
+  test('a member cannot delete a scheduled post', async () => {
+    // Act — no delete policy, so this matches nothing it is allowed to remove.
+    const response = await restDelete<Row>(
+      asUser(user('c').token),
+      `scheduled_posts?id=eq.${scheduledPost('b')}`,
+    )
+
+    // Assert — and the post is still there afterwards, which is the claim that
+    // actually matters.
+    expect(response.rows).toHaveLength(0)
+
+    const still = await restSelect<Row>(
+      serviceRole,
+      `scheduled_posts?id=eq.${scheduledPost('b')}&select=id`,
+    )
+    expect(still.rows).toHaveLength(1)
+  })
+
+  test('the audit is append-only: a member cannot rewrite or delete a move', async () => {
+    // Arrange
+    const moves = await restSelect<Row>(
+      serviceRole,
+      `post_moves?scheduled_post_id=eq.${scheduledPost('b')}&select=id&limit=1`,
+    )
+    const moveId = firstRowId(moves, "B's post move")
+
+    // Act
+    const updated = await restUpdate(asUser(user('c').token), `post_moves?id=eq.${moveId}`, {
+      to_date: '2027-01-01',
+    })
+    const deleted = await restDelete<Row>(asUser(user('c').token), `post_moves?id=eq.${moveId}`)
+
+    // Assert — no update or delete policy exists, so neither can touch it, and
+    // the row survives both attempts.
+    expect(updated.ok).toBe(false)
+    expect(deleted.rows).toHaveLength(0)
+
+    const survives = await restSelect<Row>(serviceRole, `post_moves?id=eq.${moveId}&select=id`)
+    expect(survives.rows).toHaveLength(1)
+  })
+
+  test('a title change is not a move, so it writes no audit row', async () => {
+    // Arrange — through the service role, which is the only thing that may
+    // edit a title at all.
+    const before = await restSelect<Row>(
+      serviceRole,
+      `post_moves?scheduled_post_id=eq.${scheduledPost('a')}&select=id`,
+    )
+
+    // Act
+    const renamed = await restUpdate<Row>(
+      serviceRole,
+      `scheduled_posts?id=eq.${scheduledPost('a')}`,
+      { title: `retitled ${runId}` },
+    )
+
+    // Assert — the trigger fires on every update and returns early unless the
+    // date or the time actually changed. Otherwise the audit fills with noise
+    // and stops being readable.
+    expect(renamed.rows).toHaveLength(1)
+
+    const after = await restSelect<Row>(
+      serviceRole,
+      `post_moves?scheduled_post_id=eq.${scheduledPost('a')}&select=id`,
+    )
+    expect(after.rows).toHaveLength(before.rows.length)
   })
 })
 
