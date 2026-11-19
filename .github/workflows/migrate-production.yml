@@ -27,8 +27,14 @@
 #  1. A GitHub **Environment** named `production`, with yourself as a
 #     **required reviewer**. That environment, not anything here, is what makes
 #     the migration wait — `environment:` below is the hook it attaches to.
-#  2. Repository secrets `SUPABASE_PRODUCTION_PROJECT_REF` and
-#     `SUPABASE_PRODUCTION_DB_PASSWORD`.
+#  2. Three repository secrets, and they do different jobs:
+#     - `SUPABASE_ACCESS_TOKEN` — a **personal access token** from
+#       supabase.com/dashboard/account/tokens. `supabase link` uses the
+#       Management API and cannot authenticate without it.
+#     - `SUPABASE_PRODUCTION_PROJECT_REF` — which project to link to.
+#     - `SUPABASE_PRODUCTION_DB_PASSWORD` — the Postgres password `db push` uses.
+#     The token and the password are not interchangeable; one talks to the API
+#     and the other to the database.
 #  3. **Turn off Vercel's automatic production deploy for `main`.** This is the
 #     half that keeps condition 2 — otherwise Vercel promotes on push and the
 #     code is live before the approval, which is the failure the gate exists to
@@ -88,17 +94,24 @@ jobs:
           ENABLED: ${{ vars.PRODUCTION_MIGRATIONS_ENABLED }}
           HAS_REF: ${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF != '' }}
           HAS_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD != '' }}
+          HAS_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' }}
         run: |
           if [ "$ENABLED" != "true" ]; then
             echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Production migrations are not enabled::Set the repository variable PRODUCTION_MIGRATIONS_ENABLED=true, create the 'production' Environment with yourself as a required reviewer, and add SUPABASE_PRODUCTION_PROJECT_REF and SUPABASE_PRODUCTION_DB_PASSWORD. Until then migrations are applied by hand and a merge can put new code in front of an old schema. See docs/DECISIONS.md D93."
+            echo "::notice title=Production migrations are not enabled::Set the repository variable PRODUCTION_MIGRATIONS_ENABLED=true, create the 'production' Environment with yourself as a required reviewer, and add SUPABASE_ACCESS_TOKEN, SUPABASE_PRODUCTION_PROJECT_REF and SUPABASE_PRODUCTION_DB_PASSWORD. Until then migrations are applied by hand and a merge can put new code in front of an old schema. See docs/DECISIONS.md D93."
             exit 0
           fi
 
           # Enabled but half-configured is the dangerous state: it looks armed
-          # and is not. Fail rather than notice.
-          if [ "$HAS_REF" != "true" ] || [ "$HAS_PASSWORD" != "true" ]; then
-            echo "::error title=Production migrations are enabled but not configured::PRODUCTION_MIGRATIONS_ENABLED is true but SUPABASE_PRODUCTION_PROJECT_REF or SUPABASE_PRODUCTION_DB_PASSWORD is missing."
+          # and is not. Fail rather than notice, and name every missing piece in
+          # one go rather than one per re-run.
+          missing=""
+          [ "$HAS_ACCESS_TOKEN" = "true" ] || missing="$missing SUPABASE_ACCESS_TOKEN"
+          [ "$HAS_REF" = "true" ] || missing="$missing SUPABASE_PRODUCTION_PROJECT_REF"
+          [ "$HAS_PASSWORD" = "true" ] || missing="$missing SUPABASE_PRODUCTION_DB_PASSWORD"
+
+          if [ -n "$missing" ]; then
+            echo "::error title=Production migrations are enabled but not configured::PRODUCTION_MIGRATIONS_ENABLED is true but these secrets are missing:$missing"
             exit 1
           fi
 
@@ -130,6 +143,14 @@ jobs:
     # This line is the gate. The `production` Environment's required reviewer is
     # what holds the job; without that setting this runs straight through.
     environment: production
+    # Both credentials, and they are not interchangeable. `supabase link` talks
+    # to the **Management API** and needs a personal access token
+    # (`SUPABASE_ACCESS_TOKEN`); `db push` connects to **Postgres** and needs the
+    # database password. Supplying only the password gets a CLI that cannot
+    # link — a confusing failure a long way from its cause.
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -138,20 +159,14 @@ jobs:
           version: latest
 
       - name: Show what would be applied
-        env:
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD }}
         run: |
           supabase link --project-ref "${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF }}"
           supabase migration list --linked
 
       - name: Apply
-        env:
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD }}
         run: supabase db push --linked
 
       - name: Confirm local and remote agree
-        env:
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD }}
         run: supabase migration list --linked
 
   # Condition 2: the code goes live *after* its schema, never before.

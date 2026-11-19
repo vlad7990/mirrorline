@@ -6,6 +6,153 @@
 
 ---
 
+## Handoff — 19 November 2026 (B1 merged; the migration gate is built and inert; B2.2 is paused for the production database)
+
+**Branch** `backend/b2-studio`, rebased onto `main` · pushed · **no PR yet.**
+Gates: lint, typecheck, **931 unit**, build, licence-check, migration-safety —
+all green. **Full e2e: 410 passed / 836 skipped, zero failures** (13.0m).
+
+**PR #2 (B1) is merged** as `cbdda37`. **PR #3 (`docs/plan-v2`) is open** — the
+BACKEND_PHASE revision, docs-only, one file.
+
+### 1. The next task, and why B2.2 waits for it
+
+**Create the separate production Supabase project.** Production and preview
+currently share one, and that is now what blocks everything else.
+
+Verified rather than assumed, through the Vercel API: all four Supabase
+variables — `SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` — carry
+`target: ["production", "preview"]` with **a single value**, and
+`hiddenProductionEnvCount` is `0`. There is no production-only override, so
+production serves `qypakxvxnjmsvxmxiynf`: the project `supabase/config.toml` is
+linked to, the one previews use, and the one the e2e suite writes to.
+
+What follows, and why it is first rather than later:
+
+- **The e2e suite creates real auth users in the project production serves**,
+  and its teardown deletes `e2e+`-tagged accounts from it. The sweep is narrow
+  and `sweep-rule.test.ts` proves real addresses are untouchable — so this is
+  not a live hazard today. It is a thing to fix **before there is a client**,
+  not after.
+- **The migration gate cannot be meaningfully exercised** while "production"
+  and "preview" are the same database. Approving a push to one approves it to
+  the other.
+- **B2.2 adds the first new tables since production existed**
+  (`scheduled_posts`, `post_moves`). Creating them against a shared database
+  means creating them in production, by hand, with no gate — exactly the
+  sequence D93 was written to stop. So B2.2 waits.
+
+**What creating it involves:** a second project (D76 reserved the name and
+`us-east-1`), `supabase db push` of all six migrations into it, `seed.sql` for
+the twelve KPI definitions, then **re-scoping the four Vercel variables** so the
+existing values become `preview`-only and the new project's become `production`.
+That last step must not be half-done: a production deployment holding a preview
+URL and a production key, or the reverse, fails in ways that look like an auth
+bug.
+
+### 2. B2.2 — not started, nothing to hand over
+
+**No code, no migration, no WIP commit.** The previous turn ended with "now
+starting B2.2" and then ended; nothing was written. `grep` for
+`scheduled_posts|post_moves` across `supabase/` and `apps/web/` returns nothing,
+and the working tree was clean at handoff.
+
+What the next session should know before starting it:
+
+- **Scope** is B2's item 2: calendar moves. `lib/studio/schedule-moves.ts` is
+  already pure (`movedPost`, `applyMoves`, `movedWeekPosts`, `timeSlotsFor`,
+  `isSameSlot`) with its own tests, driven by a React context, and six
+  components under `components/calendar/`. **The pure functions do not change.**
+- **The schema reading that was settled**, because the plan's wording looks
+  contradictory and is not: *"a `post_moves` write"* alongside *"a move is an
+  edit to a row, not a new row"* means **both** — `scheduled_posts.scheduled_at`
+  is mutated so the calendar shows one post moved, and `post_moves` is an
+  append-only record of who moved what and when.
+- **It must be additive**, and `pnpm migration-safety` now enforces that.
+- **B2.1's three inherited rules** (§2 of PR #3): an unmeasured value is `null`
+  and reads "Not measured yet", never `0`; no studio screen falls back to sample
+  data; authorisation is one RLS check with `.select()` on the write, so a
+  filtered row reports not-found rather than a silent success.
+
+### 3. The D-a gate — built, and deliberately inert
+
+`a86d47a`. D93 records the decision and both of Vlad's conditions.
+
+- **`.github/workflows/migrate-production.yml`** — `push` to `main` →
+  `preflight` → `safety` → `migrate` (`environment: production`, which is what
+  makes it wait) → `promote`.
+- **Condition 1, expand/contract, is enforced not asked for**:
+  `pnpm migration-safety` (`scripts/migration-safety.mjs`, 17 tests), wired into
+  `ci.yml` and into the migration workflow. Fails on drop/rename/retype and
+  `set not null`; `drop policy` and `drop function` are deliberately exempt,
+  because `create or replace function` is how every RPC here is revised. Escape
+  hatch is `-- contract-migration: approved` **in the SQL file**.
+- **Condition 2** is the `promote` job, behind its own separate switch, so
+  arming the gate cannot arm deploying-from-CI by accident.
+
+**It does nothing until three secrets and a variable exist — and one of them was
+missing from the first version of this workflow:**
+
+| What | Why |
+|---|---|
+| `SUPABASE_ACCESS_TOKEN` | **The one that was missing.** A personal access token from supabase.com/dashboard/account/tokens. `supabase link` uses the **Management API** and cannot authenticate without it — the database password is a different credential for a different endpoint, so supplying only the password gets a CLI that cannot link. Threaded through and named in preflight now. |
+| `SUPABASE_PRODUCTION_PROJECT_REF` | Which project to link. **Does not exist yet** — it is §1's output. |
+| `SUPABASE_PRODUCTION_DB_PASSWORD` | What `db push` connects with. Also §1's output. |
+| `vars.PRODUCTION_MIGRATIONS_ENABLED` | The switch. Unset, so preflight prints a notice naming what is missing. |
+
+Plus a **GitHub Environment named `production` with Vlad as required
+reviewer** — that setting, not anything in the file, is what holds the job.
+Without it the workflow runs straight through.
+
+**It fails loudly if half-configured.** Enabled-but-missing-secrets is an error
+naming every missing one at once, not a quiet skip: a safety gate that is off
+and looks green is the failure this repo keeps rediscovering.
+
+One bug caught before it shipped, worth remembering: the `promote` job first
+guarded on `secrets.VERCEL_TOKEN != ''` in a **job-level `if:`**. The `secrets`
+context is not available there — GitHub exposes only `github`, `needs`, `vars`
+and `inputs` — so the condition evaluated to empty and the job would have
+silently never run.
+
+### 4. What else landed this session
+
+- **D91, the onboarding submit.** It was never being sent: mirroring the wizard
+  step into `?step=` with `router.replace` dispatched a navigation, and two
+  overlapping navigations strand every later action — a server action included —
+  in Next's action queue. `history.replaceState` writes the URL without
+  navigating. `e2e/onboarding-submit.spec.ts` guards it by **counting
+  navigations rather than racing them**, because the race-it version stayed
+  green on the broken code over six runs.
+- **D92, force-pushing**, narrowed to `main` and to branches under someone
+  else's review.
+- **`goals-persist.spec.ts` is green**, 4/4, having never run before. Two of its
+  assertions were wrong rather than the product — a `getByLabel` substring
+  collision with `GoalProgress`'s aria-label, and a `-40` that never reached the
+  server because `min={0}` makes the browser refuse to submit.
+
+### Still needs you
+
+1. **Create the production Supabase project** (§1), then re-scope the four
+   Vercel variables so preview and production stop sharing. **B2.2 is paused
+   until this is done.**
+2. **Add the three secrets, the variable and the `production` Environment**
+   (§3) once that project exists.
+3. **PR #3** (`docs/plan-v2`) is open and ends with **eight decisions**. D-a is
+   answered and built; **D-b — where the renderer runs** — is the other one
+   that blocks work.
+4. **`backend/b2-studio` has no PR.** It is 5 commits ahead of `main` and mixes
+   B2.1 with the CI gate, because `DECISIONS.md` numbering forced D93 onto this
+   branch. Happy to split the gate onto its own branch once PR #3 merges.
+5. **`E2E_SIGNUP_EMAIL`** is still unset, so the one UI sign-up test skips.
+6. **Eight reference PNGs** under `docs/screens-built/` for the goals screens
+   legitimately changed in B2.1 and were deliberately **not** committed —
+   screenshots get refreshed only when a screen changes, reviewed by eye. The
+   other eight that moved (`agents`, `index`, `sign-up`) have no business
+   changing and look like render nondeterminism.
+
+---
+
 ## Handoff — 18 November 2026, evening (the onboarding submit is fixed, and PR #2 is clear to merge)
 
 **Branch** `backend/b1-auth` · **PR #2 open, not merged — merging is Vlad's.**
