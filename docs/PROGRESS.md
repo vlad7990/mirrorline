@@ -204,8 +204,16 @@ RLS/DB and the full e2e are unchanged from the handoff below: no schema changed.
    the production one is true.
 2. **Merge PR #4 and arm the gate** — unchanged from below, and still before
    the B2 PR.
-3. The ten stray `… 2.ts` iCloud copies, PR #3, and `E2E_SIGNUP_EMAIL` — all
-   unchanged from below.
+3. **The ten stray `… 2.ts` iCloud copies — and I committed them by accident**
+   (D102). `git add -A` in `6030060` swept them in, and the handoff below says
+   they are "not in git", which was true when written and is why the mistake
+   reads as a correction rather than a surprise. They are **untracked again**,
+   still on disk, and `.gitignore` now has the pattern so it cannot recur. They
+   remain yours to delete; the durable fix is moving this repo somewhere iCloud
+   does not reach.
+4. **PR #3** (`docs/plan-v2`) is still open, and **D-b — where the renderer
+   runs** — is still the blocking decision. `E2E_SIGNUP_EMAIL` is still unset,
+   so the one UI sign-up test skips.
 
 ---
 

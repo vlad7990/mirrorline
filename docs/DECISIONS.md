@@ -7272,6 +7272,70 @@ which is true for every input. The same mistake as the probe, in the same file,
 within ten minutes — **an assertion that cannot fail is the default outcome of
 writing one in a hurry**, and both surfaced only because something else failed
 and made them worth re-reading.
+
+## 2026-11-19 · D102 · `git add -A` committed ten files I had just written a handoff about
+
+Found while confirming the handoff was current before a `/clear` — which is the
+only reason it was found at all.
+
+The B2.2 handoff said of ten iCloud conflict copies: *"They are stale, they are
+not in git, and I have not deleted them because they are not mine to delete."*
+Two of those three clauses stayed true. **`git add -A` in `6030060` committed
+every one of them**, about an hour after that sentence was written, in the same
+session.
+
+```
+apps/web/app/app/(studio)/goals/actions 2.ts
+apps/web/app/app/(studio)/goals/target-form-state 2.ts
+apps/web/app/app/onboarding/actions 2.ts
+apps/web/components/calendar/calendar-view 2.tsx
+apps/web/components/studio/target-form 2.tsx
+apps/web/lib/supabase/rls.db.test 2.ts
+apps/web/lib/workspace/goal-cascade 2.ts
+apps/web/lib/workspace/goal-cascade.test 2.ts
+apps/web/lib/workspace/read-goal-cascade 2.ts
+e2e/goals-persist.spec 2.ts
+```
+
+### Why nothing caught it
+
+Every gate passed, and each for an honest reason. They are **valid TypeScript**
+— stale copies of working modules — so `typecheck` and `lint` are content.
+`rls.db.test 2.ts` and `goal-cascade.test 2.ts` are **not collected**: the globs
+are `**/*.test.ts` and `**/*.db.test.ts`, and `test 2.ts` matches neither. The
+sweep in `youtube-claims.test.ts` reads them and finds nothing to complain
+about.
+
+So they are inert — and inert is the problem. A stale `calendar-view 2.tsx`
+sitting beside the real one, in git, is a file somebody opens in six weeks and
+edits.
+
+### `git rm --cached`, not `rm`
+
+They are untracked again and **still on disk**: "never delete files you did not
+create" is about the filesystem, and `--cached` is the operation that respects
+it. Vlad decides whether they go.
+
+History is not rewritten. `6030060` is pushed, and rewriting a pushed commit to
+tidy a mistake is a bigger risk than the mistake — the files are gone from the
+tree, which is what matters, and the commit that removes them says why.
+
+### The guard, and the actual fix
+
+`.gitignore` now carries `* 2.*`, which no file in this repo is legitimately
+named. That stops the recurrence; it does not stop iCloud writing the copies.
+The real fix is moving the repo out from under `~/Documents`.
+
+### The lesson, which is about `-A` rather than about iCloud
+
+**`git add -A` stages what is there, not what you worked on.** It had been
+harmless in this repo for ninety commits because the tree was always clean —
+and the one session where it was not was the session that also ran a full e2e
+suite, generated screenshots, and had a sync conflict.
+
+Noticing required re-reading a claim I had written myself and checking it
+against `git ls-files` rather than against memory. "Confirm the handoff is
+current" turned out to be a real question.
 ## 2026-11-21 · D104 · The gate was a GitHub feature we do not have, so the order changed instead: migrate first, then merge
 
 **Vlad's decision, and he found the fault before the gate was ever armed.** D93
