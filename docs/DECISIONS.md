@@ -6301,3 +6301,51 @@ route still goes red.
 
 `demo-path.spec.ts` is green again, in **3.0s** rather than the 7.3s it used to
 take, because two wasted round trips went with the bug.
+
+## 2026-11-19 · D92 · The blanket force-push ban was stricter than it needed to be, and made a requested rebase unpushable
+
+**Vlad's decision**, taken when the old rule blocked work he had asked for.
+
+CLAUDE.md said "Never force-push, rewrite history, or delete files you did not
+create" — one sentence covering three different risks at one severity. It is now:
+
+> Never force-push `main`, and never force-push a branch with an open pull
+> request somebody else is reviewing. On your own feature branch, after a
+> rebase, `--force-with-lease` is allowed — and **never plain `--force`**, which
+> overwrites whatever arrived while you were not looking. Still never rewrite
+> history that is not yours, and never delete files you did not create.
+
+### Why the old wording had to go
+
+Vlad asked for `backend/b2-studio` to be rebased onto `origin/main` after PR #2
+merged. A rebase rewrites the branch's commits by construction, so the rebased
+branch **cannot** be pushed without force — the old rule made a legitimate,
+explicitly requested operation impossible to finish. A rule that forbids the
+only way to complete a sanctioned task is not protecting anything; it is just
+mis-aimed.
+
+### What the real risks are, and which part of the rule catches each
+
+- **`main`** — force-pushing it can destroy merged work for everyone and, here,
+  it is the production branch (D85). Still absolutely forbidden.
+- **A branch under somebody else's review** — force-pushing invalidates the
+  diff they are reading and can silently drop review comments. Forbidden.
+- **Your own unreviewed feature branch after a rebase** — the only thing at
+  risk is your own superseded history, which is the point of rebasing. Allowed.
+
+### Why `--force-with-lease` and not `--force`
+
+`--force` says "make the remote look like me", full stop. `--force-with-lease`
+says "make the remote look like me **only if** it still points where I last saw
+it" — so a commit pushed by somebody else, or by another session, aborts the
+push instead of vanishing. On a shared repository that difference is the whole
+safety argument, and it costs nothing. Plain `--force` stays banned everywhere.
+
+### Where this leaves the "don't rewrite history" instinct
+
+Intact, and narrowed to what it was for: do not rewrite history other people are
+building on. Rebasing your own branch onto a new base is not that — it is the
+normal way to keep a feature branch current, and the alternative (merging main
+back in repeatedly) buries the branch's own commits in merge noise, which is
+exactly what made "confirm it shows only B2 commits ahead" a reasonable thing
+for Vlad to ask for and check.
