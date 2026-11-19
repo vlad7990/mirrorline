@@ -702,6 +702,47 @@ export async function countPostMoves(
   return ((await response.json()) as readonly unknown[]).length
 }
 
+/**
+ * A real confirmation link, minted through the admin API (D101).
+ *
+ * `generate_link` returns the **same link the confirmation email carries**,
+ * without sending mail — which matters twice: the sender is rate-limited
+ * (D79), and a test that read a mailbox would be testing the mailbox.
+ *
+ * `redirect_to` is the part under test. Supabase only honours it if it matches
+ * the project's redirect allow-list and **falls back to the Site URL when it
+ * does not** — which is exactly the production bug this helper exists to catch:
+ * a link landing on the marketing home page instead of onboarding looks like a
+ * routing mistake and is a configuration one.
+ *
+ * Returns null rather than throwing, so a caller can fail with its own
+ * sentence.
+ */
+export async function generateSignupLink(
+  config: SupabaseTestConfig,
+  options: {
+    readonly email: string
+    readonly password: string
+    readonly redirectTo: string
+  },
+): Promise<string | null> {
+  const response = await fetch(`${config.url}/auth/v1/admin/generate_link`, {
+    method: 'POST',
+    headers: { ...adminHeaders(config), 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 'signup',
+      email: options.email,
+      password: options.password,
+      options: { redirect_to: options.redirectTo },
+    }),
+  })
+
+  if (!response.ok) return null
+
+  const body = (await response.json()) as { action_link?: unknown }
+  return typeof body.action_link === 'string' ? body.action_link : null
+}
+
 /** The stored target, read with the service role so RLS cannot mask a failure. */
 export async function readKeyResultTarget(
   config: SupabaseTestConfig,

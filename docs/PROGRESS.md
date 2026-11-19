@@ -94,6 +94,121 @@ B2.2's tests. The B2 branch's count stands separately.
 
 **Dropped from this list:** the Vercel promotion check. Migrating before the
 merge removes the window it was for (D104).
+## Handoff — 19 November 2026, morning (the confirmation link: one fault was ours, and one is two lines you have to add)
+
+**Branch** `backend/b2-studio` · pushed. Gates in §4.
+
+"After clicking the email confirmation link, users land on the home page" was
+**two faults with one symptom**, and the code half is fixed. The other half is
+§2 — it needs you, and until it is done one new e2e skips rather than passes.
+
+Everything the report asked for already existed: `emailRedirectTo` already
+pointed at `/auth/callback?next=/app/onboarding`, and the callback already
+refused an off-site `next`. So the work was finding out why a correct-looking
+chain produced the wrong destination. **D101** has the whole of it.
+
+### 1. Our fault: `VERCEL_URL` is not the URL anybody visits
+
+`callbackUrl` fell back to `VERCEL_URL`, which is the **per-deployment**
+hostname — `mirrorline-a1b2c3d4.vercel.app`, new on every push — not the
+`mirrorline-eosin` alias. `NEXT_PUBLIC_SITE_URL` would have overridden it, and I
+checked the Vercel API rather than guessing: **it is not set**, on either
+target. Only the four Supabase variables and `ANTHROPIC_API_KEY` are.
+
+So Supabase got a `redirect_to` on a host no allow-list contains, refused it,
+and fell back to the Site URL — the marketing home page.
+
+Fixed in `lib/auth/callback-url.ts`: on production it now prefers
+`VERCEL_PROJECT_PRODUCTION_URL`, gated on `VERCEL_ENV === 'production'` so a
+preview still links back to itself rather than to production. Nine lines, nine
+unit tests, out of the server action where no test could reach it.
+
+### 2. Your half: the allow-lists, and the `/**` is the important part
+
+The new e2e found the second fault, locally: a link came back to
+`http://localhost:3000/#access_token=…` — our origin, with `/auth/callback`
+**dropped**. That is what an entry of `http://localhost:3000` *without* a
+wildcard does: it matches the origin and rewrites the path. The right host, the
+home page, no error anywhere — the production symptom, on a laptop.
+
+**Look first.** The PATCH below replaces the whole list, so copy what is there
+before changing it:
+
+```sh
+export SUPABASE_ACCESS_TOKEN=…   # supabase.com/dashboard/account/tokens
+
+# Preview
+curl -s https://api.supabase.com/v1/projects/qypakxvxnjmsvxmxiynf/config/auth \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  | python3 -c 'import json,sys; c=json.load(sys.stdin); print(c["site_url"]); print(c["uri_allow_list"])'
+
+# Production
+curl -s https://api.supabase.com/v1/projects/uvwedufzjldfahlqtisk/config/auth \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  | python3 -c 'import json,sys; c=json.load(sys.stdin); print(c["site_url"]); print(c["uri_allow_list"])'
+```
+
+**Then set them.** Each list must contain every entry you want to keep — a PATCH
+that omits one removes it:
+
+```sh
+# Preview: localhost for development and the e2e suite, plus preview deployments.
+curl -X PATCH https://api.supabase.com/v1/projects/qypakxvxnjmsvxmxiynf/config/auth \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"uri_allow_list":"http://localhost:3000/**,https://mirrorline-*.vercel.app/**"}'
+
+# Production: the alias, and nothing else.
+curl -X PATCH https://api.supabase.com/v1/projects/uvwedufzjldfahlqtisk/config/auth \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"uri_allow_list":"https://mirrorline-eosin.vercel.app/**"}'
+```
+
+Three notes on those:
+
+- **A targeted PATCH, not `supabase config push`.** D94's near-miss was that a
+  config push asserts *every* key it knows, and would have turned TOTP off and
+  relaxed the email rate limit. This touches one field.
+- **`https://mirrorline-*.vercel.app/**` is deliberately not `https://*.vercel.app/**`.**
+  The second would let any site on `vercel.app` receive one of our auth links.
+- **Production may already be right.** D94 set `https://mirrorline-eosin.vercel.app/**`,
+  wildcard included — in which case the GET shows it and the PATCH is a no-op
+  you can skip. With fault 1 fixed, that entry is now the one we actually send.
+
+Afterwards, `pnpm test:e2e --project=chromium auth-callback.spec.ts` turns the
+skip into a pass. That is the check that this worked.
+
+### 3. What did not need changing, and now has tests
+
+`resolveNextPath` / `isSafeNextPath` were already correct and already used by
+the callback. Four e2e tests now prove it end to end — no code, a dead link, a
+stale code, and the four off-site shapes (`https://`, protocol-relative,
+backslash, `javascript:`).
+
+Worth one line in your head: **two assertions I wrote in that file could not
+fail** — one compared a URL's host to itself, the other compared origins while
+the path was being dropped. Both are in D101, because the second is what hid
+fault 2.
+
+### 4. Gates
+
+lint · typecheck · **991 unit** (+9 for the callback URL) · build ·
+licence-check · migration-safety (12 additive) ·
+`auth-callback.spec.ts` **4 passed, 1 skipped** (the skip is §2).
+RLS/DB and the full e2e are unchanged from the handoff below: no schema changed.
+
+### Still needs you
+
+1. **The two allow-list commands** (§2). Sign-up is wrong in production until
+   the production one is true.
+2. **Merge PR #4 and arm the gate** — unchanged from below, and still before
+   the B2 PR.
+3. The ten stray `… 2.ts` iCloud copies, PR #3, and `E2E_SIGNUP_EMAIL` — all
+   unchanged from below.
+
+---
+
 ## Handoff — 19 November 2026, early morning (the calendar is real: it reads your posts and a move is saved — and two grant audits found holes on twelve tables and four functions)
 
 **Branch** `backend/b2-studio` · pushed · **no PR yet.**

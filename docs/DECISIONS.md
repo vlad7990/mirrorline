@@ -7187,6 +7187,91 @@ it.
 **And one was flaky**: the Results screen's `Overview` heading, on one of four
 screenshot projects, at a 5-second timeout. Not calendar-related and not
 reproduced on the re-run. Named here rather than quietly re-run until green.
+
+## 2026-11-19 · D101 · The confirmation link landed on the home page, and it was two faults wearing one symptom
+
+Reported as "after clicking the email confirmation link, users land on the home
+page". Everything the report asked for already existed —
+`emailRedirectTo: callbackUrl(ONBOARDING)`, a callback that validates `next`
+through `resolveNextPath`, an open-redirect guard with its own test file. So the
+first job was finding out why a correct-looking chain produced the wrong
+destination.
+
+**It was two independent faults, and either alone would have been enough.**
+
+### Fault one: `VERCEL_URL` is not the URL anybody visits
+
+`callbackUrl` read `NEXT_PUBLIC_SITE_URL`, then `VERCEL_URL`, then localhost.
+`NEXT_PUBLIC_SITE_URL` **is not set on this project** — checked against the
+Vercel API rather than assumed: production and preview carry the four Supabase
+variables and `ANTHROPIC_API_KEY`, and nothing else.
+
+So production fell through to `VERCEL_URL`, which is the **per-deployment**
+hostname — `mirrorline-a1b2c3d4.vercel.app`, a new one every push — not the
+`mirrorline-eosin` alias. Supabase was handed a `redirect_to` on a host its
+allow-list had never heard of, refused it, and fell back to the Site URL. The
+Site URL is the marketing home page.
+
+It survived because it needed the one environment where the deployment URL and
+the public URL differ: locally and on previews `VERCEL_URL` *is* the host being
+visited, so every hand test passed.
+
+The fix is `lib/auth/callback-url.ts`, with the decision moved out of a server
+action into nine testable lines. On production it prefers
+`VERCEL_PROJECT_PRODUCTION_URL` — **gated on `VERCEL_ENV === 'production'`**,
+because that variable is set on previews too, and naming it first would send
+every preview's confirmation link to production. That is the worse bug: silent,
+and it moves people between databases.
+
+### Fault two: an allow-list entry without `/**` keeps the origin and drops the path
+
+Found by the new e2e, and only because the first version of its probe was too
+weak. That version compared **origins** and passed — while the link landed on
+`http://localhost:3000/#access_token=…`: our origin, with `/auth/callback`
+silently removed.
+
+That is what an allow-list entry of `http://localhost:3000` does to a
+`redirect_to` of `http://localhost:3000/auth/callback?next=…`. It matches on the
+origin and the path is rewritten to the allowed one. **The right host, the home
+page, and no error anywhere** — the production symptom, reproduced on a laptop.
+
+So the probe asserts the **path**, the entries need their `/**`, and the
+allow-lists are a one-time explicit command rather than anything a local link
+can do (D94). The preview project's list is missing it today, which is why one
+test skips rather than passes.
+
+### What the e2e can and cannot prove
+
+`generate_link` mints the same URL the email carries without sending one — the
+sender is rate-limited (D79), and a test that read a mailbox would be testing
+the mailbox.
+
+**It is not quite the app's own flow, and the test says so rather than implying
+otherwise.** An admin-generated link has no PKCE challenge, so it verifies
+through the implicit flow and arrives with tokens in the fragment, where
+`signUp()` from our own form produces the `?code=` that
+`exchangeCodeForSession` takes. What it does prove is the link in the chain that
+was actually broken: whether Supabase sends the browser to our callback path at
+all.
+
+### A skip, not a failure, when the project is unconfigured
+
+The real-link test skips with the entry to add and where to add it. A red test
+would point at the code, which is correct; the missing thing is a line in a
+dashboard. The repo already does this for `E2E_SIGNUP_EMAIL`.
+
+### What the investigation did not change
+
+`resolveNextPath` and `isSafeNextPath` were already right, and the callback
+already used them — so "make the callback honour a same-origin `next` only"
+needed tests, not code. Four now cover it end to end, including the
+protocol-relative and backslash forms the guard was written for.
+
+One of those tests was written wrong first: it compared a URL's host to itself,
+which is true for every input. The same mistake as the probe, in the same file,
+within ten minutes — **an assertion that cannot fail is the default outcome of
+writing one in a hurry**, and both surfaced only because something else failed
+and made them worth re-reading.
 ## 2026-11-21 · D104 · The gate was a GitHub feature we do not have, so the order changed instead: migrate first, then merge
 
 **Vlad's decision, and he found the fault before the gate was ever armed.** D93
