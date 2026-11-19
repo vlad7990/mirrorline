@@ -6782,6 +6782,89 @@ The studio still reads `@mirrorline/mock`. The schema exists and is proved; the
 read path, the server action and the context wiring are the next milestone, and
 until they land the calendar is unchanged and still says "Sample data, not
 saved" — which remains honest.
+
+## 2026-11-19 · D96 · The default-grants bug was on ten more tables, and asking the question properly took no fixtures at all
+
+Vlad asked whether the bug D95 found on `post_moves` — an UPDATE with a grant
+and no policy answering **200 with an empty array** — existed elsewhere. It did,
+on **every other table that had an unpoliced write verb**: ten of the fifteen in
+`public`.
+
+That was the expected answer rather than a surprise, because the cause is not
+per-table. Supabase's default privileges grant all four verbs on every new
+`public` table to `anon` and `authenticated`, and **the grant is checked before
+the policy**. Every `create table` in this schema inherited it.
+
+### The audit, and the shape of the hole per verb
+
+The verbs behave differently, and only two of them are dangerous:
+
+| Verb | With a grant and no policy | |
+|---|---|---|
+| INSERT | the row is built, the missing `with check` refuses it, caller gets `42501` | **loud** |
+| UPDATE | `using` filters to no rows, zero rows change, PostgREST answers `200 []` | **silent** |
+| DELETE | the same | **silent** |
+| SELECT | `[]`, which is the honest answer to "you may not see this" | fine |
+
+So the bug class is exactly *UPDATE or DELETE, granted, unpoliced*. INSERT was
+already loud; it is revoked too, which changes only *which* error it is.
+
+| Table | Verbs left open | Now |
+|---|---|---|
+| `profiles` | insert, delete | revoked; `update` (self) keeps its policy |
+| `memberships` | insert, update, delete | revoked |
+| `workspaces` | insert, delete | revoked; `update` (owner) keeps its policy |
+| `social_accounts` | insert, update, delete | revoked |
+| `kpi_definitions` | insert, update, delete | revoked |
+| `metric_snapshots` | insert, update, delete | revoked |
+| `ledger_weekly` | insert, update, delete | revoked |
+| `alerts` | insert, delete | revoked; `update` (acknowledge) keeps its policy |
+| `leads` | insert, update, delete | revoked — and it had no policy of any kind |
+| `trends` | insert, update, delete | revoked |
+| `goals`, `objectives`, `key_results` | none | four policies each |
+| `scheduled_posts`, `post_moves` | none | D95 and `20261119040000` |
+
+`20261119050000_grants_match_policies.sql`, additive, from `authenticated` **and
+`anon`** — `anon` is the role the public site's browser code holds, and it
+carried the same grants.
+
+### Revoked rather than given a refusing policy
+
+A policy that matches nothing produces the identical silent `200`. Only the
+absence of the grant makes Postgres refuse before it looks at a row. "RLS
+decides rows, grants decide columns" (D95); a verb the client has no business
+using is not a row question at all.
+
+**No capability was lost, and that was checked rather than assumed.** Every
+write to those ten tables already goes through the service role
+(`metric_snapshots`, `ledger_weekly`, `trends`, `leads`) or a `security definer`
+function that runs as its owner: `handle_new_user`,
+`ensure_workspace_for_current_user`, `save_onboarding`, `delete_workspace`. The
+only direct client write in the app is `key_results`, which keeps all four
+policies — and two tests assert the two nearest neighbours still work, so an
+over-broad revoke would fail rather than pass quietly.
+
+### The part worth keeping: the test needed no fixtures
+
+Seventeen cases, each filtering on an id that matches nothing —
+`00000000-…`, `id=eq.0`, `no-such-lead-<runId>`. **Postgres checks the table
+privilege before it looks for a row**, so a refusal proves the *verb* is refused
+and cannot be a row that happened to be hidden. The first instinct was to seed a
+row per table per verb, which would have been thirty fixtures proving something
+weaker.
+
+Run before the migration: **18 failed, every one `expected 200 to be 403`** —
+the hole, on every table, in one screen. After: 81 passed.
+
+### One correction the run produced
+
+The anonymous case came back **401**, not 403. PostgREST maps `42501` by whether
+the caller presented an identity: anonymous gets 401 because "authenticate and
+try again" is the useful hint, authenticated gets 403 because it has and still
+may not. Both carry `42501`, so the error **code** is the assertion that holds
+for both roles and the status is asserted per role.
+
+Gates: lint, typecheck, **81 RLS/DB**, migration-safety (9 additive) — green.
 ## 2026-11-21 · D104 · The gate was a GitHub feature we do not have, so the order changed instead: migrate first, then merge
 
 **Vlad's decision, and he found the fault before the gate was ever armed.** D93

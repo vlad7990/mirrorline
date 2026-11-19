@@ -721,6 +721,146 @@ describe('a member moves a post, and only moves it', () => {
 })
 
 /**
+ * The audit D96 came out of: every table, every verb we rely on being
+ * impossible.
+ *
+ * B2.2 found one table where an UPDATE with a grant and no policy answered
+ * **200 with an empty array** — a silent success. The cause was Supabase's
+ * default privileges, which every `create table` in this schema inherited, so
+ * the bug could not have been specific to that table.
+ *
+ * **No fixtures, on purpose.** Each case filters on an id that matches nothing,
+ * which is what makes the assertion sharp: Postgres checks the table privilege
+ * before it looks for a row, so a refusal here is the *verb* being refused and
+ * cannot be a row that happened to be hidden. Before
+ * `20261119050000_grants_match_policies.sql` every one of these answered
+ * `200 []`.
+ */
+describe('a verb we rely on being impossible refuses out loud (D96)', () => {
+  const NO_SUCH_UUID = '00000000-0000-0000-0000-000000000000'
+
+  interface RefusalCase {
+    readonly table: string
+    readonly verb: 'update' | 'delete'
+    /** Matches nothing, so only the privilege can decide the answer. */
+    readonly filter: string
+    /** A real column, so the request reaches Postgres rather than failing to parse. */
+    readonly patch?: Readonly<Record<string, unknown>>
+  }
+
+  // The three verbs absent here — workspaces.update, profiles.update and
+  // alerts.update — each have a policy and are meant to work.
+  const REFUSALS: readonly RefusalCase[] = [
+    { table: 'profiles', verb: 'delete', filter: `id=eq.${NO_SUCH_UUID}` },
+    {
+      table: 'memberships',
+      verb: 'update',
+      filter: `id=eq.${NO_SUCH_UUID}`,
+      patch: { role: 'owner' },
+    },
+    { table: 'memberships', verb: 'delete', filter: `id=eq.${NO_SUCH_UUID}` },
+    { table: 'workspaces', verb: 'delete', filter: `id=eq.${NO_SUCH_UUID}` },
+    {
+      table: 'social_accounts',
+      verb: 'update',
+      filter: `id=eq.${NO_SUCH_UUID}`,
+      patch: { handle: `@audit_${runId}` },
+    },
+    { table: 'social_accounts', verb: 'delete', filter: `id=eq.${NO_SUCH_UUID}` },
+    {
+      table: 'kpi_definitions',
+      verb: 'update',
+      filter: `key=eq.no_such_kpi_${runId}`,
+      patch: { name: `audit ${runId}` },
+    },
+    { table: 'kpi_definitions', verb: 'delete', filter: `key=eq.no_such_kpi_${runId}` },
+    { table: 'metric_snapshots', verb: 'update', filter: 'id=eq.0', patch: { value: 1 } },
+    { table: 'metric_snapshots', verb: 'delete', filter: 'id=eq.0' },
+    { table: 'ledger_weekly', verb: 'update', filter: 'id=eq.0', patch: { posts: 1 } },
+    { table: 'ledger_weekly', verb: 'delete', filter: 'id=eq.0' },
+    { table: 'alerts', verb: 'delete', filter: `id=eq.${NO_SUCH_UUID}` },
+    {
+      table: 'leads',
+      verb: 'update',
+      filter: `id=eq.no-such-lead-${runId}`,
+      patch: { niche: `audit ${runId}` },
+    },
+    { table: 'leads', verb: 'delete', filter: `id=eq.no-such-lead-${runId}` },
+    {
+      table: 'trends',
+      verb: 'update',
+      filter: `id=eq.${NO_SUCH_UUID}`,
+      patch: { format: `audit ${runId}` },
+    },
+    { table: 'trends', verb: 'delete', filter: `id=eq.${NO_SUCH_UUID}` },
+  ]
+
+  test.each(REFUSALS)(
+    'a signed-in user cannot $verb $table, and is told so rather than given an empty array',
+    async ({ table, verb, filter, patch }) => {
+      // Act
+      const path = `${table}?${filter}`
+      const response =
+        verb === 'update'
+          ? await restUpdate(asUser(user('a').token), path, patch ?? {})
+          : await restDelete(asUser(user('a').token), path)
+
+      // Assert — the grant is gone, so this never reaches a policy.
+      expect(response.status).toBe(403)
+      expect(response.errorCode).toBe('42501')
+      expect(response.rows).toHaveLength(0)
+    },
+  )
+
+  test('the same holds for anonymous, which is the role the public site holds', async () => {
+    // Act — `leads` is the table the marketing site's own code is nearest to.
+    const response = await restDelete(anonymous, `leads?id=eq.no-such-lead-${runId}`)
+
+    // Assert — **401 here, 403 above, and the same refusal.** PostgREST maps
+    // `42501` by whether the caller presented an identity: an anonymous request
+    // gets 401, because "authenticate and try again" is the useful hint, and a
+    // signed-in one gets 403, because it has authenticated and still may not.
+    // The code is what the two have in common, so it is the real assertion.
+    expect(response.errorCode).toBe('42501')
+    expect(response.status).toBe(401)
+    expect(response.rows).toHaveLength(0)
+  })
+
+  test('an owner can still rename their own workspace — the revokes did not overreach', async () => {
+    // Act
+    const renamed = await restUpdate<Row>(
+      asUser(user('a').token),
+      `workspaces?id=eq.${workspace('a')}`,
+      { name: `Workspace A renamed ${runId}` },
+    )
+
+    // Assert — `workspaces_update_owner` still decides this one, by row.
+    expect(renamed.ok).toBe(true)
+    expect(renamed.rows).toHaveLength(1)
+  })
+
+  test('a member can still update a key result — the one direct client write', async () => {
+    // Arrange — D's cascade, through the service role, to get an id to aim at.
+    const keyResults = await restSelect<Row>(
+      serviceRole,
+      `key_results?objective_id=eq.${workspaceDChildren.objectiveId}&select=id`,
+    )
+    const keyResultId = firstRowId(keyResults, 'key result for the overreach check')
+
+    // Act
+    const updated = await restUpdate<Row>(
+      asUser(user('d').token),
+      `key_results?id=eq.${keyResultId}`,
+      { target: 25 },
+    )
+
+    // Assert
+    expect(updated.ok).toBe(true)
+    expect(updated.rows).toHaveLength(1)
+  })
+})
+
+/**
  * Last, because it destroys workspace D and user D. Vitest runs a file's tests
  * in order, so this block's fixtures are untouched by everything above.
  */
