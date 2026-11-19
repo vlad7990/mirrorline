@@ -136,7 +136,12 @@ test('a proposed target is written, and is still there after a reload', async ({
 
   await page.goto('/app/goals')
 
-  const target = page.getByLabel('Target')
+  // `getByRole`, not `getByLabel`. `getByLabel('Target')` matches by substring,
+  // and `GoalProgress` draws the outcome bar as a `role="img"` whose aria-label
+  // reads "Not measured yet. The target is 120, this quarter." — so the label
+  // locator found the bar as well as the field and failed strict mode. The role
+  // is what distinguishes the one of them you can type into.
+  const target = page.getByRole('spinbutton', { name: 'Target' })
   await expect(target).toHaveValue('120')
 
   await target.fill('440')
@@ -151,7 +156,7 @@ test('a proposed target is written, and is still there after a reload', async ({
   // And after a reload, because a figure that only lives in React state is
   // exactly the bug B2 exists to fix.
   await page.reload()
-  await expect(page.getByLabel('Target')).toHaveValue('440')
+  await expect(page.getByRole('spinbutton', { name: 'Target' })).toHaveValue('440')
 
   await context.close()
 })
@@ -170,13 +175,19 @@ test('a target the parser would refuse is refused with a sentence', async ({ bro
 
   await page.goto('/app/goals')
 
-  // `type="number"` with `min={0}` stops most of these in the browser, which
-  // is a courtesy rather than a control — the action re-checks. Filling a
-  // value the field accepts but the parser rejects proves the server half.
-  await page.getByLabel('Target').fill('-40')
+  // **Not `-40`.** That was the first version of this test and it never reached
+  // the server: `min={0}` makes a negative fail the browser's own constraint
+  // validation, so the form refuses to submit and the action never runs. The
+  // parser's negative branch is therefore unreachable *through this form* — it
+  // exists for a crafted POST, and `goal-cascade.test.ts` covers it directly.
+  //
+  // A value over `MAX_TARGET` (1,000,000,000) is the honest choice here: the
+  // field accepts it, the browser submits it, and only the server can refuse
+  // it. That is the half this test is for.
+  await page.getByRole('spinbutton', { name: 'Target' }).fill('2000000000')
   await page.getByRole('button', { name: 'Propose a new target' }).click()
 
-  await expect(page.getByText(/cannot be negative/i)).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByText(/looks like a typo/i)).toBeVisible({ timeout: 20_000 })
 
   // Nothing was written.
   expect(await readKeyResultTarget(config, seeded.keyResultId)).toBe(120)
