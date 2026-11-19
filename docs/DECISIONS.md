@@ -6216,3 +6216,88 @@ owner's actual account. `sweep-rule.test.ts` now asserts that `you@example.com`,
 `you+newsletters@example.com` and `you+mirrorline@example.com` are all
 untouchable, and that `you+my-e2e-<ancient>@…` does not match either — the tag
 has to be `+e2e-`, not merely contain "e2e".
+
+## 2026-11-18 · D91 · The onboarding submit was never sent, and mirroring a step must not be a navigation
+
+Onboarding's last step stopped completing. The button stayed on "Saving your
+setup…", the URL never left `/app/onboarding`, and the test waiting on the
+redirect timed out. It was recorded as "the server action never settles" and it
+blocked PR #2.
+
+**That diagnosis was wrong, and wrong in a way worth keeping.** The action did
+not fail to settle — it was **never called**. A Playwright trace of the failing
+run contains no POST to `/app/onboarding` at all, while the DOM shows React
+owning the form (`action="javascript:throw new Error('A React form was
+unexpectedly submitted…')"`, its hydration sentinel) and the pending state
+applied. So the form was hydrated, the click was handled, and nothing was sent.
+That is why no server error was ever printed against the dev server, and why
+`save_onboarding` timed at 109ms was never the suspect it looked like. Two
+earlier diagnoses of this symptom were also wrong; this one is recorded with the
+evidence attached so it does not become a third.
+
+### What it actually was
+
+`step-context.tsx` mirrored the step into `?step=` with `router.replace`, which
+is a **navigation**. From Next's own action queue
+(`next/dist/client/components/app-router-instance.js`, 15.5.29):
+
+- `dispatchAction` calls `setState(deferredPromise)` for every action except
+  `ACTION_RESTORE`, and `useActionQueue` does `use(state)` on it — so a
+  navigation in flight **suspends the whole router**;
+- a second navigation dispatched before the first commits sets
+  `pending.discarded = true`, and `handleResult` returns **early** for a
+  discarded action: it neither resolves that promise nor calls
+  `runRemainingActions`;
+- that branch sets `newAction.next = pending.next` but never reassigns
+  `actionQueue.last`, so `last` still points at the discarded node;
+- the form's server action is not a navigation, so it is appended to
+  `actionQueue.last.next` — behind the dead node — and never runs, while React
+  stays suspended on its deferred promise.
+
+Two quick Continues and a Submit is the whole recipe.
+
+### Why it "passed on Monday"
+
+Pure latency. The race is lost only when the second Continue beats the first RSC
+round trip home, and that round trip goes through `middleware.ts`, which
+verifies the token with Supabase **over the network**. Remote, variable latency
+decided it. Verified rather than assumed: `demo-path.spec.ts` was run at the
+exact PR #2 review commit (`593cbd6`) and **failed there too**, same assertion —
+so nothing in the repo changed between the green run and the red one, and there
+was nothing to bisect. It also explains why raising the timeout hid it and the
+symptom came back worse: the submit was not slow, it was absent.
+
+### The fix
+
+`window.history.replaceState`. Next patches it, copies its own history state
+across (`copyNextJsInternalHistoryState`) and dispatches `ACTION_RESTORE`, which
+`dispatchAction` handles **synchronously** — creating no promise and no queue
+entry — so `usePathname` and `useSearchParams` still hold the step, with no
+round trip to stall on and nothing for a later action to queue behind.
+
+The URL still has to carry the step: `e2e/helpers/routes.ts` deep-links
+`?step=2` and `?step=3`, and a reload must return to the panel the reader was
+on. So not writing the URL was never an option — writing it without navigating
+is. The RSC request this removes fetched a byte-identical 8,352-byte payload
+every time in any case: the route is static, and the step is a client concern
+the server has no opinion about.
+
+### The guard, and why it counts instead of racing
+
+The obvious test — hold the navigation open and submit underneath it — **is not
+reliably red**. Next can serve a static route's payload from its prefetch cache,
+in which case no navigation is pending and there is nothing to wedge; six runs
+of that test stayed green on the broken code. A test that passes before the fix
+guards nothing, and `demo-path.spec.ts` is already the proof that racing real
+latency is a coin toss.
+
+`e2e/onboarding-submit.spec.ts` asserts the cause instead of the symptom:
+stepping twice must issue **no** step-bearing RSC request. That is deterministic
+— four before the fix, none after, three runs each way — and narrow enough that
+an unrelated prefetch added later will not trip it. It asserts the URL still
+reaches `?step=3`, so the fix cannot quietly become "stop writing the URL", and
+it asserts the submit reaches `/app/home`, so a wedge arriving by some other
+route still goes red.
+
+`demo-path.spec.ts` is green again, in **3.0s** rather than the 7.3s it used to
+take, because two wasted round trips went with the bug.

@@ -6,6 +6,111 @@
 
 ---
 
+## Handoff — 18 November 2026, evening (the onboarding submit is fixed, and PR #2 is clear to merge)
+
+**Branch** `backend/b1-auth` · **PR #2 open, not merged — merging is Vlad's.**
+Gates: lint, typecheck, **894 unit**, build — all green. **Full e2e twice:
+406 passed / 828 skipped, both runs, zero failures** (12.9m and 12.8m).
+
+The previous note said to stop and not merge PR #2 until onboarding submitted.
+It does now. Here is what it was, because the diagnosis in that note was wrong.
+
+### 1. The submit was never sent — the action was never called
+
+Not "the server action never settles". A Playwright trace of the failing run
+contains **no POST to `/app/onboarding` at all**, while the DOM shows React
+owning the form (`action="javascript:throw new Error('A React form was
+unexpectedly submitted…')"` — its hydration sentinel), the button `type=submit`,
+enabled, inside the form, all five fields populated, and the pending state
+applied after the click. Hydrated, click handled, nothing sent.
+
+That is why **no server error was ever printed** and why `save_onboarding` timed
+at 109ms was never the suspect it looked like. Both of those facts in the old
+note were true; the conclusion drawn from them was not.
+
+### 2. What it actually was: mirroring the step was a navigation
+
+`step-context.tsx` wrote `?step=` with `router.replace`, which is a
+**navigation**. From Next 15.5.29's action queue
+(`next/dist/client/components/app-router-instance.js`):
+
+- `dispatchAction` calls `setState(deferredPromise)` for every action except
+  `ACTION_RESTORE`, and `useActionQueue` does `use(state)` on it — so a
+  navigation in flight **suspends the whole router**;
+- a second navigation dispatched before the first commits marks the first
+  `discarded`, and `handleResult` returns **early** for a discarded action: it
+  neither resolves that promise nor advances the queue;
+- that branch never reassigns `actionQueue.last`, so `last` still points at the
+  dead node, and the form's server action — not a navigation — is appended
+  behind it and never runs.
+
+Two quick Continues and a Submit is the whole recipe. Proven by isolation: with
+the RSC response held open and **two** replaces, zero POSTs and the exact
+reported symptom; with **one** replace, the POST fires and lands on `/app/home`.
+
+### 3. Why it "passed at the review commit"
+
+Pure latency, not a code change. The race is lost only when the second Continue
+beats the first RSC round trip home, and that trip goes through `middleware.ts`,
+which verifies the token with Supabase **over the network**.
+
+Checked rather than assumed: `demo-path.spec.ts` was run at the exact PR #2
+review commit `593cbd6` and **failed there too**, same assertion. So nothing in
+the repo changed between the green run and the red one, and **there was nothing
+to bisect**. It also explains why raising the timeout hid it and the symptom
+returned worse: the submit was not slow, it was absent.
+
+### 4. The fix, and what it must not break
+
+`window.history.replaceState`. Next patches it, copies its own history state
+across and dispatches `ACTION_RESTORE`, which `dispatchAction` handles
+**synchronously** — no promise, no queue entry — so `usePathname` and
+`useSearchParams` still hold the step, with nothing for a later action to queue
+behind.
+
+The URL still has to carry the step: `e2e/helpers/routes.ts` deep-links
+`?step=2` and `?step=3`, and a reload must come back to the right panel. So
+"stop writing the URL" was never an option. The RSC request removed fetched a
+byte-identical 8,352-byte payload every time in any case — the route is static.
+
+### 5. The guard counts navigations instead of racing them
+
+`e2e/onboarding-submit.spec.ts`. The obvious test — hold the navigation open and
+submit underneath it — **is not reliably red**: Next can serve a static route
+from its prefetch cache, so nothing is pending to wedge, and six runs of that
+test stayed green on the broken code. It was written, measured and thrown away;
+a test that passes before the fix guards nothing.
+
+What is deterministic is the cause: stepping twice must issue **no**
+step-bearing RSC request. Four before the fix, none after, three runs each way.
+The spec also asserts the URL reaches `?step=3`, so the fix cannot decay into
+not writing the URL, and that the submit reaches `/app/home`, so a wedge
+arriving by another route still goes red.
+
+`demo-path.spec.ts` is green again at **3.0s**, against 7.3s before the bug —
+two wasted round trips went with it.
+
+### 6. What changed in the suite's arithmetic
+
+**406 passed / 828 skipped**, against the old baseline of 405 / 826. The new
+spec adds one run plus two `onlyProject` skips, so the previous note's skip
+audit (802 project-matrix + 21 `recordings` + 3 `E2E_SIGNUP_EMAIL` = 826) still
+closes, at 828.
+
+### Still needs you
+
+1. **PR #2 is ready to merge, and merging is yours** (D85). Nothing here
+   deploys or promotes.
+2. **`backend/b2-studio` carried the stale STOP note** telling the next session
+   not to merge PR #2; it is retracted in its own commit on that branch. B2.1's
+   `e2e/goals-persist.spec.ts` was blocked entirely by this bug and should now
+   be run.
+3. **`E2E_SIGNUP_EMAIL`** is still unset, so the one UI sign-up test skips.
+4. **The axe-at-390px gap** from the previous note is unchanged and still worth
+   a B1.5 item.
+
+---
+
 ## Handoff — 18 November 2026 (PR #2's four review items are done; one of them found a silent data-loss bug)
 
 **Branch** `backend/b1-auth` · **PR #2 open, not merged.** Gates: lint,
