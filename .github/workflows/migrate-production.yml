@@ -1,0 +1,201 @@
+# Migrations reach production only after Vlad approves, and code only after the
+# migration (docs/DECISIONS.md D93, docs/plan/BACKEND_PHASE.md §1.5a).
+#
+# ==============================================================================
+# Why this exists
+# ==============================================================================
+#
+# Production tracks `main` (D85), so a merge deploys the app. Nothing deploys
+# the schema it needs — migrations have been applied by hand — so the first
+# migration an app change depends on would put new code in front of an old
+# schema, in production, with no warning.
+#
+# ==============================================================================
+# Inert until you turn it on, and loudly rather than silently
+# ==============================================================================
+#
+# Every job is behind `vars.PRODUCTION_MIGRATIONS_ENABLED == 'true'`, a
+# repository *variable* rather than a secret, because it is a switch and not a
+# credential. Until it is set, the `preflight` job runs and says exactly what is
+# missing. **It does not skip quietly**: a disabled safety gate that looks green
+# is the thing this repo keeps finding bugs about.
+#
+# ==============================================================================
+# What you set up once, and why none of it is in this file
+# ==============================================================================
+#
+#  1. A GitHub **Environment** named `production`, with yourself as a
+#     **required reviewer**. That environment, not anything here, is what makes
+#     the migration wait — `environment:` below is the hook it attaches to.
+#  2. Repository secrets `SUPABASE_PRODUCTION_PROJECT_REF` and
+#     `SUPABASE_PRODUCTION_DB_PASSWORD`.
+#  3. **Turn off Vercel's automatic production deploy for `main`.** This is the
+#     half that keeps condition 2 — otherwise Vercel promotes on push and the
+#     code is live before the approval, which is the failure the gate exists to
+#     prevent. Either disable the production branch deploy and let `promote`
+#     below do it — set `vars.PROMOTE_FROM_WORKFLOW=true` and add the secrets
+#     `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` — or keep Vercel's
+#     deploy and add a **deployment check** that blocks promotion until this
+#     workflow succeeds. The first is implemented here; the second needs no code
+#     and is a Vercel setting.
+#
+#     The two switches are separate on purpose: `PRODUCTION_MIGRATIONS_ENABLED`
+#     turns on the gate, `PROMOTE_FROM_WORKFLOW` turns on deploying from here.
+#     Gating migrations is useful on its own; promoting from CI only makes sense
+#     once Vercel's own git deploy is off, and conflating them would arm the
+#     second by accident.
+#
+# **Nothing in this file deploys anything until you have done 1–3.** Merging is
+# still the only thing that deploys, and it is still yours (D85).
+#
+# ==============================================================================
+# One thing that is true today and will not always be
+# ==============================================================================
+#
+# Production and preview **share one Supabase project**: every `SUPABASE_*`
+# variable in Vercel targets both with a single value. So this job currently
+# migrates the database previews and the e2e suite also use. That makes the
+# *gate* less urgent than it will be, and expand/contract
+# (`pnpm migration-safety`) more urgent than it would otherwise be — a
+# destructive statement applied "for preview" is applied to production in the
+# same breath.
+
+name: Migrate production
+
+on:
+  push:
+    branches: [main]
+  # So a migration can be re-run after a failure without an empty commit.
+  workflow_dispatch:
+
+# A second run must not apply migrations while the first is mid-flight.
+concurrency:
+  group: migrate-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: Is the gate configured?
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - id: check
+        env:
+          ENABLED: ${{ vars.PRODUCTION_MIGRATIONS_ENABLED }}
+          HAS_REF: ${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF != '' }}
+          HAS_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD != '' }}
+        run: |
+          if [ "$ENABLED" != "true" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Production migrations are not enabled::Set the repository variable PRODUCTION_MIGRATIONS_ENABLED=true, create the 'production' Environment with yourself as a required reviewer, and add SUPABASE_PRODUCTION_PROJECT_REF and SUPABASE_PRODUCTION_DB_PASSWORD. Until then migrations are applied by hand and a merge can put new code in front of an old schema. See docs/DECISIONS.md D93."
+            exit 0
+          fi
+
+          # Enabled but half-configured is the dangerous state: it looks armed
+          # and is not. Fail rather than notice.
+          if [ "$HAS_REF" != "true" ] || [ "$HAS_PASSWORD" != "true" ]; then
+            echo "::error title=Production migrations are enabled but not configured::PRODUCTION_MIGRATIONS_ENABLED is true but SUPABASE_PRODUCTION_PROJECT_REF or SUPABASE_PRODUCTION_DB_PASSWORD is missing."
+            exit 1
+          fi
+
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+  # Expand/contract, checked again here rather than trusted from the PR. CI runs
+  # it on the branch; this runs it on what actually reached `main`, because a
+  # merge can combine two individually-additive migrations into a broken pair.
+  safety:
+    name: Migrations are additive
+    needs: preflight
+    if: needs.preflight.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm migration-safety
+
+  migrate:
+    name: Apply migrations (waits for approval)
+    needs: [preflight, safety]
+    if: needs.preflight.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    # This line is the gate. The `production` Environment's required reviewer is
+    # what holds the job; without that setting this runs straight through.
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Show what would be applied
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD }}
+        run: |
+          supabase link --project-ref "${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF }}"
+          supabase migration list --linked
+
+      - name: Apply
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD }}
+        run: supabase db push --linked
+
+      - name: Confirm local and remote agree
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD }}
+        run: supabase migration list --linked
+
+  # Condition 2: the code goes live *after* its schema, never before.
+  #
+  # Guarded by `vars.PROMOTE_FROM_WORKFLOW`, **not** by whether VERCEL_TOKEN is
+  # set. The `secrets` context is not available in a job-level `if:` — GitHub
+  # exposes only `github`, `needs`, `vars` and `inputs` there — so a condition
+  # on a secret silently evaluates to empty and the job never runs. The token is
+  # checked inside the step, where `secrets` does reach.
+  #
+  # Leave the variable unset to keep the other arrangement: Vercel's own git
+  # deploy, gated by a deployment check that waits for this workflow. Nothing
+  # here needs removing for that.
+  promote:
+    name: Promote production
+    needs: migrate
+    if: ${{ vars.PROMOTE_FROM_WORKFLOW == 'true' }}
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Refuse rather than half-deploy
+        run: |
+          missing=""
+          [ -n "$VERCEL_TOKEN" ] || missing="$missing VERCEL_TOKEN"
+          [ -n "$VERCEL_ORG_ID" ] || missing="$missing VERCEL_ORG_ID"
+          [ -n "$VERCEL_PROJECT_ID" ] || missing="$missing VERCEL_PROJECT_ID"
+          if [ -n "$missing" ]; then
+            echo "::error title=PROMOTE_FROM_WORKFLOW is on but secrets are missing::Missing:$missing. The migration has already been applied, so production is now ahead of its deployed code — promote manually or add the secrets and re-run."
+            exit 1
+          fi
+
+      # `--token` is read from the environment, so it never appears in a command
+      # line that shows up in the log.
+      - name: Deploy and promote
+        run: |
+          npx --yes vercel@latest pull --yes --environment=production
+          npx --yes vercel@latest build --prod
+          npx --yes vercel@latest deploy --prebuilt --prod

@@ -39,6 +39,13 @@ jobs:
       - name: Licence check
         run: pnpm licence-check
 
+      # Expand/contract (D93). Production tracks main and the migration job
+      # waits for a human, so a destructive migration would leave production
+      # running one half of the change. Checked here on the branch, and again in
+      # migrate-production.yml on what actually reached main.
+      - name: Migration safety
+        run: pnpm migration-safety
+
   # Engine v0. Its own job: a different language, a different toolchain, and
   # nothing in it depends on the web build passing first.
   pipeline:

@@ -6349,3 +6349,94 @@ normal way to keep a feature branch current, and the alternative (merging main
 back in repeatedly) buries the branch's own commits in merge noise, which is
 exactly what made "confirm it shows only B2 commits ahead" a reasonable thing
 for Vlad to ask for and check.
+
+## 2026-11-19 · D93 · Production migrations are gated on Vlad's approval, and two conditions come with it
+
+**Vlad's decision**, answering open question D-a in `BACKEND_PHASE.md` §10. The
+options were a gated job, an automatic one, or a manual dispatch. **A: gated.**
+
+A GitHub **Environment** named `production` with Vlad as a **required
+reviewer**, and a workflow — `.github/workflows/migrate-production.yml` — that
+runs `supabase db push` on merge to `main` and waits for him.
+
+This keeps D85 intact. Merging is still the only thing that deploys the app, and
+merging is still his; the schema gets one deliberate extra click, because a bad
+migration is the one deploy that reverting a commit does not undo.
+
+### Condition 1 — expand/contract, and it is enforced rather than asked for
+
+**Every migration must be compatible with the code currently in production**, so
+that approving late never breaks anything. Destructive changes — drop, rename,
+retype, `set not null` — only in a **later** PR, once the code no longer uses
+the old shape.
+
+The reason is the gate itself. Between the merge and the approval, production
+runs **new code against the old schema**. After a Vercel rollback it runs **old
+code against the new schema**, because a rollback moves the code back and
+nothing moves the schema back. Only an additive migration survives both
+directions, and a review checklist is not enough: the once it is forgotten is
+the once it is 2am.
+
+So it is a gate, in the shape this repo already uses for licences and GSAP
+scope: **`pnpm migration-safety`** (`scripts/migration-safety.mjs`, 17 tests).
+It reads every migration, strips comments so prose *about* dropping a column is
+not a finding, and fails on `drop table`, `drop column`, `drop view`,
+`rename to`, `rename column`, `alter column … type` and `set not null`.
+`drop policy` and `drop function` are deliberately **not** on the list —
+`create or replace function` is how every RPC here is revised.
+
+A contract migration is legitimate eventually, so there is an escape hatch, and
+it lives **in the SQL file** rather than in a CI variable or a commit message:
+
+    -- contract-migration: approved
+
+A marker in the file is one somebody has to open the file to add. It runs in
+`ci.yml` on the branch and again in the migration workflow on what actually
+reached `main` — because two individually-additive migrations can merge into a
+broken pair.
+
+### Condition 2 — the code goes live after its schema, never before
+
+Production currently auto-deploys on push to `main`, which would put the code
+live **while the migration is still waiting for approval** — precisely the
+failure the gate exists to prevent. Two ways to fix it, and the workflow
+supports either:
+
+- **Turn off Vercel's automatic production deploy for `main`** and let the
+  workflow's `promote` job deploy after `migrate` succeeds. Implemented.
+- **Keep Vercel's deploy and add a deployment check** that blocks promotion
+  until the workflow passes. No code; a Vercel setting.
+
+### What is true today, and why we built it anyway
+
+**Production and preview share one Supabase project.** Verified rather than
+assumed: every Supabase variable in the Vercel project —
+`SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+`SUPABASE_SERVICE_ROLE_KEY` — carries `target: ["production", "preview"]` with a
+single value, and `hiddenProductionEnvCount` is `0`. There is no
+production-only override, so production serves `qypakxvxnjmsvxmxiynf`, the same
+project `supabase/config.toml` is linked to and the e2e suite writes to.
+
+Two things follow, and they pull in opposite directions:
+
+- **The gate is not yet load-bearing.** Approving a push to "production" today
+  approves a push to the database previews already use. It becomes
+  load-bearing when the separate production project exists — which is why it is
+  built now, while there is nothing to lose by getting it wrong.
+- **Condition 1 is load-bearing immediately.** A destructive statement applied
+  "for preview" is applied to production in the same breath. There is no window
+  in which expand/contract is optional, and today there is not even a second
+  database to practise on.
+
+**And one thing worth saying out loud:** the e2e suite creates real auth users
+in the project production serves, and its teardown deletes `e2e+`-tagged
+accounts from it. The sweep is narrow and tested — `sweep-rule.test.ts` asserts
+that `you@example.com`, `you+newsletters@…` and `you+mirrorline@…` are all
+untouchable — so this is not a live hazard. It is a reason the split is worth
+doing before there is a client, rather than after.
+
+Nothing in the workflow runs until Vlad sets the repository variable
+`PRODUCTION_MIGRATIONS_ENABLED=true`, creates the environment and adds the two
+secrets. Until then its preflight job prints a notice naming exactly what is
+missing — **it does not skip quietly**, because a safety gate that is off and
+looks green is the failure mode this repo keeps rediscovering.

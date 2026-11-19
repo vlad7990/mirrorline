@@ -20,6 +20,7 @@
     "test:rls-db": "vitest run --config vitest.db.config.ts",
     "screenshots": "playwright test --project=screenshots",
     "licence-check": "node scripts/licence-check.mjs",
+    "migration-safety": "node scripts/migration-safety.mjs",
     "design:lint": "npx --yes @google/design.md lint DESIGN.md"
   },
   "devDependencies": {
