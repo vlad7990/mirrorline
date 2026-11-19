@@ -1,18 +1,59 @@
 # Backend phase — the plan
 
-**Status: plan only. Nothing in here is built.** Written 16 November 2026, at
-the end of the site/prototype phase, against the repo as it stands on
-`v4/site-and-metrics`.
+**Status: B1 is built and merged. Everything from B1.5 onward is still plan
+only.** Written 16 November 2026 at the end of the site/prototype phase;
+**revised 19 November 2026** against `main` at `cbdda37`.
 
-**Updated 16 November 2026 with Vlad's answers** — D76 (previews share one
-database), D77 (I create the Stripe test products), D78 (n8n is deferred; B4
-emails instead), D79 (auth mail stays on Supabase's sender) and D80 (the plan
-now covers cancellation, account deletion and a self-service export, because
-the site already promises all three). §1, §3, §4, §7 and §8 say what was
-decided rather than what was assumed.
+> **Section numbers are an API. Do not renumber them.** `lib/supabase/env.ts`
+> and `/api/health/supabase` print *"see docs/plan/BACKEND_PHASE.md §7"* **to
+> the user** when keys are missing, and `rls.db.test.ts`, `auth-forms.tsx` and
+> `e2e/auth.setup.ts` cite §1 and §7 in comments. That is why this revision adds
+> **§1.5** and **§5.5** rather than shifting §2–§9 down: a renumber would
+> silently turn a live error message into a wrong one. New phases get decimal
+> sections; the phase names (B1…B7) and the section numbers were already
+> different sequences.
+
+### What changed since the first draft
+
+- **B1 is done and in `main`** (PR #2, merged 19 November as `cbdda37`). Real
+  auth, `profiles`, `memberships`, every RLS policy proved against a live
+  instance, workspace bootstrap, onboarding's write, workspace deletion and the
+  rows export. §1 is kept as a record of what shipped rather than a plan.
+- **Production exists, and it tracks `main`** (D85). Vercel's production branch
+  is `main`, the production URL is `mirrorline-eosin.vercel.app`, and production
+  holds its own environment variables. **Merging is the only thing that
+  deploys**, and it is Vlad's. The original draft said "no production deploys"
+  because there was no production; the rule is now stricter rather than looser,
+  and it is why §1.5's first item exists at all.
+- **Previews have a database** (D76, now real): one shared `mirrorline-preview`
+  project in `us-east-1`, which every preview and the e2e suite point at.
+  `supabase/README.md`'s "the database is optional today" is no longer true of
+  `/app/*` — it is true only of the marketing site.
+- **13 tables in `public`**, not eleven: `profiles` and `memberships` joined the
+  original eleven in B1. **All 13 carry policies now** — the draft's "RLS is
+  enabled on all eleven and there is not one policy" was the most important
+  line in it, and it is spent.
+- **D91 — the onboarding lesson**, which changed how this plan proves things.
+  Onboarding's submit silently stopped working: the form hung for ever, and the
+  diagnosis "the server action never settles" was wrong three times over. The
+  action was never *called*. Mirroring a wizard step into the URL with
+  `router.replace` dispatched a navigation, and two overlapping navigations
+  strand every later action — a server action included — in Next's action
+  queue. Three lessons are now load-bearing in §8:
+  **(a)** a test that passes before the fix guards nothing, so every "done
+  when" below names a check that fails without the work;
+  **(b)** never raise a timeout to make a symptom go away;
+  **(c)** a latency-dependent race looks exactly like "the environment
+  changed", so "no code changed between the green run and the red one" is not
+  evidence that a cause is environmental.
+- **D92 — force-pushing** is now aimed at `main` and at branches under someone
+  else's review, with `--force-with-lease` allowed on your own feature branch
+  after a rebase. Relevant here because §1.5's migration gate and its e2e
+  sharding both assume feature branches are rebased rather than merged back
+  into.
 
 Read `docs/plan/ENGINE_WIRING.md` for how the media engine is already joined to
-the app, and `supabase/README.md` for why the database is optional today.
+the app, and `supabase/README.md` for the database's history.
 
 ---
 
@@ -23,14 +64,17 @@ the prototype:
 
 | Already here | Where | State |
 |---|---|---|
-| **The schema for metrics and goals** | `supabase/migrations/20261113120000_metrics_and_goals.sql` | Eleven tables — `workspaces`, `goals`, `objectives`, `key_results`, `kpi_definitions`, `metric_snapshots`, `ledger_weekly`, `alerts`, `social_accounts`, `leads`, `trends`. **RLS is enabled on all eleven and there is not one policy.** |
+| **The schema, with policies** | `supabase/migrations/` (6 files) | **13 tables** — the original eleven (`workspaces`, `goals`, `objectives`, `key_results`, `kpi_definitions`, `metric_snapshots`, `ledger_weekly`, `alerts`, `social_accounts`, `leads`, `trends`) plus `profiles` and `memberships` from B1. **Every one carries policies now**, proved against a live instance by `rls.db.test.ts`. |
+| **Auth, workspaces and ownership** | `lib/supabase/`, `middleware.ts`, `app/(auth)/` | B1, merged. Email + password, magic link, reset, Remember me; `ensure_workspace_for_current_user` at sign-in; `save_onboarding`; owner-only workspace deletion that refuses while other members remain; the rows export read as the user. |
 | **The twelve KPI definitions** | `supabase/seed.sql` | Idempotent, and `lib/studio/kpi-seed.test.ts` fails if it drifts from the TypeScript. |
 | **A storage adapter chosen at runtime** | `lib/leads/scan-store.ts` | Supabase when `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` are set, a git-ignored JSON file otherwise. |
 | **An n8n notifier** | `lib/leads/scan-store.ts` → `notifyN8n` | Posts when `N8N_WEBHOOK_URL` is set. Nothing sets it, and **nothing will this phase** — D78 defers n8n and the adapter stays exactly as it is, inactive. |
 | **The engine seam** | `lib/engine/{jobs,runner,types}.ts`, `/api/engine/*` | Jobs are directories under `.data/engine-jobs`; `services/pipeline` does the work through `adapters/`. |
 
-So: **the tables exist and nothing is allowed to read them, the adapter exists
-and has no credentials, and every studio screen still reads sample data.**
+So, as of 19 November: **the tables exist and are properly fenced, the adapter
+has its credentials, and the studio has started coming off sample data — Goals
+and the Results goals-tab read the real workspace (B2.1, in flight on
+`backend/b2-studio`). Every other studio screen still reads `packages/mock`.**
 
 Two things CLAUDE.md's repo layout promises that do **not** exist:
 `automation/n8n/` (no docker-compose, no exported workflow) and any Stripe code
@@ -38,17 +82,35 @@ at all — `STRIPE_TEST_SECRET_KEY` appears in exactly one test, as a string.
 **The first stays missing**: D78 defers n8n out of this phase. The second is
 B3.
 
-And three things the **site** promises that the app does not have: a cancel
-control (`/legal/cancellation-refunds` and five other places), a working
-export (two stub buttons in Settings) and account deletion (`/legal/privacy`,
-with no control at all). D80 puts all three in this phase — §1, §2 and §3.
+And three things the **site** promised that the app did not have. Two are now
+built: **account deletion** (owner-only, typed confirmation, refuses while
+other members remain) and the **rows export**, both shipped in B1. The third —
+a **cancel control**, promised on `/legal/cancellation-refunds` and five other
+places — is still missing, and is B3 (§3).
+
+**One more promise this revision adds to the list**, because nothing in the
+first draft covered it: production now exists and tracks `main` (D85), but
+**migrations are applied by hand**. A merge deploys the app and *not* the
+schema it needs, which is a production outage waiting for the first migration
+that matters. That is §1.5's first item.
 
 ---
 
-## 1. B1 — Real auth, workspaces and RLS
+## 1. B1 — Real auth, workspaces and RLS — **DONE (PR #2, `cbdda37`)**
 
-**The piece everything else waits on.** Until a request carries a user, no
-policy can be written and no row can be owned.
+**The piece everything else waited on.** Kept as a record of what shipped, not
+as a plan. Everything in this section is built and in `main`; where the plan and
+the result differ, the difference is noted inline.
+
+Two things worth carrying forward:
+
+- **The RLS tests run against a real instance** (`pnpm test:rls-db`, 49 tests).
+  The draft insisted on this and it was right: a mocked RLS test proves nothing.
+- **The onboarding submit was broken for two days inside this phase** and the
+  cause was not in B1's auth, its RLS or its RPC — it was a client-side
+  navigation stranding a server action (D91). It is listed here because the
+  temptation was to look at the new, server-side, security-shaped code, and the
+  bug was in the wizard's URL mirroring.
 
 - **Supabase Auth, email + password, plus a magic link.** No social login: it
   adds an OAuth app per provider for a product whose users arrive from a sales
@@ -117,14 +179,150 @@ promise with no mechanism is the thing this product was built to stop doing.
 The export itself is B2, because it is a read of studio data; the deletion is
 B1, because it is an auth and ownership question.
 
+## 1.5 B1.5 — Foundations, before any more features
+
+**New in this revision.** None of this is a feature and all of it is now owed,
+because B1 shipping changed the facts: there is a production, it tracks `main`,
+and it has users-of-one. Six items, roughly in order of what breaks first.
+
+### 1.5a Migrations reach production, through a gate (highest priority)
+
+**Today a merge to `main` deploys the app and not the schema.** Production has
+its own Supabase project and its own variables (D85); migrations are applied by
+hand. The first migration that an app change depends on will therefore deploy
+broken code against an old schema, in production, with no warning.
+
+- **A GitHub Action on merge to `main`** runs `supabase db push` against
+  production, with the project ref and database password in repository secrets.
+- **Gated, not automatic.** A GitHub Environment with a required reviewer, so
+  the job waits for Vlad. "Merging is the only thing that deploys" (D85) stays
+  true of the app; the schema gets one deliberate extra click, because a bad
+  migration is the one deploy you cannot roll back by reverting a commit.
+- **Forward-only, and every migration additive.** No destructive statement in a
+  migration that ships with app code that still reads the old shape: add a
+  column, deploy, backfill, then drop in a later migration. The three-step is
+  tedious and it is the only version that survives a rollback.
+- **The same Action runs against the preview project on every PR**, so a
+  migration is proved before it is near production.
+- **Done when:** a PR adding a trivial migration shows it applied to preview
+  automatically and to production only after an approval, and
+  `supabase migration list` agrees across both.
+
+### 1.5b Error tracking
+
+**Right now a production error is invisible.** D91 took two days partly because
+nothing recorded that a server action was never reaching the server; the only
+signal was a human noticing a hung button.
+
+- **Sentry** (or equivalent) on both the Next runtime and the browser, with
+  source maps uploaded at build and releases tagged by commit.
+- **Scrub before send.** No `email`, no `outcome_text`, no niche free-text, no
+  tokens. The scrubber is a test, not a config comment — the whole point of
+  this product is not leaking what clients tell us.
+- **An alert that would have caught D91**: a client-side route that reports a
+  pending transition over N seconds, and an unhandled-rejection rate. A hang
+  reports nothing by default, which is exactly why it went unnoticed.
+- **Done when:** a deliberately thrown error in a preview appears with a
+  readable stack and the release tag, and a seeded PII field is absent.
+
+### 1.5c A scheduler
+
+B6 (metrics) and the weekly ledger both need something to run on a clock, and
+there is nothing today.
+
+- **Vercel Cron** for anything that is an HTTP call we already have a route
+  for; **`pg_cron`** for anything that is pure SQL and should not depend on the
+  app being up.
+- **Recommendation: Vercel Cron**, because the metrics pulls are HTTP calls to
+  third-party APIs with token refresh, which belongs in app code next to the
+  adapters rather than in a database extension. `pg_cron` stays the right answer
+  for ledger rollups, which are SQL over rows we already hold.
+- **Every scheduled route is idempotent and authenticated** — a `CRON_SECRET`
+  header, because a public URL that triggers an ingest is an invitation.
+- **Done when:** a scheduled job runs on time in preview, a second
+  simultaneous invocation changes nothing, and an unauthenticated call is
+  refused.
+
+### 1.5d Turnstile on sign-up
+
+`/sign-up` posts to a rate-limited sender on a real project. Nothing stops a
+script making accounts, and the first time somebody does, the auth sender is
+spent for everyone (D79's limit is already a live constraint).
+
+- **Cloudflare Turnstile**, verified server-side in the sign-up action before
+  the Supabase call. Free, and no visible challenge for a normal person.
+- **Also on the Niche Scan form** (`/api/leads`), which is the other
+  unauthenticated write.
+- **The e2e suite needs a bypass**, through a test-mode site key that always
+  passes, not an environment flag that disables the check — a flag that turns
+  off a protection is one deploy away from being set in production.
+- **Done when:** sign-up with no token is refused server-side, and
+  `sign-up-ui.spec.ts` still passes.
+
+### 1.5e e2e sharding
+
+The suite is **~13 minutes** for 406 tests, run serially per project. Twice
+through, which is the standing requirement before a merge, is half an hour.
+
+- **Shard across runners** (`--shard=i/n`), with the `setup` project's session
+  established per shard — it signs in through the real form, so each shard
+  needs its own account rather than a shared storage state.
+- **The teardown sweep already supports this**: accounts are namespaced per run
+  and swept by age, so parallel shards cannot delete each other's fixtures.
+  That design decision was made for concurrent branches and pays for itself
+  here.
+- **Keep `fullyParallel` off within a shard** until the shared-session specs are
+  audited — several assume they are the only writer on the shared account.
+- **Done when:** four shards finish in under five minutes with the same pass
+  count as a single run, twice in a row.
+
+### 1.5f An axe pass at 390px, and a skip reason that tells the truth
+
+The previous handoff's audit found this and it is still open. **Axe never runs
+at 390px.** All four axe-using specs (`a11y`, `copilot-site`,
+`copilot-studio`, `home-sections`) are chromium-only, and
+`responsive.spec.ts` — which `a11y.spec.ts`'s skip reason cites as owning
+390px — asserts horizontal scroll and the sidebar/drawer swap and **never calls
+axe**.
+
+- **Run axe at 390px** across the public pages and the studio shell. Touch
+  targets, focus order through the mobile drawer, and aria on the hamburger are
+  all unverified today.
+- **Fix `a11y.spec.ts`'s skip reason.** It currently overstates what covers it,
+  which is worse than no comment: it tells the next person the gap is closed.
+- **Expect findings.** Two are already known from the goals work: the outcome
+  bar's aria-label reads *"The target is 120 , this quarter"* with a stray space
+  before the comma, and `getByLabel('Target')` matching both that bar and the
+  input is a sign the bar's label is doing too much.
+- **Done when:** axe runs at both viewports on both surfaces with the D75
+  `moderate` threshold, and the skip reasons name what actually covers what.
+
 ## 2. B2 — The studio off sample data
 
 In dependency order, because each is a different shape of write:
 
 1. **Goals and KPIs** (`goals`, `objectives`, `key_results`, `kpi_definitions`,
-   `metric_snapshots`). Mostly reads; the one write is a **target** on a key
-   result, which is what "targets persisting" means. 15 §7 is the schema and it
-   is already in the migration.
+   `metric_snapshots`) — **B2.1, built, on `backend/b2-studio`.** Mostly reads;
+   the one write is a **target** on a key result, which is what "targets
+   persisting" means. 15 §7 is the schema and it was already in the migration.
+
+   Three things it settled that the rest of B2 inherits:
+
+   - **`KeyResult.current` is `number | null`, not `number`.**
+     `metric_snapshots` stays empty until B6, so no real workspace has a current
+     value. A `0` would claim we measured and found nothing; the baseline would
+     claim nothing changed. Screens read "Not measured yet" and `keyResultPace`
+     has an `unmeasured` state. **Every screen B2 converts has the same
+     question to answer**, and the answer is a null, not a zero.
+   - **No studio screen falls back to sample data.** `GoalsBoard` defaulted to
+     the demo cascade when handed none — right for the marketing site, wrong in
+     the studio, where a client would have seen somebody else's goal with
+     nothing saying so. That is exactly what non-negotiable 7's label exists to
+     prevent, and the fix was to render an empty state instead.
+   - **Authorisation is one RLS check, not a re-derivation.** The target write
+     runs as the user with `key_results_update_members` as the only gate, and
+     `.select()` on the update so a row RLS filtered out reports not-found
+     rather than a silent success.
 2. **Calendar moves.** `lib/studio/schedule-moves.ts` is already a pure module
    — `PostMove`, `applyMoves`, `movedPost` — with the moves held in a React
    context. It needs a `scheduled_posts` table and a `post_moves` write, and
@@ -216,6 +414,87 @@ The ids are test-mode `price_…` values. They are not secrets, they are not in
 `.env`, and they are committed — a `price_` id without `sk_test_` buys
 nothing.
 
+### Entitlements — what the money actually buys
+
+**New in this revision.** The draft had a `subscriptions` table with a status
+and stopped there, which is enough to say "they paid" and not enough to answer
+"so what are they allowed to do". Every screen that has to make that decision
+will otherwise invent its own answer.
+
+**One module, `lib/billing/entitlements.ts`, pure and tested**, that turns a
+subscription row into a capability set. Screens ask the capability, never the
+plan name — `canSchedule(entitlements)`, not `plan === 'creator'`. A plan name
+scattered through components is how a price change becomes a bug hunt.
+
+#### What each plan unlocks
+
+Derived from `pricing-tiers.ts` and 09 §Services, which stay the only place
+prices and posts-per-week live. The entitlement module reads them; it does not
+restate them.
+
+| | Pilot ($750, one-off) | Creator ($499/mo) | Growth / Scale / Studio |
+|---|---|---|---|
+| Posts per week | per 09 §Services | per 09 §Services | sales-led |
+| Connected accounts | 1 | per 09 | per 09 |
+| Workspaces | 1 | 1 | many — **not this phase** (§9) |
+| Niche Scan | yes | yes | yes |
+| Studio screens | all | all | all |
+| Export (rows) | **always**, see below | always | always |
+| Scheduling / publishing | **blocked until B7** for everyone | — | — |
+
+**The row export is never gated.** `/legal/cancellation-refunds` says it "keeps
+working after you cancel", so it is gated on having an account and nothing
+else. The entitlement module must not be able to express "export denied", so
+there is no capability for it — the absence is the enforcement, and §8 proves
+it.
+
+#### Pilot expiry
+
+**Pilot is two weeks of work, not a subscription**, and a one-off payment has
+no `current_period_end` for a webhook to move. So its end has to be written
+down rather than inferred:
+
+- `checkout.session.completed` for the Pilot price writes
+  `subscriptions.pilot_expires_at = now() + interval '14 days'` alongside the
+  plan. **One timestamp, set once, from the server's clock** — never from the
+  client, and never recomputed on read, or a redeploy silently extends
+  everybody's trial.
+- **Expiry degrades, it does not lock out.** After it passes: the studio stays
+  readable, the export keeps working, and anything that would schedule or
+  consume engine time is refused with a sentence naming what ended and what to
+  do. Deleting access to data somebody paid for is not a billing state, it is a
+  data-loss bug.
+- **A real end date on screen, from the first day.** `plan-card.tsx` shows
+  "Your Pilot runs until 3 December" rather than a countdown that appears at
+  the end. 15 §1's honesty rule applies to our own commitments too.
+- **Expiry is not a webhook.** Stripe sends nothing when a date passes, so the
+  state is computed from the timestamp on read, and any scheduled work checks
+  it at run time. The scheduler in §1.5c is what notices.
+
+#### Add-on gating
+
+09 lists add-ons on top of a plan. They are the same shape of question and get
+the same treatment:
+
+- **Each add-on is its own Stripe price and its own row**, not a boolean on the
+  subscription — a workspace can hold several, and they start and stop
+  independently of the plan.
+- **The capability set is the union of plan and active add-ons**, computed in
+  the one module. A screen never asks "do they have the extra-accounts add-on";
+  it asks how many accounts they may connect.
+- **Removing an add-on is `cancel_at_period_end`, like the plan**, so nothing a
+  client paid for stops mid-month.
+- **An add-on cannot grant what the phase has not built.** Buying extra posts
+  per week before B7 must not imply publishing. The capability set is
+  intersected with a build-time "what exists" set, so an entitlement can never
+  outrun the product — the honest failure is "not available yet", not a
+  schedule that silently never sends.
+
+**A test that would fail without this**: a Pilot whose `pilot_expires_at` is in
+the past still exports its rows and still reads every screen, and is refused
+exactly one thing — the scheduling call — with the sentence that names the
+expiry.
+
 ### Cancellation is in this phase (D80)
 
 `/legal/cancellation-refunds` says **"You cancel from Settings, in one click,
@@ -296,26 +575,171 @@ The smallest piece, because `scan-store.ts` already has both halves.
 burned-in captions, and runs all four compliance rules. What it does not have
 is anywhere to put the result.
 
-- **Jobs move from directories to rows.** `lib/engine/jobs.ts` is the whole
-  surface — `readJob`, `writeJob`, `listJobIds`, and the paths. A `jobs` table
-  plus Supabase Storage for the media, behind those same functions, and
-  `/api/engine/*` does not change.
-- **Storage buckets**: `uploads` (client source video), `renders` (finished
-  cuts), `posters` (stills) — all private, reached by short-lived signed URLs.
-  Nothing public.
-- **A worker, not a request.** Rendering takes minutes and a Vercel function
-  cannot hold it. The pipeline runs where ffmpeg already does — a long-running
-  container or a queue consumer — and the app polls the row, exactly as
-  `use-engine-job.ts` polls today.
+**Split into three in this revision**, because the draft's single bullet list
+hid that these are different risks on different timelines: B5a is a storage and
+upload problem, B5b is a hosting and money problem, and B5c is the thing that
+makes a hand-delivered Pilot possible. **B5a and B5c are worth doing before
+B5b is decided** — a job can be uploaded and reviewed while rendering is still
+run by hand.
+
+### B5a — Uploads go straight to Storage, and a jobs table
+
+**Nothing may pass through a Vercel function body.** Serverless request bodies
+are capped in the single-digit megabytes, and the input here is a podcast
+recording. An upload route is therefore not an option at any size, not merely
+inadvisable for large ones.
+
+- **Resumable, direct-to-Storage uploads.** Supabase Storage's resumable
+  endpoint (TUS), with the browser talking to Storage and the app issuing only
+  a short-lived signed upload target. **Resumable rather than a single PUT**
+  because the realistic client is uploading a 2GB file over domestic Wi-Fi,
+  and a failure at 90% that restarts from zero is the end of their patience.
+- **The app never proxies bytes.** It mints the target, records the row, and
+  watches. No Vercel function ever holds the file.
+- **Buckets**: `uploads` (client source video), `renders` (finished cuts),
+  `posters` (stills) — all private, reached by short-lived signed URLs. Nothing
+  public, ever, including posters.
+- **A `jobs` table replaces the directories.** `lib/engine/jobs.ts` is the
+  whole surface — `readJob`, `writeJob`, `listJobIds`, and the paths — so a
+  table plus Storage behind those same functions leaves `/api/engine/*`
+  unchanged. The seam was built for this.
+- **Ownership is the workspace, enforced by RLS**, with the Storage path
+  prefixed by workspace id and a policy that matches it. A signed URL is a
+  bearer token; the path must not be guessable across tenants.
+- **Done when:** a 2GB file uploads from a browser with the connection
+  interrupted once and resumed, no request body exceeds the function limit, and
+  a second workspace can neither read the object nor see the row.
+
+### B5b — Where the work actually runs, and what it costs
+
+**The open question, and the one with money attached.** Rendering takes minutes
+and a Vercel function cannot hold it. Options, with the trade named rather than
+hidden — this is the decision list at the end of this document, item 2.
+
+| Option | Cost shape | Turnaround | The catch |
+|---|---|---|---|
+| **Fly.io machines** | per-second, scale to zero | fast start | ffmpeg on shared CPU is slow; needs a performance tier |
+| **Railway / Render worker** | always-on monthly | fast | paying for idle between clients |
+| **Modal / Replicate** | per-second GPU/CPU | fast, no ops | per-job cost highest; vendor-shaped code |
+| **A single rented box** | flat monthly, cheapest per minute | fast | ours to patch, back up and monitor |
+
+Whatever wins, the same things are required of it:
+
+- **A queue, not a poll.** Jobs claimed atomically — `select … for update skip
+  locked` over the `jobs` table is enough and needs no broker. Two workers must
+  never claim one job.
+- **Retries with a bound and a dead state.** Attempt count, last error, and a
+  terminal `failed` the UI can explain. An infinite retry on a video that will
+  never render is a bill that grows while nothing improves.
+- **Per-workspace cost metering, recorded as it is spent.** Every LLM call and
+  every compute minute writes a row against the workspace: tokens, model,
+  seconds, and the job. **Not estimated at the end of the month** — metered at
+  the time, because the cap in non-negotiable 11 is only enforceable against a
+  running total. The agents screen already shows "spend this month $43 of $180
+  in caps" from sample data; this is what makes that real.
+- **A hard cap that refuses rather than degrades.** At the cap, new jobs are
+  refused with a sentence. Quietly producing worse output to stay under budget
+  is the kind of thing this product exists not to do.
+- **Done when:** two workers race for one job and exactly one renders it; a
+  deliberately broken input reaches `failed` with a readable reason after a
+  bounded number of attempts; and a workspace's metered spend matches the
+  provider's own figure for the same window to within rounding.
+
+### B5c — The compliance verdict, and an ops console
+
+**This is what makes a hand-delivered Pilot possible**, which is the first
+thing that earns money. A Pilot is two weeks of work for one client; it does
+not need self-serve publishing, it needs us to be able to see the queue, review
+cuts and approve them.
+
 - **The compliance gate becomes a column with a verdict and its reasons**,
   written by the Compliance agent before anything is schedulable.
-  Non-negotiable 6 turns into a database constraint rather than a convention:
-  a cut with no passing verdict cannot be referenced by a scheduled post.
+  Non-negotiable 6 turns into a database constraint rather than a convention: a
+  cut with no passing verdict cannot be referenced by a scheduled post. **A
+  foreign key with a check, not application logic** — the convention is the
+  thing that gets forgotten under deadline.
+- **An internal ops console**, `/ops/*`, behind a role rather than a URL
+  nobody has shared. A `profiles.is_staff` flag, an RLS policy that lets staff
+  read across workspaces, and **an audit row for every staff read of a client's
+  workspace**. Cross-tenant access with no log is the thing that turns one
+  mistake into an unanswerable question later.
+- **What the console does**: list jobs across workspaces with their state, see
+  a cut with its compliance reasons, approve or reject with a note, and retry a
+  failed job. Read-mostly, four actions.
+- **It never edits client content.** Staff approve or reject; they do not
+  rewrite a script or swap a clip. The line matters because the product's claim
+  is that the agents made the video.
+- **Done when:** a staff user reviews and approves a cut for a workspace they
+  are not a member of, the approval is attributed to them, the audit row
+  exists, and a non-staff user gets a 404 — not a 403, which confirms the route
+  exists.
 
-## 6. Posting stays off, and this is the gate
+## 5.5 B6 — Metrics ingestion, read-only
 
-**No posting to Instagram, TikTok or YouTube is built in this phase**, and the
-product already says so on `/pricing` and `/trust`.
+**New in this revision**, and it is the phase that makes the Results Ledger
+mean anything. `metric_snapshots` and `ledger_weekly` have been in the schema
+since 13 November and have never held a row; every KPI on screen is either
+sample data or "Not measured yet" (B2.1's null, §2).
+
+**Read-only, and deliberately before posting.** Pulling insights needs none of
+the publishing permissions, none of the App Review that §6 is blocked on for
+TikTok and Meta, and it is useful on day one: a client who connects an account
+we did not post to still gets their own numbers, which is the honest version of
+"we report outcomes" while the pipeline is hand-run.
+
+- **A scheduled pull per connected account**, on the §1.5c scheduler, writing
+  `metric_snapshots` rows — one per account, per metric, per day. **Append-only
+  and idempotent on `(account, metric, date)`**, so a re-run repairs rather
+  than duplicates. Backfill is the same code with a date range.
+- **`ledger_weekly` is a rollup, not an ingest.** Computed from snapshots in
+  SQL, which is the one job `pg_cron` is better at than the app (§1.5c).
+- **A gap is a gap.** If a pull fails or an account is disconnected, the day
+  has **no row** — never a zero. 15 §5's honesty rule and B2.1's
+  `number | null` are the same decision, and the Accounts tab already renders
+  "We have no measurements for LinkedIn" rather than a row of zeroes.
+- **Token refresh is the real work.** Every platform's access token expires on
+  its own schedule; the refresh lives with the adapter and failures surface as
+  "needs reconnecting" on the account, which Home's alerts already render.
+- **Rate limits are per-app, not per-client**, so the scheduler staggers pulls
+  and records the limit headers. One noisy workspace must not spend the app's
+  budget for everybody.
+
+### The exact read-only scopes, per platform
+
+**Request nothing beyond these.** Every extra scope is a question in App Review
+and a line in a privacy notice. **Confirm each against the current platform
+docs at implementation time** — these names have all changed at least once, and
+the list below is the intent rather than a guarantee of spelling.
+
+| Platform | Scopes | What it buys |
+|---|---|---|
+| **Instagram** (Instagram API with Instagram Login) | `instagram_business_basic`, `instagram_business_manage_insights` | Account and media list; impressions, reach, saves, shares, profile visits. |
+| **Instagram** (via Facebook Login for Business, if the account is Page-linked) | `instagram_basic`, `instagram_manage_insights`, `pages_show_list`, `pages_read_engagement` | Same, through the linked Page. **Only if** the client's setup requires it. |
+| **TikTok** (Display API) | `user.info.basic`, `user.info.profile`, `user.info.stats`, `video.list` | Follower count, profile fields, per-video views, likes, comments, shares. |
+| **YouTube** (Data + Analytics) | `youtube.readonly`, `yt-analytics.readonly` | Channel and video list; views, watch time, subscribers gained, traffic sources. |
+
+**Explicitly not requested:** `instagram_content_publish`,
+`video.publish`/`video.upload`, `youtube.upload`, and
+`yt-analytics-monetary.readonly`. The first three are B7's and are not asked
+for a moment before they are used; the fourth is revenue data we have no reason
+to see.
+
+- **One `social_accounts` row per connection**, holding the platform, the
+  external id, the granted scopes and the token state — **but no token until
+  B7** (§6 and the draft's §2 item 3 both already said this, and B6 does not
+  change it: a read-only token is still a token, so it is stored the same
+  encrypted way B7 describes, or not at all).
+- **Done when:** a connected account's yesterday appears in
+  `metric_snapshots`, re-running the pull adds no second row, a disconnected
+  account produces no row rather than a zero, and the Accounts tab shows the
+  gap in the wording it already ships.
+
+## 6. B7 — Posting, and this is still the gate
+
+**No posting to Instagram, TikTok or YouTube is built until this phase**, and
+the product already says so on `/pricing` and `/trust`. Renumbered as B7 in
+this revision; the gate itself is unchanged, because none of it is ours to
+accelerate.
 
 What has to be true first — all of it yours, none of it code:
 
@@ -331,6 +755,34 @@ What has to be true first — all of it yours, none of it code:
 
 Until then the schedule is a schedule: approved cuts, with times, that nothing
 sends. **The honest version of this is already shipped.**
+
+### What B7 builds, once the approvals land
+
+- **Postiz, as a separate unmodified service** (non-negotiables 3 and 10). It
+  is AGPL, so it runs as its own deployment with its own credentials and we
+  never patch it or link against it. The app talks to it over its API.
+- **Encrypted token storage, and the key is not in the database.** Tokens go in
+  `social_accounts` encrypted at rest with a key held in the environment —
+  Postgres `pgcrypto` with the key passed per statement, or encryption in the
+  app before the write. **Either way the database alone is not enough to
+  decrypt**, because a database backup is the thing most likely to be copied.
+  The service-role key already never reaches the browser (§1); this is the same
+  argument one layer down.
+- **Nothing decrypts outside a server action or a worker.** No token is ever
+  returned by an API route, logged, or put in an error. The §1.5b scrubber lists
+  these fields explicitly.
+- **Refresh is a write, and a failure is visible.** An expired refresh token
+  marks the account as needing reconnection and raises the alert Home already
+  renders — the one case where the client has to act, so it must not be silent.
+- **Revocation on disconnect, not just deletion.** Disconnecting an account
+  calls the platform's revoke endpoint before dropping the row. A token we
+  stopped storing but never revoked is still live.
+- **Publishing is still gated per cut on the compliance verdict** (B5c), and
+  the constraint is in the database rather than in the scheduler.
+- **Done when:** a scheduled post reaches a real test account through Postiz;
+  a cut without a passing verdict cannot be scheduled, proved by the
+  constraint rather than by a UI check; a token is unreadable from a database
+  dump without the environment key; and disconnecting revokes before deleting.
 
 ---
 
@@ -380,6 +832,35 @@ mail credential of its own even though auth mail does not. **Without it B4
 still works** — the lead is written and the notification is logged instead of
 sent — so this blocks the notification, not the feature.
 
+### B1.5 — the foundations, and the first one is a GitHub secret not an env var
+
+**New in this revision.** These are the only new credentials B1.5 needs, and
+the first two live in **GitHub repository secrets** rather than in Vercel,
+because the migration job runs in Actions and not in the app.
+
+| Key | Where | Note |
+|---|---|---|
+| `SUPABASE_PRODUCTION_PROJECT_REF` | GitHub secret | For `supabase db push` against production. Not a secret in truth, but it belongs beside the password. |
+| `SUPABASE_PRODUCTION_DB_PASSWORD` | GitHub secret | The one that applies migrations to production. **Nothing else in the repo should ever hold it.** |
+| `SENTRY_DSN` / `SENTRY_AUTH_TOKEN` | Vercel (both envs) + GitHub secret | DSN is public by design; the auth token uploads source maps at build and is not. |
+| `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | Vercel (both envs) | Site key is public. Use Cloudflare's **always-passes test keys** for the e2e suite, not a flag that disables the check. |
+| `CRON_SECRET` | Vercel (both envs) | Header checked by every scheduled route, so the URL alone cannot trigger an ingest. |
+
+**A GitHub Environment with you as a required reviewer** is the gate in §1.5a.
+That is a repository setting rather than a key, and it is the part that keeps
+"merging is the only thing that deploys" (D85) true of the app while giving the
+schema one deliberate extra click.
+
+### B6 and B7 — the platform credentials, and one key that matters more than the rest
+
+| Key | Phase | Note |
+|---|---|---|
+| Meta app id + secret | B6 read-only, B7 publish | Same app, different scopes; the read-only scopes in §5.5 need no App Review for publishing. |
+| TikTok client key + secret | B6 read-only, B7 publish | Display API scopes for B6; the Content Posting API and its audit are B7's. |
+| Google OAuth client id + secret | B6 read-only, B7 publish | `youtube.readonly` + `yt-analytics.readonly` for B6. |
+| `SOCIAL_TOKEN_ENCRYPTION_KEY` | B7 | **The key that must not live in the database.** Tokens are encrypted with it before the write, so a database dump alone decrypts nothing. Rotating it means re-encrypting every row, so it is generated once and backed up somewhere that is not this repo and not Supabase. |
+| Postiz credentials | B7 | Its own deployment, its own secrets. We never modify it (non-negotiables 3 and 10). |
+
 ### n8n — not this phase (D78)
 
 **No keys needed.** `N8N_WEBHOOK_URL` and the shared secret are deferred along
@@ -407,16 +888,32 @@ developer app + audit, **YouTube** OAuth client + quota. The posting work in
 
 ## 8. Order, and how each step is proved
 
+**Every row names a check that fails without the work.** That is D91's first
+lesson made structural: a test that passes before the fix guards nothing, and
+"it looks right on screen" is how a silently-never-called server action
+survived two days.
+
 | Step | Done when |
 |---|---|
-| B1 auth + RLS | A second workspace cannot read the first, proved against a real instance. Anonymous reads nothing. |
-| B1 deletion | After a workspace is deleted, a **service-role** read returns zero rows for it across all eleven tables — and the last owner can no longer sign in. |
-| B2 studio | Goals, targets and calendar moves survive a reload and a different browser. Sample data still only on marketing. |
+| ~~B1 auth + RLS~~ | **Done.** A second workspace cannot read the first, proved against a real instance (49 RLS tests). Anonymous reads nothing. |
+| ~~B1 deletion~~ | **Done.** After a workspace is deleted, a **service-role** read returns zero rows for it across every table; an owner cannot delete it out from under other members; the last owner can no longer sign in. |
+| **B1.5a migrations** | A PR with a trivial migration shows it applied to preview automatically and to production **only after your approval**, and `supabase migration list` agrees across both. |
+| **B1.5b errors** | A deliberate error in preview arrives with a readable stack and a release tag, and a seeded PII field is **absent** from the payload. |
+| **B1.5c scheduler** | A job runs on time; a second simultaneous invocation changes nothing; an unauthenticated call is refused. |
+| **B1.5d Turnstile** | Sign-up with no token is refused **server-side**, and `sign-up-ui.spec.ts` still passes using a test site key rather than a disabled check. |
+| **B1.5e sharding** | Four shards finish under five minutes with the same pass count as a single run, twice in a row. |
+| **B1.5f axe at 390px** | Axe runs at both viewports on the public pages and the studio shell at the D75 `moderate` threshold, and each skip reason names what actually covers what. |
+| B2 studio | Goals, targets and calendar moves survive a reload and a different browser. **An unmeasured value reads "Not measured yet", never `0`.** Sample data still only on marketing. |
 | B2 export | "Export my data" returns this workspace's rows and **none of a second workspace's**, run as the user rather than the service role. |
 | B3 Stripe | A test card buys a Pilot and a Creator; a replayed webhook changes nothing; a live key is refused at startup. |
+| **B3 entitlements** | A Pilot past `pilot_expires_at` still reads every screen and still exports, and is refused **exactly one** thing — scheduling — with a sentence naming the expiry. An add-on cannot grant a capability the build does not have. |
 | B3 cancellation | Cancel from Settings sets `cancel_at_period_end`, the webhook writes it to our table, "Keep my plan" reverses it, and **the export still works after the period ends**. |
 | B4 scan | A scan request lands in `leads` and emails the notification; **with no mail key the lead is still written** and the notification is logged. |
-| B5 pipeline | A real upload produces cuts, a compliance verdict and a row the studio renders — with posting still impossible. |
+| **B5a uploads** | A 2GB file uploads from a browser with the connection interrupted and resumed; no request body exceeds the function limit; a second workspace can neither read the object nor see the row. |
+| **B5b workers** | Two workers race for one job and exactly one renders it; a broken input reaches `failed` with a readable reason after a bounded number of attempts; metered spend matches the provider's figure to within rounding. |
+| **B5c compliance + ops** | A staff user approves a cut in a workspace they are not a member of, it is attributed, the audit row exists, and a non-staff user gets a **404**. A cut with no passing verdict cannot be scheduled — **proved by the constraint, not the UI**. |
+| **B6 metrics** | A connected account's yesterday appears in `metric_snapshots`; a re-run adds no second row; a disconnected account produces **no row rather than a zero**. |
+| **B7 posting** | A scheduled post reaches a real test account through Postiz; a token is unreadable from a database dump without the environment key; disconnecting **revokes before deleting**. |
 
 Every step keeps the existing gates: `pnpm lint && pnpm typecheck && pnpm test
 && pnpm build && pnpm licence-check`, the e2e suite, and the axe gate — which
@@ -425,8 +922,14 @@ public pages; the studio is not held to it.
 
 ## 9. What this phase deliberately does not do
 
-- **No production deploys and no real money.** Non-negotiable 11, unchanged.
-- **No posting.** §6.
+- **No deploying or promoting, and no real money.** Non-negotiable 11, and
+  **stricter than the first draft**: production now exists and tracks `main`
+  (D85), so a merge is a deploy. Merging is Vlad's, and nothing in this plan
+  deploys or promotes. Stripe stays test mode throughout.
+- **No posting until B7.** §6, unchanged — it is blocked on platform reviews,
+  none of which are code.
+- **No multi-workspace accounts**, even though entitlements now has a row for
+  it. One workspace per account stays the rule until agencies are a phase.
 - **No multi-tenant billing beyond one plan per workspace.** Agencies with many
   clients are a real requirement in 09 and a different schema; not now.
 - **No analytics vendor.** The cookie banner currently tells the truth — "no
@@ -441,3 +944,137 @@ public pages; the studio is not held to it.
   production one is created when there is something to put in it (D76).
 - **No migration of the sample data into the database.** The fictional client
   is a demo, not a seed.
+
+---
+
+## 10. Open decisions — yours, with a recommendation on each
+
+Eight. Each has the options, what it costs to be wrong, and what I would do.
+**Nothing below is being done until you answer**; where a recommendation is
+safe to start with and cheap to reverse, I say so.
+
+### D-a. Does the production migration job need your approval every time?
+
+- **A. Gated on a GitHub Environment reviewer** — the job waits for you.
+- **B. Automatic on merge** — schema and app always in step, no click.
+- **C. Manual `workflow_dispatch`** — you run it when you choose.
+
+**Cost of being wrong:** B applies a bad migration to production with no pause,
+and a migration is the one deploy a revert does not undo. C means a merge can
+deploy app code against an old schema, which is the bug we have today.
+
+> **Recommend A.** It keeps D85's "merging is the only thing that deploys" true
+> of the app while giving the schema one deliberate click. Once a few
+> migrations have gone through cleanly, moving to B is a one-line change — but
+> start with the pause, because the first migration that matters is the one most
+> likely to be wrong.
+
+### D-b. Where does the renderer run? (B5b)
+
+- **A. Fly.io machines**, per-second, scale to zero.
+- **B. An always-on worker** on Railway or Render.
+- **C. Modal or Replicate**, per-second managed.
+- **D. One rented box.**
+
+**Cost of being wrong:** C is the most expensive per job and shapes the code
+around a vendor; D is the cheapest per minute and the most operational work
+(patching, backups, monitoring — all ours); B pays for idle, which at one
+client is most of the month.
+
+> **Recommend A for the Pilot, revisit at ~10 clients.** Scale-to-zero matches
+> a business with one client and bursty work, and Fly's machines are plain
+> containers, so moving to D later is a deployment change rather than a rewrite.
+> **Do not pick C**: per-job cost is worst exactly when volume arrives, and it
+> is the hardest to leave.
+
+### D-c. Vercel Cron or `pg_cron`? (B1.5c)
+
+- **A. Vercel Cron** for everything.
+- **B. `pg_cron`** for everything.
+- **C. Both** — Vercel for HTTP, `pg_cron` for SQL.
+
+> **Recommend C, and it is already written that way in §1.5c.** The metrics
+> pulls are HTTP calls with token refresh and belong next to the adapters;
+> the ledger rollup is SQL over rows we already hold and should not need the
+> app to be up. Splitting on that line is not indecision — it is two different
+> jobs.
+
+### D-d. Is there an ops console before the first Pilot, or do we run it by hand? (B5c)
+
+- **A. Build `/ops/*` first** — four actions, a staff role, an audit row.
+- **B. Run the first Pilot through SQL and the Supabase dashboard.**
+
+**Cost of being wrong:** B is faster to the first paying client and leaves no
+audit trail of staff reading client data, which is the thing that becomes an
+unanswerable question later. A is maybe a week before any money arrives.
+
+> **Recommend B for exactly one Pilot, then A.** With one client, a console is
+> ceremony — but **the audit requirement does not wait**: even dashboard access
+> should be from a named staff account rather than the project owner's key, so
+> there is a record. Build A before the second client, not the tenth.
+
+### D-e. Which Instagram path — Instagram Login or Facebook Login for Business? (B6)
+
+- **A. Instagram API with Instagram Login** — `instagram_business_*` scopes, no
+  Page required.
+- **B. Facebook Login for Business** — via a linked Page.
+- **C. Support both.**
+
+**Cost of being wrong:** A fails for clients whose account is Page-linked in a
+way that needs the Page path; B asks every client for a Facebook Page they may
+not have, which is friction at the worst moment.
+
+> **Recommend A, with B as a documented fallback** — build A, and when a client
+> cannot connect, we have the scopes for B written down (§5.5) rather than
+> discovered during a sales call. Not C up front: two OAuth paths is twice the
+> review surface for a case we have not met yet.
+
+### D-f. How much history does B6 backfill on first connect?
+
+- **A. 14 days** — matches the "14-day baseline" the targets already cite.
+- **B. 90 days.**
+- **C. Everything the API allows.**
+
+**Cost of being wrong:** C burns rate limit on first connect and can look like
+we were measuring before they hired us; A means a baseline that is thin if
+somebody connects mid-period.
+
+> **Recommend A, 14 days.** It is the number already on screen — "Target 10 ·
+> 14-day baseline" — and a plan whose code and copy disagree about the window
+> is a bug in the honesty rules. Widen later if the Analyst needs more.
+
+### D-g. Does the Pilot's expiry need a payment method on file?
+
+- **A. No** — one-off payment, nothing to renew.
+- **B. Yes**, so it can convert to Creator in one click.
+
+**Cost of being wrong:** B is a card on file for a product the client has not
+agreed to continue, which is the kind of thing `/legal` exists to avoid. A
+means conversion is a second checkout.
+
+> **Recommend A.** A second checkout is a sales conversation we want to have
+> anyway, and "we kept your card" is a trust cost out of all proportion to the
+> clicks it saves.
+
+### D-h. Does `/ops/*` live in this app or its own?
+
+- **A. Same app**, behind `profiles.is_staff` and an RLS policy.
+- **B. A separate deployment** with the service role.
+
+**Cost of being wrong:** B holds the service-role key in a second place and
+duplicates auth; A puts cross-tenant read capability inside the app clients use,
+so a policy mistake is a client-facing breach rather than an internal one.
+
+> **Recommend A, with the staff policy as its own migration and its own RLS
+> test** — the risk is real but it is a testable risk, and `rls.db.test.ts`
+> already proves cross-workspace isolation against a live instance, so the same
+> suite can prove that staff read is the *only* exception. B's second copy of
+> the service-role key is a worse trade.
+
+---
+
+**One thing I did not add, and why.** The draft's §9 says "no analytics
+vendor", and B1.5b adds error tracking, which is adjacent. They are not the
+same: error tracking records our faults with PII scrubbed, and an analytics
+vendor records visitors' behaviour and needs a consent flow. The cookie banner
+currently tells the truth and this revision keeps it true.
