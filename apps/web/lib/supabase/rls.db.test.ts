@@ -861,6 +861,188 @@ describe('a verb we rely on being impossible refuses out loud (D96)', () => {
 })
 
 /**
+ * The workspace's time zone (D97): captured once, and never a guess.
+ *
+ * Two halves worth proving separately — the function writes it, and a trigger
+ * refuses a value no zone database knows. The trigger is the half that matters,
+ * because an owner can PATCH their own workspace row directly and would
+ * otherwise be one request away from `timezone = 'Narnia'`.
+ */
+describe('a workspace records where it is, or admits it does not know (D97)', () => {
+  test('a workspace starts with no time zone, rather than with UTC', async () => {
+    // Act
+    const workspaces = await restSelect<{ readonly timezone: string | null }>(
+      asUser(user('b').token),
+      `workspaces?id=eq.${workspace('b')}&select=timezone`,
+    )
+
+    // Assert — null is "not captured". Defaulting to UTC is the mistake D95
+    // refused, and B's fixture never went through onboarding.
+    expect(workspaces.rows[0]?.timezone).toBeNull()
+  })
+
+  test('an owner records their own zone, and reads it back', async () => {
+    // Act
+    const stored = await restRpc(asUser(user('a').token), 'set_workspace_timezone', {
+      p_timezone: 'America/New_York',
+    })
+
+    // Assert
+    expect(stored.ok).toBe(true)
+
+    const workspaces = await restSelect<{ readonly timezone: string | null }>(
+      asUser(user('a').token),
+      `workspaces?id=eq.${workspace('a')}&select=timezone`,
+    )
+    expect(workspaces.rows[0]?.timezone).toBe('America/New_York')
+  })
+
+  test('the zone goes to the caller’s own workspace and no other', async () => {
+    // Act — A has just set theirs. B's must be untouched by it.
+    const bs = await restSelect<{ readonly timezone: string | null }>(
+      serviceRole,
+      `workspaces?id=eq.${workspace('b')}&select=timezone`,
+    )
+
+    // Assert — there is no parameter in which to name another workspace, and
+    // this is the assertion that says so.
+    expect(bs.rows[0]?.timezone).toBeNull()
+  })
+
+  test('a zone no database knows is refused by the function', async () => {
+    // Act
+    const refused = await restRpc(asUser(user('a').token), 'set_workspace_timezone', {
+      p_timezone: 'Narnia',
+    })
+
+    // Assert — `45004`, raised by the trigger rather than by the function, so
+    // the message is the same wherever the value came from.
+    expect(refused.ok).toBe(false)
+    expect(refused.errorCode).toBe('45004')
+  })
+
+  test('and refused on a direct PATCH too, which is the point of the trigger', async () => {
+    // Act — the route that skips the function entirely:
+    // `workspaces_update_owner` permits an owner to patch their own row.
+    const patched = await restUpdate(
+      asUser(user('a').token),
+      `workspaces?id=eq.${workspace('a')}`,
+      { timezone: 'Middle/Earth' },
+    )
+
+    // Assert
+    expect(patched.ok).toBe(false)
+    expect(patched.errorCode).toBe('45004')
+
+    // And the good value it already had survived the refusal.
+    const workspaces = await restSelect<{ readonly timezone: string | null }>(
+      serviceRole,
+      `workspaces?id=eq.${workspace('a')}&select=timezone`,
+    )
+    expect(workspaces.rows[0]?.timezone).toBe('America/New_York')
+  })
+
+  test('an empty zone is refused rather than stored as nothing-in-particular', async () => {
+    // Act
+    const refused = await restRpc(asUser(user('a').token), 'set_workspace_timezone', {
+      p_timezone: '   ',
+    })
+
+    // Assert — `45005`. The action never sends this; the function is reachable
+    // without the form.
+    expect(refused.ok).toBe(false)
+    expect(refused.errorCode).toBe('45005')
+  })
+
+  test('somebody who owns no workspace is told so, not quietly ignored', async () => {
+    // Act — C is a member of B and owns nothing.
+    const refused = await restRpc(asUser(user('c').token), 'set_workspace_timezone', {
+      p_timezone: 'Europe/London',
+    })
+
+    // Assert — `45002`, the same code `save_onboarding` raises for the same
+    // reason, which is what the action already knows how to read.
+    expect(refused.ok).toBe(false)
+    expect(refused.errorCode).toBe('45002')
+  })
+
+  test('an anonymous caller cannot record a zone at all', async () => {
+    // Act
+    const refused = await restRpc(anonymous, 'set_workspace_timezone', {
+      p_timezone: 'Europe/London',
+    })
+
+    // Assert — `42501`, refused by the **grant**, so it never reaches the body.
+    // Asserting the code rather than just `ok: false` is the whole of D98: the
+    // body's own `auth.uid() is null` guard also answers "no", with `P0001`, and
+    // a test that accepted either would have passed while `anon` still held
+    // execute on every one of these functions.
+    expect(refused.errorCode).toBe('42501')
+  })
+})
+
+/**
+ * D98: the four `security definer` writers, refused by their grant rather than
+ * by their first line.
+ *
+ * `revoke all on function … from public` was taken to mean "and therefore not
+ * `anon`". It does not — `anon` holds a direct grant from Supabase's default
+ * privileges, and revoking the implicit `public` one leaves it. All four were
+ * reachable anonymously until `20261119070000`, and only their
+ * `if auth.uid() is null then raise` opening stopped them.
+ */
+describe('a signed-out caller cannot execute the functions that write (D98)', () => {
+  const WRITERS: readonly { readonly name: string; readonly args: Record<string, unknown> }[] = [
+    {
+      name: 'save_onboarding',
+      args: {
+        p_niche: 'probe',
+        p_audience: 'business',
+        p_stage: 'new',
+        p_goal_type: 'leads',
+        p_outcome_text: 'probe',
+      },
+    },
+    { name: 'delete_workspace', args: { p_workspace_id: '00000000-0000-0000-0000-000000000000' } },
+    {
+      name: 'ensure_workspace_for_current_user',
+      args: {
+        p_name: 'probe',
+        p_audience: null,
+        p_stage: null,
+        p_goal_type: null,
+        p_niche: null,
+      },
+    },
+    { name: 'set_workspace_timezone', args: { p_timezone: 'Europe/London' } },
+  ]
+
+  test.each(WRITERS)('anonymous cannot execute $name', async ({ name, args }) => {
+    // Act
+    const refused = await restRpc(anonymous, name, args)
+
+    // Assert — `42501` is the grant refusing. `P0001` here would mean the
+    // function ran and stopped itself, which is the state D98 found.
+    expect(refused.errorCode).toBe('42501')
+  })
+
+  test('the policy helpers keep theirs, because a public page evaluates them', async () => {
+    // Act — `is_member_of` is granted to `anon` deliberately: an anonymous
+    // SELECT runs the policy as `anon`, and the policy calls this.
+    const allowed = await restRpc<boolean>(anonymous, 'is_member_of', {
+      p_workspace_id: workspace('b'),
+    })
+
+    // Assert — it executed rather than being refused, which is the whole claim.
+    // Not `rows`: this function returns a bare `false`, and `readBody` only
+    // unpacks an array, so a scalar reply arrives as zero rows. That is a shape
+    // the helper does not cover rather than an answer of "none".
+    expect(allowed.ok).toBe(true)
+    expect(allowed.errorCode).toBeNull()
+  })
+})
+
+/**
  * Last, because it destroys workspace D and user D. Vitest runs a file's tests
  * in order, so this block's fixtures are untouched by everything above.
  */

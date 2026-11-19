@@ -6865,6 +6865,131 @@ may not. Both carry `42501`, so the error **code** is the assertion that holds
 for both roles and the status is asserted per role.
 
 Gates: lint, typecheck, **81 RLS/DB**, migration-safety (9 additive) — green.
+
+## 2026-11-19 · D97 · The workspace records where it is, captured from the browser at onboarding and never guessed
+
+Vlad asked for this as "small, additive, now rather than later", and explicitly
+**not** as posting logic. It is one nullable column, one trigger and one
+function.
+
+D95 stored a scheduled post as a local date plus a `time24` string rather than a
+`timestamptz`, because no workspace time zone existed and defaulting to UTC
+would have silently rescheduled every account outside it. That storage stays.
+What was missing is the fact that makes `09:00` mean anything: *nine in the
+morning where?*
+
+### Captured where the answer is actually known
+
+`Intl.DateTimeFormat().resolvedOptions().timeZone`, in an effect rather than at
+render. During SSR that same line runs on a Vercel server and answers `UTC` —
+the server's zone wearing the client's name, which is worse than not asking. So
+the hidden field posts empty until hydration, and empty means **not captured**:
+the action stores nothing rather than a guess.
+
+### Nullable, no default
+
+`not null default 'UTC'` is D95's mistake one layer down. It would make every
+workspace predating the column, and every one whose capture failed, claim London
+time rather than admit it does not know. Null is a state readers must handle,
+and the only honest response to it is to ask.
+
+### Validated three times, and only one of them counts
+
+1. `lib/workspace/timezone.ts` — `parseTimeZone`, on the server, before the RPC.
+   The check is `new Intl.DateTimeFormat('en-GB', { timeZone })` in a try/catch
+   rather than `Intl.supportedValuesOf('timeZone')`, because the formatter
+   accepts the backward-compatibility aliases a real browser still sends
+   (`Asia/Calcutta`, `US/Eastern`) that the list omits. 8 unit tests.
+2. `set_workspace_timezone(text)` — rejects empty with `45005`, and "you own no
+   workspace" with `45002`, the code `save_onboarding` already uses for the same
+   condition.
+3. **A trigger on the column, which is the one that cannot be bypassed.**
+   `workspaces_update_owner` plus the table UPDATE grant mean an owner can PATCH
+   their own row directly, so a function-only check left `timezone = 'Narnia'`
+   one request away. `45004`, raised wherever the value came from — the same
+   reasoning as D95's audit trigger.
+
+A CHECK constraint could not do this: it would have to read `pg_timezone_names`,
+and a constraint that reads a catalog is not immutable — a dump and restore
+would then depend on the restoring server's zone database.
+
+### A second function rather than a sixth parameter
+
+`save_onboarding(text, text, text, text, text)` is deployed and called by the
+running app. A defaulted sixth argument makes the existing five-argument call
+match two signatures — `42725`, ambiguous — and dropping the function to reshape
+it is precisely the contract break D93's gate exists to prevent: production
+would run code calling the old shape until the next deploy.
+
+The separate call is also better shaped. **A time zone that fails to save must
+not cost somebody their onboarding answers**, so `captureTimeZone` cannot fail
+the submit: the answers are already committed, and a null column is a state
+every reader handles. It is logged, not swallowed —
+`console.error('[onboarding] could not store the time zone …')`, the shape the
+rest of the server uses.
+
+Eight RLS/DB tests, run before the migration and failing with `PGRST202` /
+`PGRST204` — no such function, no such column — so they exercise the migration
+rather than passing regardless.
+
+## 2026-11-19 · D98 · `revoke all from public` is not `revoke from anon`, and four functions were anonymous-callable because of it
+
+Found while writing D97's anonymous test, which was the weakest assertion in the
+block — `expect(refused.ok).toBe(false)` — and so nearly did not find it.
+
+Every `security definer` function here carries the same pair of lines:
+
+```sql
+revoke all on function … from public;
+grant execute on function … to authenticated;
+```
+
+which reads as "only a signed-in caller may run this". It is not what it does.
+`public` is the **implicit** grant every role holds; `anon` is a named role with
+a **direct** grant of its own, from Supabase's
+`alter default privileges … grant all on functions to postgres, anon,
+authenticated, service_role`. Revoking the implicit one leaves the direct one
+in place.
+
+Measured against preview with the publishable key and no bearer token:
+
+| Function | Anonymous call |
+|---|---|
+| `save_onboarding` | 400 `P0001` "requires an authenticated user" |
+| `delete_workspace` | 400 `P0001` same |
+| `ensure_workspace_for_current_user` | 400 `P0001` same |
+| `set_workspace_timezone` | 400 `P0001` same |
+
+`P0001` is the function's **own first line** refusing. Not the grant. All four
+ran.
+
+### Nothing was exploitable, and that is the only reason this is not urgent
+
+Each opens with `if auth.uid() is null then raise`, so an anonymous call writes
+nothing. **The guard held and the grant did not** — defence in depth doing its
+job, which is also exactly why the outer layer being wrong went unnoticed for
+two weeks.
+
+`20261119070000_definer_functions_are_authenticated_only.sql` revokes execute
+from `anon` on the four writers. The policy helpers — `is_member_of`,
+`is_owner_of`, `can_access_*` — **keep** theirs: a policy runs as the calling
+role, so an anonymous SELECT evaluates them as `anon`, and revoking there would
+turn "you see nothing" into an error on the public site. A test now asserts that
+distinction in both directions.
+
+### The rule out of D96 and D98 together
+
+Two findings, one shape: **a grant nobody wrote, inherited from a default, wider
+than the comment above it claimed.** D96 was tables, this is functions.
+
+So: **name the role you mean.** `from public` is a statement about the implicit
+grant and about nothing else. And when asserting a refusal, assert *which*
+refusal — `ok: false` was true the whole time these were open, and `42501`
+versus `P0001` is the difference between the grant saying no and the body saying
+no.
+
+Gates: lint, typecheck, 939 unit, **94 RLS/DB**, build, licence-check,
+migration-safety (11 additive) — green.
 ## 2026-11-21 · D104 · The gate was a GitHub feature we do not have, so the order changed instead: migrate first, then merge
 
 **Vlad's decision, and he found the fault before the gate was ever armed.** D93
