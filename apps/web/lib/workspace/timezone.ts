@@ -39,3 +39,44 @@ export function parseTimeZone(value: unknown): string | null {
 
   return trimmed
 }
+
+/**
+ * What the date is, right now, in a given zone — `YYYY-MM-DD`.
+ *
+ * The calendar needs this to decide which week to draw and which column is
+ * today. `new Date().toISOString().slice(0, 10)` answers the same question for
+ * **UTC**, which is a different day for roughly a third of the world for part of
+ * every day: a client in Auckland looking at their Monday morning would be
+ * shown the week that ended on Sunday.
+ *
+ * Assembled from `formatToParts` rather than from a formatted string, because
+ * the order and the separators of a formatted date are the locale's business.
+ * The parts are named, so this does not depend on `en-CA` happening to put the
+ * year first.
+ *
+ * Returns null for a zone ICU does not know, which keeps the "we do not know"
+ * path a single one — the same answer `parseTimeZone` gives.
+ */
+export function localDateIn(timeZone: string, now: Date): string | null {
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(now)
+
+    const find = (type: Intl.DateTimeFormatPartTypes): string | undefined =>
+      parts.find((part) => part.type === type)?.value
+
+    const year = find('year')
+    const month = find('month')
+    const day = find('day')
+
+    if (year === undefined || month === undefined || day === undefined) return null
+
+    return `${year}-${month}-${day}`
+  } catch {
+    return null
+  }
+}

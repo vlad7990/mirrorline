@@ -3,6 +3,7 @@ import { expect, test as setup } from '@playwright/test'
 import {
   createConfirmedUser,
   newRunId,
+  seedScheduledPosts,
   STUDIO_STORAGE_STATE,
   supabaseConfig,
   testEmail,
@@ -53,7 +54,7 @@ setup('sign in and save the session', async ({ page }) => {
   const email = testEmail(runId)
   const password = testPassword(runId)
 
-  await createConfirmedUser(config, email, password, `E2E ${runId}`)
+  const user = await createConfirmedUser(config, email, password, `E2E ${runId}`)
 
   await page.goto('/sign-in')
   await page.getByLabel('Email', { exact: true }).fill(email)
@@ -71,4 +72,31 @@ setup('sign in and save the session', async ({ page }) => {
   await page.waitForURL(/\/app\/home/, { timeout: 30_000 })
 
   await page.context().storageState({ path: STUDIO_STORAGE_STATE })
+
+  /**
+   * The calendar's week, seeded here rather than per spec (B2.2).
+   *
+   * Until B2.2 the calendar read `@mirrorline/mock`, so every spec that opened
+   * `/app/calendar` found a full grid whoever was signed in. It now reads this
+   * workspace's `scheduled_posts`, and **nothing authors one**: there is no
+   * insert policy, by design — the pipeline writes posts and a member may only
+   * move them (D95). So a fresh account's calendar is empty, and the specs that
+   * drag a chip, screenshot the grid or audit it for accessibility would all
+   * fail on an empty week rather than on anything true.
+   *
+   * It belongs in setup because it is a property of *the session those specs
+   * share*. Seeding per spec would put five more posts on the same workspace
+   * each time and make "the chip I moved" ambiguous — the problem D84 hit from
+   * the other direction.
+   *
+   * A failure here fails the setup, which fails every dependent project. That
+   * is intended: a silently unseeded calendar is a wall of confusing failures
+   * in six specs, and this is the one place that can say why.
+   */
+  const seeded = await seedScheduledPosts(config, { userId: user.id, runId })
+
+  expect(
+    seeded,
+    'The calendar fixture did not seed. Check that 20261119030000_scheduled_posts_and_moves.sql and 20261119080000_scheduled_posts_ai_scenes.sql are applied to this project.',
+  ).not.toBeNull()
 })

@@ -43,7 +43,7 @@ async function openFromSidebar(page: Page, label: string): Promise<void> {
   await expect(item).toHaveAttribute('aria-current', 'page')
 }
 
-function heading(page: Page, name: string) {
+function heading(page: Page, name: string | RegExp) {
   return page.getByRole('heading', { level: 1, name })
 }
 
@@ -258,16 +258,31 @@ test('the whole demo path holds up', async ({ page }) => {
   /* --- 9. Calendar and batch approval ----------------------------------- */
 
   await openFromSidebar(page, 'Calendar')
-  await expect(heading(page, 'Week of 9 November')).toBeVisible()
+
+  /*
+   * Patterns rather than text, since B2.2.
+   *
+   * This step used to read "Week of 9 November", "9 posts" and "Tue 10" —
+   * `@mirrorline/mock`'s week, which never moved. The calendar now reads this
+   * workspace's `scheduled_posts` for the week the client is actually in, so
+   * the date, the count and the day name are all data. The seeded week comes
+   * from `auth.setup.ts`.
+   *
+   * What is still asserted is everything that is a promise rather than a
+   * number: there is a week heading with a date in it, the bar names a count
+   * and says all of them need an eye, approving says the Publisher will post
+   * that many on a named day, and the button goes away afterwards.
+   */
+  await expect(heading(page, /^Week of \d{1,2} [A-Z][a-z]+$/)).toBeVisible()
 
   const batchBar = page.getByRole('region', { name: "Tomorrow's approvals", exact: true })
-  await expect(batchBar).toContainText('Tomorrow: 9 posts ready. All 9 need your eye.')
+  await expect(batchBar).toContainText(/Tomorrow: \d+ posts ready\. All \d+ need your eye\./)
 
-  const approveAll = batchBar.getByRole('button', { name: 'Approve all 9 for tomorrow' })
+  const approveAll = batchBar.getByRole('button', { name: /^Approve all \d+ for tomorrow$/ })
   await approveAll.click()
 
   await expect(batchBar).toContainText(
-    'Tomorrow is approved. The Publisher will post 9 videos on Tue 10.',
+    /Tomorrow is approved\. The Publisher will post \d+ videos on [A-Z][a-z]{2} \d{1,2}\./,
   )
   await expect(approveAll).toBeHidden()
 

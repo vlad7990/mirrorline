@@ -87,13 +87,19 @@ async function dragChipTo(page: Page, chip: Locator, target: Locator): Promise<b
   return true
 }
 
-test('the screen says a move is sample data before anyone makes one', async ({ page }) => {
+test('the screen says what a move does before anyone makes one', async ({ page }) => {
   await openCalendar(page)
 
-  // Non-negotiable 7. The claim is on the screen, not only in the commit —
-  // and it says "not saved", which is the part a reader needs *before* they
-  // drag something and then reload the page.
-  await expect(page.getByText(/Sample data, not saved/i).first()).toBeVisible()
+  // This said "Sample data, not saved" until B2.2, when the calendar started
+  // reading `scheduled_posts` and a move became a write. The sentence now makes
+  // the smaller, true claim: the schedule changes, and nothing already
+  // published does.
+  await expect(
+    page.getByText(/changes the schedule, not anything already published/i),
+  ).toBeVisible()
+
+  // And the old promise is gone rather than lingering beside the new one.
+  await expect(page.getByText(/Sample data, not saved/i)).toHaveCount(0)
 })
 
 test('dragging a post to another day moves it there', async ({ page }) => {
@@ -118,9 +124,10 @@ test('dragging a post to another day moves it there', async ({ page }) => {
   await expect(source.getByRole('button', { name: chipName ?? '' })).toHaveCount(0)
   await expect(page.locator('[data-drag-ghost]')).toHaveCount(0)
 
-  // And the confirmation repeats that nothing was really rescheduled.
+  // And the confirmation says it was saved, which it now is — while still
+  // naming the thing a move does not do.
   await expect(page.getByRole('status').filter({ hasText: /Moved to/ })).toContainText(
-    'Sample data, not saved',
+    'Saved to your schedule. Nothing has been published.',
   )
 })
 
@@ -204,7 +211,7 @@ test('the "Move to…" menu reschedules without any dragging', async ({ page }) 
   await move.click()
 
   await expect(page.getByRole('status').filter({ hasText: /Moved to/ })).toContainText(
-    'Sample data, not saved',
+    'Saved to your schedule. Nothing has been published.',
   )
   await expect(source.getByRole('button', { name: chipName ?? '' })).toHaveCount(0)
 })

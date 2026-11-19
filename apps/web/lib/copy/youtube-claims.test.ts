@@ -53,6 +53,9 @@ const NOT_A_POSTING_CLAIM: Readonly<Record<string, string>> = {
     'The hero upload control. YouTube is a source of footage here, never a destination.',
   'copy/platform-limits.ts':
     'Defines the caveat itself, so it cannot sensibly be required to quote its own output.',
+  'workspace/week-schedule.ts':
+    'Holds the platform label map — "youtube" to "YouTube Shorts" — and builds the calendar grid from it. It names the platform in a lookup table and promises nothing: the caveat belongs to copy that claims a post will go out, not to the row header a post sits in.',
+  'workspace/week-schedule.test.ts': 'Tests that label map, and has to quote it to do so.',
   'copy/youtube-claims.test.ts': 'This file, which names the claim in order to search for it.',
   'copy/platform-limits.test.ts': 'Tests the caveat, so it quotes both halves on purpose.',
   'app/(marketing)/pricing/page.tsx':

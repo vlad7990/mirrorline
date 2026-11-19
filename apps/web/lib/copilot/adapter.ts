@@ -48,6 +48,7 @@
  * the only visible symptom of a prefix being invalidated.
  */
 
+import type { ScheduledPost } from '@mirrorline/mock'
 import Anthropic from '@anthropic-ai/sdk'
 
 import {
@@ -252,6 +253,16 @@ export interface AskOptions {
   readonly question: string
   /** Whose month the spend lands in. One workspace per studio client. */
   readonly workspaceId: string
+  /**
+   * This workspace's week, when the caller has it (B2.2).
+   *
+   * The studio surface can propose moving a post, and a proposal naming a post
+   * that is not on the calendar is a card whose Approve button fails. So the
+   * posts come in, the canned answer picks one of them, and a proposal from the
+   * **model** naming anything else is dropped rather than shown. Empty or
+   * omitted means no move is proposed at all.
+   */
+  readonly posts?: readonly ScheduledPost[]
   readonly now?: Date
   readonly env?: EnvLike
 }
@@ -262,8 +273,9 @@ const SAMPLE_CHUNK = 48
 async function* sampleStream(
   surface: CopilotSurface,
   question: string,
+  posts: readonly ScheduledPost[],
 ): AsyncGenerator<CopilotEvent> {
-  const answer = cannedAnswer(surface, question)
+  const answer = cannedAnswer(surface, question, posts)
 
   for (let at = 0; at < answer.text.length; at += SAMPLE_CHUNK) {
     yield { type: 'delta', text: answer.text.slice(at, at + SAMPLE_CHUNK) }
@@ -568,7 +580,7 @@ export async function* askCopilot(options: AskOptions): AsyncGenerator<CopilotEv
   yield { type: 'meta', mode, notice: mode === 'sample' ? SAMPLE_NOTICE : null }
 
   if (mode === 'sample') {
-    yield* sampleStream(options.surface, options.question)
+    yield* sampleStream(options.surface, options.question, options.posts ?? [])
     return
   }
 
@@ -652,7 +664,17 @@ const PROPOSAL_KINDS: readonly ProposalKind[] = ['move-post', 'swap-format', 'pa
  * card with an Approve button on it. Anything that does not match exactly is
  * dropped: a proposal we cannot read is not a proposal we should offer.
  */
-export function parseProposal(value: unknown): Proposal | null {
+/**
+ * @param knownPostIds The ids on the client's calendar, when the caller has
+ * them. A `move-post` naming anything else is dropped: the model is told to
+ * propose, and an id it invented is a card whose Approve button would fail with
+ * "We could not find that post" (B2.2). Omitted means the check is skipped,
+ * which is only right for a unit test with no calendar in play.
+ */
+export function parseProposal(
+  value: unknown,
+  knownPostIds?: ReadonlySet<string>,
+): Proposal | null {
   if (typeof value !== 'object' || value === null) return null
 
   const source = value as Record<string, unknown>
@@ -669,6 +691,11 @@ export function parseProposal(value: unknown): Proposal | null {
   // and found to do nothing.
   const move = kind === 'move-post' ? parseProposalMove(source.move) : null
   if (kind === 'move-post' && !move) return null
+
+  // And a payload the screen can act on has to name a post the screen can
+  // find. Shape is not existence: `parseProposalMove` would accept
+  // `postId: 'whatever'`.
+  if (move && knownPostIds !== undefined && !knownPostIds.has(move.postId)) return null
 
   return {
     kind: kind as ProposalKind,

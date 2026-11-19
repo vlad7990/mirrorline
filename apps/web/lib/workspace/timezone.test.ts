@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { parseTimeZone } from './timezone'
+import { localDateIn, parseTimeZone } from './timezone'
 
 describe('parseTimeZone', () => {
   test('accepts the IANA name a browser actually reports', () => {
@@ -56,5 +56,40 @@ describe('parseTimeZone', () => {
 
     // Assert
     expect(parsed).toBeNull()
+  })
+})
+
+describe('localDateIn', () => {
+  /** 02:30 UTC on Thursday 19 November 2026. */
+  const EARLY_UTC_THURSDAY = new Date('2026-11-19T02:30:00Z')
+
+  test('is still the previous day west of Greenwich', () => {
+    // Act — 21:30 on Wednesday in New York.
+    const date = localDateIn('America/New_York', EARLY_UTC_THURSDAY)
+
+    // Assert — this is the whole reason the function exists: UTC would say the
+    // 19th and show the client a week they are not in yet.
+    expect(date).toBe('2026-11-18')
+  })
+
+  test('is already the next day far enough east', () => {
+    // Act — 15:30 on Thursday in Auckland.
+    expect(localDateIn('Pacific/Auckland', EARLY_UTC_THURSDAY)).toBe('2026-11-19')
+  })
+
+  test('agrees with UTC when the zone is UTC', () => {
+    expect(localDateIn('UTC', EARLY_UTC_THURSDAY)).toBe('2026-11-19')
+  })
+
+  test('pads the month and the day to two digits', () => {
+    // Act — 1 January, the shape that breaks a naive join.
+    const date = localDateIn('UTC', new Date('2027-01-01T12:00:00Z'))
+
+    // Assert
+    expect(date).toBe('2027-01-01')
+  })
+
+  test('returns null for a zone ICU does not know', () => {
+    expect(localDateIn('Narnia', EARLY_UTC_THURSDAY)).toBeNull()
   })
 })

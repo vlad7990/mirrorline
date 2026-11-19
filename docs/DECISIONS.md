@@ -6990,6 +6990,203 @@ no.
 
 Gates: lint, typecheck, 939 unit, **94 RLS/DB**, build, licence-check,
 migration-safety (11 additive) — green.
+
+## 2026-11-19 · D99 · `hasAiScenes` is stored, because a non-negotiable must not rest on a literal
+
+D95 left three columns out of `scheduled_posts` on the grounds that they are
+functions of other fields: `timeLabel`, `platformLabel`, `statusLabel`. That was
+right. `hasAiScenes` was left out with them, and it does not belong in that
+group — nothing else on the row implies it.
+
+The read path made that visible. `components/calendar/post-panel.tsx` reads
+`post.hasAiScenes` to **lock the AI label on**, which is CLAUDE.md
+non-negotiable 4: "AI scenes are always labelled, in the UI and on the
+platform." So building a `ScheduledPost` out of the database left two options:
+store the fact, or hardcode `false`.
+
+Hardcoding would be correct today — nothing authors an AI remake yet — and
+silently wrong the first time the Remake Producer does, with a non-negotiable
+depending on a literal nobody would think to revisit.
+`20261119080000_scheduled_posts_ai_scenes.sql` adds the column.
+
+`default false` is honest here in a way `default 'UTC'` was not for D97: a post
+has AI scenes only if something put them there, so the default is the true
+answer for every row that exists. And no grant is added — a member may move a
+post, not relabel it, and "this has no AI scenes" is exactly the edit that must
+stay impossible.
+
+## 2026-11-19 · D100 · B2.2's read path, its one write, and the note that was removed last
+
+The calendar reads `scheduled_posts` for the signed-in workspace, a move is
+persisted, and the e2e suite proves it survives a reload. The studio is off
+`@mirrorline/mock`; the marketing site keeps it (non-negotiable 7).
+
+### The read, split the way the Goals read is
+
+`lib/workspace/week-schedule.ts` is pure and decides everything — 33 unit tests,
+no network. `read-week-schedule.ts` fetches and decides only *which week*. The
+same division `goal-cascade.ts` has from `read-goal-cascade.ts`, and the reason
+is the same: a builder that needs a database to test is a builder nobody tests
+at the edges.
+
+Four things it had to decide:
+
+- **Which week.** The one *today* falls in, with today resolved in the
+  workspace's zone (D97 earning its place within a day of being written). A
+  client in Auckland on Monday morning is eleven hours into a week a UTC server
+  still calls last week. With no zone captured, the window falls back to the
+  server's UTC date and `today` stays null, so **no column is highlighted** — a
+  week boundary a few hours out is visible and self-correcting; a highlighted
+  "today" on the wrong day is a claim made without evidence.
+- **Which rows are platforms.** The platforms that have a post this week, in a
+  fixed order. Not `social_accounts`, which would be truer and has no connect
+  flow behind it; not all four, which would draw a LinkedIn row for an account
+  that has never posted there. An empty week therefore has **no rows**, which is
+  what a new workspace looks like, so the view has to cope.
+- **`thumbnailColor`.** Hashed from the post id, against `THUMBNAIL_COLORS` from
+  `@mirrorline/ui`. The fixtures take it from the cut; there is no cuts table
+  yet. Presentational and deterministic.
+- **An undrawable row is dropped, not coerced.** A platform or status outside
+  the check constraint means something wrote past the schema; a chip in the
+  wrong row, or labelled "undefined", is worse than a chip that is absent.
+
+### The write is one update on two columns, and the database is what makes it two
+
+`authenticated` holds `update (scheduled_date, scheduled_time24)` and nothing
+else (D95), so `movePostToSlot` names those two columns because they are the
+only two it *could* name. `.select()` is load-bearing for the third time now —
+B2.1's rule, D95's bug, D96's ten more: without it an update RLS filtered to
+nothing returns success.
+
+It does **not** write `post_moves`. `record_post_move()` does, on the update.
+An insert here as well would double every entry; instead of would be a write the
+application could forget.
+
+### The module constants were the real refactor
+
+`calendar-view.tsx` read `weekSchedule` at module scope, so a dozen derived
+values were module constants too. A module constant computed from props is
+computed **once per process** — the second workspace to render on a warm server
+would have been shown the first one's week. All of them moved inside the
+component. The two existing `useMemo`s keyed on `[moves]` alone had to gain the
+week as well, or a revalidation's fresh data would have been computed over and
+thrown away.
+
+### Optimistic, with a rollback, because a move can now fail
+
+`ScheduleMovesProvider.movePost` went from `boolean` to
+`Promise<MoveOutcome>` — `unchanged | saved | failed`. It records the move so
+the chip lands under the pointer, then writes; on failure it **removes the entry
+and the chip goes back**, and the caller gets a sentence. The entry is
+deliberately not cleared on success: the route revalidates, and dropping it
+before that render arrives would snap the chip back for a frame, which is the
+one thing an optimistic update exists to prevent.
+
+`unchanged` is not a detail. A drop onto the day a post is already in is not a
+move, and a confirmation for it would be the screen claiming to have done
+something it did not.
+
+### Three sentences that became false, and were rewritten rather than left
+
+The handoff named two; there were four.
+
+| Where | Said | Now |
+|---|---|---|
+| `schedule-moves.ts` header | "Nothing is persisted, and that is the product" | the display half of a persisted move, and what a rollback un-applies |
+| `schedule-moves-context.tsx` header | the same | the optimistic layer over a real write |
+| `(studio)/layout.tsx` | "Still nothing persisted" | the map dies with the page; the move does not |
+| `studio-copilot-copy.ts` | "Moved on the calendar. Sample data, not saved" | "Moved on the calendar and saved. Nothing has been published." |
+
+And the calendar's own note, removed **last**, as the handoff required. It now
+reads "Changing a time here changes the schedule, not anything already
+published" — smaller and true. Non-negotiable 7 is unaffected: it requires demo
+data to be labelled, and there is none left on that screen. Leaving the old
+sentence would have been the mirror of the dishonesty it was added to prevent —
+telling somebody their change was not saved when it was.
+
+The co-pilot's Approve had the same problem one layer deeper: it wrote
+"approvedMove" into the transcript *before* knowing whether the write
+succeeded. It now corrects its own line.
+
+### The e2e fixture, per Vlad's decision
+
+Service role, in `auth.setup.ts`, tagged with the run id, swept with the
+account. **In setup** rather than per spec, which was the part worth getting
+right: the calendar used to render the fixtures for whoever was signed in, so
+six specs — the drag, the menu, the screenshots, the accessibility audit, the
+responsive pass, the co-pilot — would otherwise have failed on an empty week
+rather than on anything true. Seeding per spec would have piled five more posts
+onto the shared workspace each time and made "the chip I moved" ambiguous, which
+is D84's problem from the other side.
+
+The sweep is the existing one: `scheduled_posts.workspace_id` is
+`on delete cascade` and `deleteTestAccounts` deletes workspaces before users.
+`scheduled_posts` was added to `WORKSPACE_CHILD_TABLES` so that cascade is
+**asserted** by `workspace-delete.spec.ts` rather than assumed.
+
+The fixture also pins the test workspace's zone to `UTC`, so the week it seeds
+and the week the app draws cannot disagree across a midnight.
+
+`calendar-persist.spec.ts` is the new one: its own account, move through the
+menu, assert in the database with the service role, count the audit row, reload,
+and find the chip in its new cell. Plus the no-op case, which must write nothing
+— an audit that fills with non-moves stops being readable.
+
+### One repo gate earned its keep
+
+`youtube-claims.test.ts` failed on the new builder, which names "YouTube Shorts"
+in a label map near the word "post". It is not a posting claim, so it went on
+that file's allowlist **with the written reason the file demands** — the device
+exists precisely so the alternative (weakening the regex) is not taken.
+
+### What the full e2e run found, which no unit test could have
+
+Eight failures on the first run, and every one of them was the suite being
+right.
+
+**Three were hard-coded fixture dates.** `Week of 9 November`, "Tomorrow: 9
+posts ready", "Tue 10" — the mock week, which never moved. They now assert the
+shape (`/^Week of \d{1,2} [A-Z][a-z]+$/`), so a heading that loses its date
+still fails and a calendar that moves does not. `Route.h1` widened to
+`string | RegExp` for it.
+
+**Two were the co-pilot proposing a move for a post that no longer exists**, and
+that is the finding worth keeping.
+
+`canned.ts` built its `move-post` proposal from `weekPosts` in
+`@mirrorline/mock` — at module scope — and the comment above it was *proud* of
+not hard-coding an id: "a proposal pointing at a post that is not on the
+calendar is a card whose Approve button silently does nothing. Reading the
+fixtures keeps the proposal and the grid describing the same post by
+construction."
+
+Every word of that was true until the grid stopped being the fixtures. The
+proposal then named an id the database had never heard of, and Approve answered
+"We could not find that post" — the exact failure the comment was written to
+prevent, arriving through the assumption *underneath* it rather than through the
+mistake it was watching for.
+
+So the week now comes in: `/api/copilot/studio` reads it with
+`readWeekSchedule()` and hands it down through `respond` → `askCopilot` →
+`cannedAnswer` → `cannedStudioAnswer`, which picks a post that is actually
+there. **With no posts, or one day's worth, no move is proposed at all** — the
+question falls through to the ordinary answer rather than offering a card built
+on a guess.
+
+Read on the server rather than sent by the client for two reasons: the panel
+opens from any screen under `/app/*` and only the calendar has the week in hand,
+and a post id arriving from a browser would be a client telling the server which
+post to propose moving. The policy would refuse a foreign one anyway; there is
+no reason to ask the question.
+
+`parseProposal` gained the same guard for the live path — a `move-post` naming
+an id outside the week is dropped. Nothing reaches it yet (the live path emits
+`proposals: []`), so this is the hole closed before the feature that would open
+it.
+
+**And one was flaky**: the Results screen's `Overview` heading, on one of four
+screenshot projects, at a 5-second timeout. Not calendar-related and not
+reproduced on the re-run. Named here rather than quietly re-run until green.
 ## 2026-11-21 · D104 · The gate was a GitHub feature we do not have, so the order changed instead: migrate first, then merge
 
 **Vlad's decision, and he found the fault before the gate was ever armed.** D93

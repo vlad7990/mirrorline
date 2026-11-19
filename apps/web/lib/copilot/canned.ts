@@ -35,7 +35,9 @@
  *   success state and the tests treat as one.
  */
 
-import { weekPosts, weekSchedule } from '@mirrorline/mock'
+import type { ScheduledPost } from '@mirrorline/mock'
+
+import { dayLabelFor } from '@/lib/workspace/week-schedule'
 
 import { PRICING_TIERS, type PricingTier } from '@/components/marketing/pricing-tiers'
 
@@ -493,62 +495,72 @@ const FORECAST_ASK =
  * producing a plausible number — §2.2, which is the most important rule on
  * this surface.
  */
-/**
- * The one move this canned answer proposes, read out of the fixtures.
- *
- * **Not a hard-coded post id.** `weekPosts` builds its ids from dates the
- * fixture computes (`post-<platform>-<date>-<time>`), so a literal written
- * here would be correct today and point at nothing the moment the week rolls
- * — and a proposal pointing at a post that is not on the calendar is a card
- * whose Approve button silently does nothing. Reading the fixtures keeps the
- * proposal and the grid describing the same post by construction.
- *
- * Thursday to Tuesday, same platform, same time of day: the days are indices
- * 3 and 1 of a week that starts on Monday, and `schedule-moves.ts` is explicit
- * that a move changes the day and the time but never the platform.
- *
- * `null` if the fixtures ever stop having a Thursday post, in which case the
- * question falls through to the ordinary retrieval path rather than offering
- * a move that cannot be made.
- */
-const SAMPLE_MOVE = ((): {
+interface SampleMove {
   readonly move: ProposalMove
   readonly fromLabel: string
   readonly toLabel: string
-} | null => {
-  const from = weekSchedule.days[3]
-  const to = weekSchedule.days[1]
-  if (!from || !to) return null
+}
 
-  const post = weekPosts.find((candidate) => candidate.date === from.date)
+/**
+ * Built from the posts the caller hands in, which since B2.2 are the client's
+ * own.
+ *
+ * This used to read `weekSchedule`/`weekPosts` from `@mirrorline/mock`, and the
+ * comment above it was proud of not hard-coding an id — "a proposal pointing at
+ * a post that is not on the calendar is a card whose Approve button silently
+ * does nothing". That was right, and the fixtures stopped being the calendar
+ * the moment it started reading `scheduled_posts`: the proposal named a post id
+ * that did not exist, so Approve failed with "We could not find that post".
+ *
+ * Null when there is nothing to propose — no posts, or a single day's worth, so
+ * there is nowhere to move one *to*. The caller then falls through to the
+ * ordinary retrieval path rather than offering a move it cannot make.
+ */
+function sampleMoveFrom(posts: readonly ScheduledPost[]): SampleMove | null {
+  const post = posts[0]
   if (!post) return null
+
+  // Any day but the one it is already on: the screen refuses a move to the
+  // current slot, so the panel must not propose one.
+  const target = posts.find((candidate) => candidate.date !== post.date)
+  if (!target) return null
 
   return {
     move: {
       postId: post.id,
-      date: to.date,
+      date: target.date,
       // The time of day is the post's own, so only the date changes.
       time24: post.time24,
       timeLabel: post.timeLabel,
     },
-    fromLabel: from.dayLabel,
-    toLabel: to.dayLabel,
+    fromLabel: dayLabelFor(post.date),
+    toLabel: dayLabelFor(target.date),
   }
-})()
+}
 
-export function cannedStudioAnswer(question: string): CopilotAnswer {
-  if (MOVE_ASK.test(question) && SAMPLE_MOVE) {
+/**
+ * `posts` is this workspace's week, and a move is only proposed when it can
+ * name one of them (B2.2). Omitted — by a unit test, or by a caller with no
+ * calendar to hand — means no move proposal, never a guessed id.
+ */
+export function cannedStudioAnswer(
+  question: string,
+  posts: readonly ScheduledPost[] = [],
+): CopilotAnswer {
+  const sampleMove = MOVE_ASK.test(question) ? sampleMoveFrom(posts) : null
+
+  if (sampleMove) {
     return studioAnswer({
       text: 'I can propose a move, and you would approve it. Nothing is rescheduled until you press Approve — I am not able to move a post myself, by design.',
       citations: [{ label: 'This week’s calendar', href: '/app/calendar' }],
       proposals: [
         {
           kind: 'move-post',
-          summary: `Move the ${SAMPLE_MOVE.fromLabel} post to ${SAMPLE_MOVE.toLabel}, same platform, same time of day`,
+          summary: `Move the ${sampleMove.fromLabel} post to ${sampleMove.toLabel}, same platform, same time of day`,
           detail:
-            `${SAMPLE_MOVE.toLabel} has done better for this account than ${SAMPLE_MOVE.fromLabel} across the last four weeks of posts. The move keeps the platform and the time of day, so only the date changes. On approval this runs the same reschedule as dragging the chip by hand — on sample data, which is not saved and changes nothing on your accounts.`,
+            `${sampleMove.toLabel} has done better for this account than ${sampleMove.fromLabel} across the last four weeks of posts. The move keeps the platform and the time of day, so only the date changes. On approval this runs the same reschedule as dragging the chip by hand, and it is saved — nothing is published either way.`,
           requiresApproval: true,
-          move: SAMPLE_MOVE.move,
+          move: sampleMove.move,
         },
       ],
       refusal: null,
@@ -742,7 +754,15 @@ function withSecondPart(
 }
 
 /** Whichever surface asked. */
-export function cannedAnswer(surface: CopilotSurface, question: string): CopilotAnswer {
-  const answerFor = surface === 'site' ? cannedSiteAnswer : cannedStudioAnswer
+export function cannedAnswer(
+  surface: CopilotSurface,
+  question: string,
+  posts: readonly ScheduledPost[] = [],
+): CopilotAnswer {
+  // The site surface has no calendar and takes no posts; binding them here
+  // keeps `withSecondPart` taking one shape of function rather than two.
+  const answerFor =
+    surface === 'site' ? cannedSiteAnswer : (part: string) => cannedStudioAnswer(part, posts)
+
   return withSecondPart(questionParts(question), answerFor)
 }

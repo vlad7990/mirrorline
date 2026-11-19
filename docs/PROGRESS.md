@@ -94,6 +94,251 @@ B2.2's tests. The B2 branch's count stands separately.
 
 **Dropped from this list:** the Vercel promotion check. Migrating before the
 merge removes the window it was for (D104).
+## Handoff — 19 November 2026, early morning (the calendar is real: it reads your posts and a move is saved — and two grant audits found holes on twelve tables and four functions)
+
+**Branch** `backend/b2-studio` · pushed · **no PR yet.**
+**PR #4 is open and wants merging first** — see §1.
+
+Gates: lint, typecheck, unit, RLS/DB, build, licence-check, migration-safety,
+full e2e. Numbers in §7.
+
+**Your four Vercel variables are done, and that is recorded.** Production has
+its own Supabase values, preview keeps the preview ones, production was
+redeployed. Item 1 of "Still needs you" in both handoffs below is **closed** —
+they are superseded on that point and only on that point.
+
+### 1. PR #4: the migration gate, on its own branch, waiting for you
+
+https://github.com/vlad7990/mirrorline/pull/4 — `infra/migration-gate`, cut
+from `origin/main`. 1,162 lines, of which 632 are docs. No application code.
+
+It carries `migrate-production.yml`, `scripts/migration-safety.mjs` and its 17
+tests, the CI step, and **D93 + D94**. D92 rides along because it is the commit
+D93 was written on top of, and keeping the commits intact is what lets
+`backend/b2-studio` rebase onto this cleanly afterwards rather than fight it.
+
+**Merge it before the B2 pull request.** B2 carries five migrations and
+production has its own database now, so merging a migration-bearing PR while the
+gate is off would put code in front of its schema for real.
+
+**What to set after you merge, in this order.** The PR body has this too.
+
+1. **Settings → Environments → New environment**, named exactly `production`.
+   Tick **Required reviewers**, add yourself, save. *This is the part that
+   actually gates* — `environment: production` in the workflow is only the hook;
+   the waiting lives in the environment's protection rule.
+2. **Three repository secrets** (Settings → Secrets and variables → Actions →
+   **Secrets**):
+
+   | Secret | Value |
+   |---|---|
+   | `SUPABASE_PRODUCTION_ACCESS_TOKEN` | a personal access token from supabase.com/dashboard/account/tokens |
+   | `SUPABASE_PRODUCTION_PROJECT_REF` | `uvwedufzjldfahlqtisk` |
+   | `SUPABASE_PRODUCTION_DB_PASSWORD` | the Postgres password for `mirrorline-production` |
+
+3. **One repository variable** (same page, **Variables** tab — not Secrets):
+   `PRODUCTION_MIGRATIONS_ENABLED` = `true`. **Set this last:** with it on and a
+   secret missing, the workflow fails the push rather than noticing.
+
+**Leave unset:** `PROMOTE_FROM_WORKFLOW`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`,
+`VERCEL_PROJECT_ID`. Those are only for the arrangement where the workflow
+deploys instead of Vercel's own git deploy.
+
+**And the second condition, which is a Vercel setting rather than code.** The
+gate holds the *schema* but not the *code* until Vercel stops promoting `main`
+while the migration waits. Either add a deployment check that blocks promotion
+until *Migrate production* succeeds (no code — recommended), or turn the
+production branch deploy off and set `PROMOTE_FROM_WORKFLOW=true` with the three
+`VERCEL_*` secrets.
+
+### 2. The audit you asked for: ten more tables had the same hole (D96)
+
+The `post_moves` bug generalised, because its cause was never that table.
+Supabase's default privileges grant all four verbs on every new `public` table
+to `anon` and `authenticated`, and **the grant is checked before the policy**.
+
+Only two verbs are dangerous:
+
+| Verb | With a grant and no policy | |
+|---|---|---|
+| INSERT | the missing `with check` refuses it, `42501` | **loud** |
+| UPDATE / DELETE | filtered to zero rows, PostgREST answers **200 `[]`** | **silent** |
+| SELECT | `[]`, the honest answer to "you may not see this" | fine |
+
+Ten tables were open: `profiles`, `memberships`, `workspaces`,
+`social_accounts`, `kpi_definitions`, `metric_snapshots`, `ledger_weekly`,
+`alerts`, `leads`, `trends`. `goals` / `objectives` / `key_results` have all
+four policies and were fine.
+
+`20261119050000_grants_match_policies.sql` revokes the uncovered verbs from
+**`authenticated` and `anon`**. Nothing lost a capability — every write to those
+tables already goes through the service role or a `security definer` function —
+and two tests assert the nearest neighbours still work, so an over-broad revoke
+would have failed rather than passed quietly.
+
+**Seventeen tests, no fixtures.** Each filters on an id that matches nothing;
+Postgres checks the table privilege before it looks for a row, so a refusal
+proves the *verb* is refused rather than a row being hidden. Run before the
+migration: **18 failed, every one `expected 200 to be 403`**.
+
+### 3. The same bug on functions, found by the weakest test in that block (D98)
+
+`revoke all on function … from public` does **not** revoke from `anon`. `public`
+is the implicit grant; `anon` holds a direct one from Supabase's default
+privileges. So `save_onboarding`, `delete_workspace`,
+`ensure_workspace_for_current_user` and `set_workspace_timezone` were all
+**callable with the publishable key and no session** — stopped only by their own
+`if auth.uid() is null then raise`.
+
+Nothing was exploitable: every one raises before touching data. The guard held
+and the grant did not, which is also why it went unnoticed.
+`20261119070000_definer_functions_are_authenticated_only.sql` revokes it. The
+policy helpers (`is_member_of`, `is_owner_of`, `can_access_*`) **keep** theirs —
+a policy runs as the calling role, so an anonymous SELECT evaluates them as
+`anon`.
+
+Found because my own test asserted `expect(refused.ok).toBe(false)`, which was
+true the whole time the hole was open. The lesson is in D98: assert *which*
+refusal — `42501` is the grant saying no, `P0001` is the body saying no.
+
+### 4. The workspace's time zone, captured at onboarding (D97)
+
+One nullable column, one trigger, one function — and no posting logic, as you
+asked.
+
+`Intl.DateTimeFormat().resolvedOptions().timeZone`, read in an effect rather
+than at render: during SSR that line runs on a Vercel server and answers UTC,
+the server's zone wearing the client's name. The field posts empty until
+hydration, and empty means **not captured** — nothing is stored rather than a
+guess.
+
+**Nullable with no default.** `not null default 'UTC'` is D95's mistake one
+layer down.
+
+Validated three times: `parseTimeZone` on the server, `set_workspace_timezone`,
+and **a trigger on the column** — which is the one that counts, because an owner
+can PATCH their own workspace row and would otherwise be one request away from
+`timezone = 'Narnia'`.
+
+A second function rather than a sixth parameter on `save_onboarding`: a
+defaulted sixth argument makes the deployed five-argument call ambiguous
+(`42725`), and dropping the function to reshape it is the contract break the
+gate exists to prevent. It also means **a time zone that fails to save cannot
+cost somebody their onboarding answers** — it is logged, not swallowed.
+
+### 5. B2.2 is finished: the calendar reads your posts, and a move is saved (D99, D100)
+
+The studio is off `@mirrorline/mock`. The marketing site keeps it.
+
+- `lib/workspace/week-schedule.ts` — pure, 33 unit tests. Derives `timeLabel`,
+  `platformLabel`, `statusLabel`; drops a row whose platform or status is
+  outside the check constraint rather than drawing a chip in the wrong row.
+- `read-week-schedule.ts` — the week *today* falls in, with today resolved in
+  the workspace's zone (D97, earning its place within a day of being written).
+  With no zone, the window falls back to the server's UTC date and **no column
+  is highlighted**.
+- `(studio)/calendar/actions.ts` — one update on the two granted columns, with
+  `.select()` so a filtered row reports not-found. It does **not** write
+  `post_moves`; the trigger does.
+- `ScheduleMovesProvider.movePost` is now `Promise<MoveOutcome>` —
+  `unchanged | saved | failed`. Optimistic, and **rolled back** if the write is
+  refused.
+- `has_ai_scenes` was added to the schema (D99). It drives the AI-label lock in
+  `post-panel.tsx`, so hardcoding `false` would have made **non-negotiable 4**
+  depend on a literal — right today, silently wrong the first time the Remake
+  Producer writes an AI remake.
+
+**The "Sample data, not saved" note is gone**, last, as the previous handoff
+required. It now reads "Changing a time here changes the schedule, not anything
+already published." Three other sentences said the same false thing and were
+rewritten: the two file headers the handoff named, plus `(studio)/layout.tsx`
+and the co-pilot's `approvedMove` copy. The co-pilot also used to write
+"approved" into its transcript before knowing whether the write had succeeded;
+it corrects its own line now.
+
+### 6. The e2e fixture, per your decision — and it had to go in setup
+
+Service role, tagged with the run id, swept with the account. **In
+`auth.setup.ts`**, which was the part worth getting right: the calendar used to
+render the fixtures for whoever was signed in, so six specs — the drag, the
+menu, the screenshots, the accessibility audit, the responsive pass, the
+co-pilot — would otherwise have failed on an empty week rather than on anything
+true.
+
+- **Every weekday identical** (four posts a day, all seven days). "Tomorrow" is
+  a different weekday on every run, so a fixture with a shape would make the
+  batch bar's count depend on the day the suite ran.
+- The workspace's zone is pinned to `UTC`, so the week it seeds and the week the
+  app draws cannot disagree across a midnight.
+- The sweep is the existing one — `on delete cascade` from `workspaces`, and
+  `deleteTestAccounts` deletes workspaces before users. `scheduled_posts` was
+  added to `WORKSPACE_CHILD_TABLES` so that cascade is **asserted** by
+  `workspace-delete.spec.ts` rather than assumed.
+- `calendar-persist.spec.ts` is new: its own account, move through the menu,
+  assert in the database with the service role, count the audit row, reload,
+  find the chip in its new cell. Plus the no-op case, which must write nothing.
+
+**Three specs hardcoded the fixtures' week** and failed honestly on the first
+full run: `Week of 9 November`, "9 posts ready", "Tue 10". They now assert the
+*shape* — `/^Week of \d{1,2} [A-Z][a-z]+$/`, `/Tomorrow: \d+ posts ready/` — so
+a heading that loses its date still fails and a calendar that moves does not.
+`Route.h1` widened to `string | RegExp` to allow it.
+
+**And the run found a real bug nothing else would have: the co-pilot was
+proposing a move for a post that no longer exists.** Its `move-post` proposal
+was built from `weekPosts` in `@mirrorline/mock`, so once the calendar read the
+database the proposal named an id that was not there and Approve answered "We
+could not find that post".
+
+`/api/copilot/studio` now reads the week with `readWeekSchedule()` and hands it
+down, and the canned answer picks a post that is actually on the calendar. With
+no posts — or one day's worth, so there is nowhere to move to — **no move is
+proposed at all**, and the question falls through to the ordinary answer.
+`parseProposal` drops a `move-post` naming an id outside the week, which closes
+the same hole on the live-model path before it is wired.
+
+Worth reading D100's last section for this one: the comment above the old code
+was proud of not hard-coding a post id, and it was right — the assumption that
+broke was the one *underneath* it, that the fixtures were what the client was
+looking at.
+
+### 7. Gates
+
+| Gate | Result |
+|---|---|
+| `pnpm lint` | clean |
+| `pnpm typecheck` | clean |
+| `pnpm test` | **977 passed** (931 + 13 for the time zone + 33 for the week) |
+| `pnpm test:rls-db` | **94 passed** |
+| `pnpm build` | clean |
+| `pnpm licence-check` | 439 packages, GSAP scope clean |
+| `pnpm migration-safety` | **12 additive** |
+| `pnpm test:e2e` | **413 passed, 842 skipped, zero failures** |
+
+All five new migrations are applied to **`mirrorline-preview` only**. Production
+gets them through PR #4's gated workflow, once it is armed.
+
+The e2e run rewrites `docs/screens-built/*.png`. **Four are committed** — the
+`app-calendar` pair at each width, because that screen genuinely changed. The
+other seventeen were reverted: they are pages this work never touched, and the
+diffs are antialiasing and timing rather than anything anybody did.
+
+### Still needs you
+
+1. **Merge PR #4 and arm the gate** (§1). Before the B2 PR.
+2. **Ten stray files, and they are not mine.** `git status` shows untracked
+   copies with a space in the name — `calendar-view 2.tsx`, `goal-cascade 2.ts`,
+   `rls.db.test 2.ts` and seven more, all duplicates of B2.1 files. They look
+   like iCloud conflict copies (this repo lives under `~/Documents`). They are
+   stale and they are not in git. I have not deleted them, because they are not
+   mine to delete. Worth removing — and worth deciding whether this repo should
+   live somewhere iCloud does not reach.
+3. **PR #3** (`docs/plan-v2`) is still open; **D-b — where the renderer runs** —
+   is still the blocking decision.
+4. **`E2E_SIGNUP_EMAIL`** still unset, so the one UI sign-up test skips.
+
+---
+
 ## Handoff — 19 November 2026, later (B2.2 milestone 1: the calendar's schema is in and proved; the read and write paths are next)
 
 **Branch** `backend/b2-studio` · pushed · **no PR yet.**

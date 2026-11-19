@@ -32,6 +32,7 @@
 
 import { createHash, randomBytes } from 'node:crypto'
 
+import type { ScheduledPost } from '@mirrorline/mock'
 import { NextResponse } from 'next/server'
 
 import { askCopilot, type CopilotEvent } from '@/lib/copilot/adapter'
@@ -133,13 +134,14 @@ export function streamAnswer(
   surface: CopilotSurface,
   question: string,
   workspaceId: string,
+  posts: readonly ScheduledPost[] = [],
 ): Response {
   const encoder = new TextEncoder()
 
   const body = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        for await (const event of askCopilot({ surface, question, workspaceId })) {
+        for await (const event of askCopilot({ surface, question, workspaceId, posts })) {
           controller.enqueue(encoder.encode(line(event)))
         }
       } catch (error: unknown) {
@@ -170,11 +172,18 @@ export function streamAnswer(
   })
 }
 
-/** The whole of a route handler, minus which surface it is. */
+/**
+ * The whole of a route handler, minus which surface it is.
+ *
+ * `posts` is the studio surface's week, when the caller has read one (B2.2).
+ * The site surface passes nothing and wants nothing: it has no calendar, and
+ * the one proposal kind that needs a post is a studio feature.
+ */
 export async function respond(
   request: Request,
   surface: CopilotSurface,
   workspaceId: string,
+  posts: readonly ScheduledPost[] = [],
 ): Promise<Response> {
   const rate = checkRate(request)
   if (!rate.allowed) {
@@ -203,5 +212,5 @@ export async function respond(
     return NextResponse.json({ ok: false, error: validation.error }, { status: 400 })
   }
 
-  return streamAnswer(surface, validation.question, workspaceId)
+  return streamAnswer(surface, validation.question, workspaceId, posts)
 }

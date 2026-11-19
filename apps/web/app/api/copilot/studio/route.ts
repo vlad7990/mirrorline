@@ -21,6 +21,8 @@
  * cap keyed to a constant is a cap on everybody at once.
  */
 
+import { readWeekSchedule } from '@/lib/workspace/read-week-schedule'
+
 import { respond } from '../respond'
 
 export const runtime = 'nodejs'
@@ -29,6 +31,25 @@ export const dynamic = 'force-dynamic'
 /** The demo workspace, until there is a session to read one from. */
 const DEMO_WORKSPACE = 'demo'
 
+/**
+ * ## The week is read here, because a proposal has to name a real post (B2.2)
+ *
+ * The co-pilot can propose moving a post, and the screen performs it through
+ * `movePostToSlot`. Before B2.2 the proposal was built from `@mirrorline/mock`,
+ * which was also what the calendar drew — so the two agreed by construction.
+ * The calendar now reads `scheduled_posts`, and the fixtures stopped being the
+ * calendar: the proposal named an id that did not exist, and Approve answered
+ * "We could not find that post".
+ *
+ * So the route reads the client's own week and hands it down. Read here rather
+ * than sent by the client, for two reasons: the panel opens from any screen
+ * under `/app/*` and only the calendar has the week in hand, and a post id
+ * arriving from the browser would be a client telling the server which post to
+ * propose moving — the policy would still refuse a foreign one, but there is no
+ * reason to ask the question.
+ */
 export async function POST(request: Request): Promise<Response> {
-  return respond(request, 'studio', DEMO_WORKSPACE)
+  const { posts } = await readWeekSchedule()
+
+  return respond(request, 'studio', DEMO_WORKSPACE, posts)
 }

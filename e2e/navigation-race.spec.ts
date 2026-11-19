@@ -37,7 +37,7 @@ import { ROUTES } from './helpers/routes'
  * been renamed or the path has moved, and a test that quietly stopped
  * checking the heading would still pass while asserting nothing.
  */
-function pricingHeading(): string {
+function pricingHeading(): string | RegExp {
   const pricing = ROUTES.find((route) => route.path === '/pricing')
   if (pricing === undefined) throw new Error('No /pricing route in e2e/helpers/routes.ts')
   return pricing.h1
