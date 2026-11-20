@@ -7336,6 +7336,92 @@ suite, generated screenshots, and had a sync conflict.
 Noticing required re-reading a claim I had written myself and checking it
 against `git ls-files` rather than against memory. "Confirm the handoff is
 current" turned out to be a real question.
+
+---
+
+## 2026-11-20 · D103 · The skip that blamed your configuration was my bug, in a field name's position
+
+Vlad added the redirect URLs in the Supabase dashboard — `http://localhost:3000/**`
+and `https://mirrorline-*.vercel.app/**` on preview, `https://mirrorline-eosin.vercel.app/**`
+on production — and asked for the run that would turn D101's one skip into a
+pass. **It skipped again, with the same message naming the allow-list.** The
+message was wrong, and had been wrong since the test was written.
+
+### What the evidence said
+
+`generate_link` echoes the `redirect_to` it accepted back into the action link,
+so one POST per shape answers the question without a browser. Against the live
+preview project `qypakxvxnjmsvxmxiynf`:
+
+| sent | accepted |
+|---|---|
+| `…/auth/callback?next=%2Fapp%2Fonboarding` **nested under `options`** | `http://localhost:3000` |
+| the same URL **at the top level** | the same URL, intact |
+| `…/auth/callback` at the top level | intact |
+| `https://evil.example/login` at the top level | `http://localhost:3000` |
+
+The last row is the one that settles it: the allow-list **is** enforced, and it
+**does** hold the wildcard entry. Vlad's change was right when he made it.
+
+### The fault
+
+`generateSignupLink` sent `options: { redirect_to }`. That is the supabase-js
+*client* shape — `generateLink({ options: { redirectTo } })`. The admin REST
+endpoint declares one **top-level** `redirect_to` and silently ignores keys it
+does not know, and ignoring it means falling back to the Site URL. The Site URL
+for that project is `http://localhost:3000`, which is the bare origin — so the
+minted link was **indistinguishable from a link the allow-list had refused**.
+
+That is why the probe's bare-origin case read as `kept: yes`. It was not kept;
+it was the fallback, agreeing with the request by coincidence. A one-line
+placement change, and the skip became a run.
+
+### Then it failed, and that was the test's premise rather than the product
+
+The run landed on `/sign-in?notice=that-link-did-not-work#access_token=…`. Our
+origin, our callback — and refused, because the tokens came back in the
+**fragment**.
+
+An admin-minted link cannot complete this callback, and no configuration
+changes that. `@supabase/ssr@0.12.7` fixes `flowType: "pkce"` in
+`createServerClient.js:37`, so a real sign-up stores a verifier and its emailed
+link returns with `?code=`, which `/auth/callback` exchanges. `generate_link`
+never saw a `code_challenge`, so GoTrue issues the implicit grant instead — and
+a fragment is never sent to a server, so the callback sees no code and is right
+to refuse it.
+
+**Checked before narrowing anything, because the alternative mattered:** if the
+real email also arrived as a fragment, production would have a second fault and
+every confirmation would now break on the notice page instead of the home page.
+It does not. The flow type is pinned in the dependency, not configured, so the
+emailed link carries a code.
+
+So the test now asserts the hop it can prove, which is also the hop D101 was
+about: Supabase sends the browser to `${origin}/auth/callback`, not to the Site
+URL. Code-for-session belongs to `sign-up-ui.spec.ts`, which drives a real
+sign-up — and is the reason that one needs a real mailbox.
+
+### What changed, and what the skip now says
+
+- `generateSignupLink` puts `redirect_to` at the top level, with the placement
+  trap written down on the function.
+- The first test reads the accepted `redirect_to` and the `Location` header
+  rather than driving a browser. Five pass, nothing skips.
+- The skip survives for a project that genuinely is not configured, but it now
+  names **both** causes — a missing allow-list entry *or* a misplaced
+  `redirect_to` — because one of those two spent a day masquerading as the
+  other.
+
+### The lesson
+
+**A skip is an assertion about why.** This one asserted "your project is
+misconfigured" and was believed — by me when I wrote it, and by Vlad when he
+acted on it — because it was specific and plausible. A test that declines to run
+deserves the same suspicion as one that fails, and the cheap discipline is to
+make it distinguish its own causes, which is what the new message does.
+
+Related: D101 noted two assertions in that same file that could not fail. The
+file has now produced three findings about itself and one about the product.
 ## 2026-11-21 · D104 · The gate was a GitHub feature we do not have, so the order changed instead: migrate first, then merge
 
 **Vlad's decision, and he found the fault before the gate was ever armed.** D93

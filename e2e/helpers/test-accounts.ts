@@ -717,6 +717,18 @@ export async function countPostMoves(
  *
  * Returns null rather than throwing, so a caller can fail with its own
  * sentence.
+ *
+ * **`redirect_to` goes at the top level of the body, and the first version of
+ * this put it under `options`.** That is the supabase-js *client* shape
+ * (`generateLink({ options: { redirectTo } })`); this talks to the admin
+ * endpoint directly, where GoTrue reads one top-level `redirect_to` and
+ * silently ignores anything it does not declare. Ignored means the Site URL is
+ * used instead — so the minted link looked exactly like a link refused by the
+ * allow-list, and the test that exists to catch that fallback skipped itself
+ * with a message blaming the project's configuration, which was right all
+ * along. Verified against the live project: nested is rewritten to the Site
+ * URL, top-level keeps path and query, and a top-level off-site URL is still
+ * refused — so the allow-list is enforced either way.
  */
 export async function generateSignupLink(
   config: SupabaseTestConfig,
@@ -733,7 +745,7 @@ export async function generateSignupLink(
       type: 'signup',
       email: options.email,
       password: options.password,
-      options: { redirect_to: options.redirectTo },
+      redirect_to: options.redirectTo,
     }),
   })
 

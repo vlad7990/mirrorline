@@ -94,6 +94,87 @@ B2.2's tests. The B2 branch's count stands separately.
 
 **Dropped from this list:** the Vercel promotion check. Migrating before the
 merge removes the window it was for (D104).
+## Handoff — 20 November 2026, morning (your allow-list was right; the skip was my bug, and the test now passes)
+
+**Branch** `backend/b2-studio` · **repo now at `~/Developer/mirrorline/mirrorline`.**
+Gates in §4. **No B2 PR cut — waiting for you**, as you asked.
+
+### 1. The repo is out of iCloud, and the ten copies are gone
+
+`git worktree prune` run; one worktree, this one, at `911b8cc`. The ten
+`* 2.*` copies are **deleted** — and each was checked first rather than taken
+on trust:
+
+- **Six** were byte-identical to their tracked file.
+- **Four** differed, and each one matched an **earlier committed revision** of
+  its original — `calendar-view 2.tsx` at `101194c`, `rls.db.test 2.ts` and
+  `onboarding/actions 2.ts` at `593cbd6`, `goals-persist.spec 2.ts` at
+  `ac79e7d`. Stale snapshots, nothing unique in any of them.
+
+`git status` is clean and the `.gitignore` pattern from D102 holds. The old tree
+at `~/Documents/Projects/mirrorline-OLD-do-not-use` was not touched.
+
+### 2. Item 1 is closed, and not for the reason the message gave (D103)
+
+Your dashboard entries were **correct when you made them**. The test skipped
+again anyway, repeating a message that blamed your configuration — and the
+message was wrong.
+
+`generateSignupLink` sent `redirect_to` **nested under `options`**, which is the
+supabase-js *client* shape. The admin REST endpoint reads one top-level
+`redirect_to` and ignores what it does not declare; ignoring it falls back to
+the Site URL, which for the preview project is `http://localhost:3000` — the
+bare origin. So a misplaced field produced a link **identical to one the
+allow-list had refused**, and the skip could not tell the two apart.
+
+Proved against the live project, one mint per shape:
+
+| sent | accepted |
+|---|---|
+| `…/auth/callback?next=…` nested under `options` | `http://localhost:3000` |
+| the same URL at the top level | intact |
+| `https://evil.example/login` at the top level | `http://localhost:3000` |
+
+The third row is the proof your allow-list is live and enforced.
+
+### 3. Then it failed once, and that was the test, not the product
+
+With the field in the right place the link reached our callback and was refused:
+the tokens arrive in the **fragment**. An admin-minted link has no
+`code_challenge`, so GoTrue issues the implicit grant, and a fragment never
+reaches a server.
+
+**The question worth asking was whether the real email does the same**, because
+that would mean every confirmation now breaks on the notice page instead of the
+home page. It does not: `@supabase/ssr@0.12.7` pins `flowType: "pkce"`
+(`createServerClient.js:37`), so a real sign-up stores a verifier and its link
+returns with `?code=`. Pinned in the dependency, not configured — nothing to set.
+
+So that test now asserts the hop D101 was actually about — Supabase sends the
+browser to `${origin}/auth/callback` rather than to the Site URL — and
+code-for-session stays with `sign-up-ui.spec.ts`, which needs your mailbox.
+The skip remains for a genuinely unconfigured project, but it now names both
+possible causes.
+
+### 4. Gates
+
+lint · typecheck · **991 unit** · `auth-callback.spec.ts` **5 passed, 0
+skipped**. No product code changed — the diff is one test helper, one spec and
+two docs — so build, licence-check, migration-safety, RLS/DB and the full e2e
+stand as recorded below.
+
+### Still needs you
+
+1. **PR #4 and the gate** — you said you were merging and arming it. Then tell
+   me and I cut the B2 PR; I have not touched it.
+2. **The Vercel promotion check** (§1 of the handoff below) — the gate holds the
+   schema but not the code until promotion waits on *Migrate production*.
+3. **`E2E_SIGNUP_EMAIL`** — yours to set, and it is what un-skips the one UI
+   sign-up test that proves code-for-session end to end.
+4. **PR #3** (`docs/plan-v2`), still blocked on **D-b, where the renderer runs**.
+
+---
+
 ## Handoff — 19 November 2026, morning (the confirmation link: one fault was ours, and one is two lines you have to add)
 
 **Branch** `backend/b2-studio` · pushed. Gates in §4.

@@ -12,8 +12,9 @@
  * Site URL.
  *
  * That is a failure no unit test can see — it needs a real link, minted the way
- * the email mints it and followed the way a person follows it. So the first
- * test does exactly that, and the rest cover the guard on the way back in.
+ * the email mints it, and the question of where Supabase sends it. So the first
+ * test asks exactly that, and the rest cover the guard on the way back in. The
+ * note above that test explains why it stops at the callback.
  *
  * ============================================================================
  * Why the link is generated rather than emailed
@@ -52,39 +53,67 @@ test.use({ storageState: { cookies: [], origins: [] } })
 const LINK_FAILED = 'that-link-did-not-work'
 
 /**
- * Does this project's allow-list honour a callback **at our path**?
+ * Where Supabase actually sends the browser, read from the one header that
+ * says so.
  *
- * Asked by following the verify link without a browser and reading the one
- * header that answers it. Supabase sends the browser to `redirect_to` when the
- * URL is allowed and somewhere else when it is not, and the difference is the
- * whole bug.
+ * Following the verify link without a browser is the point: the answer sits in
+ * the `Location` of the 303, before any of our code runs, so a wrong answer
+ * cannot be mistaken for a routing mistake of ours. It burns the link — these
+ * tokens are one-time — so the caller gets one use of it.
  *
  * **The path is the assertion, not the origin.** The first version of this
  * compared origins and passed while the link landed on
  * `http://localhost:3000/#access_token=…` — our origin, with `/auth/callback`
- * silently dropped, because an allow-list entry of `http://localhost:3000`
- * without `/**` matches the origin and rewrites the path. That is the
- * production symptom exactly: the right host, the home page, no error
- * anywhere.
- *
- * It burns the link it is given — these tokens are one-time — which is why the
- * caller mints a second for the real assertion.
+ * silently dropped. That is the production symptom exactly: the right host,
+ * the home page, no error anywhere.
  */
-async function redirectHonoured(link: string, ourOrigin: string): Promise<boolean> {
+async function callbackDestination(link: string): Promise<string | null> {
   const response = await fetch(link, { redirect: 'manual' })
   const location = response.headers.get('location')
-  if (location === null) return false
+  if (location === null) return null
 
   try {
     const target = new URL(location)
-    return target.origin === ourOrigin && target.pathname === '/auth/callback'
+    return `${target.origin}${target.pathname}`
   } catch {
-    return false
+    return null
   }
 }
 
-test('a real confirmation link lands on onboarding, not on the home page', async ({
-  page,
+/**
+ * Which `redirect_to` survived the mint — a different question from where the
+ * link goes.
+ *
+ * Supabase echoes the value it accepted back into the action link, so this
+ * separates "the allow-list refused our URL" from "the browser went somewhere
+ * unexpected afterwards". It is the signal that caught the placement bug
+ * described on `generateSignupLink`.
+ */
+function acceptedRedirect(link: string): string | null {
+  try {
+    return new URL(link).searchParams.get('redirect_to')
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Why this stops at the callback rather than following through to onboarding.
+ *
+ * An admin-minted link cannot complete our callback, and no configuration
+ * changes that. `createServerClient` fixes `flowType: 'pkce'`, so a real
+ * sign-up stores a verifier and its emailed link comes back with `?code=`,
+ * which `/auth/callback` exchanges. `generate_link` never saw a
+ * `code_challenge`, so GoTrue issues the implicit grant instead and returns
+ * the tokens in the **fragment** — which a browser never sends to a server, so
+ * the callback sees no code and correctly refuses the link.
+ *
+ * That makes the last hop unreachable here and the first hop the only thing
+ * worth asserting — and the first hop is the bug: D101 was a link that went to
+ * the Site URL instead of to us. `sign-up-ui.spec.ts` covers code-for-session
+ * with a real sign-up, which is why that one needs a real mailbox.
+ */
+test('a real confirmation link is sent to our callback, not to the home page', async ({
   baseURL,
 }) => {
   const config = supabaseConfig()
@@ -97,42 +126,29 @@ test('a real confirmation link lands on onboarding, not on the home page', async
   // destination `CALLBACK_DESTINATIONS.signUp`.
   const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent('/app/onboarding')}`
 
-  async function mint(label: string): Promise<string | null> {
-    const runId = newRunId()
-    return generateSignupLink(config, {
-      email: testEmail(runId, label),
-      password: testPassword(runId),
-      redirectTo,
-    })
-  }
-
-  const probe = await mint('callback-probe')
-  expect(probe, 'the admin API minted no link — check the service-role key').not.toBeNull()
-  if (probe === null) return
-
-  // Skipped rather than failed when the project has not been configured: this
-  // is a missing entry in the Supabase redirect allow-list, not a regression in
-  // the code, and a red test here would point at the wrong thing. Named in full
-  // so the fix is the message rather than an investigation.
-  const honoured = await redirectHonoured(probe, origin)
-  test.skip(
-    !honoured,
-    `This project's redirect allow-list does not include ${origin}/auth/callback, so Supabase fell back to the Site URL. Add "${origin}/**" to Authentication → URL Configuration → Redirect URLs. See docs/PROGRESS.md, "the two commands".`,
-  )
-
-  const link = await mint('callback')
-  expect(link).not.toBeNull()
+  const runId = newRunId()
+  const link = await generateSignupLink(config, {
+    email: testEmail(runId, 'callback'),
+    password: testPassword(runId),
+    redirectTo,
+  })
+  expect(link, 'the admin API minted no link — check the service-role key').not.toBeNull()
   if (link === null) return
 
-  await page.goto(link)
+  // Skipped rather than failed when the project has not been configured: a
+  // missing entry in the Supabase redirect allow-list is not a regression in
+  // the code, and a red test here would point at the wrong thing. Named in
+  // full so the fix is the message rather than an investigation.
+  const accepted = acceptedRedirect(link)
+  test.skip(
+    accepted !== redirectTo,
+    `Supabase did not accept ${redirectTo} — it minted the link with ${accepted ?? '(none)'}, which is the Site URL fallback. Either this project's redirect allow-list is missing "${origin}/**" (Authentication → URL Configuration → Redirect URLs), or the request put "redirect_to" where GoTrue does not read it — see generateSignupLink. docs/PROGRESS.md has both.`,
+  )
 
-  // The assertion the bug would have failed. Landing on `/` means Supabase
+  // The assertion the bug would have failed. `${origin}/` means Supabase
   // discarded `redirect_to` and used the Site URL — the exact symptom, and the
   // reason this asserts the destination rather than merely "not an error".
-  await expect(page).toHaveURL(/\/app\/onboarding/, { timeout: 30_000 })
-
-  // And the link signed them in, rather than bouncing them to sign-in.
-  await expect(page).not.toHaveURL(/\/sign-in/)
+  expect(await callbackDestination(link)).toBe(`${origin}/auth/callback`)
 })
 
 test('a link with no code says so, rather than pretending to sign anybody in', async ({
