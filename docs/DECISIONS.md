@@ -7601,3 +7601,57 @@ The drift check caught one and asking caught the other.
 A practical consequence worth keeping: **a pre-written "expected results"
 message is not a status report, and should not be pasted as one.** If a
 reviewer supplies one, run the thing and replace the numbers.
+
+---
+
+## 2026-11-21 · D106 · `--remote`, the actions off Node 20, and the field in a dispatch that lies about what was migrated
+
+Housekeeping with one finding in it, all of it from the logs of the three real
+`Migrate production` runs.
+
+### `--linked` is deprecated, and it is on the production path
+
+Every Supabase step printed `--linked is deprecated and will be removed in v4.
+Use --remote instead`. Since `setup-cli` was pinned to `version: latest`, v4
+would have arrived on its own schedule and broken the migrate workflow at its
+link step and the drift check at its list step — both of which only run when
+they matter.
+
+All five call sites now use `--remote`. It needs **CLI v3 or newer**: the
+machine this was written on has 2.48.3, which does not recognise the flag. That
+is tolerable precisely because of D94 — production is never touched from a local
+CLI, so the only place these commands run is a runner with a current CLI.
+
+### The actions were being forced onto Node 24 anyway
+
+`actions/checkout@v4`, `actions/setup-node@v4` and `supabase/setup-cli@v1`
+target Node 20, which GitHub now force-runs on Node 24 with a warning. Bumped
+to the current majors — checkout **v7**, setup-node **v7**, pnpm/action-setup
+**v6**, setup-cli **v3**, setup-uv **v10** — and `node-version` from 20 to
+**24**.
+
+Versions were read from the releases API rather than recalled, and the Node 24
+change was confirmed to land in **v5** of both checkout and setup-node. The
+jump past v5 to the current major is a judgement call: our usage is trivial
+(`ref`, `node-version`, `cache`, no arguments), `packageManager` in
+`package.json` pins pnpm so `action-setup` needs no input on any major, and any
+incompatibility fails on the pull request rather than in production. If CI
+disagrees, stepping back a major is the fix.
+
+### The finding: a dispatched run's branch is not the tree it migrated
+
+`head_branch` and `head_sha` — in the Actions list and the API — are the branch
+the **workflow file** came from, not the `ref` input. All three runs read
+`main`, including the one that applied B2's six migrations from
+`backend/b2-studio`.
+
+That matters because it is the audit trail. "Which tree went to production?" has
+exactly one authoritative answer: the `migrate` job's **checkout step**, which
+logs `ref: <input>` and the SHA it resolved. On run 3 that was `cebf747`, which
+matched `backend/b2-studio`'s head and PR #5's `headRefOid` — so what merged is
+what was migrated, verified rather than assumed.
+
+Written into the workflow's header under "How to read a run", because somebody
+glancing at three runs all labelled `main` would reasonably conclude the
+dispatch never happened — which is, with some irony, the exact wrong conclusion
+that D105's zero-runs scare was the right one.

@@ -9,16 +9,16 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # pnpm must be installed before setup-node so its cache resolver works.
       # No `version:` here — the root package.json "packageManager" field pins
       # pnpm@9.15.4, and specifying it in both places is a hard error.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
 
       - name: Install dependencies
@@ -56,7 +56,7 @@ jobs:
       run:
         working-directory: services/pipeline
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The engine shells out to ffmpeg, and the tests generate their own test
       # footage with it. ubuntu-latest ships neither it nor a TTF that Pillow
@@ -65,7 +65,7 @@ jobs:
       - name: Install ffmpeg and a caption font
         run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v10
         with:
           enable-cache: true
           cache-dependency-glob: services/pipeline/uv.lock

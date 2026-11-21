@@ -77,15 +77,15 @@ jobs:
 
           echo "ready=true" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: steps.configured.outputs.ready == 'true'
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.configured.outputs.ready == 'true'
         with:
-          node-version: 20
+          node-version: 24
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         if: steps.configured.outputs.ready == 'true'
         with:
           version: latest
@@ -100,5 +100,5 @@ jobs:
       - name: Compare this tree against production
         if: steps.configured.outputs.ready == 'true'
         run: |
-          supabase migration list --linked | tee "$RUNNER_TEMP/migration-list.txt"
+          supabase migration list --remote | tee "$RUNNER_TEMP/migration-list.txt"
           node scripts/migration-drift.mjs < "$RUNNER_TEMP/migration-list.txt"
