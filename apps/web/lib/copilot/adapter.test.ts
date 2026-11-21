@@ -338,6 +338,25 @@ describe('a proposal that came back from the model', () => {
       expect(parseProposal(movePost)).toMatchObject({ kind: 'move-post', move })
     })
 
+    test('survives the calendar check when the post is on the calendar', () => {
+      const onTheCalendar = new Set([move.postId])
+      expect(parseProposal(movePost, onTheCalendar)).toMatchObject({ kind: 'move-post' })
+    })
+
+    test('is dropped when it names a post the calendar does not have (B2.2)', () => {
+      // Shape is not existence. `parseProposalMove` accepts any non-empty
+      // string, so a model inventing a plausible id would otherwise produce a
+      // card whose Approve answers "We could not find that post".
+      expect(parseProposal(movePost, new Set(['some-other-post']))).toBeNull()
+      expect(parseProposal(movePost, new Set())).toBeNull()
+    })
+
+    test('the check is skipped when no calendar is supplied', () => {
+      // So a caller with nothing to check against behaves as it did before the
+      // argument existed, rather than silently dropping every proposal.
+      expect(parseProposal(movePost, undefined)).toMatchObject({ kind: 'move-post' })
+    })
+
     test('a move-post with no payload is dropped, not shown', () => {
       // A card whose Approve button has nothing to perform is worse than no
       // card: it would read as an offer and do nothing, silently. §2.3

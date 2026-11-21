@@ -38,6 +38,10 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { isAccountStage, isAudience } from '@/lib/audience/account-type'
+import {
+  CALLBACK_DESTINATIONS,
+  callbackUrl as buildCallbackUrl,
+} from '@/lib/auth/callback-url'
 import { resolveNextPath, SIGN_IN_PATH } from '@/lib/auth/redirect-rules'
 import { ONBOARDING, STUDIO_HOME } from '@/lib/routes'
 import { REMEMBER_COOKIE, REMEMBER_COOKIE_MAX_AGE } from '@/lib/supabase/cookie-policy'
@@ -229,6 +233,8 @@ export async function sendMagicLink(
       // would skip the rights confirmation non-negotiable 1 requires before
       // anybody can upload anything.
       shouldCreateUser: false,
+      // Where they were going, if they were going somewhere — `resolveNextPath`
+      // falls back to the studio home, which is `CALLBACK_DESTINATIONS.magicLink`.
       emailRedirectTo: callbackUrl(resolveNextPath(field(formData, 'next') || null)),
     },
   })
@@ -291,7 +297,9 @@ export async function signUpWithPassword(
         goal_type: choices.goal,
         rights_confirmed_at: new Date().toISOString(),
       },
-      emailRedirectTo: callbackUrl(ONBOARDING),
+      // A new account has nothing yet, so the confirmation link goes straight
+      // to the wizard rather than to a studio with nothing in it.
+      emailRedirectTo: callbackUrl(CALLBACK_DESTINATIONS.signUp),
     },
   })
 
@@ -353,7 +361,9 @@ export async function requestPasswordReset(
 
   const supabase = await createSupabaseServerClient()
   await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: callbackUrl('/reset-password'),
+    // The only screen that can take a new password, and it needs the session
+    // the callback creates before it can.
+    redirectTo: callbackUrl(CALLBACK_DESTINATIONS.passwordReset),
   })
 
   // Deliberately identical whatever was typed. The screen already promised
@@ -401,24 +411,16 @@ export async function updatePassword(
 /**
  * The absolute URL Supabase sends people back to.
  *
- * It has to be absolute — it goes in an email — and it has to be *our* origin.
- * `NEXT_PUBLIC_SITE_URL` when set, then Vercel's `VERCEL_URL` so each preview
- * links back to itself rather than somewhere shared, then localhost.
+ * The decision moved to `lib/auth/callback-url.ts` (D101), where it can be
+ * tested. It used to be four lines of `process.env` reading that no test could
+ * reach, and on **production** it chose the per-deployment hostname — a host no
+ * allow-list contains, so Supabase fell back to the Site URL and every
+ * confirmation link landed on the marketing home page.
  *
- * **`next` is validated by `resolveNextPath` before it reaches here**, so the
- * one attacker-influenced part of this string is already known to be an
- * internal path.
+ * **`next` is validated by `resolveNextPath` before it reaches here**, and
+ * again by the callback on the way back in, so the one attacker-influenced
+ * part of this string is known to be an internal path at both ends.
  */
 function callbackUrl(next: string): string {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL
-  const vercel = process.env.VERCEL_URL
-
-  const origin =
-    configured !== undefined && configured.length > 0
-      ? configured
-      : vercel !== undefined && vercel.length > 0
-        ? `https://${vercel}`
-        : 'http://localhost:3000'
-
-  return `${origin}/auth/callback?next=${encodeURIComponent(next)}`
+  return buildCallbackUrl(next, process.env)
 }

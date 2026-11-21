@@ -16,7 +16,7 @@
  * website bot to Sonnet 5 rather than loosen the refusals.
  */
 
-import { weekPosts } from '@mirrorline/mock'
+import type { ScheduledPost } from '@mirrorline/mock'
 import { describe, expect, test } from 'vitest'
 
 import { findBannedClaims } from '../copy/banned-phrases'
@@ -201,6 +201,35 @@ describe('the studio bot cites what it says', () => {
 })
 
 describe('proposals are inert', () => {
+  /**
+   * A week of this workspace's own, handed in.
+   *
+   * `cannedStudioAnswer` used to read `weekPosts` from `@mirrorline/mock` and
+   * propose a move for one of those. Since B2.2 the calendar reads
+   * `scheduled_posts`, so the fixtures are no longer what the client is looking
+   * at — a proposal built from them would name an id the screen cannot find.
+   * The posts now come from the caller, which is the route that read them.
+   */
+  const MONDAY_POST: ScheduledPost = {
+    id: 'post-mon',
+    cutId: null,
+    date: '2026-11-16',
+    timeLabel: '7:30 am',
+    time24: '07:30',
+    platform: 'instagram',
+    platformLabel: 'Instagram',
+    title: 'Monday post',
+    status: 'needs-review',
+    statusLabel: 'Needs review',
+    hasAiScenes: false,
+    thumbnailColor: '#12545A',
+  }
+
+  const WEEK: readonly ScheduledPost[] = [
+    MONDAY_POST,
+    { ...MONDAY_POST, id: 'post-wed', date: '2026-11-18', title: 'Wednesday post' },
+  ]
+
   const proposalQuestions = [
     ['move-post', 'Can you move my Thursday post to Tuesday?'],
     ['swap-format', 'Can you swap this to a different format?'],
@@ -208,7 +237,7 @@ describe('proposals are inert', () => {
   ] as const
 
   test.each(proposalQuestions)('%s comes back needing approval', (kind, question) => {
-    const answer = cannedStudioAnswer(question)
+    const answer = cannedStudioAnswer(question, WEEK)
 
     expect(answer.proposals.length).toBe(1)
     const proposal = answer.proposals[0]
@@ -222,16 +251,17 @@ describe('proposals are inert', () => {
 
   test('the move-post proposal points at a post that is actually on the calendar', () => {
     // The payload is what Approve performs, so a post id that is not in the
-    // week would be a card whose button silently does nothing. The ids are
-    // built from dates the fixture computes, which is why `canned.ts` reads
-    // them rather than holding a literal — a literal would be right today and
-    // wrong the moment the week rolls.
-    const proposal = cannedStudioAnswer('Can you move my Thursday post to Tuesday?').proposals[0]
+    // week is a card whose button fails — which is exactly what happened when
+    // this was built from the fixtures and the calendar moved to the database.
+    const proposal = cannedStudioAnswer(
+      'Can you move my Thursday post to Tuesday?',
+      WEEK,
+    ).proposals[0]
 
     expect(proposal?.kind).toBe('move-post')
     expect(proposal?.move).toBeDefined()
 
-    const target = weekPosts.find((post) => post.id === proposal?.move?.postId)
+    const target = WEEK.find((candidate) => candidate.id === proposal?.move?.postId)
     expect(target, 'the proposal names a post that is not in the week').toBeDefined()
 
     // It moves the post somewhere it is not, and keeps its time of day —
@@ -240,6 +270,24 @@ describe('proposals are inert', () => {
     expect(proposal?.move?.date).not.toBe(target?.date)
     expect(proposal?.move?.time24).toBe(target?.time24)
     expect(proposal?.move?.timeLabel).toBe(target?.timeLabel)
+
+    // And the day it names is a day the calendar has.
+    expect(WEEK.some((candidate) => candidate.date === proposal?.move?.date)).toBe(true)
+  })
+
+  test('with no calendar to read, no move is proposed at all', () => {
+    // The honest failure. A co-pilot that cannot name a post it may move says
+    // nothing about moving one, rather than offering a card built on a guessed
+    // id — which is the shape of the bug B2.2 introduced and D100 closed.
+    expect(cannedStudioAnswer('Can you move my Thursday post to Tuesday?', []).proposals).toEqual(
+      [],
+    )
+  })
+
+  test('a one-day calendar proposes nothing either, because there is nowhere to move to', () => {
+    expect(
+      cannedStudioAnswer('Can you move my Thursday post to Tuesday?', [MONDAY_POST]).proposals,
+    ).toEqual([])
   })
 
   test('the two kinds with no screen behind them carry no payload', () => {
@@ -268,7 +316,7 @@ describe('proposals are inert', () => {
   })
 
   test('the co-pilot says out loud that it cannot act', () => {
-    const answer = cannedStudioAnswer('Move my Thursday post to Tuesday.')
+    const answer = cannedStudioAnswer('Move my Thursday post to Tuesday.', WEEK)
     expect(answer.text).toMatch(/until you press Approve|not able to/i)
   })
 

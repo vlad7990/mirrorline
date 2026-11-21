@@ -41,6 +41,7 @@ import { SIGN_IN_PATH } from '@/lib/auth/redirect-rules'
 import { STUDIO_HOME } from '@/lib/routes'
 import { createSupabaseServerClient } from '@/lib/supabase/server-client'
 import { parseOnboardingSubmission } from '@/lib/workspace/onboarding-input'
+import { parseTimeZone } from '@/lib/workspace/timezone'
 
 import { type OnboardingFormState } from './onboarding-form-state'
 
@@ -105,5 +106,45 @@ export async function saveOnboarding(
     return fail(SAVE_FAILED)
   }
 
+  await captureTimeZone(supabase, field(formData, 'timezone'))
+
   redirect(STUDIO_HOME)
+}
+
+/**
+ * The browser's time zone, stored if we got one (D97).
+ *
+ * **A second call rather than a sixth parameter**, because
+ * `save_onboarding(text, text, text, text, text)` is already deployed: a
+ * defaulted sixth argument would make the running app's five-argument call
+ * ambiguous (`42725`), and dropping the function to change its shape is the
+ * contract break D93's gate exists to prevent.
+ *
+ * **It cannot fail the submit, and that is deliberate rather than careless.**
+ * The person's answers are committed by the time this runs. A time zone that
+ * does not save leaves `workspaces.timezone` null, which the column documents as
+ * "not captured" and which every reader has to handle anyway — so turning it
+ * into `SAVE_FAILED` would ask somebody to retype a form that already worked, to
+ * fix a fact they never typed.
+ *
+ * Not swallowed, though: it is logged with the same `[scope] sentence` shape the
+ * rest of the server uses, so a zone that never arrives is findable rather than
+ * invisible.
+ */
+async function captureTimeZone(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  submitted: string,
+): Promise<void> {
+  // Empty before hydration, and unparseable if anything tampered with it.
+  // Either way there is nothing true to store, so nothing is stored.
+  const timeZone = parseTimeZone(submitted)
+  if (timeZone === null) return
+
+  const { error } = await supabase.rpc('set_workspace_timezone', {
+    p_timezone: timeZone,
+  })
+
+  if (error !== null) {
+    console.error(`[onboarding] could not store the time zone ${timeZone}`, error)
+  }
 }

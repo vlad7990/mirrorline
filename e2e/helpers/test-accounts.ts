@@ -393,6 +393,12 @@ const WORKSPACE_CHILD_TABLES = [
   'ledger_weekly',
   'alerts',
   'trends',
+  // B2.2. Listed here because the calendar fixture puts rows in it, and the
+  // sweep's only claim on them is the `on delete cascade` from `workspaces` — a
+  // claim `workspace-delete.spec.ts` should be checking rather than trusting.
+  // `post_moves` cannot be listed: it reaches the workspace through
+  // `scheduled_post_id` and has no `workspace_id` to filter on.
+  'scheduled_posts',
 ] as const
 
 /**
@@ -423,6 +429,345 @@ export async function workspaceRowCounts(
   }
 
   return counts
+}
+
+/**
+ * Give a workspace one objective and one key result, with the service role.
+ *
+ * **Fixture, not product behaviour.** Nothing writes objectives or key results
+ * yet — the Performance Analyst proposes them, and that agent is not built. So
+ * a test that wants to edit a target has to put one there first, and doing it
+ * with the service role keeps the fixture out of the thing being tested: the
+ * UI edit that follows runs as the user, under RLS, exactly as a client's
+ * would.
+ *
+ * `leads` is deliberate: `GoalsBoard` finds its headline bar by that KPI key,
+ * so seeding it exercises the outcome bar as well as the key-result row.
+ */
+export async function seedGoalCascade(
+  config: SupabaseTestConfig,
+  options: { readonly target: number; readonly userId: string },
+): Promise<{ readonly keyResultId: string } | null> {
+  const headers = { ...adminHeaders(config), Prefer: 'return=representation' }
+
+  // **Scoped to this user's workspace.** Selecting the first primary goal in
+  // the project would seed whichever workspace happened to be created first,
+  // and every test here would then assert against somebody else's rows.
+  const workspaceId = await findOwnedWorkspaceId(config, options.userId)
+  if (workspaceId === null) return null
+
+  const goals = (await (
+    await fetch(
+      `${config.url}/rest/v1/goals?select=id&is_primary=eq.true&workspace_id=eq.${workspaceId}&limit=1`,
+      { headers: adminHeaders(config) },
+    )
+  ).json()) as readonly { id?: unknown }[]
+
+  const goalId = goals[0]?.id
+  if (typeof goalId !== 'string') return null
+
+  const objectives = (await (
+    await fetch(`${config.url}/rest/v1/objectives`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify([{ goal_id: goalId, text: 'Publish daily and answer every comment' }]),
+    })
+  ).json()) as readonly { id?: unknown }[]
+
+  const objectiveId = objectives[0]?.id
+  if (typeof objectiveId !== 'string') return null
+
+  const keyResults = (await (
+    await fetch(`${config.url}/rest/v1/key_results`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify([
+        {
+          objective_id: objectiveId,
+          kpi_key: 'leads',
+          baseline: 10,
+          target: options.target,
+          basis: '14-day baseline + niche benchmarks',
+          due: '2027-01-06',
+        },
+      ]),
+    })
+  ).json()) as readonly { id?: unknown }[]
+
+  const keyResultId = keyResults[0]?.id
+  return typeof keyResultId === 'string' ? { keyResultId } : null
+}
+
+/* -------------------------------------------------------------------------- */
+/* The calendar's fixture (B2.2)                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Monday of the week a UTC instant falls in, `YYYY-MM-DD`.
+ *
+ * UTC on both sides on purpose. `seedScheduledPosts` pins the workspace's zone
+ * to UTC, so this and `weekStartFor` in the app agree about which week is being
+ * drawn — otherwise a run a few hours either side of midnight could seed the
+ * week next to the one on screen and fail with an empty grid.
+ */
+function utcWeekStart(now: Date): string {
+  const date = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  )
+  // `getUTCDay()` calls Sunday 0, so a Sunday has to come back six days rather
+  // than being treated as the start of the week it ends.
+  date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7))
+  return date.toISOString().slice(0, 10)
+}
+
+function addUtcDays(isoDate: string, days: number): string {
+  const date = new Date(`${isoDate}T00:00:00Z`)
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
+/**
+ * One day's posts, repeated across all seven.
+ *
+ * **Every day identical, on purpose.** The specs that walk this calendar read
+ * "tomorrow" — the batch bar counts tomorrow's approvals, and the grid
+ * highlights it — and *tomorrow is a different weekday on every run*. A fixture
+ * with a shape (busy Monday, quiet Friday) would make the batch bar's count
+ * depend on which day the suite happened to run, and a spec asserting a number
+ * would be green from Monday to Thursday and red at the weekend. A flat week
+ * costs four rows a day and removes the whole class.
+ *
+ * The shape the specs do need:
+ *
+ *  - **three platform rows**, so "a post cannot be dragged onto another
+ *    platform row" has a foreign row to try;
+ *  - **two times on the Instagram row**, so the "Move to…" menu has more than
+ *    one slot to offer and the slot-menu test has something to compare;
+ *  - **one post with AI scenes**, so the label non-negotiable 4 forces on is on
+ *    screen somewhere.
+ */
+const CALENDAR_DAY = [
+  { platform: 'instagram', time24: '07:30', label: 'Morning post' },
+  { platform: 'instagram', time24: '14:15', label: 'Afternoon post' },
+  { platform: 'tiktok', time24: '12:15', label: 'Midday TikTok' },
+  { platform: 'youtube', time24: '17:00', label: 'Evening Shorts' },
+] as const
+
+const DAYS_IN_WEEK = 7
+
+/** The one post that carries AI scenes: Wednesday's afternoon Instagram. */
+const AI_SCENES_AT = { dayOffset: 2, index: 1 } as const
+
+export interface SeededCalendar {
+  readonly workspaceId: string
+  readonly weekStart: string
+  /** Ids in insertion order: Monday's four, then Tuesday's, and so on. */
+  readonly postIds: readonly string[]
+  /**
+   * The title of Monday's first post — `Morning post <runId> d0`.
+   *
+   * The `d<offset>` suffix is load-bearing, not decoration. Every day carries
+   * the same four labels, so a spec locating "Morning post <runId>" would match
+   * seven chips and fail strict mode. The suffix makes exactly one of them
+   * clickable, and it is the one this field names.
+   */
+  readonly firstTitle: string
+}
+
+/**
+ * Put a week of posts on a workspace's calendar, with the service role.
+ *
+ * **Fixture, not product behaviour** — the same bargain `seedGoalCascade`
+ * makes, and for a stronger reason here: there is no insert policy on
+ * `scheduled_posts` at all, because the pipeline authors posts and a member may
+ * only *move* one (D95). So a test cannot create a post as the user even in
+ * principle, and doing it with the service role keeps the fixture out of the
+ * thing under test: the move that follows runs as the user, under RLS, through
+ * the same action a client's drag would.
+ *
+ * **Tagged with the run id**, in the title, so a row found later can be traced
+ * to the run that made it.
+ *
+ * **Swept with the account.** `scheduled_posts.workspace_id` is
+ * `on delete cascade`, and `deleteTestAccounts` deletes the owned workspaces
+ * before the users — so these rows go when the account does, including for a
+ * run that died before its teardown, which the two-hour rule collects.
+ * `WORKSPACE_CHILD_TABLES` includes the table so that cascade is asserted
+ * rather than assumed.
+ */
+export async function seedScheduledPosts(
+  config: SupabaseTestConfig,
+  options: { readonly userId: string; readonly runId: string; readonly now?: Date },
+): Promise<SeededCalendar | null> {
+  const workspaceId = await findOwnedWorkspaceId(config, options.userId)
+  if (workspaceId === null) return null
+
+  const headers = { ...adminHeaders(config), Prefer: 'return=representation' }
+
+  // Pinned, so the app and this fixture agree on which week is "this" one. A
+  // workspace created by `ensure_workspace_for_current_user` has no zone — only
+  // onboarding captures one (D97) — and the app then falls back to the server's
+  // UTC date. Setting it makes that agreement explicit instead of incidental.
+  const zoned = await fetch(`${config.url}/rest/v1/workspaces?id=eq.${workspaceId}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ timezone: 'UTC' }),
+  })
+  if (!zoned.ok) return null
+
+  const weekStart = utcWeekStart(options.now ?? new Date())
+
+  const rows = Array.from({ length: DAYS_IN_WEEK }).flatMap((_unused, dayOffset) =>
+    CALENDAR_DAY.map((entry, index) => ({
+      workspace_id: workspaceId,
+      platform: entry.platform,
+      // `d<offset>` so one chip can be located among seven identical days.
+      title: `${entry.label} ${options.runId} d${dayOffset}`,
+      // Every post needs review, so the batch bar has the same count whichever
+      // weekday "tomorrow" turns out to be.
+      status: 'needs-review',
+      scheduled_date: addUtcDays(weekStart, dayOffset),
+      scheduled_time24: entry.time24,
+      has_ai_scenes: dayOffset === AI_SCENES_AT.dayOffset && index === AI_SCENES_AT.index,
+    })),
+  )
+
+  const response = await fetch(`${config.url}/rest/v1/scheduled_posts`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(rows),
+  })
+
+  if (!response.ok) return null
+
+  const created = (await response.json()) as readonly { id?: unknown }[]
+  const postIds = created.map((row) => row.id).filter((id): id is string => typeof id === 'string')
+
+  // All or nothing. A partially seeded calendar is the state that produces a
+  // confusing failure three specs later rather than here.
+  if (postIds.length !== rows.length) return null
+
+  return {
+    workspaceId,
+    weekStart,
+    postIds,
+    firstTitle: rows[0]?.title ?? '',
+  }
+}
+
+/** Where a post sits now, service role, so RLS cannot mask a failure. */
+export async function readScheduledPostSlot(
+  config: SupabaseTestConfig,
+  postId: string,
+): Promise<{ readonly date: string; readonly time24: string } | null> {
+  const response = await fetch(
+    `${config.url}/rest/v1/scheduled_posts?id=eq.${postId}&select=scheduled_date,scheduled_time24`,
+    { headers: adminHeaders(config) },
+  )
+
+  if (!response.ok) return null
+
+  const rows = (await response.json()) as readonly {
+    scheduled_date?: unknown
+    scheduled_time24?: unknown
+  }[]
+
+  const row = rows[0]
+  if (typeof row?.scheduled_date !== 'string' || typeof row.scheduled_time24 !== 'string') {
+    return null
+  }
+
+  return { date: row.scheduled_date, time24: row.scheduled_time24 }
+}
+
+/**
+ * How many audit rows a post has collected.
+ *
+ * The audit is written by `record_post_move()`, a trigger — so counting it is
+ * how a test proves the application did not have to remember to (D95). Read
+ * with the service role because `post_moves` has a select policy for members
+ * and this assertion must not depend on one.
+ */
+export async function countPostMoves(
+  config: SupabaseTestConfig,
+  postId: string,
+): Promise<number> {
+  const response = await fetch(
+    `${config.url}/rest/v1/post_moves?scheduled_post_id=eq.${postId}&select=id`,
+    { headers: adminHeaders(config) },
+  )
+
+  if (!response.ok) return -1
+
+  return ((await response.json()) as readonly unknown[]).length
+}
+
+/**
+ * A real confirmation link, minted through the admin API (D101).
+ *
+ * `generate_link` returns the **same link the confirmation email carries**,
+ * without sending mail — which matters twice: the sender is rate-limited
+ * (D79), and a test that read a mailbox would be testing the mailbox.
+ *
+ * `redirect_to` is the part under test. Supabase only honours it if it matches
+ * the project's redirect allow-list and **falls back to the Site URL when it
+ * does not** — which is exactly the production bug this helper exists to catch:
+ * a link landing on the marketing home page instead of onboarding looks like a
+ * routing mistake and is a configuration one.
+ *
+ * Returns null rather than throwing, so a caller can fail with its own
+ * sentence.
+ *
+ * **`redirect_to` goes at the top level of the body, and the first version of
+ * this put it under `options`.** That is the supabase-js *client* shape
+ * (`generateLink({ options: { redirectTo } })`); this talks to the admin
+ * endpoint directly, where GoTrue reads one top-level `redirect_to` and
+ * silently ignores anything it does not declare. Ignored means the Site URL is
+ * used instead — so the minted link looked exactly like a link refused by the
+ * allow-list, and the test that exists to catch that fallback skipped itself
+ * with a message blaming the project's configuration, which was right all
+ * along. Verified against the live project: nested is rewritten to the Site
+ * URL, top-level keeps path and query, and a top-level off-site URL is still
+ * refused — so the allow-list is enforced either way.
+ */
+export async function generateSignupLink(
+  config: SupabaseTestConfig,
+  options: {
+    readonly email: string
+    readonly password: string
+    readonly redirectTo: string
+  },
+): Promise<string | null> {
+  const response = await fetch(`${config.url}/auth/v1/admin/generate_link`, {
+    method: 'POST',
+    headers: { ...adminHeaders(config), 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 'signup',
+      email: options.email,
+      password: options.password,
+      redirect_to: options.redirectTo,
+    }),
+  })
+
+  if (!response.ok) return null
+
+  const body = (await response.json()) as { action_link?: unknown }
+  return typeof body.action_link === 'string' ? body.action_link : null
+}
+
+/** The stored target, read with the service role so RLS cannot mask a failure. */
+export async function readKeyResultTarget(
+  config: SupabaseTestConfig,
+  keyResultId: string,
+): Promise<number | null> {
+  const rows = (await (
+    await fetch(`${config.url}/rest/v1/key_results?id=eq.${keyResultId}&select=target`, {
+      headers: adminHeaders(config),
+    })
+  ).json()) as readonly { target?: unknown }[]
+
+  const target = rows[0]?.target
+  return target === undefined || target === null ? null : Number(target)
 }
 
 /** Every tagged account currently in the project, across all runs. */

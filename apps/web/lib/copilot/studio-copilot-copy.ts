@@ -79,9 +79,24 @@ export const STUDIO_COPILOT_COPY = {
    */
   proposalNote: 'Nothing happens until you press Approve.',
 
-  /** What a performed move changes, and what it does not. */
-  approvedMove:
-    'Moved on the calendar. Sample data, not saved — nothing changed on your accounts.',
+  /**
+   * What a performed move changes, and what it does not.
+   *
+   * It said "Sample data, not saved" until B2.2, when the move became a write
+   * to `scheduled_posts`. The second half of that sentence is the half that is
+   * still true and still worth saying: the schedule changed, and nothing was
+   * published, because the Publisher does not exist yet.
+   */
+  approvedMove: 'Moved on the calendar and saved. Nothing has been published.',
+
+  /**
+   * When the write is refused.
+   *
+   * A proposal card that reported a move it did not make would be the one
+   * failure §2.3 is written to prevent, and an optimistic confirmation is
+   * exactly how that happens by accident. So the panel corrects itself.
+   */
+  approvedMoveFailed: 'Not moved — the calendar refused it. The post is still where it was.',
 
   /**
    * What the other two kinds say instead of acting.

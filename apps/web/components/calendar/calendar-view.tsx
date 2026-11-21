@@ -3,13 +3,27 @@
 /**
  * S6 · Calendar and approvals.
  *
- * Holds the one piece of state this screen owns: the statuses a person has
- * changed in this session. Every update replaces the map rather than editing
- * it, so the posts coming out of @mirrorline/mock are never touched.
+ * ============================================================================
+ * The week is a prop now, not a module constant (B2.2)
+ * ============================================================================
+ *
+ * It used to be `weekSchedule` and `weekPosts` from `@mirrorline/mock`, read at
+ * module scope — so everything derived from them (the first day, tomorrow, the
+ * platform count, the day options) could be a module constant too. The week is
+ * now `scheduled_posts` for the signed-in workspace, fetched by
+ * `read-week-schedule.ts` in the route and handed down.
+ *
+ * Every one of those derived values therefore moved inside the component and
+ * became a `useMemo`. That is not ceremony: a module constant computed from
+ * props is computed once per *process*, so the second workspace to render on a
+ * warm server would have been shown the first one's week.
+ *
+ * Statuses are still the one piece of state this screen owns, and still
+ * session-only — approving a post is a later write, not this one. Every update
+ * replaces the map rather than editing it.
  */
 
-import type { PostStatus, ScheduledPost } from '@mirrorline/mock'
-import { weekPosts, weekSchedule } from '@mirrorline/mock'
+import type { PostStatus, ScheduledPost, WeekSchedule } from '@mirrorline/mock'
 import {
   Button,
   Card,
@@ -47,39 +61,11 @@ import { type DropTarget, useChipDrag } from './use-chip-drag'
 import { WeekGrid } from './week-grid'
 
 /* -------------------------------------------------------------------------- */
-/* Everything the screen can read straight off the fixtures                    */
+/* Constants that do not depend on the week                                    */
 /* -------------------------------------------------------------------------- */
 
-const FIRST_DAY = weekSchedule.days[0] ?? null
-const TODAY_INDEX = weekSchedule.days.findIndex((day) => day.isToday)
-const TOMORROW = TODAY_INDEX >= 0 ? (weekSchedule.days[TODAY_INDEX + 1] ?? null) : null
-
-// Tomorrow's chips back the batch bar. The list used to be a module constant;
-// it is now derived per render, because a post dragged on or off tomorrow
-// changes who is waiting for approval and the bar has to say so.
-
-/** The mockup opens on the second chip of tomorrow's first platform row. */
+/** The panel opens on the second chip of tomorrow's first platform row. */
 const DEFAULT_SELECTION_INDEX = 1
-const TOMORROW_FIRST_ROW: readonly ScheduledPost[] = TOMORROW
-  ? (weekSchedule.rows[0]?.cells.find((cell) => cell.date === TOMORROW.date)?.posts ?? [])
-  : []
-const DEFAULT_POST_ID =
-  TOMORROW_FIRST_ROW[DEFAULT_SELECTION_INDEX]?.id ??
-  TOMORROW_FIRST_ROW[0]?.id ??
-  weekPosts[0]?.id ??
-  null
-
-const POST_BY_ID: ReadonlyMap<string, ScheduledPost> = new Map(
-  weekPosts.map((post) => [post.id, post]),
-)
-const DAY_LABEL_BY_DATE: Readonly<Record<string, string>> = Object.fromEntries(
-  weekSchedule.days.map((day) => [day.date, `${day.dayLabel} ${day.dayOfMonth}`]),
-)
-
-const PLATFORM_COUNT = weekSchedule.rows.length
-const CELL_COUNTS = weekSchedule.rows.flatMap((row) => row.cells.map((cell) => cell.posts.length))
-const MIN_PER_DAY = CELL_COUNTS.length > 0 ? Math.min(...CELL_COUNTS) : 0
-const MAX_PER_DAY = CELL_COUNTS.length > 0 ? Math.max(...CELL_COUNTS) : 0
 
 const APPROVAL_MODES = [
   { value: 'each', label: 'Approve each post' },
@@ -110,13 +96,14 @@ interface ToastState {
 /* View                                                                        */
 /* -------------------------------------------------------------------------- */
 
-/** The days, in grid order, for the "Move to…" menu. */
-const DAY_OPTIONS = weekSchedule.days.map((day) => ({
-  value: day.date,
-  label: `${day.dayLabel} ${day.dayOfMonth}`,
-}))
+export interface CalendarViewProps {
+  /** This workspace's week, built from `scheduled_posts` by the route. */
+  readonly schedule: WeekSchedule
+  /** The same posts, flat — the panel and the counters index by them. */
+  readonly posts: readonly ScheduledPost[]
+}
 
-export function CalendarView() {
+export function CalendarView({ schedule: weekSchedule, posts: weekPosts }: CalendarViewProps) {
   const [overrides, setOverrides] = useState<StatusOverrides>({})
   /**
    * Reschedules made in this session, keyed by post.
@@ -129,7 +116,73 @@ export function CalendarView() {
    * is what "not saved" promises.
    */
   const { moves, movePost } = useScheduleMoves()
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(DEFAULT_POST_ID)
+
+  /* ---------------------------------------------------------------------- */
+  /* Read off the week, which is now a prop                                 */
+  /* ---------------------------------------------------------------------- */
+
+  const firstDay = weekSchedule.days[0] ?? null
+
+  /**
+   * Tomorrow, which the batch bar and the grid's highlight both need.
+   *
+   * Null when no day is today — which happens when the workspace has no time
+   * zone captured (D97), because nothing is highlighted on a guess. The bar
+   * then has nothing to approve, which is the honest degradation.
+   */
+  const tomorrow = useMemo(() => {
+    const todayIndex = weekSchedule.days.findIndex((day) => day.isToday)
+    return todayIndex >= 0 ? (weekSchedule.days[todayIndex + 1] ?? null) : null
+  }, [weekSchedule])
+
+  const defaultPostId = useMemo(() => {
+    const firstRowTomorrow = tomorrow
+      ? (weekSchedule.rows[0]?.cells.find((cell) => cell.date === tomorrow.date)?.posts ?? [])
+      : []
+
+    return (
+      firstRowTomorrow[DEFAULT_SELECTION_INDEX]?.id ??
+      firstRowTomorrow[0]?.id ??
+      weekPosts[0]?.id ??
+      null
+    )
+  }, [tomorrow, weekPosts, weekSchedule])
+
+  const postById = useMemo<ReadonlyMap<string, ScheduledPost>>(
+    () => new Map(weekPosts.map((post) => [post.id, post])),
+    [weekPosts],
+  )
+
+  const dayLabelByDate = useMemo<Readonly<Record<string, string>>>(
+    () =>
+      Object.fromEntries(
+        weekSchedule.days.map((day) => [day.date, `${day.dayLabel} ${day.dayOfMonth}`]),
+      ),
+    [weekSchedule],
+  )
+
+  /** The days, in grid order, for the "Move to…" menu. */
+  const dayOptions = useMemo(
+    () =>
+      weekSchedule.days.map((day) => ({
+        value: day.date,
+        label: `${day.dayLabel} ${day.dayOfMonth}`,
+      })),
+    [weekSchedule],
+  )
+
+  const platformCount = weekSchedule.rows.length
+
+  /** Measured off the grid rather than asserted, so the eyebrow cannot lie. */
+  const { minPerDay, maxPerDay } = useMemo(() => {
+    const counts = weekSchedule.rows.flatMap((row) => row.cells.map((cell) => cell.posts.length))
+    return {
+      minPerDay: counts.length > 0 ? Math.min(...counts) : 0,
+      maxPerDay: counts.length > 0 ? Math.max(...counts) : 0,
+    }
+  }, [weekSchedule])
+
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(defaultPostId)
   const [isDrawerOpen, setDrawerOpen] = useState(false)
   const [mode, setMode] = useState<string>(DEFAULT_MODE)
   const [toast, setToast] = useState<ToastState | null>(null)
@@ -171,27 +224,44 @@ export function CalendarView() {
     setToast({ title: 'Sent back', description: 'It stays in needs review until you approve it.' })
   }, [])
 
-  /** The week as the grid should draw it, with this session's moves applied. */
-  const schedule = useMemo(() => applyMoves(weekSchedule, moves), [moves])
-  const posts = useMemo(() => movedWeekPosts(weekPosts, moves), [moves])
+  /**
+   * The week as the grid should draw it, with any in-flight move applied.
+   *
+   * `weekSchedule` is in the deps because it is a prop now. The route
+   * revalidates after a move, so a list of `[moves]` alone would redraw from
+   * the week this component first rendered with — the chip would appear to
+   * move, then the server's answer would arrive and be ignored.
+   */
+  const schedule = useMemo(() => applyMoves(weekSchedule, moves), [moves, weekSchedule])
+  const posts = useMemo(() => movedWeekPosts(weekPosts, moves), [moves, weekPosts])
 
   /**
    * One place both paths land, so the drag and the menu cannot drift apart —
-   * same state change, same confirmation, same wording about saving.
+   * same write, same confirmation, same wording.
    */
   const handleMove = useCallback(
-    (postId: string, move: PostMove) => {
-      // `movePost` reports whether anything changed. A drop onto the day a
-      // post is already in is not a move, and a toast for it would be the
-      // screen claiming to have done something it did not.
-      if (!movePost(postId, move)) return
+    async (postId: string, move: PostMove) => {
+      // Three outcomes, and each gets what it deserves. `unchanged` is a drop
+      // onto the day a post is already in: not a move, and a toast for it
+      // would be the screen claiming to have done something it did not.
+      const outcome = await movePost(postId, move)
+
+      if (outcome.status === 'unchanged') return
+
+      if (outcome.status === 'failed') {
+        // The chip has already snapped back by the time this renders — the
+        // provider rolled the move back before resolving. So the toast says
+        // what is true rather than apologising for something still on screen.
+        setToast({ title: 'Not moved', description: outcome.message })
+        return
+      }
 
       setToast({
-        title: `Moved to ${DAY_LABEL_BY_DATE[move.date] ?? 'another day'}, ${move.timeLabel}`,
-        description: 'Sample data, not saved. Nothing has been rescheduled on your accounts.',
+        title: `Moved to ${dayLabelByDate[move.date] ?? 'another day'}, ${move.timeLabel}`,
+        description: 'Saved to your schedule. Nothing has been published.',
       })
     },
-    [movePost],
+    [dayLabelByDate, movePost],
   )
 
   /**
@@ -212,8 +282,8 @@ export function CalendarView() {
 
   /** Tomorrow's set changes when a post is moved on or off that day. */
   const tomorrowPosts = useMemo(
-    () => (TOMORROW ? posts.filter((post) => post.date === TOMORROW.date) : []),
-    [posts],
+    () => (tomorrow ? posts.filter((post) => post.date === tomorrow.date) : []),
+    [posts, tomorrow],
   )
 
   const pendingTomorrow = useMemo(
@@ -230,14 +300,14 @@ export function CalendarView() {
     }))
     setToast({
       title: `Approved ${ids.length} posts`,
-      description: `They go out on ${TOMORROW ? (DAY_LABEL_BY_DATE[TOMORROW.date] ?? 'their day') : 'their day'}.`,
+      description: `They go out on ${tomorrow ? (dayLabelByDate[tomorrow.date] ?? 'their day') : 'their day'}.`,
     })
     setApproveAllCount((previous) => previous + 1)
-  }, [pendingTomorrow])
+  }, [dayLabelByDate, pendingTomorrow, tomorrow])
 
   // Read through the moves, or the panel would keep describing the day the
   // post was on before it was dragged.
-  const selectedBase = selectedPostId ? (POST_BY_ID.get(selectedPostId) ?? null) : null
+  const selectedBase = selectedPostId ? (postById.get(selectedPostId) ?? null) : null
   const selectedPost = selectedBase ? movedPost(selectedBase, moves) : null
 
   const panel = selectedPost ? (
@@ -245,10 +315,10 @@ export function CalendarView() {
       key={selectedPost.id}
       post={selectedPost}
       status={statusOf(selectedPost)}
-      dayLabel={DAY_LABEL_BY_DATE[selectedPost.date] ?? ''}
+      dayLabel={dayLabelByDate[selectedPost.date] ?? ''}
       onApprove={handleApprove}
       onSendBack={handleSendBack}
-      days={DAY_OPTIONS}
+      days={dayOptions}
       slots={timeSlotsFor(weekSchedule, selectedPost.platform)}
       onMove={handleMove}
     />
@@ -262,14 +332,14 @@ export function CalendarView() {
         <div className="flex min-w-0 flex-col gap-1.5">
           <Eyebrow>
             {/* Counts read off the grid itself, so they are measured. */}
-            Publisher agent · <span className="machine">{PLATFORM_COUNT}</span> platforms ·{' '}
+            Publisher agent · <span className="machine">{platformCount}</span> platforms ·{' '}
             <span className="machine">
-              {MIN_PER_DAY} to {MAX_PER_DAY}
+              {minPerDay} to {maxPerDay}
             </span>{' '}
             posts a day each
           </Eyebrow>
           <h1 className="m-0 font-heading text-headline text-text">
-            {FIRST_DAY ? `Week of ${FIRST_DAY.dayOfMonth} ${FIRST_DAY.monthLabel}` : 'This week'}
+            {firstDay ? `Week of ${firstDay.dayOfMonth} ${firstDay.monthLabel}` : 'This week'}
           </h1>
         </div>
         <div className="flex flex-col items-start gap-1.5 lg:items-end">
@@ -293,17 +363,24 @@ export function CalendarView() {
           <h2 id="week-grid-heading" className="sr-only">
             Posts this week, by platform
           </h2>
-          {/* Non-negotiable 7: demo data is labelled where it is shown. It
-              says "not saved" rather than only "sample", because the thing a
-              reader is about to do here is move a post — and a drag that
-              appears to work and is gone on reload is the dishonest part. */}
+          {/* "Sample data, not saved" was here until B2.2, and it has been
+              removed because it stopped being true: these are this workspace's
+              own posts, and a move is written to `scheduled_posts`. Leaving it
+              would be the mirror of the dishonesty it was added to prevent —
+              telling somebody their change was not saved when it was.
+
+              Non-negotiable 7 is unaffected: it requires demo data to be
+              labelled, and there is none left on this screen. The sentence
+              still says what a move does *not* do, because the Publisher does
+              not exist yet and "rescheduled" could be read as "reposted". */}
           <p className="m-0 mb-2.5 text-caption text-text-muted">
             Drag a post to another day, or use <strong className="font-semibold">Move to…</strong>{' '}
-            on the right. Sample data, not saved.
+            on the right. Changing a time here changes the schedule, not anything already
+            published.
           </p>
           <WeekGrid
             schedule={schedule}
-            highlightDate={TOMORROW?.date ?? null}
+            highlightDate={tomorrow?.date ?? null}
             statusOf={statusOf}
             selectedPostId={selectedPostId}
             onSelect={handleSelect}
@@ -344,7 +421,7 @@ export function CalendarView() {
       <BatchBar
         readyCount={tomorrowPosts.length}
         pendingCount={pendingTomorrow.length}
-        dayLabel={TOMORROW ? (DAY_LABEL_BY_DATE[TOMORROW.date] ?? '') : ''}
+        dayLabel={tomorrow ? (dayLabelByDate[tomorrow.date] ?? '') : ''}
         messageRef={batchMessageRef}
         onApproveAll={handleApproveAll}
       />

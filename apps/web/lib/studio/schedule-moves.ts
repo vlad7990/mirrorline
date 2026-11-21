@@ -1,23 +1,30 @@
 /**
- * Rescheduling a post, as a pure transform over the week fixtures.
+ * Rescheduling a post, as a pure transform over a week.
  *
- * The screen owns a map of moves in exactly the way it already owns a map of
- * status overrides: nothing here edits `weekSchedule` or `weekPosts`, because
- * those are module-level constants from `@mirrorline/mock` and a mutation
- * would follow the reader to every other screen in the session — and would
- * survive a navigation, which is the part that would make it look saved.
+ * Nothing here writes anything, and nothing here edits the week it is given:
+ * every function returns a new one. That was originally because the week *was*
+ * `weekSchedule` from `@mirrorline/mock` — a module-level constant a mutation
+ * would have followed to every other screen in the session.
  *
- * **Nothing is persisted, and that is the product, not a shortcut.** There is
- * no API behind this yet. The calendar says so on the screen rather than only
- * in a comment, because a drag that appears to work and is gone on reload is
- * worse than one that admits it is a sample.
+ * **It is still true, for a better reason.** Since B2.2 the week arrives as
+ * server-component props built from `scheduled_posts`
+ * (`lib/workspace/read-week-schedule.ts`), and a move is persisted by
+ * `movePostToSlot`. These functions are the *display* half of that: they put a
+ * chip where the move says it is while the write is in flight, and they are
+ * what a rollback un-applies. A transform that mutated its input could not be
+ * undone — which is exactly what `ScheduleMovesProvider` has to do when a save
+ * fails.
  *
- * **A move changes the day and the time, never the platform.** The grid's
- * rows are platforms, so dropping across rows would mean "post this to TikTok
- * instead", which is a different decision under different rules — TikTok
- * posts stay private until our app is approved, for one. Moving within a row
- * is a scheduling change; moving across one is a publishing change, and
- * conflating the two in a drag would be a trap.
+ * Applying a move the data already reflects is therefore harmless and expected:
+ * it is the same date and the same time, written twice.
+ *
+ * **A move changes the day and the time, never the platform.** The grid's rows
+ * are platforms, so dropping across rows would mean "post this to TikTok
+ * instead", which is a different decision under different rules — TikTok posts
+ * stay private until our app is approved, for one. Moving within a row is a
+ * scheduling change; moving across one is a publishing change, and conflating
+ * the two in a drag would be a trap. The database agrees: `authenticated` may
+ * update `scheduled_date` and `scheduled_time24`, and not `platform` (D95).
  */
 
 import type { CalendarRow, ScheduledPost, WeekSchedule } from '@mirrorline/mock'

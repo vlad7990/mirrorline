@@ -17,11 +17,15 @@ import { ScheduleMovesProvider } from '@/lib/studio/schedule-moves-context'
  * Anywhere means the layout; mounting it per screen would mean a shortcut
  * that worked on the pages somebody remembered to add it to.
  *
- * **This session's reschedules**, because approving a `move-post` proposal
- * has to perform the calendar's own move rather than a second copy of it, and
- * the co-pilot can be open on any screen when it happens. They were local
- * state in `calendar-view.tsx` until C3. Still nothing persisted: the
- * provider dies with the page, which is what "Sample data, not saved" means.
+ * **Reschedules**, because approving a `move-post` proposal has to perform the
+ * calendar's own move rather than a second copy of it, and the co-pilot can be
+ * open on any screen when it happens. They were local state in
+ * `calendar-view.tsx` until C3.
+ *
+ * Since B2.2 they are **persisted** — `movePostToSlot` writes the two columns a
+ * member may write — and the provider's map is the optimistic layer over that
+ * write, which it rolls back if the write is refused. The map still dies with
+ * the page; that no longer means the move did.
  */
 
 export default function StudioLayout({ children }: { children: React.ReactNode }) {

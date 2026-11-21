@@ -178,12 +178,28 @@ export function StudioCopilot() {
       if (next === exchange) return
 
       const proposal = exchange.proposals[index]?.proposal
+      const key = `${exchangeId}:${index}`
+
+      const record = (line: string) => setOutcomes((current) => ({ ...current, [key]: line }))
 
       let outcome: string = STUDIO_COPILOT_COPY.dismissed
       if (decision === 'approved') {
         if (proposal?.kind === 'move-post' && proposal.move) {
           const { postId, ...move } = proposal.move
-          movePost(postId, move)
+
+          /*
+           * Optimistic, then corrected — the same bargain the calendar's own
+           * drag makes (B2.2). The move is a write now, so the confirmation
+           * can be wrong, and the panel rewrites its own line rather than
+           * leaving a claim that a move happened. `isMountedRef` because the
+           * panel closes on Escape and a `setState` after that is a warning
+           * about nothing.
+           */
+          void movePost(postId, move).then((result) => {
+            if (!isMountedRef.current) return
+            if (result.status === 'failed') record(STUDIO_COPILOT_COPY.approvedMoveFailed)
+          })
+
           outcome = STUDIO_COPILOT_COPY.approvedMove
         } else {
           // `swap-format` and `pause-account` have no screen that performs
@@ -193,7 +209,7 @@ export function StudioCopilot() {
         }
       }
 
-      setOutcomes((current) => ({ ...current, [`${exchangeId}:${index}`]: outcome }))
+      record(outcome)
       setExchanges((current) =>
         current.map((candidate) => (candidate.id === exchangeId ? next : candidate)),
       )

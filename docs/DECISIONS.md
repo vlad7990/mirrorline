@@ -6675,6 +6675,753 @@ CI, not from here.
 
 ---
 
+## 2026-11-19 · D95 · The calendar's schema: a move is an edit plus an audit, and the database decides which columns a move may touch
+
+B2.2's first milestone. `supabase/migrations/20261119030000_scheduled_posts_and_moves.sql`
+and `…040000_append_only_grants.sql`, proved by twelve new tests in
+`apps/web/lib/supabase/rls.db.test.ts`.
+
+### The plan's apparent contradiction is two tables, not one mistake
+
+`BACKEND_PHASE.md` §2 item 2 says both *"it needs a `scheduled_posts` table and
+a `post_moves` write"* and *"a move is an edit to a row, not a new row"*. Both
+are true, of different tables: `scheduled_posts.scheduled_date` and
+`.scheduled_time24` are **mutated**, so the calendar shows one post moved rather
+than two posts with one of them stale; `post_moves` is an **append-only** record
+of who moved what, from where, when.
+
+### Local date and time, not an instant
+
+`scheduled_at timestamptz` is the right column for a publisher and **cannot be
+filled honestly yet.** Turning "Tuesday 2:15 pm" into an instant needs a
+workspace time zone, there is no such column, and nobody has been asked for one.
+Defaulting to UTC would silently reschedule every post for every user outside
+it — a data bug that looks like a product decision.
+
+So the columns are `scheduled_date date` and `scheduled_time24 text` with a
+`check` regex, which is what the user actually chose. The conversion becomes a
+real decision when posting is switched on (§6 keeps it off) and there is a time
+zone to make it with. **Deferring a decision beats inventing the input to it.**
+
+`ScheduledPost` in `@mirrorline/mock` also carries `platformLabel`,
+`statusLabel` and `timeLabel`. **None is a column**: each is a pure function of
+`platform`, `status` and `scheduled_time24`, and two fields that can disagree is
+a bug with a schema for a home.
+
+### The audit is written by a trigger, not by the application
+
+`record_post_move()` fires `after update` and appends to `post_moves` in the
+same statement, so no code path can move a post and forget to say so. An audit
+the application remembers to write stays complete until somebody adds a second
+way to move a post — and the co-pilot's `move-post` approval is already a second
+caller of exactly this operation.
+
+It returns early unless the date or the time actually changed, so a retitle is
+not recorded as a move; an audit full of non-moves is one nobody reads.
+`moved_by` is **nullable on purpose** — null means "not a signed-in user": the
+service role, a migration, a fixture. Not-null would make the honest answer
+unrepresentable and invite a sentinel user id.
+
+### RLS decides rows; grants decide columns
+
+The update policy alone would let a member retitle a post or change its
+platform. `schedule-moves.ts` is explicit that moving across a platform row
+*"would mean 'post this to TikTok instead', which is a different decision under
+different rules"*, and that sentence deserves to be true in the database rather
+than only in a comment. So:
+
+    revoke update on public.scheduled_posts from authenticated;
+    grant update (scheduled_date, scheduled_time24) on public.scheduled_posts to authenticated;
+
+There is **no insert and no delete policy** on `scheduled_posts`. Nobody authors
+a post in this phase — the pipeline will, through the service role — so a member
+may move one and may not create or destroy one. An absent policy denies; that is
+the design, not an omission. `with check` repeats the `using` expression so a
+member cannot move a post *into* another workspace by patching `workspace_id`.
+
+### What the test caught, and why it needed a second migration
+
+The append-only claim was false when first written. `post_moves` had a select
+policy and no insert, update or delete policy — but **Supabase grants every
+`public` table to `authenticated` by default, and the grant is checked before
+the policy.** So an UPDATE was permitted, RLS filtered it to zero rows, and
+PostgREST answered **200 with an empty array**.
+
+For a post that is correct: B2.1's rule is that a filtered row reads as
+not-found. For an audit table it is wrong — an attempt to rewrite history should
+be an error somebody can see, not a no-op reporting success. INSERT already
+failed loudly (a missing insert policy *is* a 42501), which is why only two of
+the three verbs were quiet.
+
+The fix is `revoke insert, update, delete on public.post_moves from
+authenticated` (and `insert, delete` on `scheduled_posts` for the same
+loudness). **It went in a second migration rather than an edit**, because
+`…030000` had already been applied: editing an applied migration leaves every
+database that ran it disagreeing with the file, which is the drift a migration
+history exists to prevent.
+
+Worth recording that **the test was right and the schema was wrong.** The
+assertion encoded the guarantee that was intended; the migration under-delivered
+it. Weakening the assertion to match would have left an audit table anyone could
+quietly fail to rewrite.
+
+### Proved, in that order
+
+The twelve tests were written and run **before** the migration was applied, and
+failed with `Could not find the table 'public.scheduled_posts'` — so they
+genuinely exercise the migration rather than passing regardless. Applied to
+`mirrorline-preview` only; production gets it through D93's gated workflow, and
+`pnpm migration-safety` reports all eight migrations additive.
+
+Gates: lint, typecheck, **931 unit**, **61 RLS/DB**, build, licence-check,
+migration-safety — all green.
+
+### What this milestone deliberately does not do
+
+The studio still reads `@mirrorline/mock`. The schema exists and is proved; the
+read path, the server action and the context wiring are the next milestone, and
+until they land the calendar is unchanged and still says "Sample data, not
+saved" — which remains honest.
+
+## 2026-11-19 · D96 · The default-grants bug was on ten more tables, and asking the question properly took no fixtures at all
+
+Vlad asked whether the bug D95 found on `post_moves` — an UPDATE with a grant
+and no policy answering **200 with an empty array** — existed elsewhere. It did,
+on **every other table that had an unpoliced write verb**: ten of the fifteen in
+`public`.
+
+That was the expected answer rather than a surprise, because the cause is not
+per-table. Supabase's default privileges grant all four verbs on every new
+`public` table to `anon` and `authenticated`, and **the grant is checked before
+the policy**. Every `create table` in this schema inherited it.
+
+### The audit, and the shape of the hole per verb
+
+The verbs behave differently, and only two of them are dangerous:
+
+| Verb | With a grant and no policy | |
+|---|---|---|
+| INSERT | the row is built, the missing `with check` refuses it, caller gets `42501` | **loud** |
+| UPDATE | `using` filters to no rows, zero rows change, PostgREST answers `200 []` | **silent** |
+| DELETE | the same | **silent** |
+| SELECT | `[]`, which is the honest answer to "you may not see this" | fine |
+
+So the bug class is exactly *UPDATE or DELETE, granted, unpoliced*. INSERT was
+already loud; it is revoked too, which changes only *which* error it is.
+
+| Table | Verbs left open | Now |
+|---|---|---|
+| `profiles` | insert, delete | revoked; `update` (self) keeps its policy |
+| `memberships` | insert, update, delete | revoked |
+| `workspaces` | insert, delete | revoked; `update` (owner) keeps its policy |
+| `social_accounts` | insert, update, delete | revoked |
+| `kpi_definitions` | insert, update, delete | revoked |
+| `metric_snapshots` | insert, update, delete | revoked |
+| `ledger_weekly` | insert, update, delete | revoked |
+| `alerts` | insert, delete | revoked; `update` (acknowledge) keeps its policy |
+| `leads` | insert, update, delete | revoked — and it had no policy of any kind |
+| `trends` | insert, update, delete | revoked |
+| `goals`, `objectives`, `key_results` | none | four policies each |
+| `scheduled_posts`, `post_moves` | none | D95 and `20261119040000` |
+
+`20261119050000_grants_match_policies.sql`, additive, from `authenticated` **and
+`anon`** — `anon` is the role the public site's browser code holds, and it
+carried the same grants.
+
+### Revoked rather than given a refusing policy
+
+A policy that matches nothing produces the identical silent `200`. Only the
+absence of the grant makes Postgres refuse before it looks at a row. "RLS
+decides rows, grants decide columns" (D95); a verb the client has no business
+using is not a row question at all.
+
+**No capability was lost, and that was checked rather than assumed.** Every
+write to those ten tables already goes through the service role
+(`metric_snapshots`, `ledger_weekly`, `trends`, `leads`) or a `security definer`
+function that runs as its owner: `handle_new_user`,
+`ensure_workspace_for_current_user`, `save_onboarding`, `delete_workspace`. The
+only direct client write in the app is `key_results`, which keeps all four
+policies — and two tests assert the two nearest neighbours still work, so an
+over-broad revoke would fail rather than pass quietly.
+
+### The part worth keeping: the test needed no fixtures
+
+Seventeen cases, each filtering on an id that matches nothing —
+`00000000-…`, `id=eq.0`, `no-such-lead-<runId>`. **Postgres checks the table
+privilege before it looks for a row**, so a refusal proves the *verb* is refused
+and cannot be a row that happened to be hidden. The first instinct was to seed a
+row per table per verb, which would have been thirty fixtures proving something
+weaker.
+
+Run before the migration: **18 failed, every one `expected 200 to be 403`** —
+the hole, on every table, in one screen. After: 81 passed.
+
+### One correction the run produced
+
+The anonymous case came back **401**, not 403. PostgREST maps `42501` by whether
+the caller presented an identity: anonymous gets 401 because "authenticate and
+try again" is the useful hint, authenticated gets 403 because it has and still
+may not. Both carry `42501`, so the error **code** is the assertion that holds
+for both roles and the status is asserted per role.
+
+Gates: lint, typecheck, **81 RLS/DB**, migration-safety (9 additive) — green.
+
+## 2026-11-19 · D97 · The workspace records where it is, captured from the browser at onboarding and never guessed
+
+Vlad asked for this as "small, additive, now rather than later", and explicitly
+**not** as posting logic. It is one nullable column, one trigger and one
+function.
+
+D95 stored a scheduled post as a local date plus a `time24` string rather than a
+`timestamptz`, because no workspace time zone existed and defaulting to UTC
+would have silently rescheduled every account outside it. That storage stays.
+What was missing is the fact that makes `09:00` mean anything: *nine in the
+morning where?*
+
+### Captured where the answer is actually known
+
+`Intl.DateTimeFormat().resolvedOptions().timeZone`, in an effect rather than at
+render. During SSR that same line runs on a Vercel server and answers `UTC` —
+the server's zone wearing the client's name, which is worse than not asking. So
+the hidden field posts empty until hydration, and empty means **not captured**:
+the action stores nothing rather than a guess.
+
+### Nullable, no default
+
+`not null default 'UTC'` is D95's mistake one layer down. It would make every
+workspace predating the column, and every one whose capture failed, claim London
+time rather than admit it does not know. Null is a state readers must handle,
+and the only honest response to it is to ask.
+
+### Validated three times, and only one of them counts
+
+1. `lib/workspace/timezone.ts` — `parseTimeZone`, on the server, before the RPC.
+   The check is `new Intl.DateTimeFormat('en-GB', { timeZone })` in a try/catch
+   rather than `Intl.supportedValuesOf('timeZone')`, because the formatter
+   accepts the backward-compatibility aliases a real browser still sends
+   (`Asia/Calcutta`, `US/Eastern`) that the list omits. 8 unit tests.
+2. `set_workspace_timezone(text)` — rejects empty with `45005`, and "you own no
+   workspace" with `45002`, the code `save_onboarding` already uses for the same
+   condition.
+3. **A trigger on the column, which is the one that cannot be bypassed.**
+   `workspaces_update_owner` plus the table UPDATE grant mean an owner can PATCH
+   their own row directly, so a function-only check left `timezone = 'Narnia'`
+   one request away. `45004`, raised wherever the value came from — the same
+   reasoning as D95's audit trigger.
+
+A CHECK constraint could not do this: it would have to read `pg_timezone_names`,
+and a constraint that reads a catalog is not immutable — a dump and restore
+would then depend on the restoring server's zone database.
+
+### A second function rather than a sixth parameter
+
+`save_onboarding(text, text, text, text, text)` is deployed and called by the
+running app. A defaulted sixth argument makes the existing five-argument call
+match two signatures — `42725`, ambiguous — and dropping the function to reshape
+it is precisely the contract break D93's gate exists to prevent: production
+would run code calling the old shape until the next deploy.
+
+The separate call is also better shaped. **A time zone that fails to save must
+not cost somebody their onboarding answers**, so `captureTimeZone` cannot fail
+the submit: the answers are already committed, and a null column is a state
+every reader handles. It is logged, not swallowed —
+`console.error('[onboarding] could not store the time zone …')`, the shape the
+rest of the server uses.
+
+Eight RLS/DB tests, run before the migration and failing with `PGRST202` /
+`PGRST204` — no such function, no such column — so they exercise the migration
+rather than passing regardless.
+
+## 2026-11-19 · D98 · `revoke all from public` is not `revoke from anon`, and four functions were anonymous-callable because of it
+
+Found while writing D97's anonymous test, which was the weakest assertion in the
+block — `expect(refused.ok).toBe(false)` — and so nearly did not find it.
+
+Every `security definer` function here carries the same pair of lines:
+
+```sql
+revoke all on function … from public;
+grant execute on function … to authenticated;
+```
+
+which reads as "only a signed-in caller may run this". It is not what it does.
+`public` is the **implicit** grant every role holds; `anon` is a named role with
+a **direct** grant of its own, from Supabase's
+`alter default privileges … grant all on functions to postgres, anon,
+authenticated, service_role`. Revoking the implicit one leaves the direct one
+in place.
+
+Measured against preview with the publishable key and no bearer token:
+
+| Function | Anonymous call |
+|---|---|
+| `save_onboarding` | 400 `P0001` "requires an authenticated user" |
+| `delete_workspace` | 400 `P0001` same |
+| `ensure_workspace_for_current_user` | 400 `P0001` same |
+| `set_workspace_timezone` | 400 `P0001` same |
+
+`P0001` is the function's **own first line** refusing. Not the grant. All four
+ran.
+
+### Nothing was exploitable, and that is the only reason this is not urgent
+
+Each opens with `if auth.uid() is null then raise`, so an anonymous call writes
+nothing. **The guard held and the grant did not** — defence in depth doing its
+job, which is also exactly why the outer layer being wrong went unnoticed for
+two weeks.
+
+`20261119070000_definer_functions_are_authenticated_only.sql` revokes execute
+from `anon` on the four writers. The policy helpers — `is_member_of`,
+`is_owner_of`, `can_access_*` — **keep** theirs: a policy runs as the calling
+role, so an anonymous SELECT evaluates them as `anon`, and revoking there would
+turn "you see nothing" into an error on the public site. A test now asserts that
+distinction in both directions.
+
+### The rule out of D96 and D98 together
+
+Two findings, one shape: **a grant nobody wrote, inherited from a default, wider
+than the comment above it claimed.** D96 was tables, this is functions.
+
+So: **name the role you mean.** `from public` is a statement about the implicit
+grant and about nothing else. And when asserting a refusal, assert *which*
+refusal — `ok: false` was true the whole time these were open, and `42501`
+versus `P0001` is the difference between the grant saying no and the body saying
+no.
+
+Gates: lint, typecheck, 939 unit, **94 RLS/DB**, build, licence-check,
+migration-safety (11 additive) — green.
+
+## 2026-11-19 · D99 · `hasAiScenes` is stored, because a non-negotiable must not rest on a literal
+
+D95 left three columns out of `scheduled_posts` on the grounds that they are
+functions of other fields: `timeLabel`, `platformLabel`, `statusLabel`. That was
+right. `hasAiScenes` was left out with them, and it does not belong in that
+group — nothing else on the row implies it.
+
+The read path made that visible. `components/calendar/post-panel.tsx` reads
+`post.hasAiScenes` to **lock the AI label on**, which is CLAUDE.md
+non-negotiable 4: "AI scenes are always labelled, in the UI and on the
+platform." So building a `ScheduledPost` out of the database left two options:
+store the fact, or hardcode `false`.
+
+Hardcoding would be correct today — nothing authors an AI remake yet — and
+silently wrong the first time the Remake Producer does, with a non-negotiable
+depending on a literal nobody would think to revisit.
+`20261119080000_scheduled_posts_ai_scenes.sql` adds the column.
+
+`default false` is honest here in a way `default 'UTC'` was not for D97: a post
+has AI scenes only if something put them there, so the default is the true
+answer for every row that exists. And no grant is added — a member may move a
+post, not relabel it, and "this has no AI scenes" is exactly the edit that must
+stay impossible.
+
+## 2026-11-19 · D100 · B2.2's read path, its one write, and the note that was removed last
+
+The calendar reads `scheduled_posts` for the signed-in workspace, a move is
+persisted, and the e2e suite proves it survives a reload. The studio is off
+`@mirrorline/mock`; the marketing site keeps it (non-negotiable 7).
+
+### The read, split the way the Goals read is
+
+`lib/workspace/week-schedule.ts` is pure and decides everything — 33 unit tests,
+no network. `read-week-schedule.ts` fetches and decides only *which week*. The
+same division `goal-cascade.ts` has from `read-goal-cascade.ts`, and the reason
+is the same: a builder that needs a database to test is a builder nobody tests
+at the edges.
+
+Four things it had to decide:
+
+- **Which week.** The one *today* falls in, with today resolved in the
+  workspace's zone (D97 earning its place within a day of being written). A
+  client in Auckland on Monday morning is eleven hours into a week a UTC server
+  still calls last week. With no zone captured, the window falls back to the
+  server's UTC date and `today` stays null, so **no column is highlighted** — a
+  week boundary a few hours out is visible and self-correcting; a highlighted
+  "today" on the wrong day is a claim made without evidence.
+- **Which rows are platforms.** The platforms that have a post this week, in a
+  fixed order. Not `social_accounts`, which would be truer and has no connect
+  flow behind it; not all four, which would draw a LinkedIn row for an account
+  that has never posted there. An empty week therefore has **no rows**, which is
+  what a new workspace looks like, so the view has to cope.
+- **`thumbnailColor`.** Hashed from the post id, against `THUMBNAIL_COLORS` from
+  `@mirrorline/ui`. The fixtures take it from the cut; there is no cuts table
+  yet. Presentational and deterministic.
+- **An undrawable row is dropped, not coerced.** A platform or status outside
+  the check constraint means something wrote past the schema; a chip in the
+  wrong row, or labelled "undefined", is worse than a chip that is absent.
+
+### The write is one update on two columns, and the database is what makes it two
+
+`authenticated` holds `update (scheduled_date, scheduled_time24)` and nothing
+else (D95), so `movePostToSlot` names those two columns because they are the
+only two it *could* name. `.select()` is load-bearing for the third time now —
+B2.1's rule, D95's bug, D96's ten more: without it an update RLS filtered to
+nothing returns success.
+
+It does **not** write `post_moves`. `record_post_move()` does, on the update.
+An insert here as well would double every entry; instead of would be a write the
+application could forget.
+
+### The module constants were the real refactor
+
+`calendar-view.tsx` read `weekSchedule` at module scope, so a dozen derived
+values were module constants too. A module constant computed from props is
+computed **once per process** — the second workspace to render on a warm server
+would have been shown the first one's week. All of them moved inside the
+component. The two existing `useMemo`s keyed on `[moves]` alone had to gain the
+week as well, or a revalidation's fresh data would have been computed over and
+thrown away.
+
+### Optimistic, with a rollback, because a move can now fail
+
+`ScheduleMovesProvider.movePost` went from `boolean` to
+`Promise<MoveOutcome>` — `unchanged | saved | failed`. It records the move so
+the chip lands under the pointer, then writes; on failure it **removes the entry
+and the chip goes back**, and the caller gets a sentence. The entry is
+deliberately not cleared on success: the route revalidates, and dropping it
+before that render arrives would snap the chip back for a frame, which is the
+one thing an optimistic update exists to prevent.
+
+`unchanged` is not a detail. A drop onto the day a post is already in is not a
+move, and a confirmation for it would be the screen claiming to have done
+something it did not.
+
+### Three sentences that became false, and were rewritten rather than left
+
+The handoff named two; there were four.
+
+| Where | Said | Now |
+|---|---|---|
+| `schedule-moves.ts` header | "Nothing is persisted, and that is the product" | the display half of a persisted move, and what a rollback un-applies |
+| `schedule-moves-context.tsx` header | the same | the optimistic layer over a real write |
+| `(studio)/layout.tsx` | "Still nothing persisted" | the map dies with the page; the move does not |
+| `studio-copilot-copy.ts` | "Moved on the calendar. Sample data, not saved" | "Moved on the calendar and saved. Nothing has been published." |
+
+And the calendar's own note, removed **last**, as the handoff required. It now
+reads "Changing a time here changes the schedule, not anything already
+published" — smaller and true. Non-negotiable 7 is unaffected: it requires demo
+data to be labelled, and there is none left on that screen. Leaving the old
+sentence would have been the mirror of the dishonesty it was added to prevent —
+telling somebody their change was not saved when it was.
+
+The co-pilot's Approve had the same problem one layer deeper: it wrote
+"approvedMove" into the transcript *before* knowing whether the write
+succeeded. It now corrects its own line.
+
+### The e2e fixture, per Vlad's decision
+
+Service role, in `auth.setup.ts`, tagged with the run id, swept with the
+account. **In setup** rather than per spec, which was the part worth getting
+right: the calendar used to render the fixtures for whoever was signed in, so
+six specs — the drag, the menu, the screenshots, the accessibility audit, the
+responsive pass, the co-pilot — would otherwise have failed on an empty week
+rather than on anything true. Seeding per spec would have piled five more posts
+onto the shared workspace each time and made "the chip I moved" ambiguous, which
+is D84's problem from the other side.
+
+The sweep is the existing one: `scheduled_posts.workspace_id` is
+`on delete cascade` and `deleteTestAccounts` deletes workspaces before users.
+`scheduled_posts` was added to `WORKSPACE_CHILD_TABLES` so that cascade is
+**asserted** by `workspace-delete.spec.ts` rather than assumed.
+
+The fixture also pins the test workspace's zone to `UTC`, so the week it seeds
+and the week the app draws cannot disagree across a midnight.
+
+`calendar-persist.spec.ts` is the new one: its own account, move through the
+menu, assert in the database with the service role, count the audit row, reload,
+and find the chip in its new cell. Plus the no-op case, which must write nothing
+— an audit that fills with non-moves stops being readable.
+
+### One repo gate earned its keep
+
+`youtube-claims.test.ts` failed on the new builder, which names "YouTube Shorts"
+in a label map near the word "post". It is not a posting claim, so it went on
+that file's allowlist **with the written reason the file demands** — the device
+exists precisely so the alternative (weakening the regex) is not taken.
+
+### What the full e2e run found, which no unit test could have
+
+Eight failures on the first run, and every one of them was the suite being
+right.
+
+**Three were hard-coded fixture dates.** `Week of 9 November`, "Tomorrow: 9
+posts ready", "Tue 10" — the mock week, which never moved. They now assert the
+shape (`/^Week of \d{1,2} [A-Z][a-z]+$/`), so a heading that loses its date
+still fails and a calendar that moves does not. `Route.h1` widened to
+`string | RegExp` for it.
+
+**Two were the co-pilot proposing a move for a post that no longer exists**, and
+that is the finding worth keeping.
+
+`canned.ts` built its `move-post` proposal from `weekPosts` in
+`@mirrorline/mock` — at module scope — and the comment above it was *proud* of
+not hard-coding an id: "a proposal pointing at a post that is not on the
+calendar is a card whose Approve button silently does nothing. Reading the
+fixtures keeps the proposal and the grid describing the same post by
+construction."
+
+Every word of that was true until the grid stopped being the fixtures. The
+proposal then named an id the database had never heard of, and Approve answered
+"We could not find that post" — the exact failure the comment was written to
+prevent, arriving through the assumption *underneath* it rather than through the
+mistake it was watching for.
+
+So the week now comes in: `/api/copilot/studio` reads it with
+`readWeekSchedule()` and hands it down through `respond` → `askCopilot` →
+`cannedAnswer` → `cannedStudioAnswer`, which picks a post that is actually
+there. **With no posts, or one day's worth, no move is proposed at all** — the
+question falls through to the ordinary answer rather than offering a card built
+on a guess.
+
+Read on the server rather than sent by the client for two reasons: the panel
+opens from any screen under `/app/*` and only the calendar has the week in hand,
+and a post id arriving from a browser would be a client telling the server which
+post to propose moving. The policy would refuse a foreign one anyway; there is
+no reason to ask the question.
+
+`parseProposal` gained the same guard for the live path — a `move-post` naming
+an id outside the week is dropped. Nothing reaches it yet (the live path emits
+`proposals: []`), so this is the hole closed before the feature that would open
+it.
+
+**And one was flaky**: the Results screen's `Overview` heading, on one of four
+screenshot projects, at a 5-second timeout. Not calendar-related and not
+reproduced on the re-run. Named here rather than quietly re-run until green.
+
+## 2026-11-19 · D101 · The confirmation link landed on the home page, and it was two faults wearing one symptom
+
+Reported as "after clicking the email confirmation link, users land on the home
+page". Everything the report asked for already existed —
+`emailRedirectTo: callbackUrl(ONBOARDING)`, a callback that validates `next`
+through `resolveNextPath`, an open-redirect guard with its own test file. So the
+first job was finding out why a correct-looking chain produced the wrong
+destination.
+
+**It was two independent faults, and either alone would have been enough.**
+
+### Fault one: `VERCEL_URL` is not the URL anybody visits
+
+`callbackUrl` read `NEXT_PUBLIC_SITE_URL`, then `VERCEL_URL`, then localhost.
+`NEXT_PUBLIC_SITE_URL` **is not set on this project** — checked against the
+Vercel API rather than assumed: production and preview carry the four Supabase
+variables and `ANTHROPIC_API_KEY`, and nothing else.
+
+So production fell through to `VERCEL_URL`, which is the **per-deployment**
+hostname — `mirrorline-a1b2c3d4.vercel.app`, a new one every push — not the
+`mirrorline-eosin` alias. Supabase was handed a `redirect_to` on a host its
+allow-list had never heard of, refused it, and fell back to the Site URL. The
+Site URL is the marketing home page.
+
+It survived because it needed the one environment where the deployment URL and
+the public URL differ: locally and on previews `VERCEL_URL` *is* the host being
+visited, so every hand test passed.
+
+The fix is `lib/auth/callback-url.ts`, with the decision moved out of a server
+action into nine testable lines. On production it prefers
+`VERCEL_PROJECT_PRODUCTION_URL` — **gated on `VERCEL_ENV === 'production'`**,
+because that variable is set on previews too, and naming it first would send
+every preview's confirmation link to production. That is the worse bug: silent,
+and it moves people between databases.
+
+### Fault two: an allow-list entry without `/**` keeps the origin and drops the path
+
+Found by the new e2e, and only because the first version of its probe was too
+weak. That version compared **origins** and passed — while the link landed on
+`http://localhost:3000/#access_token=…`: our origin, with `/auth/callback`
+silently removed.
+
+That is what an allow-list entry of `http://localhost:3000` does to a
+`redirect_to` of `http://localhost:3000/auth/callback?next=…`. It matches on the
+origin and the path is rewritten to the allowed one. **The right host, the home
+page, and no error anywhere** — the production symptom, reproduced on a laptop.
+
+So the probe asserts the **path**, the entries need their `/**`, and the
+allow-lists are a one-time explicit command rather than anything a local link
+can do (D94). The preview project's list is missing it today, which is why one
+test skips rather than passes.
+
+### What the e2e can and cannot prove
+
+`generate_link` mints the same URL the email carries without sending one — the
+sender is rate-limited (D79), and a test that read a mailbox would be testing
+the mailbox.
+
+**It is not quite the app's own flow, and the test says so rather than implying
+otherwise.** An admin-generated link has no PKCE challenge, so it verifies
+through the implicit flow and arrives with tokens in the fragment, where
+`signUp()` from our own form produces the `?code=` that
+`exchangeCodeForSession` takes. What it does prove is the link in the chain that
+was actually broken: whether Supabase sends the browser to our callback path at
+all.
+
+### A skip, not a failure, when the project is unconfigured
+
+The real-link test skips with the entry to add and where to add it. A red test
+would point at the code, which is correct; the missing thing is a line in a
+dashboard. The repo already does this for `E2E_SIGNUP_EMAIL`.
+
+### What the investigation did not change
+
+`resolveNextPath` and `isSafeNextPath` were already right, and the callback
+already used them — so "make the callback honour a same-origin `next` only"
+needed tests, not code. Four now cover it end to end, including the
+protocol-relative and backslash forms the guard was written for.
+
+One of those tests was written wrong first: it compared a URL's host to itself,
+which is true for every input. The same mistake as the probe, in the same file,
+within ten minutes — **an assertion that cannot fail is the default outcome of
+writing one in a hurry**, and both surfaced only because something else failed
+and made them worth re-reading.
+
+## 2026-11-19 · D102 · `git add -A` committed ten files I had just written a handoff about
+
+Found while confirming the handoff was current before a `/clear` — which is the
+only reason it was found at all.
+
+The B2.2 handoff said of ten iCloud conflict copies: *"They are stale, they are
+not in git, and I have not deleted them because they are not mine to delete."*
+Two of those three clauses stayed true. **`git add -A` in `6030060` committed
+every one of them**, about an hour after that sentence was written, in the same
+session.
+
+```
+apps/web/app/app/(studio)/goals/actions 2.ts
+apps/web/app/app/(studio)/goals/target-form-state 2.ts
+apps/web/app/app/onboarding/actions 2.ts
+apps/web/components/calendar/calendar-view 2.tsx
+apps/web/components/studio/target-form 2.tsx
+apps/web/lib/supabase/rls.db.test 2.ts
+apps/web/lib/workspace/goal-cascade 2.ts
+apps/web/lib/workspace/goal-cascade.test 2.ts
+apps/web/lib/workspace/read-goal-cascade 2.ts
+e2e/goals-persist.spec 2.ts
+```
+
+### Why nothing caught it
+
+Every gate passed, and each for an honest reason. They are **valid TypeScript**
+— stale copies of working modules — so `typecheck` and `lint` are content.
+`rls.db.test 2.ts` and `goal-cascade.test 2.ts` are **not collected**: the globs
+are `**/*.test.ts` and `**/*.db.test.ts`, and `test 2.ts` matches neither. The
+sweep in `youtube-claims.test.ts` reads them and finds nothing to complain
+about.
+
+So they are inert — and inert is the problem. A stale `calendar-view 2.tsx`
+sitting beside the real one, in git, is a file somebody opens in six weeks and
+edits.
+
+### `git rm --cached`, not `rm`
+
+They are untracked again and **still on disk**: "never delete files you did not
+create" is about the filesystem, and `--cached` is the operation that respects
+it. Vlad decides whether they go.
+
+History is not rewritten. `6030060` is pushed, and rewriting a pushed commit to
+tidy a mistake is a bigger risk than the mistake — the files are gone from the
+tree, which is what matters, and the commit that removes them says why.
+
+### The guard, and the actual fix
+
+`.gitignore` now carries `* 2.*`, which no file in this repo is legitimately
+named. That stops the recurrence; it does not stop iCloud writing the copies.
+The real fix is moving the repo out from under `~/Documents`.
+
+### The lesson, which is about `-A` rather than about iCloud
+
+**`git add -A` stages what is there, not what you worked on.** It had been
+harmless in this repo for ninety commits because the tree was always clean —
+and the one session where it was not was the session that also ran a full e2e
+suite, generated screenshots, and had a sync conflict.
+
+Noticing required re-reading a claim I had written myself and checking it
+against `git ls-files` rather than against memory. "Confirm the handoff is
+current" turned out to be a real question.
+
+---
+
+## 2026-11-20 · D103 · The skip that blamed your configuration was my bug, in a field name's position
+
+Vlad added the redirect URLs in the Supabase dashboard — `http://localhost:3000/**`
+and `https://mirrorline-*.vercel.app/**` on preview, `https://mirrorline-eosin.vercel.app/**`
+on production — and asked for the run that would turn D101's one skip into a
+pass. **It skipped again, with the same message naming the allow-list.** The
+message was wrong, and had been wrong since the test was written.
+
+### What the evidence said
+
+`generate_link` echoes the `redirect_to` it accepted back into the action link,
+so one POST per shape answers the question without a browser. Against the live
+preview project `qypakxvxnjmsvxmxiynf`:
+
+| sent | accepted |
+|---|---|
+| `…/auth/callback?next=%2Fapp%2Fonboarding` **nested under `options`** | `http://localhost:3000` |
+| the same URL **at the top level** | the same URL, intact |
+| `…/auth/callback` at the top level | intact |
+| `https://evil.example/login` at the top level | `http://localhost:3000` |
+
+The last row is the one that settles it: the allow-list **is** enforced, and it
+**does** hold the wildcard entry. Vlad's change was right when he made it.
+
+### The fault
+
+`generateSignupLink` sent `options: { redirect_to }`. That is the supabase-js
+*client* shape — `generateLink({ options: { redirectTo } })`. The admin REST
+endpoint declares one **top-level** `redirect_to` and silently ignores keys it
+does not know, and ignoring it means falling back to the Site URL. The Site URL
+for that project is `http://localhost:3000`, which is the bare origin — so the
+minted link was **indistinguishable from a link the allow-list had refused**.
+
+That is why the probe's bare-origin case read as `kept: yes`. It was not kept;
+it was the fallback, agreeing with the request by coincidence. A one-line
+placement change, and the skip became a run.
+
+### Then it failed, and that was the test's premise rather than the product
+
+The run landed on `/sign-in?notice=that-link-did-not-work#access_token=…`. Our
+origin, our callback — and refused, because the tokens came back in the
+**fragment**.
+
+An admin-minted link cannot complete this callback, and no configuration
+changes that. `@supabase/ssr@0.12.7` fixes `flowType: "pkce"` in
+`createServerClient.js:37`, so a real sign-up stores a verifier and its emailed
+link returns with `?code=`, which `/auth/callback` exchanges. `generate_link`
+never saw a `code_challenge`, so GoTrue issues the implicit grant instead — and
+a fragment is never sent to a server, so the callback sees no code and is right
+to refuse it.
+
+**Checked before narrowing anything, because the alternative mattered:** if the
+real email also arrived as a fragment, production would have a second fault and
+every confirmation would now break on the notice page instead of the home page.
+It does not. The flow type is pinned in the dependency, not configured, so the
+emailed link carries a code.
+
+So the test now asserts the hop it can prove, which is also the hop D101 was
+about: Supabase sends the browser to `${origin}/auth/callback`, not to the Site
+URL. Code-for-session belongs to `sign-up-ui.spec.ts`, which drives a real
+sign-up — and is the reason that one needs a real mailbox.
+
+### What changed, and what the skip now says
+
+- `generateSignupLink` puts `redirect_to` at the top level, with the placement
+  trap written down on the function.
+- The first test reads the accepted `redirect_to` and the `Location` header
+  rather than driving a browser. Five pass, nothing skips.
+- The skip survives for a project that genuinely is not configured, but it now
+  names **both** causes — a missing allow-list entry *or* a misplaced
+  `redirect_to` — because one of those two spent a day masquerading as the
+  other.
+
+### The lesson
+
+**A skip is an assertion about why.** This one asserted "your project is
+misconfigured" and was believed — by me when I wrote it, and by Vlad when he
+acted on it — because it was specific and plausible. A test that declines to run
+deserves the same suspicion as one that fails, and the cheap discipline is to
+make it distinguish its own causes, which is what the new message does.
+
+Related: D101 noted two assertions in that same file that could not fail. The
+file has now produced three findings about itself and one about the product.
 ## 2026-11-21 · D104 · The gate was a GitHub feature we do not have, so the order changed instead: migrate first, then merge
 
 **Vlad's decision, and he found the fault before the gate was ever armed.** D93

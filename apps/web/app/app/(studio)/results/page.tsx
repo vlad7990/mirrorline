@@ -1,4 +1,4 @@
-import { PageHeader } from '@mirrorline/ui'
+import { Button, Card, PageHeader } from '@mirrorline/ui'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
@@ -14,7 +14,9 @@ import { GoalsBoard } from '@/components/studio/goals-board'
 import { InsightBoard } from '@/components/studio/insight-board'
 import { KpiGrid } from '@/components/studio/kpi-grid'
 import { LedgerBoard } from '@/components/studio/ledger-board'
+import { ONBOARDING } from '@/lib/routes'
 import { type ResultsTabSlug, parseResultsTab, resultsTab } from '@/lib/studio/results-tabs'
+import { readGoalCascade } from '@/lib/workspace/read-goal-cascade'
 
 /**
  * S7 · Results — rebuilt as 15 §5's seven tabs.
@@ -58,6 +60,39 @@ export default async function ResultsPage({
   )
 }
 
+/**
+ * The goals tab, read from the workspace like the Goals screen is.
+ *
+ * `GoalsBoard` defaults to `SAMPLE_CASCADE` when given no cascade, which is
+ * right for the marketing site and wrong here: this tab would have gone on
+ * rendering the demo workspace's goal, unlabelled, to a signed-in client. Its
+ * own async component so the switch below can stay synchronous.
+ */
+async function GoalsTab() {
+  const cascade = await readGoalCascade()
+
+  if (cascade === null) {
+    return (
+      <Card as="section" aria-labelledby="results-no-goal" className="flex flex-col gap-3">
+        <h2 id="results-no-goal" className="m-0 font-heading text-title text-text">
+          Your goal is not set yet
+        </h2>
+        <p className="m-0 text-body text-text-muted">
+          Finish onboarding and the Performance Analyst proposes the objectives and key results
+          this tab reports against.
+        </p>
+        <div>
+          <Button asChild variant="primary">
+            <Link href={ONBOARDING}>Finish setting up</Link>
+          </Button>
+        </div>
+      </Card>
+    )
+  }
+
+  return <GoalsBoard cascade={cascade} />
+}
+
 function Panel({ slug }: { slug: ResultsTabSlug }) {
   switch (slug) {
     case 'funnel':
@@ -81,7 +116,7 @@ function Panel({ slug }: { slug: ResultsTabSlug }) {
       return <AccountsBoard animateValues />
 
     case 'goals':
-      return <GoalsBoard />
+      return <GoalsTab />
 
     case 'ledger':
       return <LedgerBoard />

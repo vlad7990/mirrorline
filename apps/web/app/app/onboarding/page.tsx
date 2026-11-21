@@ -106,6 +106,23 @@ export default function OnboardingPage() {
     IDLE_ONBOARDING_STATE,
   )
 
+  // The workspace's time zone, asked of the one machine that knows (D97).
+  //
+  // Read in an effect rather than at render, because during SSR this code runs
+  // on a Vercel server and `resolvedOptions()` would answer UTC — the server's
+  // zone dressed up as the client's, which is worse than not asking. So the
+  // field posts empty until hydration, and an empty field means "not captured":
+  // the action stores nothing rather than storing a guess.
+  const [timeZone, setTimeZone] = React.useState('')
+
+  React.useEffect(() => {
+    try {
+      setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone)
+    } catch {
+      // A browser with no zone data leaves this empty, which is handled.
+    }
+  }, [])
+
   // Two gated steps now. Step 2 is the rights confirmation (non-negotiable 1);
   // step 3 is the outcome, which cannot be prefilled and so cannot be skipped.
   const hasOutcome = draft.outcomeText.trim().length > 0
@@ -121,6 +138,9 @@ export default function OnboardingPage() {
       <input type="hidden" name="audience" value={draft.audience} />
       <input type="hidden" name="stage" value={draft.stage} />
       <input type="hidden" name="goalType" value={draft.goal} />
+      {/* Not one of the person's answers: the browser's own, so that "09:00"
+          on the calendar means nine o'clock where they are (D97). */}
+      <input type="hidden" name="timezone" value={timeZone} />
       {/* The wizard opens on the demo workspace's brand and accounts, not on
           yours. CLAUDE.md non-negotiable 7: say so, in the fixed wording. */}
       <div className="flex flex-wrap items-center gap-3">

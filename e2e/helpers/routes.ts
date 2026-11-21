@@ -20,8 +20,15 @@ export interface RouteEntry {
   /** Human name, used in test titles. */
   readonly name: string
   readonly area: RouteArea
-  /** The exact, visible text of the page's single <h1>. */
-  readonly h1: string
+  /**
+   * The visible text of the page's single <h1>.
+   *
+   * A string where the heading is fixed copy, which is nearly everywhere. A
+   * **RegExp** where the heading is data: since B2.2 the calendar's reads
+   * "Week of 16 November" for whichever week the client is actually in, so an
+   * exact string there would have been a test that passed until Monday.
+   */
+  readonly h1: string | RegExp
 }
 
 /** The remake studio is one route per trend; trend-01 is the board's first card. */
@@ -305,7 +312,11 @@ export const ROUTES: readonly RouteEntry[] = [
     slug: 'app-calendar',
     name: 'Calendar and approvals',
     area: 'studio',
-    h1: 'Week of 9 November',
+    // Was 'Week of 9 November', the fixtures' week. The calendar reads
+    // `scheduled_posts` for the real current week now (B2.2), so the month and
+    // the day are data. The shape is still asserted — a heading that lost its
+    // date, or its "Week of", still fails.
+    h1: /^Week of \d{1,2} [A-Z][a-z]+$/,
   },
   {
     // v4: Results is the seven tabs of 15 §5, and each tab's own label is the

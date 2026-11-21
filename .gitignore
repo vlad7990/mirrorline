@@ -35,3 +35,16 @@ services/pipeline/samples/
 supabase/.temp/
 test-results/
 .gstack/
+
+# iCloud conflict copies. This repo lives under ~/Documents, and iCloud
+# resolves a sync conflict by writing a second file beside the first with " 2"
+# before the extension — `calendar-view 2.tsx` next to `calendar-view.tsx`.
+#
+# Ignored because ten of them reached a commit through `git add -A` (D102).
+# They are stale duplicates of real modules: inert, because nothing imports
+# them and the test globs do not match them, and exactly the kind of inert that
+# somebody later reads as source and edits.
+#
+# No file here is legitimately named this way, so the pattern is safe. The real
+# fix is moving the repo somewhere iCloud does not reach.
+* 2.*

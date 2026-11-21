@@ -6,6 +6,81 @@
 
 ---
 
+## Handoff — 21 November 2026, after the rebase (B2 is rebased onto main and green; it carries six migrations, not five)
+
+**Branch** `backend/b2-studio`, rebased onto `main` at `e40f484` (PR #4 merged).
+Gates in §4. **The PR is not cut yet — the push needs you, see §5.**
+
+### 1. The rebase, and what git did with the duplicated gate commits
+
+Eleven commits replayed, **four skipped as already upstream** — `46f82fb`,
+`a86d47a`, `876709a`, `93e3d24`, this branch's own copies of D92, D93, the
+paused-B2.2 handoff and D94. PR #4 carried the same work under different SHAs,
+and git matched them by patch id. That is exactly what the PR #4 note predicted,
+so nothing had to be forced.
+
+Nine conflicts, **all of them append-versus-append** — `main` had gained D104
+and a handoff while this branch gained D95–D103 and its own. None was a
+disagreement about content, so they were resolved by rule rather than by
+judgement: decision entries run oldest-first, so D95–D103 slot in **before**
+D104; handoffs run newest-first, so `main`'s 21 November one stays on top. A
+throwaway script applied that nine times rather than my doing it by hand nine
+times, and it was written to refuse — a malformed marker set or a missing D104
+heading aborts without writing.
+
+Verified afterwards rather than assumed: **D95 … D104 appear once each, in
+order**, no conflict markers survive anywhere, and the gate files are `main`'s
+post-D104 versions — `migrate-production.yml` is dispatch-only, and the only
+`environment:` left in it is the comment explaining why it was removed.
+
+### 2. Six migrations, not five
+
+Every handoff and PR body until now said five. There are **six**:
+
+```
+20261119030000_scheduled_posts_and_moves.sql
+20261119040000_append_only_grants.sql
+20261119050000_grants_match_policies.sql
+20261119060000_workspace_timezone.sql
+20261119070000_definer_functions_are_authenticated_only.sql
+20261119080000_scheduled_posts_ai_scenes.sql
+```
+
+The count was written before `…080000_scheduled_posts_ai_scenes.sql` (D99) was
+added and never updated. It matters this once because **the dry run will list
+six**, and a number that disagrees with the log is exactly the kind of thing
+worth having corrected in advance rather than wondered about mid-dispatch.
+
+All twelve migrations in the tree are additive — `migration-safety` passes.
+
+### 3. The screenshots were reverted again
+
+The e2e run regenerated 21 PNGs under `docs/screens-built/`. This branch's
+intended calendar visuals were committed last session, so this run is rendering
+churn and all 21 were reverted — the same call, and for the same reason, as on
+19 November.
+
+### 4. Gates, all after the rebase
+
+lint · typecheck · **1,006 unit** (58 files) · build · licence-check (439
+packages, GSAP scope clean) · migration-safety (**12 additive**) ·
+**RLS/DB 94** (2 files, against preview) · **full e2e 417 passed / 850 skipped,
+zero failures** (12.9m).
+
+### 5. Still needs you
+
+1. **Approve the push.** `git push --force-with-lease` was declined, and the
+   rebase rewrote this branch's history, so a plain push will be rejected as a
+   non-fast-forward. It is the D92-sanctioned case — my own branch, no open PR,
+   lease held — but it is yours to allow. Then I cut the PR.
+2. **Then the new procedure, for the first time:** dispatch *Migrate production*
+   with `ref: backend/b2-studio`, confirm the dry run lists exactly the **six**
+   migrations in §2, merge.
+3. **`E2E_SIGNUP_EMAIL`** — yours to set; it un-skips the one UI sign-up test.
+4. **PR #3** (`docs/plan-v2`), still blocked on **D-b, where the renderer runs**.
+
+---
+
 ## Handoff — 21 November 2026 (PR #4 reworked: the gate is a Run button, because the GitHub feature it was built on does not exist here)
 
 **Branch** `infra/migration-gate` — **PR #4**, ready to merge. Gates in §5.
@@ -94,6 +169,550 @@ B2.2's tests. The B2 branch's count stands separately.
 
 **Dropped from this list:** the Vercel promotion check. Migrating before the
 merge removes the window it was for (D104).
+## Handoff — 20 November 2026, morning (your allow-list was right; the skip was my bug, and the test now passes)
+
+**Branch** `backend/b2-studio` · **repo now at `~/Developer/mirrorline/mirrorline`.**
+Gates in §4. **No B2 PR cut — waiting for you**, as you asked.
+
+### 1. The repo is out of iCloud, and the ten copies are gone
+
+`git worktree prune` run; one worktree, this one, at `911b8cc`. The ten
+`* 2.*` copies are **deleted** — and each was checked first rather than taken
+on trust:
+
+- **Six** were byte-identical to their tracked file.
+- **Four** differed, and each one matched an **earlier committed revision** of
+  its original — `calendar-view 2.tsx` at `101194c`, `rls.db.test 2.ts` and
+  `onboarding/actions 2.ts` at `593cbd6`, `goals-persist.spec 2.ts` at
+  `ac79e7d`. Stale snapshots, nothing unique in any of them.
+
+`git status` is clean and the `.gitignore` pattern from D102 holds. The old tree
+at `~/Documents/Projects/mirrorline-OLD-do-not-use` was not touched.
+
+### 2. Item 1 is closed, and not for the reason the message gave (D103)
+
+Your dashboard entries were **correct when you made them**. The test skipped
+again anyway, repeating a message that blamed your configuration — and the
+message was wrong.
+
+`generateSignupLink` sent `redirect_to` **nested under `options`**, which is the
+supabase-js *client* shape. The admin REST endpoint reads one top-level
+`redirect_to` and ignores what it does not declare; ignoring it falls back to
+the Site URL, which for the preview project is `http://localhost:3000` — the
+bare origin. So a misplaced field produced a link **identical to one the
+allow-list had refused**, and the skip could not tell the two apart.
+
+Proved against the live project, one mint per shape:
+
+| sent | accepted |
+|---|---|
+| `…/auth/callback?next=…` nested under `options` | `http://localhost:3000` |
+| the same URL at the top level | intact |
+| `https://evil.example/login` at the top level | `http://localhost:3000` |
+
+The third row is the proof your allow-list is live and enforced.
+
+### 3. Then it failed once, and that was the test, not the product
+
+With the field in the right place the link reached our callback and was refused:
+the tokens arrive in the **fragment**. An admin-minted link has no
+`code_challenge`, so GoTrue issues the implicit grant, and a fragment never
+reaches a server.
+
+**The question worth asking was whether the real email does the same**, because
+that would mean every confirmation now breaks on the notice page instead of the
+home page. It does not: `@supabase/ssr@0.12.7` pins `flowType: "pkce"`
+(`createServerClient.js:37`), so a real sign-up stores a verifier and its link
+returns with `?code=`. Pinned in the dependency, not configured — nothing to set.
+
+So that test now asserts the hop D101 was actually about — Supabase sends the
+browser to `${origin}/auth/callback` rather than to the Site URL — and
+code-for-session stays with `sign-up-ui.spec.ts`, which needs your mailbox.
+The skip remains for a genuinely unconfigured project, but it now names both
+possible causes.
+
+### 4. Gates
+
+lint · typecheck · **991 unit** · `auth-callback.spec.ts` **5 passed, 0
+skipped**. No product code changed — the diff is one test helper, one spec and
+two docs — so build, licence-check, migration-safety, RLS/DB and the full e2e
+stand as recorded below.
+
+### Still needs you
+
+1. **PR #4 and the gate** — you said you were merging and arming it. Then tell
+   me and I cut the B2 PR; I have not touched it.
+2. ~~**The Vercel promotion check**~~ — **dropped, 21 November (D104).** The
+   gate it belonged to could not exist: environment protection rules are
+   Enterprise-only for a private repository. PR #4 now migrates *before* the
+   merge, which removes the window a promotion check was policing. The procedure
+   for a migration-bearing PR is **dispatch *Migrate production* on the PR's
+   branch → confirm green → merge**, and a PR's migrations must not change once
+   applied.
+3. **`E2E_SIGNUP_EMAIL`** — yours to set, and it is what un-skips the one UI
+   sign-up test that proves code-for-session end to end.
+4. **PR #3** (`docs/plan-v2`), still blocked on **D-b, where the renderer runs**.
+
+---
+
+## Handoff — 19 November 2026, morning (the confirmation link: one fault was ours, and one is two lines you have to add)
+
+**Branch** `backend/b2-studio` · pushed. Gates in §4.
+
+"After clicking the email confirmation link, users land on the home page" was
+**two faults with one symptom**, and the code half is fixed. The other half is
+§2 — it needs you, and until it is done one new e2e skips rather than passes.
+
+Everything the report asked for already existed: `emailRedirectTo` already
+pointed at `/auth/callback?next=/app/onboarding`, and the callback already
+refused an off-site `next`. So the work was finding out why a correct-looking
+chain produced the wrong destination. **D101** has the whole of it.
+
+### 1. Our fault: `VERCEL_URL` is not the URL anybody visits
+
+`callbackUrl` fell back to `VERCEL_URL`, which is the **per-deployment**
+hostname — `mirrorline-a1b2c3d4.vercel.app`, new on every push — not the
+`mirrorline-eosin` alias. `NEXT_PUBLIC_SITE_URL` would have overridden it, and I
+checked the Vercel API rather than guessing: **it is not set**, on either
+target. Only the four Supabase variables and `ANTHROPIC_API_KEY` are.
+
+So Supabase got a `redirect_to` on a host no allow-list contains, refused it,
+and fell back to the Site URL — the marketing home page.
+
+Fixed in `lib/auth/callback-url.ts`: on production it now prefers
+`VERCEL_PROJECT_PRODUCTION_URL`, gated on `VERCEL_ENV === 'production'` so a
+preview still links back to itself rather than to production. Nine lines, nine
+unit tests, out of the server action where no test could reach it.
+
+### 2. Your half: the allow-lists, and the `/**` is the important part
+
+The new e2e found the second fault, locally: a link came back to
+`http://localhost:3000/#access_token=…` — our origin, with `/auth/callback`
+**dropped**. That is what an entry of `http://localhost:3000` *without* a
+wildcard does: it matches the origin and rewrites the path. The right host, the
+home page, no error anywhere — the production symptom, on a laptop.
+
+**Look first.** The PATCH below replaces the whole list, so copy what is there
+before changing it:
+
+```sh
+export SUPABASE_ACCESS_TOKEN=…   # supabase.com/dashboard/account/tokens
+
+# Preview
+curl -s https://api.supabase.com/v1/projects/qypakxvxnjmsvxmxiynf/config/auth \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  | python3 -c 'import json,sys; c=json.load(sys.stdin); print(c["site_url"]); print(c["uri_allow_list"])'
+
+# Production
+curl -s https://api.supabase.com/v1/projects/uvwedufzjldfahlqtisk/config/auth \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  | python3 -c 'import json,sys; c=json.load(sys.stdin); print(c["site_url"]); print(c["uri_allow_list"])'
+```
+
+**Then set them.** Each list must contain every entry you want to keep — a PATCH
+that omits one removes it:
+
+```sh
+# Preview: localhost for development and the e2e suite, plus preview deployments.
+curl -X PATCH https://api.supabase.com/v1/projects/qypakxvxnjmsvxmxiynf/config/auth \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"uri_allow_list":"http://localhost:3000/**,https://mirrorline-*.vercel.app/**"}'
+
+# Production: the alias, and nothing else.
+curl -X PATCH https://api.supabase.com/v1/projects/uvwedufzjldfahlqtisk/config/auth \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"uri_allow_list":"https://mirrorline-eosin.vercel.app/**"}'
+```
+
+Three notes on those:
+
+- **A targeted PATCH, not `supabase config push`.** D94's near-miss was that a
+  config push asserts *every* key it knows, and would have turned TOTP off and
+  relaxed the email rate limit. This touches one field.
+- **`https://mirrorline-*.vercel.app/**` is deliberately not `https://*.vercel.app/**`.**
+  The second would let any site on `vercel.app` receive one of our auth links.
+- **Production may already be right.** D94 set `https://mirrorline-eosin.vercel.app/**`,
+  wildcard included — in which case the GET shows it and the PATCH is a no-op
+  you can skip. With fault 1 fixed, that entry is now the one we actually send.
+
+Afterwards, `pnpm test:e2e --project=chromium auth-callback.spec.ts` turns the
+skip into a pass. That is the check that this worked.
+
+### 3. What did not need changing, and now has tests
+
+`resolveNextPath` / `isSafeNextPath` were already correct and already used by
+the callback. Four e2e tests now prove it end to end — no code, a dead link, a
+stale code, and the four off-site shapes (`https://`, protocol-relative,
+backslash, `javascript:`).
+
+Worth one line in your head: **two assertions I wrote in that file could not
+fail** — one compared a URL's host to itself, the other compared origins while
+the path was being dropped. Both are in D101, because the second is what hid
+fault 2.
+
+### 4. Gates
+
+lint · typecheck · **991 unit** (+9 for the callback URL) · build ·
+licence-check · migration-safety (12 additive) ·
+`auth-callback.spec.ts` **4 passed, 1 skipped** (the skip is §2).
+RLS/DB and the full e2e are unchanged from the handoff below: no schema changed.
+
+### Still needs you
+
+1. **The two allow-list commands** (§2). Sign-up is wrong in production until
+   the production one is true.
+2. **Merge PR #4 and arm the gate** — unchanged from below, and still before
+   the B2 PR.
+3. **The ten stray `… 2.ts` iCloud copies — and I committed them by accident**
+   (D102). `git add -A` in `6030060` swept them in, and the handoff below says
+   they are "not in git", which was true when written and is why the mistake
+   reads as a correction rather than a surprise. They are **untracked again**,
+   still on disk, and `.gitignore` now has the pattern so it cannot recur. They
+   remain yours to delete; the durable fix is moving this repo somewhere iCloud
+   does not reach.
+4. **PR #3** (`docs/plan-v2`) is still open, and **D-b — where the renderer
+   runs** — is still the blocking decision. `E2E_SIGNUP_EMAIL` is still unset,
+   so the one UI sign-up test skips.
+
+---
+
+## Handoff — 19 November 2026, early morning (the calendar is real: it reads your posts and a move is saved — and two grant audits found holes on twelve tables and four functions)
+
+**Branch** `backend/b2-studio` · pushed · **no PR yet.**
+**PR #4 is open and wants merging first** — see §1.
+
+Gates: lint, typecheck, unit, RLS/DB, build, licence-check, migration-safety,
+full e2e. Numbers in §7.
+
+**Your four Vercel variables are done, and that is recorded.** Production has
+its own Supabase values, preview keeps the preview ones, production was
+redeployed. Item 1 of "Still needs you" in both handoffs below is **closed** —
+they are superseded on that point and only on that point.
+
+### 1. PR #4: the migration gate, on its own branch, waiting for you
+
+https://github.com/vlad7990/mirrorline/pull/4 — `infra/migration-gate`, cut
+from `origin/main`. 1,162 lines, of which 632 are docs. No application code.
+
+It carries `migrate-production.yml`, `scripts/migration-safety.mjs` and its 17
+tests, the CI step, and **D93 + D94**. D92 rides along because it is the commit
+D93 was written on top of, and keeping the commits intact is what lets
+`backend/b2-studio` rebase onto this cleanly afterwards rather than fight it.
+
+**Merge it before the B2 pull request.** B2 carries five migrations and
+production has its own database now, so merging a migration-bearing PR while the
+gate is off would put code in front of its schema for real.
+
+**What to set after you merge, in this order.** The PR body has this too.
+
+1. **Settings → Environments → New environment**, named exactly `production`.
+   Tick **Required reviewers**, add yourself, save. *This is the part that
+   actually gates* — `environment: production` in the workflow is only the hook;
+   the waiting lives in the environment's protection rule.
+2. **Three repository secrets** (Settings → Secrets and variables → Actions →
+   **Secrets**):
+
+   | Secret | Value |
+   |---|---|
+   | `SUPABASE_PRODUCTION_ACCESS_TOKEN` | a personal access token from supabase.com/dashboard/account/tokens |
+   | `SUPABASE_PRODUCTION_PROJECT_REF` | `uvwedufzjldfahlqtisk` |
+   | `SUPABASE_PRODUCTION_DB_PASSWORD` | the Postgres password for `mirrorline-production` |
+
+3. **One repository variable** (same page, **Variables** tab — not Secrets):
+   `PRODUCTION_MIGRATIONS_ENABLED` = `true`. **Set this last:** with it on and a
+   secret missing, the workflow fails the push rather than noticing.
+
+**Leave unset:** `PROMOTE_FROM_WORKFLOW`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`,
+`VERCEL_PROJECT_ID`. Those are only for the arrangement where the workflow
+deploys instead of Vercel's own git deploy.
+
+**And the second condition, which is a Vercel setting rather than code.** The
+gate holds the *schema* but not the *code* until Vercel stops promoting `main`
+while the migration waits. Either add a deployment check that blocks promotion
+until *Migrate production* succeeds (no code — recommended), or turn the
+production branch deploy off and set `PROMOTE_FROM_WORKFLOW=true` with the three
+`VERCEL_*` secrets.
+
+### 2. The audit you asked for: ten more tables had the same hole (D96)
+
+The `post_moves` bug generalised, because its cause was never that table.
+Supabase's default privileges grant all four verbs on every new `public` table
+to `anon` and `authenticated`, and **the grant is checked before the policy**.
+
+Only two verbs are dangerous:
+
+| Verb | With a grant and no policy | |
+|---|---|---|
+| INSERT | the missing `with check` refuses it, `42501` | **loud** |
+| UPDATE / DELETE | filtered to zero rows, PostgREST answers **200 `[]`** | **silent** |
+| SELECT | `[]`, the honest answer to "you may not see this" | fine |
+
+Ten tables were open: `profiles`, `memberships`, `workspaces`,
+`social_accounts`, `kpi_definitions`, `metric_snapshots`, `ledger_weekly`,
+`alerts`, `leads`, `trends`. `goals` / `objectives` / `key_results` have all
+four policies and were fine.
+
+`20261119050000_grants_match_policies.sql` revokes the uncovered verbs from
+**`authenticated` and `anon`**. Nothing lost a capability — every write to those
+tables already goes through the service role or a `security definer` function —
+and two tests assert the nearest neighbours still work, so an over-broad revoke
+would have failed rather than passed quietly.
+
+**Seventeen tests, no fixtures.** Each filters on an id that matches nothing;
+Postgres checks the table privilege before it looks for a row, so a refusal
+proves the *verb* is refused rather than a row being hidden. Run before the
+migration: **18 failed, every one `expected 200 to be 403`**.
+
+### 3. The same bug on functions, found by the weakest test in that block (D98)
+
+`revoke all on function … from public` does **not** revoke from `anon`. `public`
+is the implicit grant; `anon` holds a direct one from Supabase's default
+privileges. So `save_onboarding`, `delete_workspace`,
+`ensure_workspace_for_current_user` and `set_workspace_timezone` were all
+**callable with the publishable key and no session** — stopped only by their own
+`if auth.uid() is null then raise`.
+
+Nothing was exploitable: every one raises before touching data. The guard held
+and the grant did not, which is also why it went unnoticed.
+`20261119070000_definer_functions_are_authenticated_only.sql` revokes it. The
+policy helpers (`is_member_of`, `is_owner_of`, `can_access_*`) **keep** theirs —
+a policy runs as the calling role, so an anonymous SELECT evaluates them as
+`anon`.
+
+Found because my own test asserted `expect(refused.ok).toBe(false)`, which was
+true the whole time the hole was open. The lesson is in D98: assert *which*
+refusal — `42501` is the grant saying no, `P0001` is the body saying no.
+
+### 4. The workspace's time zone, captured at onboarding (D97)
+
+One nullable column, one trigger, one function — and no posting logic, as you
+asked.
+
+`Intl.DateTimeFormat().resolvedOptions().timeZone`, read in an effect rather
+than at render: during SSR that line runs on a Vercel server and answers UTC,
+the server's zone wearing the client's name. The field posts empty until
+hydration, and empty means **not captured** — nothing is stored rather than a
+guess.
+
+**Nullable with no default.** `not null default 'UTC'` is D95's mistake one
+layer down.
+
+Validated three times: `parseTimeZone` on the server, `set_workspace_timezone`,
+and **a trigger on the column** — which is the one that counts, because an owner
+can PATCH their own workspace row and would otherwise be one request away from
+`timezone = 'Narnia'`.
+
+A second function rather than a sixth parameter on `save_onboarding`: a
+defaulted sixth argument makes the deployed five-argument call ambiguous
+(`42725`), and dropping the function to reshape it is the contract break the
+gate exists to prevent. It also means **a time zone that fails to save cannot
+cost somebody their onboarding answers** — it is logged, not swallowed.
+
+### 5. B2.2 is finished: the calendar reads your posts, and a move is saved (D99, D100)
+
+The studio is off `@mirrorline/mock`. The marketing site keeps it.
+
+- `lib/workspace/week-schedule.ts` — pure, 33 unit tests. Derives `timeLabel`,
+  `platformLabel`, `statusLabel`; drops a row whose platform or status is
+  outside the check constraint rather than drawing a chip in the wrong row.
+- `read-week-schedule.ts` — the week *today* falls in, with today resolved in
+  the workspace's zone (D97, earning its place within a day of being written).
+  With no zone, the window falls back to the server's UTC date and **no column
+  is highlighted**.
+- `(studio)/calendar/actions.ts` — one update on the two granted columns, with
+  `.select()` so a filtered row reports not-found. It does **not** write
+  `post_moves`; the trigger does.
+- `ScheduleMovesProvider.movePost` is now `Promise<MoveOutcome>` —
+  `unchanged | saved | failed`. Optimistic, and **rolled back** if the write is
+  refused.
+- `has_ai_scenes` was added to the schema (D99). It drives the AI-label lock in
+  `post-panel.tsx`, so hardcoding `false` would have made **non-negotiable 4**
+  depend on a literal — right today, silently wrong the first time the Remake
+  Producer writes an AI remake.
+
+**The "Sample data, not saved" note is gone**, last, as the previous handoff
+required. It now reads "Changing a time here changes the schedule, not anything
+already published." Three other sentences said the same false thing and were
+rewritten: the two file headers the handoff named, plus `(studio)/layout.tsx`
+and the co-pilot's `approvedMove` copy. The co-pilot also used to write
+"approved" into its transcript before knowing whether the write had succeeded;
+it corrects its own line now.
+
+### 6. The e2e fixture, per your decision — and it had to go in setup
+
+Service role, tagged with the run id, swept with the account. **In
+`auth.setup.ts`**, which was the part worth getting right: the calendar used to
+render the fixtures for whoever was signed in, so six specs — the drag, the
+menu, the screenshots, the accessibility audit, the responsive pass, the
+co-pilot — would otherwise have failed on an empty week rather than on anything
+true.
+
+- **Every weekday identical** (four posts a day, all seven days). "Tomorrow" is
+  a different weekday on every run, so a fixture with a shape would make the
+  batch bar's count depend on the day the suite ran.
+- The workspace's zone is pinned to `UTC`, so the week it seeds and the week the
+  app draws cannot disagree across a midnight.
+- The sweep is the existing one — `on delete cascade` from `workspaces`, and
+  `deleteTestAccounts` deletes workspaces before users. `scheduled_posts` was
+  added to `WORKSPACE_CHILD_TABLES` so that cascade is **asserted** by
+  `workspace-delete.spec.ts` rather than assumed.
+- `calendar-persist.spec.ts` is new: its own account, move through the menu,
+  assert in the database with the service role, count the audit row, reload,
+  find the chip in its new cell. Plus the no-op case, which must write nothing.
+
+**Three specs hardcoded the fixtures' week** and failed honestly on the first
+full run: `Week of 9 November`, "9 posts ready", "Tue 10". They now assert the
+*shape* — `/^Week of \d{1,2} [A-Z][a-z]+$/`, `/Tomorrow: \d+ posts ready/` — so
+a heading that loses its date still fails and a calendar that moves does not.
+`Route.h1` widened to `string | RegExp` to allow it.
+
+**And the run found a real bug nothing else would have: the co-pilot was
+proposing a move for a post that no longer exists.** Its `move-post` proposal
+was built from `weekPosts` in `@mirrorline/mock`, so once the calendar read the
+database the proposal named an id that was not there and Approve answered "We
+could not find that post".
+
+`/api/copilot/studio` now reads the week with `readWeekSchedule()` and hands it
+down, and the canned answer picks a post that is actually on the calendar. With
+no posts — or one day's worth, so there is nowhere to move to — **no move is
+proposed at all**, and the question falls through to the ordinary answer.
+`parseProposal` drops a `move-post` naming an id outside the week, which closes
+the same hole on the live-model path before it is wired.
+
+Worth reading D100's last section for this one: the comment above the old code
+was proud of not hard-coding a post id, and it was right — the assumption that
+broke was the one *underneath* it, that the fixtures were what the client was
+looking at.
+
+### 7. Gates
+
+| Gate | Result |
+|---|---|
+| `pnpm lint` | clean |
+| `pnpm typecheck` | clean |
+| `pnpm test` | **977 passed** (931 + 13 for the time zone + 33 for the week) |
+| `pnpm test:rls-db` | **94 passed** |
+| `pnpm build` | clean |
+| `pnpm licence-check` | 439 packages, GSAP scope clean |
+| `pnpm migration-safety` | **12 additive** |
+| `pnpm test:e2e` | **413 passed, 842 skipped, zero failures** |
+
+All five new migrations are applied to **`mirrorline-preview` only**. Production
+gets them through PR #4's gated workflow, once it is armed.
+
+The e2e run rewrites `docs/screens-built/*.png`. **Four are committed** — the
+`app-calendar` pair at each width, because that screen genuinely changed. The
+other seventeen were reverted: they are pages this work never touched, and the
+diffs are antialiasing and timing rather than anything anybody did.
+
+### Still needs you
+
+1. **Merge PR #4 and arm the gate** (§1). Before the B2 PR.
+2. **Ten stray files, and they are not mine.** `git status` shows untracked
+   copies with a space in the name — `calendar-view 2.tsx`, `goal-cascade 2.ts`,
+   `rls.db.test 2.ts` and seven more, all duplicates of B2.1 files. They look
+   like iCloud conflict copies (this repo lives under `~/Documents`). They are
+   stale and they are not in git. I have not deleted them, because they are not
+   mine to delete. Worth removing — and worth deciding whether this repo should
+   live somewhere iCloud does not reach.
+3. **PR #3** (`docs/plan-v2`) is still open; **D-b — where the renderer runs** —
+   is still the blocking decision.
+4. **`E2E_SIGNUP_EMAIL`** still unset, so the one UI sign-up test skips.
+
+---
+
+## Handoff — 19 November 2026, later (B2.2 milestone 1: the calendar's schema is in and proved; the read and write paths are next)
+
+**Branch** `backend/b2-studio` · pushed · **no PR yet.**
+Gates: lint, typecheck, **931 unit**, **61 RLS/DB**, build, licence-check,
+migration-safety (8 additive) — all green. Full e2e not re-run: no app code
+changed this milestone.
+
+**B2.2 is under way rather than paused.** The handoff below said it waited on
+the Vercel split; it does not, for the schema — see §3.
+
+### 1. What landed: two migrations and twelve tests (D95)
+
+- `20261119030000_scheduled_posts_and_moves.sql` — `scheduled_posts`,
+  `post_moves`, the `record_post_move()` trigger, RLS, and the column grant.
+- `20261119040000_append_only_grants.sql` — the revokes that make the audit
+  refuse rather than silently no-op.
+- Twelve tests in `apps/web/lib/supabase/rls.db.test.ts`, under
+  *"a member moves a post, and only moves it"*.
+
+**Applied to `mirrorline-preview` only.** Production gets them through D93's
+gated workflow. Repo link verified as `qypakxvxnjmsvxmxiynf` before each push.
+
+The three design calls, all in D95: **local date + `time24`, not
+`timestamptz`** (no workspace time zone exists, and defaulting to UTC would
+silently reschedule posts for everyone outside it); **no derivable columns** —
+`platformLabel`, `statusLabel`, `timeLabel` are functions of other fields;
+**the audit is written by a trigger**, so no code path can move a post and
+forget to record it.
+
+**RLS decides rows, grants decide columns.** `authenticated` may update exactly
+`scheduled_date` and `scheduled_time24` — so a member can move a post and
+cannot retitle it or change its platform. No insert or delete policy at all:
+the pipeline authors posts through the service role.
+
+### 2. The bug worth knowing about before you write another policy
+
+The append-only claim was **false when first written**, and the test caught it.
+Supabase grants every `public` table to `authenticated` by default, and **the
+grant is checked before the policy** — so with no update policy, an UPDATE was
+permitted, RLS filtered it to zero rows, and PostgREST returned **200 with an
+empty array**. Silent success on an audit table.
+
+Fixed by revoking the verbs rather than by weakening the assertion: the test
+encoded the guarantee that was intended, and the schema under-delivered it. It
+needed a **second migration** because the first was already applied, and
+editing an applied migration leaves databases disagreeing with the file.
+
+### 3. Next milestone, and the one dependency it has
+
+In order:
+
+1. **The read path** — `lib/workspace/read-week-schedule.ts`, building a
+   `WeekSchedule` from `scheduled_posts` rows. Derives `timeLabel`,
+   `platformLabel`, `statusLabel`. The studio stops reading `@mirrorline/mock`;
+   the marketing site keeps it (non-negotiable 7).
+2. **The server action** — one `update` on the two granted columns, with
+   `.select()` so a filtered row reports not-found rather than silent success
+   (B2.1's third inherited rule). The trigger writes the audit, so the action
+   does **not** insert into `post_moves`.
+3. **Wire `schedule-moves-context.tsx`** to it. **The pure functions in
+   `schedule-moves.ts` do not change** — `movePost` gains persistence, not new
+   behaviour. Its header comment and the context's ("Nothing is persisted, and
+   that is the product") both become wrong and must be rewritten, not left.
+4. **An e2e persistence spec**, modelled on `goals-persist.spec.ts`: move a
+   post, reload, it is still moved.
+5. Remove the calendar's "Sample data, not saved" note **last**, when it stops
+   being true.
+
+**The dependency:** a post has to exist to be moved, and nothing authors one —
+by design. The e2e spec will need a service-role fixture, the way
+`auth.setup.ts` mints confirmed users. Decide that before writing step 4.
+
+### 4. Why the Vercel split does not block this
+
+The schema is additive and no production code references the two new tables, so
+applying them to preview — which production still reads until you re-scope the
+variables — changes nothing production serves. **That reasoning does not extend
+to a destructive migration**, and `pnpm migration-safety` is what keeps it from
+having to.
+
+### Still needs you
+
+1. **The four Vercel variables** (previous handoff §2). Production still serves
+   the preview database until then.
+2. **Arm the gate** (D93): the `production` Environment with yourself as
+   required reviewer, `PRODUCTION_MIGRATIONS_ENABLED=true`, three
+   `SUPABASE_PRODUCTION_*` secrets.
+3. **PR #3** (`docs/plan-v2`) still open; **D-b — where the renderer runs** —
+   still the blocking decision.
+4. **`E2E_SIGNUP_EMAIL`** still unset, so the one UI sign-up test skips.
 
 ---
 
@@ -486,6 +1105,77 @@ closes, at 828.
 3. **`E2E_SIGNUP_EMAIL`** is still unset, so the one UI sign-up test skips.
 4. **The axe-at-390px gap** from the previous note is unchanged and still worth
    a B1.5 item.
+## Handoff — 18 November 2026, afternoon (B2.1 as WIP, two sample-data bugs, and the skip audit)
+
+**Branch** `backend/b2-studio` (from `backend/b1-auth`, since rebased onto
+`main` once PR #2 merged).
+
+**This note's original §1 was a STOP** — onboarding's submit was broken and PR #2
+was not to be merged. Both are resolved: the cause is **D91**, the fix is in
+`main`, and the evening handoff above carries the account. That §1 is not
+preserved here because its diagnosis was wrong in a way worth not re-reading —
+the action was never *called*, rather than failing to settle. What follows is
+the part of this note that was B2's own, and still stands.
+
+### 2. B2.1 — committed as WIP, not green
+
+`5995e36` on `backend/b2-studio`. Lint, typecheck, **914 unit tests**, build —
+all pass. **No end-to-end verification**, because every goals test has to
+complete onboarding first.
+
+- Goals and the Results goals-tab read the real workspace (`readGoalCascade` +
+  the pure `buildGoalCascade`, 20 tests).
+- **`KeyResult.current` is now `number | null`.** `metric_snapshots` is empty
+  until B6, so there is no current value for any real workspace. A `0` would
+  claim we read the account and found nothing; the baseline would claim nothing
+  changed. Screens render "Not measured yet" and `keyResultPace` has an
+  `unmeasured` state.
+- The target write is real: `key_results.target`, as the user, with
+  `key_results_update_members` as the only check. `.select()` on the update so
+  a row RLS filtered out reports not-found rather than a silent success.
+- `e2e/goals-persist.spec.ts` is written (4 tests) and was **blocked entirely by
+  the submit bug** (D91), because every goals test has to finish onboarding
+  first. Runnable now that the fix is in `main`.
+
+### 3. Two bugs this turned up, both fixed in `5995e36`
+
+- **The Results goals-tab rendered `SAMPLE_CASCADE` unlabelled to signed-in
+  clients.** `GoalsBoard` defaults to the demo cascade when handed none — right
+  for the marketing site, wrong in the studio. A client would have seen somebody
+  else's goal with nothing saying so, which is precisely what non-negotiable 7's
+  "Sample data" label exists to prevent.
+- **A workspace with a goal but no key results showed no outcome at all.** The
+  outcome card only rendered when a `leads` key result existed, so every new
+  workspace saw its own goal missing from its own Goals screen.
+
+Neither screen falls back to sample data now; no goal shows an empty state that
+links back to onboarding.
+
+### 4. The 826 e2e skips — audited, and one gap worth knowing
+
+Asked whether the skips hide coverage. **They do not**, and the arithmetic
+closes exactly: **802** project-matrix (`onlyProject`) + **21**
+`recordings.spec.ts` (opt-in via `MOTION_RECORD`, 7 tests × 3 projects, records
+videos for a human and asserts almost nothing) + **3** the `E2E_SIGNUP_EMAIL`
+skip = **826**. Every spec passes in exactly one project; I checked that
+invariant per file.
+
+**The one real gap: axe never runs at 390px.** All four axe-using specs
+(`a11y`, `copilot-site`, `copilot-studio`, `home-sections`) are chromium-only,
+and `responsive.spec.ts` — which `a11y.spec.ts`'s skip reason cites as owning
+390px — asserts horizontal-scroll and the sidebar/drawer swap, **never axe**.
+So touch targets, focus order through the mobile drawer, and aria on the
+hamburger nav are unverified. The skip is intentional; its stated reason
+overstates what covers it. Worth a B1.5 item and a corrected comment.
+
+### Still needs you
+
+1. **`E2E_SIGNUP_EMAIL`** is still unset, so the one UI sign-up test skips.
+
+The two items that were here — "do not merge PR #2" and "PR #2 is still open,
+so b2-studio's PR will carry B1's commits" — are both spent. PR #2 merged as
+`cbdda37` on 19 November, and `backend/b2-studio` was rebased onto `main`
+immediately after, so it now carries only B2's own commits.
 
 ---
 

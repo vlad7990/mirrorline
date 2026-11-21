@@ -173,7 +173,10 @@ test.describe('it proposes; the person disposes (§2.3)', () => {
       .getByRole('listitem')
     await second.getByRole('button', { name: 'Approve' }).click()
 
-    await expect(panel(page)).toContainText('Sample data, not saved')
+    // B2.2: an approved move is a write now, so the panel's line says saved
+    // rather than "Sample data, not saved". It still names what a move does
+    // not do, because the Publisher does not exist yet.
+    await expect(panel(page)).toContainText('Moved on the calendar and saved')
     await expect.poll(async () => grid(page)).not.toEqual(before)
   })
 
