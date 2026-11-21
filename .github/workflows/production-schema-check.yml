@@ -1,0 +1,104 @@
+# Did production get the migrations `main` carries? (docs/DECISIONS.md D104)
+#
+# ==============================================================================
+# Why this is separate from the migration workflow
+# ==============================================================================
+#
+# `migrate-production.yml` is a **manual dispatch** now, run on the pull
+# request's branch before the merge (D104). That order keeps the schema ahead of
+# the code, and it depends on a person remembering to do it — so the one thing
+# it cannot do is notice its own absence.
+#
+# This runs on every push to `main` and answers the complementary question: does
+# production have every migration this tree has? If not, the merge went ahead
+# without the dispatch, and `main` goes red within a minute instead of staying
+# silent until the first request reaches a missing column.
+#
+# ==============================================================================
+# Read-only, and that is the whole design
+# ==============================================================================
+#
+# It links and runs `supabase migration list`. It does **not** run `db push`,
+# and must not be given one: a check that fixed what it found would re-create
+# the thing D104 removed — migrations reaching production unattended, after the
+# code. Applying stays manual, deliberate, and in the other file.
+#
+# The comparison itself is `scripts/migration-drift.mjs`, with 15 tests, because
+# the failure to guard against is a silent pass — CLI output the parser cannot
+# read, counted as "nothing missing". No rows found is a failure there, not a
+# green tick.
+
+name: Production schema check
+
+on:
+  push:
+    branches: [main]
+  # So it can be re-run after a dispatch without an empty commit.
+  workflow_dispatch:
+
+concurrency:
+  group: production-schema-check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    name: Production has every migration on main
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_PRODUCTION_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD }}
+    steps:
+      - id: configured
+        name: Is there anything to check against?
+        env:
+          ENABLED: ${{ vars.PRODUCTION_MIGRATIONS_ENABLED }}
+          HAS_REF: ${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF != '' }}
+          HAS_ACCESS_TOKEN: ${{ secrets.SUPABASE_PRODUCTION_ACCESS_TOKEN != '' }}
+        run: |
+          if [ "$ENABLED" != "true" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Production schema check is not enabled::Set the repository variable PRODUCTION_MIGRATIONS_ENABLED=true and add SUPABASE_PRODUCTION_ACCESS_TOKEN and SUPABASE_PRODUCTION_PROJECT_REF. Until then nothing verifies that production has the migrations on main. See docs/DECISIONS.md D104."
+            exit 0
+          fi
+
+          # Enabled and half-configured is the state worth failing on: it looks
+          # like a check and is not one.
+          missing=""
+          [ "$HAS_ACCESS_TOKEN" = "true" ] || missing="$missing SUPABASE_PRODUCTION_ACCESS_TOKEN"
+          [ "$HAS_REF" = "true" ] || missing="$missing SUPABASE_PRODUCTION_PROJECT_REF"
+
+          if [ -n "$missing" ]; then
+            echo "::error title=Production schema check is enabled but not configured::PRODUCTION_MIGRATIONS_ENABLED is true but these secrets are missing:$missing"
+            exit 1
+          fi
+
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: steps.configured.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.configured.outputs.ready == 'true'
+        with:
+          node-version: 20
+
+      - uses: supabase/setup-cli@v1
+        if: steps.configured.outputs.ready == 'true'
+        with:
+          version: latest
+
+      - name: Link
+        if: steps.configured.outputs.ready == 'true'
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF }}"
+
+      # Captured to a file rather than piped straight in, so the log shows the
+      # table a human can read as well as the verdict the script reaches. The
+      # script has no dependencies, so it runs under bare `node` — no install.
+      - name: Compare this tree against production
+        if: steps.configured.outputs.ready == 'true'
+        run: |
+          supabase migration list --linked | tee "$RUNNER_TEMP/migration-list.txt"
+          node scripts/migration-drift.mjs < "$RUNNER_TEMP/migration-list.txt"

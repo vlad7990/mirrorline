@@ -129,7 +129,7 @@ docs/                Specs, plan, designs, decisions, progress
 
 - **Don't stop to ask.** When something is unclear, choose the option most consistent with the sources above, log it in `docs/DECISIONS.md`, and continue.
 - **Work in milestones** (see `KICKOFF_PROMPT.md`). After each one: `pnpm lint && pnpm typecheck && pnpm test && pnpm build` must pass, then commit with a clear message, then update `docs/PROGRESS.md`.
-- **Never force-push, rewrite history, or delete files you did not create.**
+- **Force-pushing** (D92). Never force-push `main`, and never force-push a branch with an open pull request somebody else is reviewing. On your own feature branch, after a rebase, `--force-with-lease` is allowed — and **never plain `--force`**, which overwrites whatever arrived while you were not looking. Still never rewrite history that is not yours, and never delete files you did not create.
 - **When blocked** (missing key, failing service): stub it behind an adapter with mock data, note it in `docs/PROGRESS.md` under "Needs Vlad", and move on.
 - **Pull requests:** keep each under ~400 lines where practical.
 - **Verify every screen:**

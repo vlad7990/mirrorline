@@ -6301,3 +6301,477 @@ route still goes red.
 
 `demo-path.spec.ts` is green again, in **3.0s** rather than the 7.3s it used to
 take, because two wasted round trips went with the bug.
+
+## 2026-11-19 · D92 · The blanket force-push ban was stricter than it needed to be, and made a requested rebase unpushable
+
+**Vlad's decision**, taken when the old rule blocked work he had asked for.
+
+CLAUDE.md said "Never force-push, rewrite history, or delete files you did not
+create" — one sentence covering three different risks at one severity. It is now:
+
+> Never force-push `main`, and never force-push a branch with an open pull
+> request somebody else is reviewing. On your own feature branch, after a
+> rebase, `--force-with-lease` is allowed — and **never plain `--force`**, which
+> overwrites whatever arrived while you were not looking. Still never rewrite
+> history that is not yours, and never delete files you did not create.
+
+### Why the old wording had to go
+
+Vlad asked for `backend/b2-studio` to be rebased onto `origin/main` after PR #2
+merged. A rebase rewrites the branch's commits by construction, so the rebased
+branch **cannot** be pushed without force — the old rule made a legitimate,
+explicitly requested operation impossible to finish. A rule that forbids the
+only way to complete a sanctioned task is not protecting anything; it is just
+mis-aimed.
+
+### What the real risks are, and which part of the rule catches each
+
+- **`main`** — force-pushing it can destroy merged work for everyone and, here,
+  it is the production branch (D85). Still absolutely forbidden.
+- **A branch under somebody else's review** — force-pushing invalidates the
+  diff they are reading and can silently drop review comments. Forbidden.
+- **Your own unreviewed feature branch after a rebase** — the only thing at
+  risk is your own superseded history, which is the point of rebasing. Allowed.
+
+### Why `--force-with-lease` and not `--force`
+
+`--force` says "make the remote look like me", full stop. `--force-with-lease`
+says "make the remote look like me **only if** it still points where I last saw
+it" — so a commit pushed by somebody else, or by another session, aborts the
+push instead of vanishing. On a shared repository that difference is the whole
+safety argument, and it costs nothing. Plain `--force` stays banned everywhere.
+
+### Where this leaves the "don't rewrite history" instinct
+
+Intact, and narrowed to what it was for: do not rewrite history other people are
+building on. Rebasing your own branch onto a new base is not that — it is the
+normal way to keep a feature branch current, and the alternative (merging main
+back in repeatedly) buries the branch's own commits in merge noise, which is
+exactly what made "confirm it shows only B2 commits ahead" a reasonable thing
+for Vlad to ask for and check.
+
+## 2026-11-19 · D93 · Production migrations are gated on Vlad's approval, and two conditions come with it
+
+**Vlad's decision**, answering open question D-a in `BACKEND_PHASE.md` §10. The
+options were a gated job, an automatic one, or a manual dispatch. **A: gated.**
+
+A GitHub **Environment** named `production` with Vlad as a **required
+reviewer**, and a workflow — `.github/workflows/migrate-production.yml` — that
+runs `supabase db push` on merge to `main` and waits for him.
+
+> **That mechanism does not exist on this repository, and D104 replaces it with
+> a manual dispatch run before the merge.** Environment protection rules are
+> Enterprise-only for private repositories, and on Free a private repository has
+> no environments at all — so `environment: production` would have waited for
+> nobody. Everything below about **condition 1** stands; **condition 2 is
+> withdrawn**, because migrating before the merge removes the window it existed
+> to close.
+
+This keeps D85 intact. Merging is still the only thing that deploys the app, and
+merging is still his; the schema gets one deliberate extra click, because a bad
+migration is the one deploy that reverting a commit does not undo.
+
+### Condition 1 — expand/contract, and it is enforced rather than asked for
+
+**Every migration must be compatible with the code currently in production**, so
+that approving late never breaks anything. Destructive changes — drop, rename,
+retype, `set not null` — only in a **later** PR, once the code no longer uses
+the old shape.
+
+The reason is the gate itself. Between the merge and the approval, production
+runs **new code against the old schema**. After a Vercel rollback it runs **old
+code against the new schema**, because a rollback moves the code back and
+nothing moves the schema back. Only an additive migration survives both
+directions, and a review checklist is not enough: the once it is forgotten is
+the once it is 2am.
+
+So it is a gate, in the shape this repo already uses for licences and GSAP
+scope: **`pnpm migration-safety`** (`scripts/migration-safety.mjs`, 17 tests).
+It reads every migration, strips comments so prose *about* dropping a column is
+not a finding, and fails on `drop table`, `drop column`, `drop view`,
+`rename to`, `rename column`, `alter column … type` and `set not null`.
+`drop policy` and `drop function` are deliberately **not** on the list —
+`create or replace function` is how every RPC here is revised.
+
+A contract migration is legitimate eventually, so there is an escape hatch, and
+it lives **in the SQL file** rather than in a CI variable or a commit message:
+
+    -- contract-migration: approved
+
+A marker in the file is one somebody has to open the file to add. It runs in
+`ci.yml` on the branch and again in the migration workflow on what actually
+reached `main` — because two individually-additive migrations can merge into a
+broken pair.
+
+### Condition 2 — the code goes live after its schema, never before
+
+> **Withdrawn by D104.** The condition was right and the mechanism is no longer
+> needed: migrations are applied *before* the merge now, so there is no interval
+> in which the code is live and the migration is still pending. The `promote`
+> job, the `PROMOTE_FROM_WORKFLOW` switch and the Vercel deployment check are
+> all gone. What replaced them is a rule and a check — a PR's migrations must
+> not change once applied, and `production-schema-check.yml` fails `main` if a
+> merge skipped the dispatch.
+
+Production currently auto-deploys on push to `main`, which would put the code
+live **while the migration is still waiting for approval** — precisely the
+failure the gate exists to prevent. Two ways to fix it, and the workflow
+supports either:
+
+- **Turn off Vercel's automatic production deploy for `main`** and let the
+  workflow's `promote` job deploy after `migrate` succeeds. Implemented.
+- **Keep Vercel's deploy and add a deployment check** that blocks promotion
+  until the workflow passes. No code; a Vercel setting.
+
+### What is true today, and why we built it anyway
+
+**Production and preview share one Supabase project.** Verified rather than
+assumed: every Supabase variable in the Vercel project —
+`SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+`SUPABASE_SERVICE_ROLE_KEY` — carries `target: ["production", "preview"]` with a
+single value, and `hiddenProductionEnvCount` is `0`. There is no
+production-only override, so production serves `qypakxvxnjmsvxmxiynf`, the same
+project `supabase/config.toml` is linked to and the e2e suite writes to.
+
+Two things follow, and they pull in opposite directions:
+
+- **The gate is not yet load-bearing.** Approving a push to "production" today
+  approves a push to the database previews already use. It becomes
+  load-bearing when the separate production project exists — which is why it is
+  built now, while there is nothing to lose by getting it wrong.
+- **Condition 1 is load-bearing immediately.** A destructive statement applied
+  "for preview" is applied to production in the same breath. There is no window
+  in which expand/contract is optional, and today there is not even a second
+  database to practise on.
+
+**And one thing worth saying out loud:** the e2e suite creates real auth users
+in the project production serves, and its teardown deletes `e2e+`-tagged
+accounts from it. The sweep is narrow and tested — `sweep-rule.test.ts` asserts
+that `you@example.com`, `you+newsletters@…` and `you+mirrorline@…` are all
+untouchable — so this is not a live hazard. It is a reason the split is worth
+doing before there is a client, rather than after.
+
+Nothing in the workflow runs until Vlad sets the repository variable
+`PRODUCTION_MIGRATIONS_ENABLED=true`, creates the environment and adds the two
+secrets. Until then its preflight job prints a notice naming exactly what is
+missing — **it does not skip quietly**, because a safety gate that is off and
+looks green is the failure mode this repo keeps rediscovering.
+
+> Superseded in part by **D94**: production and preview are separate projects
+> as of 19 November, so the "What is true today" section above is history. The
+> gate is now load-bearing.
+
+## 2026-11-19 · D94 · Production has its own Supabase project, and the lesson is that the CLI could reach it from anywhere
+
+**Vlad's decision, and an explicit one-time approval to act on it.** Created
+`mirrorline-production` — ref `uvwedufzjldfahlqtisk`, organisation
+**Mirrorline** (`bfbiwjsedjhxhwbsddtb`), region `us-east-1`, **Micro** compute.
+Preview stays `mirrorline-preview` (`qypakxvxnjmsvxmxiynf`) in the same
+organisation. This is the split D76 reserved and D93 was waiting for, and it
+unblocks B2.2.
+
+### The organisation was named wrong, and asking was right
+
+The instruction said "org Mirrorline (the Pro org, not Stratum)". **D81 says the
+opposite**: Mirrorline was created as a *new free* organisation precisely so the
+preview database would not cost $10/month, and **Stratum** is the Pro one with
+five projects. Two things hung on which was true — `--size micro` is not offered
+on the free plan, and free caps at two active projects.
+
+So nothing was created until it was asked. The answer: Mirrorline **has since
+been upgraded to Pro**, so both the name and the compute size were right and
+D81's description is simply out of date. The create accepted `--size micro`,
+which is the proof — a free organisation would have rejected it.
+
+Worth keeping because the instinct it rewards is cheap: a parenthetical that
+contradicts the decision log is worth one question, not a guess. Guessing
+Stratum would have put production in the wrong organisation and started a bill;
+guessing Mirrorline-is-still-free would have downgraded production to Nano,
+which pauses after a week of inactivity.
+
+### The database password was never seen, and never needed
+
+Asked for and honoured: the password was not generated here, not printed, and
+not stored. Vlad pasted it from his password manager into a `read -rs` prompt in
+his own terminal, so the typed command line held `"$PGPW"` rather than a value
+and shell history stayed clean.
+
+**Then it turned out not to matter.** `supabase link` never prompted for a
+password, and `db push` still connected — the first line of its output is
+`Initialising login role...`. This CLI authenticates to Postgres by minting a
+temporary login role through the **Management API**, using the personal access
+token already in the keychain. The password is not on that path at all.
+
+Which is a finding with two faces:
+
+- **Convenient.** Nothing in this task needed a credential handed over, so none
+  was.
+- **The actual risk, and the reason for the rule below.** The CLI login reaches
+  **production from any local workdir**. Pointing `supabase/config.toml` at
+  preview is *not* a boundary — it is a default. One `supabase link
+  --project-ref` in any directory, or one `--project-ref` flag, and a session is
+  talking to the production database with no password, no approval and no trace
+  in the repo.
+
+### The rule
+
+**Production is touched only through the gated workflow
+(`.github/workflows/migrate-production.yml`, D93) or under an explicit one-time
+approval from Vlad. Never from a local link.**
+
+Not "prefer the workflow" — never. The gate is worth nothing if the thing it
+gates can be walked around by a CLI that is already authenticated, and it is
+already authenticated.
+
+Which is why the scratch workdir used for this work — `prod-main`, outside the
+repo, holding its own `config.toml`, the six migrations and the link state — was
+**deleted as the last step**, link state and all. It existed for one task and
+should not outlive it. The repo's own `supabase/config.toml` still reads
+`project_id = "qypakxvxnjmsvxmxiynf"` and `git status -- supabase/` is clean, so
+nothing a future session runs by habit can reach production.
+
+**And the e2e suite must never be pointed at it.** It creates real auth users
+and its teardown deletes `e2e+`-tagged accounts. D93 called that "not a live
+hazard" because the two databases were the same one and the sweep is narrow;
+now that they are separate, the correct statement is simpler — production is not
+a test target, and no test suite was run against it during this work.
+
+### Two things nearly went wrong, both from the same mistake
+
+**1. A closed stdin answers `Y`, so "no `--yes`" is not a safety gate.**
+
+The plan was to run `supabase config push` *without* `--yes` so it would print
+its diff and stop for review. That reasoning was wrong. Every `supabase`
+command here ran with `</dev/null` to stop it hanging on a prompt, and the push
+output shows what that does:
+
+    Do you want to push these migrations to the remote database?
+     • …
+     [Y/n]
+    Applying migration 20261113120000_metrics_and_goals.sql...
+
+Nobody answered that. EOF was taken as the default, which is **`Y`**. It was the
+intended outcome for `db push`, so it did no harm — and it would have applied
+the auth config before anyone saw the diff.
+
+**The fix is to answer, not to omit.** `yes n | supabase config push` prints the
+diff and applies nothing; `yes y | …` applies it. Omitting `--yes` in a
+non-interactive shell is indistinguishable from passing it.
+
+**2. A minimal `config.toml` is not a minimal push.**
+
+The first version of the production `config.toml` listed only the two URLs that
+needed changing, on the assumption that unspecified keys would be left alone.
+**They are not.** `config push` fills every key it knows with the CLI's own
+default and asserts that too. Feeding it `n` showed what the short file would
+have done to a project nobody had configured:
+
+| Key | Remote had | CLI default would have set |
+|---|---|---|
+| `[mfa.totp] enroll_enabled` | `true` | `false` |
+| `[mfa.totp] verify_enabled` | `true` | `false` |
+| `[email] max_frequency` | `1m0s` | `1s` |
+| `[email] otp_length` | `8` | `6` |
+
+Two of those weaken the project — TOTP enrolment off, and the email rate limit
+relaxed sixtyfold, which is the very limit the e2e suite's 429-skip exists
+because of (D84). None was asked for. Every value was then pinned to what the
+remote already had, so the applied diff was exactly two lines:
+
+    -site_url = "http://localhost:3000"
+    +site_url = "https://mirrorline-eosin.vercel.app"
+    -additional_redirect_urls = []
+    +additional_redirect_urls = ["https://mirrorline-eosin.vercel.app/**"]
+
+Both near-misses are the same error in different clothes: **treating absence as
+safety.** An unanswered prompt is not a refusal and an unlisted setting is not a
+preserved one. Where the default is the dangerous direction, say the safe thing
+out loud.
+
+### Auth mirrors preview, and that was verifiable after all
+
+Email confirmation **ON** (Vlad's call, D84), built-in SMTP at the default rate
+limit, stock templates. Those were taken from the record rather than a live read
+of preview — the Supabase MCP connection is scoped to the Stratum organisation
+only, so it cannot see either Mirrorline project.
+
+The diff then confirmed it from the other end: `enable_confirmations = true`,
+`max_frequency = "1m0s"`, `jwt_expiry = 3600`, refresh-token rotation and an
+empty `[email.template]` all reported as **already matching**. Preview's
+settings and a fresh project's defaults are the same settings, so the only
+genuine deltas were the two URLs.
+
+### Verified, not assumed
+
+Six migrations, staged from `origin/main` by `git archive` rather than from the
+working tree, each checked against its `origin/main` blob hash — so no
+`backend/b2-studio` work in progress could ride along. `supabase/` on that
+branch turned out to be byte-identical to `origin/main` anyway, but the
+constraint is now provable rather than lucky.
+
+| Check | Expected | Found |
+|---|---|---|
+| `migration list` local ↔ remote | all six agree | all six agree |
+| tables in `public` | 13 | 13 |
+| tables with RLS | 13 | 13 |
+| tables without RLS | none | none |
+| policies in `public` | 24 | 24 |
+| `kpi_definitions` rows | 12 | 12 |
+| distinct KPI tiers | 7 | 7 |
+
+The last four came from a read-only query Vlad ran in the production SQL
+editor, because `supabase db dump` shells out to `pg_dump` in Docker and there
+is no Docker on this machine, and `inspect db` in CLI 2.48.3 has no RLS or
+policy command. Asserting RLS from "the migration applied without error" would
+have been inference dressed as verification.
+
+### The CI secret is named for production now
+
+`migrate-production.yml` read `secrets.SUPABASE_ACCESS_TOKEN`. It now reads
+**`SUPABASE_PRODUCTION_ACCESS_TOKEN`**, matching the two secrets beside it. The
+old name was the one the CLI picks up from the environment by default, and that
+convenience was the problem: an unprefixed name reads like one account-wide
+credential, while this workflow is the one place that must only ever reach
+`mirrorline-production`. It is still handed to the CLI *as*
+`SUPABASE_ACCESS_TOKEN` in the job's `env:`, because that is what the CLI reads;
+only the secret it comes from is production-scoped.
+
+**One possible simplification, deliberately not made.** Since the Management API
+path needs no database password, `SUPABASE_PRODUCTION_DB_PASSWORD` may be
+unnecessary in CI. It stays wired in and documented: that is one local
+observation, and the password is the break-glass credential if the API path ever
+fails. Vlad agreed to leave it. Removing it is a change to make on evidence from
+CI, not from here.
+
+### Still Vlad's, and the half-done state to avoid
+
+1. **Re-scope the four Vercel variables** — `SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+   `SUPABASE_SERVICE_ROLE_KEY` — so the existing values become **Preview only**
+   and production gets `uvwedufzjldfahlqtisk`'s. Both URL names are needed:
+   `lib/leads/scan-store.ts` reads `SUPABASE_URL` while the browser needs the
+   `NEXT_PUBLIC_` one, and setting one leaves the Niche Scan writing to a JSON
+   file while the rest of the app talks to the database — a split brain with no
+   error message. Half-done the other way (production URL, preview key) fails
+   looking exactly like an auth bug.
+2. **The keys were never read here.** `supabase projects api-keys` was not run;
+   the keys come from
+   `…/project/uvwedufzjldfahlqtisk/settings/api-keys`. The project uses
+   Supabase's **new** key format (`sb_publishable_…`, `sb_secret_…`) per
+   `lib/supabase/env.ts`, so "publishable" maps to
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY` and "secret" to `SUPABASE_SERVICE_ROLE_KEY`.
+   The project URL — `https://uvwedufzjldfahlqtisk.supabase.co` — is not a
+   secret.
+3. **Arm the gate** (D93): the `production` Environment with himself as required
+   reviewer, `PRODUCTION_MIGRATIONS_ENABLED=true`, and the three
+   `SUPABASE_PRODUCTION_*` secrets.
+
+> **Item 3 is done, and the Environment is not part of it (D104).** The three
+> `SUPABASE_PRODUCTION_*` repository secrets are set — the access token scoped
+> to `mirrorline-production` alone — and `PRODUCTION_MIGRATIONS_ENABLED=true`.
+> No Environment was created, because required reviewers do not exist for a
+> private repository on this plan; the approval is Vlad running the workflow.
+> Items 1 and 2 were closed on 19 November.
+
+---
+
+## 2026-11-21 · D104 · The gate was a GitHub feature we do not have, so the order changed instead: migrate first, then merge
+
+**Vlad's decision, and he found the fault before the gate was ever armed.** D93
+built the approval out of a GitHub **Environment** with himself as a required
+reviewer. **Environment protection rules are not available for a private
+repository on this plan** — required reviewers need Enterprise, and on Free a
+private repository has no environments at all.
+
+The consequence is the bad kind. `environment: production` is not rejected when
+the environment has no protection rule; the job simply **runs**. So the line
+would have parsed, the workflow would have gone green, and the migration would
+have applied itself on every push to `main` with nobody asked. A gate that
+looks armed and is not — which is the failure this repo keeps rediscovering,
+and the third time it has appeared in a fortnight (D96's silent `200 []`,
+D103's skip that blamed the wrong thing).
+
+### The replacement needs no GitHub feature to be true
+
+Invert the order. Apply the migration **before** merging the pull request that
+needs it:
+
+1. **Actions → Migrate production → Run workflow**, with `ref` set to the
+   **pull request's branch**.
+2. **Confirm it went green.**
+3. **Merge the pull request.**
+
+Clicking *Run workflow* is the approval. It cannot be bypassed by a push,
+because nothing triggers the workflow but a person, and it cannot be bypassed
+by a schedule, because there is none. D85 is untouched: merging is still the
+only thing that deploys, and it is still Vlad's.
+
+**And the Vercel condition disappears with it.** D93's condition 2 existed
+because the migration ran *after* the merge and could still be waiting while
+the code went live — so either Vercel's production deploy had to be turned off
+or a deployment check had to block promotion. Migrating first removes the
+window rather than policing it. The `promote` job, the `PROMOTE_FROM_WORKFLOW`
+switch and the three `VERCEL_*` secrets are **gone**.
+
+### The rule that makes step 3 safe
+
+**A pull request's migrations must not change after they have been applied to
+production.** No amending, no rebasing that rewrites them, no adding one more
+"while I'm here".
+
+The reason is asymmetry. Applied migration history cannot be edited, only
+appended to: production holds a row saying `20261119080000` ran, and a
+force-push that changes what that file contains does not change what ran. The
+tree and the database would disagree about the same version number, and every
+later `db push` would be reasoning from a false premise. If something must
+change, **add another migration and dispatch again.**
+
+### What catches a merge that skipped step 1
+
+Nothing in the dispatch workflow can, because nothing starts it automatically
+any more. So the push trigger did not disappear — it moved to a **read-only**
+check, `production-schema-check.yml`:
+
+| | Migrate production | Production schema check |
+|---|---|---|
+| Trigger | `workflow_dispatch` only | push to `main`, plus dispatch |
+| Touches production | `db push` — writes | `migration list` — reads |
+| Fails when | a migration is destructive, or the push fails | `main` has a migration production does not |
+
+The comparison is `scripts/migration-drift.mjs`, with **15 tests**, and it is
+deliberately suspicious of its own input: `migration list` prints a table, so
+the parser accepts box-drawing and ASCII separators and a JSON array, and
+**finding no rows is a failure rather than a pass**. A check that cannot read
+the schema must not report that the schema is fine — the same lesson as D103,
+applied before it had a chance to bite.
+
+The reverse direction — production holding a migration this tree does not — is
+**reported and not failed**, because that is exactly what the correct procedure
+produces between step 1 and step 3.
+
+### Expand/contract did not change, but its reasoning inverted
+
+D93 argued it from the window between the merge and the approval: new code,
+old schema. That window is gone. The new one is its mirror — **between the
+apply and the merge, production runs the old code against the new schema** —
+and a Vercel rollback reopens it.
+
+So the conclusion is unchanged and now follows from one direction instead of
+two: the schema is deliberately ahead of the code, and only an additive
+migration survives that. `pnpm migration-safety` still runs on the branch in
+`ci.yml` and again on the dispatched ref, which matters more than before — the
+dispatch can be pointed at *any* ref, including one whose own CI never ran.
+
+### What this cost, and what it bought
+
+One GitHub feature we cannot have, exchanged for one habit we have to keep. The
+habit is weaker than a protection rule — a forgotten dispatch is possible in a
+way a bypassed reviewer is not — which is the whole reason the drift check is
+part of this decision rather than a nice-to-have. The gate is a person plus a
+tripwire, and the tripwire is tested.
+
+Still true, and worth repeating because the dispatch makes it easier to get
+wrong: **production is touched only through this workflow or under an explicit
+one-time approval, never from a local link** (D94). The `ref` box takes a
+branch name, not a project ref; nothing in it can point at a different
+database.
