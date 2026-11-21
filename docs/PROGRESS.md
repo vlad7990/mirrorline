@@ -167,8 +167,13 @@ stand as recorded below.
 
 1. **PR #4 and the gate** — you said you were merging and arming it. Then tell
    me and I cut the B2 PR; I have not touched it.
-2. **The Vercel promotion check** (§1 of the handoff below) — the gate holds the
-   schema but not the code until promotion waits on *Migrate production*.
+2. ~~**The Vercel promotion check**~~ — **dropped, 21 November (D104).** The
+   gate it belonged to could not exist: environment protection rules are
+   Enterprise-only for a private repository. PR #4 now migrates *before* the
+   merge, which removes the window a promotion check was policing. The procedure
+   for a migration-bearing PR is **dispatch *Migrate production* on the PR's
+   branch → confirm green → merge**, and a PR's migrations must not change once
+   applied.
 3. **`E2E_SIGNUP_EMAIL`** — yours to set, and it is what un-skips the one UI
    sign-up test that proves code-for-session end to end.
 4. **PR #3** (`docs/plan-v2`), still blocked on **D-b, where the renderer runs**.
