@@ -6,6 +6,81 @@
 
 ---
 
+## Handoff — 21 November 2026, after the rebase (B2 is rebased onto main and green; it carries six migrations, not five)
+
+**Branch** `backend/b2-studio`, rebased onto `main` at `e40f484` (PR #4 merged).
+Gates in §4. **The PR is not cut yet — the push needs you, see §5.**
+
+### 1. The rebase, and what git did with the duplicated gate commits
+
+Eleven commits replayed, **four skipped as already upstream** — `46f82fb`,
+`a86d47a`, `876709a`, `93e3d24`, this branch's own copies of D92, D93, the
+paused-B2.2 handoff and D94. PR #4 carried the same work under different SHAs,
+and git matched them by patch id. That is exactly what the PR #4 note predicted,
+so nothing had to be forced.
+
+Nine conflicts, **all of them append-versus-append** — `main` had gained D104
+and a handoff while this branch gained D95–D103 and its own. None was a
+disagreement about content, so they were resolved by rule rather than by
+judgement: decision entries run oldest-first, so D95–D103 slot in **before**
+D104; handoffs run newest-first, so `main`'s 21 November one stays on top. A
+throwaway script applied that nine times rather than my doing it by hand nine
+times, and it was written to refuse — a malformed marker set or a missing D104
+heading aborts without writing.
+
+Verified afterwards rather than assumed: **D95 … D104 appear once each, in
+order**, no conflict markers survive anywhere, and the gate files are `main`'s
+post-D104 versions — `migrate-production.yml` is dispatch-only, and the only
+`environment:` left in it is the comment explaining why it was removed.
+
+### 2. Six migrations, not five
+
+Every handoff and PR body until now said five. There are **six**:
+
+```
+20261119030000_scheduled_posts_and_moves.sql
+20261119040000_append_only_grants.sql
+20261119050000_grants_match_policies.sql
+20261119060000_workspace_timezone.sql
+20261119070000_definer_functions_are_authenticated_only.sql
+20261119080000_scheduled_posts_ai_scenes.sql
+```
+
+The count was written before `…080000_scheduled_posts_ai_scenes.sql` (D99) was
+added and never updated. It matters this once because **the dry run will list
+six**, and a number that disagrees with the log is exactly the kind of thing
+worth having corrected in advance rather than wondered about mid-dispatch.
+
+All twelve migrations in the tree are additive — `migration-safety` passes.
+
+### 3. The screenshots were reverted again
+
+The e2e run regenerated 21 PNGs under `docs/screens-built/`. This branch's
+intended calendar visuals were committed last session, so this run is rendering
+churn and all 21 were reverted — the same call, and for the same reason, as on
+19 November.
+
+### 4. Gates, all after the rebase
+
+lint · typecheck · **1,006 unit** (58 files) · build · licence-check (439
+packages, GSAP scope clean) · migration-safety (**12 additive**) ·
+**RLS/DB 94** (2 files, against preview) · **full e2e 417 passed / 850 skipped,
+zero failures** (12.9m).
+
+### 5. Still needs you
+
+1. **Approve the push.** `git push --force-with-lease` was declined, and the
+   rebase rewrote this branch's history, so a plain push will be rejected as a
+   non-fast-forward. It is the D92-sanctioned case — my own branch, no open PR,
+   lease held — but it is yours to allow. Then I cut the PR.
+2. **Then the new procedure, for the first time:** dispatch *Migrate production*
+   with `ref: backend/b2-studio`, confirm the dry run lists exactly the **six**
+   migrations in §2, merge.
+3. **`E2E_SIGNUP_EMAIL`** — yours to set; it un-skips the one UI sign-up test.
+4. **PR #3** (`docs/plan-v2`), still blocked on **D-b, where the renderer runs**.
+
+---
+
 ## Handoff — 21 November 2026 (PR #4 reworked: the gate is a Run button, because the GitHub feature it was built on does not exist here)
 
 **Branch** `infra/migration-gate` — **PR #4**, ready to merge. Gates in §5.
