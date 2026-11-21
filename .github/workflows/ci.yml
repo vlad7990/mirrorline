@@ -65,7 +65,11 @@ jobs:
       - name: Install ffmpeg and a caption font
         run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
 
-      - uses: astral-sh/setup-uv@v10
+      # Pinned to an exact tag, not a floating major: astral-sh stopped
+      # publishing those after `v7`, so `@v10` does not resolve even though
+      # v10.4.0 is the current release — "unable to find version `v10`", before
+      # any step runs. The others here do publish majors.
+      - uses: astral-sh/setup-uv@v10.4.0
         with:
           enable-cache: true
           cache-dependency-glob: services/pipeline/uv.lock

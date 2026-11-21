@@ -7638,6 +7638,21 @@ jump past v5 to the current major is a judgement call: our usage is trivial
 incompatibility fails on the pull request rather than in production. If CI
 disagrees, stepping back a major is the fix.
 
+**And CI immediately disagreed about one of them**, which is the first useful
+thing this PR did. `astral-sh/setup-uv@v10` is unresolvable —
+`Unable to resolve action astral-sh/setup-uv@v10, unable to find version v10` —
+and the `pipeline` job failed at *Set up job*, before a single step ran. The
+releases API says `v10.4.0`; **astral-sh stopped publishing floating major tags
+after `v7`**, so the major I inferred from the release number does not exist.
+Pinned to `astral-sh/setup-uv@v10.4.0`, which does, and an exact pin is the
+better choice for a third-party action anyway.
+
+Reading a release number and writing the major is the same substitution D105 is
+about — a version observed, a tag assumed — and the only reason it cost nothing
+is that a pull request is where it surfaced. The four actions that *do* publish
+majors were confirmed by asking for the ref directly rather than inferring it:
+`checkout@v7`, `setup-node@v7`, `action-setup@v6`, `setup-cli@v3` all exist.
+
 ### The finding: a dispatched run's branch is not the tree it migrated
 
 `head_branch` and `head_sha` — in the Actions list and the API — are the branch
