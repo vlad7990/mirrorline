@@ -659,6 +659,50 @@ export async function seedSocialAccount(
   return typeof id === 'string' ? { id, platform, handle } : null
 }
 
+/**
+ * The stored status of one account, service role, so RLS cannot mask a failure.
+ *
+ * Not the assertion the Settings round-trip is about — a reload through the
+ * app's own read path is — but it tells two failures apart, and they want
+ * different fixes: `null` or an unchanged status means
+ * `connect_social_account` never wrote, while a stored `connected` the screen
+ * does not show is a read or a revalidation bug. Without it both look like
+ * "the chip said the wrong word".
+ */
+export async function readSocialAccountStatus(
+  config: SupabaseTestConfig,
+  options: {
+    readonly userId: string
+    readonly platform: string
+    readonly handle: string
+  },
+): Promise<string | null> {
+  const workspaceId = await findOwnedWorkspaceId(config, options.userId)
+  if (workspaceId === null) return null
+
+  const query = [
+    `workspace_id=eq.${workspaceId}`,
+    `platform=eq.${encodeURIComponent(options.platform)}`,
+    // Encoded: a handle starts with `@`, which is legal in a query string but
+    // not worth relying on, and a handle carrying one day a character
+    // PostgREST reads as syntax must fail to match rather than change which
+    // row is read.
+    `handle=eq.${encodeURIComponent(options.handle)}`,
+    'select=status',
+  ].join('&')
+
+  const response = await fetch(`${config.url}/rest/v1/social_accounts?${query}`, {
+    headers: adminHeaders(config),
+  })
+
+  if (!response.ok) return null
+
+  const rows = (await response.json()) as readonly { status?: unknown }[]
+  const status = rows[0]?.status
+
+  return typeof status === 'string' ? status : null
+}
+
 export async function seedScheduledPosts(
   config: SupabaseTestConfig,
   options: { readonly userId: string; readonly runId: string; readonly now?: Date },
