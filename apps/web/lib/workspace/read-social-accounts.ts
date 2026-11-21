@@ -29,11 +29,19 @@ import { type AccountMetrics } from '@/lib/studio/accounts'
 
 import { type SocialAccountRow, toAccountMetrics } from './social-accounts'
 
-export async function readSocialAccounts(): Promise<readonly AccountMetrics[] | null> {
+/**
+ * The rows themselves, for callers that shape them differently.
+ *
+ * Settings merges them with the supported-platform list
+ * (`toSettingsAccounts`), so there is somewhere to connect from; Accounts turns
+ * them into KPI cards. One query, two shapes, and neither screen passes a
+ * workspace id.
+ */
+export async function readSocialAccountRows(): Promise<readonly SocialAccountRow[] | null> {
   const supabase = await createSupabaseServerClient()
 
-  // Ordered in the database rather than in the mapper, so two loads of the
-  // screen cannot disagree about the order of the cards.
+  // Ordered in the database rather than in the mapper, so two loads of a screen
+  // cannot disagree about the order of the rows.
   const result = await supabase
     .from('social_accounts')
     .select('id, platform, handle, status, note, connected_on')
@@ -41,5 +49,11 @@ export async function readSocialAccounts(): Promise<readonly AccountMetrics[] | 
 
   if (result.error !== null) return null
 
-  return toAccountMetrics((result.data ?? []) as SocialAccountRow[])
+  return (result.data ?? []) as SocialAccountRow[]
+}
+
+export async function readSocialAccounts(): Promise<readonly AccountMetrics[] | null> {
+  const rows = await readSocialAccountRows()
+
+  return rows === null ? null : toAccountMetrics(rows)
 }

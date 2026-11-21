@@ -7670,3 +7670,84 @@ Written into the workflow's header under "How to read a run", because somebody
 glancing at three runs all labelled `main` would reasonably conclude the
 dispatch never happened — which is, with some irony, the exact wrong conclusion
 that D105's zero-runs scare was the right one.
+
+## 2026-11-21 · D107 · Connection state is written by a function, because re-opening the table would undo D96
+
+**Vlad's decision**, confirming the approach before it was built. B2.3 needs a
+person to be able to say "this account is mine", and `social_accounts` has been
+**read-only to the browser** since B1: members hold a SELECT policy, and D96
+revoked insert, update and delete from `authenticated` and `anon` because the
+table is written by the pipeline under the service role.
+
+Two ways to let a user change it:
+
+| | What it costs |
+|---|---|
+| **Member INSERT/UPDATE policies** on the table | Re-opens the verbs D96 closed, on a table whose other writer is a background worker. Every future column becomes browser-writable by default — which is the shape of the bug D96 was. |
+| **A `security definer` function** | One more function to grant correctly, and the write path is a named operation rather than a verb on a table. |
+
+**The function.** The same shape `save_onboarding` (D97) and
+`set_workspace_timezone` already use, which also means there is one idiom here
+rather than two.
+
+### What the shape buys, beyond the grant
+
+**Neither function takes a workspace id.** The caller's own is looked up from
+`memberships`, so there is no parameter in which to name somebody else's — D97's
+sentence, holding for the same reason.
+
+That decided the disconnect's signature, which is the part worth recording
+because the obvious version is worse. The UI already holds the row id, so
+`disconnect_social_account(p_account_id uuid)` is the natural shape — and it
+would need a membership check to be **correct**. `(workspace_id, platform,
+handle)` is already unique, so taking a platform and a handle instead needs a
+membership check to **find the row at all**. A lookup that cannot address a
+foreign row is stronger than a check that refuses one: forgetting the check is a
+code change, forgetting the scoping is a syntax error.
+
+### The grants are three statements, not two
+
+`revoke all … from public` removes the implicit grant and leaves `anon`'s
+**direct** grant from Supabase's default privileges untouched. That was the D98
+hole on four functions, so both new functions carry the explicit
+`revoke execute … from anon`, and both are in the anonymous-execution test list
+rather than trusted to the pattern.
+
+### And no column was added
+
+§6 keeps posting off until Meta, TikTok and YouTube approve the apps and Postiz
+runs. "Connected" means **the client told us this account is theirs** — not that
+we hold an OAuth grant. One test asserts that no column of `social_accounts` is
+named for a token, secret, credential or password, so the day that stops being
+true it fails rather than waits to be noticed.
+
+---
+
+## 2026-11-21 · D108 · "No such account" and "not yours" are the same answer, deliberately
+
+**Vlad's decision**, agreeing with the single error. `disconnect_social_account`
+raises `45007` both when the platform and handle match nothing and when they
+match a row in a workspace the caller does not own.
+
+The alternative is more helpful, and that is the problem. Distinguishing them —
+`45007` for missing, `45008` for forbidden — answers a question nobody should be
+able to ask: **does this handle exist in somebody else's workspace?** Two
+clients in the same niche can have the same handle in mind; one of them probing
+the other's connection state through an error code is a disclosure, however
+small, and it is the kind that compounds because it is cheap to automate.
+
+So the function does not check-then-refuse. It scopes the `update` to the
+caller's workspace and raises when nothing was updated, which makes the two
+cases **indistinguishable by construction** rather than by a decision somebody
+could later optimise away in pursuit of better error messages.
+
+Tested from both sides: a member of workspace A naming their own handle
+succeeds, and the same member naming workspace D's `@rls_…` handle gets `45007`
+— followed by the assertion that matters, which is that D's row is untouched.
+
+The cost is a worse message in one real case: a person who mistypes their own
+handle is told it does not exist on this workspace, which is true and unhelpful.
+The UI can afford to be kinder than the database here, because it already knows
+which accounts the workspace has — it can say "we do not have that handle, here
+are the three you connected" without the database confirming anything about
+anybody else.

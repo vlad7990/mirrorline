@@ -1,8 +1,8 @@
 'use client'
 
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import type { AccountStatus, SocialAccount } from '@mirrorline/mock'
-import { Button, Card, Divider, cn } from '@mirrorline/ui'
+import { Button, Card, Divider, Input, Label, cn } from '@mirrorline/ui'
 import Link from 'next/link'
 
 /**
@@ -35,11 +35,31 @@ const COMING_SOON_PLATFORM = 'linkedin'
 
 const COMING_SOON_NOTE = 'Coming after the first three platforms.'
 
+/**
+ * What "Connected" does and does not mean, under the card as a whole (D109).
+ *
+ * One sentence rather than one per row: the claim is about the product, not
+ * about a platform. The per-row notes stay where they are, because those are
+ * platform-specific and this is not.
+ */
+const CONNECTED_MEANS =
+  'We record which account is yours. Nothing posts until the platforms approve our app.'
+
+const HANDLE_HINT = 'The @handle as the platform shows it.'
+
 export interface ConnectedAccountsCardProps {
   accounts: readonly SocialAccount[]
-  onReconnect: (accountId: string) => void
-  onDisconnect: (accountId: string) => void
-  onConnect: (accountId: string) => void
+  /**
+   * Platform and handle, not a row id (D107).
+   *
+   * `connect_social_account` and `disconnect_social_account` address a row
+   * inside the caller's own workspace by `(platform, handle)` — there is no
+   * parameter in which to name another workspace's row — so the id a
+   * placeholder row carries would be meaningless to them anyway.
+   */
+  onReconnect: (platform: string, handle: string) => void
+  onDisconnect: (platform: string, handle: string) => void
+  onConnect: (platform: string, handle: string) => void
 }
 
 /** The line under the platform name: the handle, or what we have instead. */
@@ -56,6 +76,11 @@ export function ConnectedAccountsCard({
   onConnect,
 }: ConnectedAccountsCardProps) {
   const comingSoonNoteId = useId()
+  const handleFieldId = useId()
+  // Keyed by row id, seeded from the stored handle as it is rendered: a
+  // disconnected account keeps its handle, so reconnecting does not mean
+  // retyping it.
+  const [handles, setHandles] = useState<Record<string, string>>({})
 
   return (
     <Card as="section" className="flex flex-col gap-3">
@@ -94,31 +119,82 @@ export function ConnectedAccountsCard({
                 </span>
 
                 {account.status === 'reconnect-needed' ? (
-                  <Button variant="secondary" onClick={() => onReconnect(account.id)}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => onReconnect(account.platform, account.handle ?? '')}
+                  >
                     Reconnect
                     <span className="sr-only"> {account.platformLabel}</span>
                   </Button>
                 ) : null}
 
                 {account.status === 'connected' ? (
-                  <Button variant="secondary" onClick={() => onDisconnect(account.id)}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => onDisconnect(account.platform, account.handle ?? '')}
+                  >
                     Disconnect
                     <span className="sr-only"> {account.platformLabel}</span>
                   </Button>
                 ) : null}
+              </div>
 
-                {account.status === 'not-connected' ? (
+              {/* The handle, because there is no OAuth to take it from (§6).
+                  Only on a row with nothing connected: a connected row already
+                  shows its handle on the line above, and changing it is a
+                  disconnect followed by a connect rather than an edit in
+                  place — the audit reads better that way, and so does the
+                  consent question. */}
+              {account.status === 'not-connected' ? (
+                <div className="flex flex-wrap items-end gap-2.5">
+                  <span className="flex min-w-0 flex-1 basis-[180px] flex-col gap-1">
+                    <Label htmlFor={`${handleFieldId}-${account.id}`}>
+                      {account.platformLabel} handle
+                    </Label>
+                    <Input
+                      id={`${handleFieldId}-${account.id}`}
+                      name={`handle-${account.platform}`}
+                      value={handles[account.id] ?? account.handle ?? ''}
+                      onChange={(event) =>
+                        setHandles((previous) => ({
+                          ...previous,
+                          [account.id]: event.target.value,
+                        }))
+                      }
+                      placeholder="@yourhandle"
+                      disabled={isComingSoon}
+                      aria-describedby={
+                        isComingSoon ? comingSoonNoteId : `${handleFieldId}-${account.id}-hint`
+                      }
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                    <span
+                      id={`${handleFieldId}-${account.id}-hint`}
+                      className="text-caption text-text-muted"
+                    >
+                      {HANDLE_HINT}
+                    </span>
+                  </span>
+
                   <Button
                     variant="secondary"
-                    disabled={isComingSoon}
+                    disabled={
+                      isComingSoon || (handles[account.id] ?? account.handle ?? '').trim() === ''
+                    }
                     aria-describedby={isComingSoon ? comingSoonNoteId : undefined}
-                    onClick={() => onConnect(account.id)}
+                    onClick={() =>
+                      onConnect(
+                        account.platform,
+                        (handles[account.id] ?? account.handle ?? '').trim(),
+                      )
+                    }
                   >
                     Connect
                     <span className="sr-only"> {account.platformLabel}</span>
                   </Button>
-                ) : null}
-              </div>
+                </div>
+              ) : null}
 
               {account.note ? <p className="m-0 text-meta text-text-muted">{account.note}</p> : null}
 
@@ -131,6 +207,11 @@ export function ConnectedAccountsCard({
           )
         })}
       </ul>
+
+      {/* What "Connected" means, once, under the whole card. The per-row notes
+          above are platform-specific limits; this is the product's own claim,
+          and saying it four times would make it read as fine print. */}
+      <p className="m-0 text-meta text-text-muted">{CONNECTED_MEANS}</p>
 
       {/* Where Accounts is reached from, now the sidebar is back to eight
           items. The Accounts screen already links here for "connect or

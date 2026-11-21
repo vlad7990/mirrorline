@@ -30,6 +30,7 @@
  * to happen, so the failure is swallowed deliberately rather than by accident.
  */
 
+import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
@@ -61,6 +62,122 @@ const HAS_OTHER_MEMBERS =
 
 function fail(message: string): DeleteWorkspaceState {
   return { status: 'error', message }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Connection state (B2.3, D107)                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * SQLSTATE `45006` — an unsupported platform or a blank handle, refused by
+ * `connect_social_account` rather than by the column constraint, so there is a
+ * sentence to show rather than a `23514`.
+ */
+const BAD_ACCOUNT_CODE = '45006'
+
+/** SQLSTATE `45007` — no such account on this workspace (D108). */
+const NO_SUCH_ACCOUNT_CODE = '45007'
+
+/** SQLSTATE `45002` — raised when the caller owns no workspace. */
+const NO_WORKSPACE_CODE = '45002'
+
+const BAD_ACCOUNT =
+  'We need the platform and the account handle, and the platform has to be one we support. ' +
+  'Nothing has changed.'
+
+const NO_WORKSPACE =
+  'We could not find a workspace you own, so there is nothing to connect the account to.'
+
+const CONNECT_FAILED =
+  'We could not save that connection just now. Nothing has changed — try again in a moment.'
+
+const DISCONNECT_FAILED =
+  'We could not disconnect that account just now. It is still connected — try again in a moment.'
+
+/**
+ * D108: one answer for "no such account" and "not yours".
+ *
+ * The wording is deliberately about *this* workspace rather than about the
+ * handle existing anywhere, because the database will not say which case it was
+ * and this message must not imply more than it knows.
+ */
+const NOT_ON_THIS_WORKSPACE =
+  'We do not have that account on this workspace. Check the handle against the ones listed above.'
+
+export type ConnectionState =
+  | { readonly status: 'idle' }
+  | { readonly status: 'connected' }
+  | { readonly status: 'disconnected' }
+  | { readonly status: 'error'; readonly message: string }
+
+/**
+ * "This account is mine" — not an OAuth grant (§6).
+ *
+ * Nothing here stores a token, because there is none to store until the
+ * platform approvals exist. The function upserts on `(platform, handle)` and
+ * decides the workspace from the caller's own membership, so there is no
+ * workspace id to pass and none to get wrong (D107).
+ */
+export async function connectSocialAccountAction(
+  platform: string,
+  handle: string,
+): Promise<ConnectionState> {
+  const supabase = await createSupabaseServerClient()
+
+  const { error } = await supabase.rpc('connect_social_account', {
+    p_platform: platform,
+    p_handle: handle,
+    // The platform limit is ours to write, not the client's to supply, and a
+    // null here leaves any existing note alone rather than erasing it.
+    p_note: null,
+  })
+
+  if (error === null) {
+    // Both screens read this table. Revalidating only Settings would leave the
+    // Accounts board on the previous state until something else moved.
+    revalidatePath('/app/settings')
+    revalidatePath('/app/accounts')
+    return { status: 'connected' }
+  }
+
+  if (error.code === BAD_ACCOUNT_CODE) return { status: 'error', message: BAD_ACCOUNT }
+  if (error.code === NO_WORKSPACE_CODE) return { status: 'error', message: NO_WORKSPACE }
+
+  return { status: 'error', message: CONNECT_FAILED }
+}
+
+/**
+ * Stop posting to an account, and keep the row.
+ *
+ * The row survives so the card can still say which account it was, and so
+ * `metric_snapshots` keep something to reference. Platform and handle rather
+ * than an id, so the lookup cannot address another workspace's row at all
+ * (D107).
+ */
+export async function disconnectSocialAccountAction(
+  platform: string,
+  handle: string,
+): Promise<ConnectionState> {
+  const supabase = await createSupabaseServerClient()
+
+  const { error } = await supabase.rpc('disconnect_social_account', {
+    p_platform: platform,
+    p_handle: handle,
+  })
+
+  if (error === null) {
+    revalidatePath('/app/settings')
+    revalidatePath('/app/accounts')
+    return { status: 'disconnected' }
+  }
+
+  if (error.code === NO_SUCH_ACCOUNT_CODE) {
+    return { status: 'error', message: NOT_ON_THIS_WORKSPACE }
+  }
+  if (error.code === BAD_ACCOUNT_CODE) return { status: 'error', message: BAD_ACCOUNT }
+  if (error.code === NO_WORKSPACE_CODE) return { status: 'error', message: NO_WORKSPACE }
+
+  return { status: 'error', message: DISCONNECT_FAILED }
 }
 
 export async function deleteWorkspaceAction(
