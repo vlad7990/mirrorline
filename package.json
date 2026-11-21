@@ -21,6 +21,7 @@
     "screenshots": "playwright test --project=screenshots",
     "licence-check": "node scripts/licence-check.mjs",
     "migration-safety": "node scripts/migration-safety.mjs",
+    "migration-drift": "node scripts/migration-drift.mjs",
     "design:lint": "npx --yes @google/design.md lint DESIGN.md"
   },
   "devDependencies": {

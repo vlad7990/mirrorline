@@ -6,6 +6,97 @@
 
 ---
 
+## Handoff — 21 November 2026 (PR #4 reworked: the gate is a Run button, because the GitHub feature it was built on does not exist here)
+
+**Branch** `infra/migration-gate` — **PR #4**, ready to merge. Gates in §5.
+
+You found this before it could do any harm: **environment protection rules are
+not available for a private repository on this plan**, so `environment:
+production` would have parsed, run, and waited for nobody. D104 has the whole
+of it. The order is inverted instead.
+
+### 1. The procedure, for any PR that carries migrations
+
+1. **Actions → Migrate production → Run workflow**, and set `ref` to the **PR's
+   branch**.
+2. **Confirm it went green.**
+3. **Merge the PR.**
+
+Your click on *Run workflow* is the approval. Nothing else starts that workflow
+— no push, no schedule.
+
+**The rule that makes step 3 safe: a PR's migrations must not change after they
+have been applied.** Applied history can only be appended to, so a force-push
+that rewrites a migration leaves the tree and the database disagreeing about
+what version `20261119080000` actually is. If something must change, add another
+migration and dispatch again.
+
+### 2. What is in the workflow now
+
+`workflow_dispatch` only, with a `ref` input defaulting to `main`. Preflight →
+safety (`pnpm migration-safety` **on the dispatched ref**) → link → list → **dry
+run** → apply → confirm. The `environment:` lines are gone, the `promote` job is
+gone, and so are `PROMOTE_FROM_WORKFLOW` and the three `VERCEL_*` secrets.
+
+`--yes` is passed to `db push` rather than relied on, per D94's lesson that a
+closed stdin answers **Y** on its own.
+
+### 3. The new check, which is what catches a forgotten dispatch
+
+`production-schema-check.yml` — **push to `main`, read-only.** It links, runs
+`supabase migration list`, and fails if `main` carries a migration production
+does not. So a merge that skipped step 1 is red within a minute instead of
+silent until the first request reaches a missing column.
+
+It never runs `db push`. A check that fixed what it found would put migrations
+back on the unattended path this rework removed.
+
+The comparison is `scripts/migration-drift.mjs`, **15 tests**, and it distrusts
+its own input: both table separators and a JSON array are accepted, and
+**finding no rows fails** rather than passing. A gate that cannot read the
+schema must not vouch for it — D103's lesson, applied before it could bite.
+
+The other direction — production holding a migration this tree does not — is
+reported, not failed. That is what step 1 looks like between the dispatch and
+the merge.
+
+### 4. Expand/contract: same rule, inverted reasoning
+
+D93 argued it from new code against an old schema. That window is gone; the new
+one is its mirror — **between the apply and the merge, production runs the old
+code against the new schema**, and a rollback reopens it. The conclusion is
+unchanged, so the gate itself is untouched; its prose and `ci.yml`'s comment now
+say why correctly.
+
+It matters slightly more than before: the dispatch takes **any** ref, including
+one whose own CI never ran, which is why safety runs there too.
+
+### 5. Gates
+
+lint · typecheck · **926 unit** (911 + 15 for the drift parser) · build ·
+licence-check (439 packages, GSAP scope clean) · migration-safety (6 additive).
+All three workflow files parse. The drift script was exercised in all three
+directions by hand — in sync, one missing, empty input — and exits 0, 1, 1
+respectively.
+
+**926 and not 991:** this branch is cut from `main`, so it does not carry
+B2.2's tests. The B2 branch's count stands separately.
+
+### Still needs you
+
+1. **Merge PR #4.** Nothing to configure first: your three secrets and the
+   variable are already set, and no Environment is needed.
+2. **Then tell me and I cut the B2 PR** — it carries five migrations, so it is
+   the first to use the procedure in §1: dispatch on `backend/b2-studio`,
+   confirm green, merge.
+3. **`E2E_SIGNUP_EMAIL`** — yours to set; it un-skips the one UI sign-up test.
+4. **PR #3** (`docs/plan-v2`), still blocked on **D-b, where the renderer runs**.
+
+**Dropped from this list:** the Vercel promotion check. Migrating before the
+merge removes the window it was for (D104).
+
+---
+
 ## Handoff — 19 November 2026, late (production has its own database; preview and production are separate; B2.2 is unpaused once the Vercel variables are split)
 
 **Branch** `backend/b2-studio` · **no PR yet.** Modified and uncommitted:
@@ -136,6 +227,9 @@ API path fails. Store it somewhere retrievable.
 2. **Arm the gate** (D93): the `production` Environment with yourself as
    required reviewer, `PRODUCTION_MIGRATIONS_ENABLED=true`, and the three
    `SUPABASE_PRODUCTION_*` secrets.
+   **Done, and the Environment turned out to be impossible on this plan — see
+   the 21 November handoff above and D104. The secrets and the variable are
+   set; the approval is the Run button.**
 3. **Commit these three files.** Nothing here is committed yet.
 4. **PR #3** (`docs/plan-v2`) is still open; **D-b — where the renderer runs** —
    is the remaining blocking decision.

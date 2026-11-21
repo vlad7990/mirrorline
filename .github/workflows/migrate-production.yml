@@ -1,5 +1,5 @@
-# Migrations reach production only after Vlad approves, and code only after the
-# migration (docs/DECISIONS.md D93, docs/plan/BACKEND_PHASE.md §1.5a).
+# Migrations reach production **before** the code that needs them, and Vlad's
+# click on *Run workflow* is the approval (docs/DECISIONS.md D93, D104).
 #
 # ==============================================================================
 # Why this exists
@@ -9,6 +9,34 @@
 # the schema it needs — migrations have been applied by hand — so the first
 # migration an app change depends on would put new code in front of an old
 # schema, in production, with no warning.
+#
+# ==============================================================================
+# Why it is a manual dispatch rather than a gated job on push
+# ==============================================================================
+#
+# The first version ran on push to `main` and held the apply step behind a
+# GitHub **Environment** with Vlad as a required reviewer. **That gate cannot
+# exist on this repository** (D104): environment protection rules — required
+# reviewers among them — are available on private repositories only on
+# Enterprise, and on Free a private repository has no environments at all. The
+# `environment: production` line would have parsed, run, and waited for nobody.
+#
+# So the order is inverted instead, which needs no GitHub feature to be true:
+#
+#   1. Actions → **Migrate production** → *Run workflow*, with `ref` set to the
+#      **pull request's branch**.
+#   2. Confirm it went green.
+#   3. Merge the pull request.
+#
+# The schema is already in place when the code arrives, and the thing that waits
+# for a human is the human starting it. Merging is still the only thing that
+# deploys, and it is still Vlad's (D85).
+#
+# **The rule that makes step 3 safe: a PR's migrations must not change after
+# they have been applied.** Amending, rebasing or adding to them after a green
+# run puts production in front of code that assumes otherwise — and applied
+# history cannot be edited, only added to. Need a change? Add another migration
+# and run this again.
 #
 # ==============================================================================
 # Inert until you turn it on, and loudly rather than silently
@@ -24,65 +52,39 @@
 # What you set up once, and why none of it is in this file
 # ==============================================================================
 #
-#  1. A GitHub **Environment** named `production`, with yourself as a
-#     **required reviewer**. That environment, not anything here, is what makes
-#     the migration wait — `environment:` below is the hook it attaches to.
-#  2. Three repository secrets, and they do different jobs:
-#     - `SUPABASE_PRODUCTION_ACCESS_TOKEN` — a **personal access token** from
-#       supabase.com/dashboard/account/tokens. `supabase link` uses the
-#       Management API and cannot authenticate without it.
-#     - `SUPABASE_PRODUCTION_PROJECT_REF` — which project to link to.
-#     - `SUPABASE_PRODUCTION_DB_PASSWORD` — the Postgres password `db push` uses.
-#     The token and the password are not interchangeable; one talks to the API
-#     and the other to the database.
+# Three repository secrets, and they do different jobs:
 #
-#     All three carry the `PRODUCTION_` prefix on purpose (D94). The token used
-#     to be called `SUPABASE_ACCESS_TOKEN` — the name the CLI reads out of the
-#     environment by default — and that convenience is the problem: an
-#     unprefixed name reads like one account-wide credential, while this
-#     workflow is the one place that must only ever reach
-#     `mirrorline-production`. The prefix makes a production-scoped token the
-#     obvious thing to store, and a preview-capable one look wrong at a glance.
-#     It is still handed to the CLI *as* `SUPABASE_ACCESS_TOKEN` in the job's
-#     `env:`, because that is the variable the CLI reads; only the secret it is
-#     read from is production's.
-#  3. **Turn off Vercel's automatic production deploy for `main`.** This is the
-#     half that keeps condition 2 — otherwise Vercel promotes on push and the
-#     code is live before the approval, which is the failure the gate exists to
-#     prevent. Either disable the production branch deploy and let `promote`
-#     below do it — set `vars.PROMOTE_FROM_WORKFLOW=true` and add the secrets
-#     `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` — or keep Vercel's
-#     deploy and add a **deployment check** that blocks promotion until this
-#     workflow succeeds. The first is implemented here; the second needs no code
-#     and is a Vercel setting.
+#   - `SUPABASE_PRODUCTION_ACCESS_TOKEN` — a **personal access token** from
+#     supabase.com/dashboard/account/tokens, scoped to `mirrorline-production`.
+#     `supabase link` uses the Management API and cannot authenticate without it.
+#   - `SUPABASE_PRODUCTION_PROJECT_REF` — which project to link to.
+#   - `SUPABASE_PRODUCTION_DB_PASSWORD` — the Postgres password `db push` uses.
 #
-#     The two switches are separate on purpose: `PRODUCTION_MIGRATIONS_ENABLED`
-#     turns on the gate, `PROMOTE_FROM_WORKFLOW` turns on deploying from here.
-#     Gating migrations is useful on its own; promoting from CI only makes sense
-#     once Vercel's own git deploy is off, and conflating them would arm the
-#     second by accident.
+# The token and the password are not interchangeable; one talks to the API and
+# the other to the database. All three carry the `PRODUCTION_` prefix on purpose
+# (D94): the token used to be called `SUPABASE_ACCESS_TOKEN` — the name the CLI
+# reads out of the environment by default — and that convenience is the problem.
+# An unprefixed name reads like one account-wide credential, while this workflow
+# is the one place that must only ever reach `mirrorline-production`. It is
+# still handed to the CLI *as* `SUPABASE_ACCESS_TOKEN` in the job's `env:`,
+# because that is the variable the CLI reads; only the secret it is read from is
+# production's.
 #
-# **Nothing in this file deploys anything until you have done 1–3.** Merging is
-# still the only thing that deploys, and it is still yours (D85).
+# **No Vercel setting is needed any more.** The old condition 2 — turn off
+# Vercel's production deploy, or add a deployment check that blocks promotion
+# until this workflow passes — existed because the migration ran *after* the
+# merge and could still be waiting while the code went live. Migrating before
+# the merge removes that window, so the `promote` job and the
+# `PROMOTE_FROM_WORKFLOW` switch are gone with it (D104).
 #
 # ==============================================================================
-# What changed under this file on 19 November
+# The companion check
 # ==============================================================================
 #
-# It used to say production and preview **share one Supabase project**, so this
-# job migrated the database previews and the e2e suite also wrote to. That is
-# no longer true: `mirrorline-production` is its own project (D94), and
-# `SUPABASE_PRODUCTION_PROJECT_REF` points only at it.
-#
-# Two consequences worth keeping in mind:
-#
-# - **The gate is now load-bearing rather than theoretical.** Approving a push
-#   here no longer also approves it for preview, so this is the only route a
-#   migration takes to the production database.
-# - **Expand/contract is no less important.** `pnpm migration-safety` still
-#   runs above, because the reason it exists was never the shared project — it
-#   is that a contract migration applied to a database holding real rows cannot
-#   be walked back by reverting the commit.
+# `production-schema-check.yml` runs on every push to `main` and fails if `main`
+# carries a migration production does not have. That is what catches a merge
+# which skipped step 1 — this workflow cannot, because nothing starts it
+# automatically any more.
 #
 # The e2e suite must never be pointed at this project (D94). It creates real
 # auth users and its teardown deletes `e2e+`-tagged accounts.
@@ -90,10 +92,13 @@
 name: Migrate production
 
 on:
-  push:
-    branches: [main]
-  # So a migration can be re-run after a failure without an empty commit.
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch, tag or SHA to migrate from — the PR branch, before you merge it'
+        required: true
+        default: main
+        type: string
 
 # A second run must not apply migrations while the first is mid-flight.
 concurrency:
@@ -119,7 +124,7 @@ jobs:
         run: |
           if [ "$ENABLED" != "true" ]; then
             echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Production migrations are not enabled::Set the repository variable PRODUCTION_MIGRATIONS_ENABLED=true, create the 'production' Environment with yourself as a required reviewer, and add SUPABASE_PRODUCTION_ACCESS_TOKEN, SUPABASE_PRODUCTION_PROJECT_REF and SUPABASE_PRODUCTION_DB_PASSWORD. Until then migrations are applied by hand and a merge can put new code in front of an old schema. See docs/DECISIONS.md D93."
+            echo "::notice title=Production migrations are not enabled::Set the repository variable PRODUCTION_MIGRATIONS_ENABLED=true and add SUPABASE_PRODUCTION_ACCESS_TOKEN, SUPABASE_PRODUCTION_PROJECT_REF and SUPABASE_PRODUCTION_DB_PASSWORD. Until then migrations are applied by hand and a merge can put new code in front of an old schema. See docs/DECISIONS.md D93 and D104."
             exit 0
           fi
 
@@ -138,9 +143,10 @@ jobs:
 
           echo "enabled=true" >> "$GITHUB_OUTPUT"
 
-  # Expand/contract, checked again here rather than trusted from the PR. CI runs
-  # it on the branch; this runs it on what actually reached `main`, because a
-  # merge can combine two individually-additive migrations into a broken pair.
+  # Expand/contract, checked on the ref being migrated rather than trusted from
+  # the pull request's own CI run. The same gate `ci.yml` runs, pointed at
+  # whatever was typed into the `ref` box — which is the tree about to reach
+  # production.
   safety:
     name: Migrations are additive
     needs: preflight
@@ -148,6 +154,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -157,13 +165,10 @@ jobs:
       - run: pnpm migration-safety
 
   migrate:
-    name: Apply migrations (waits for approval)
+    name: Apply migrations
     needs: [preflight, safety]
     if: needs.preflight.outputs.enabled == 'true'
     runs-on: ubuntu-latest
-    # This line is the gate. The `production` Environment's required reviewer is
-    # what holds the job; without that setting this runs straight through.
-    environment: production
     # Both credentials, and they are not interchangeable. `supabase link` talks
     # to the **Management API** and needs a personal access token; `db push`
     # connects to **Postgres** and needs the database password. Supplying only
@@ -177,64 +182,42 @@ jobs:
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
 
       - uses: supabase/setup-cli@v1
         with:
           version: latest
 
-      - name: Show what would be applied
+      - name: Say what is being migrated, and from where
         run: |
-          supabase link --project-ref "${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF }}"
-          supabase migration list --linked
+          {
+            echo "### Migrating production"
+            echo
+            echo "- ref: \`${{ inputs.ref }}\`"
+            echo "- commit: \`$(git rev-parse HEAD)\`"
+            echo "- migrations in tree: $(ls -1 supabase/migrations/*.sql | wc -l | tr -d ' ')"
+          } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Link
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF }}"
+
+      - name: What production has now
+        run: supabase migration list --linked
+
+      # The dry run earns its place: it names exactly what the apply will do, in
+      # the log, before anything is written — so a surprise (a migration nobody
+      # expected, or none at all) is visible in the step above the one that acts
+      # on it.
+      - name: Dry run
+        run: supabase db push --linked --dry-run
+
+      # `--yes` is passed rather than relied upon. D94's near-miss was learning
+      # that a closed stdin answers **Y** to `[Y/n]`, so omitting the flag in CI
+      # is indistinguishable from passing it — and where the default is the
+      # acting direction, the safe thing is to say it out loud.
       - name: Apply
-        run: supabase db push --linked
+        run: supabase db push --linked --yes
 
       - name: Confirm local and remote agree
         run: supabase migration list --linked
-
-  # Condition 2: the code goes live *after* its schema, never before.
-  #
-  # Guarded by `vars.PROMOTE_FROM_WORKFLOW`, **not** by whether VERCEL_TOKEN is
-  # set. The `secrets` context is not available in a job-level `if:` — GitHub
-  # exposes only `github`, `needs`, `vars` and `inputs` there — so a condition
-  # on a secret silently evaluates to empty and the job never runs. The token is
-  # checked inside the step, where `secrets` does reach.
-  #
-  # Leave the variable unset to keep the other arrangement: Vercel's own git
-  # deploy, gated by a deployment check that waits for this workflow. Nothing
-  # here needs removing for that.
-  promote:
-    name: Promote production
-    needs: migrate
-    if: ${{ vars.PROMOTE_FROM_WORKFLOW == 'true' }}
-    runs-on: ubuntu-latest
-    environment: production
-    env:
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Refuse rather than half-deploy
-        run: |
-          missing=""
-          [ -n "$VERCEL_TOKEN" ] || missing="$missing VERCEL_TOKEN"
-          [ -n "$VERCEL_ORG_ID" ] || missing="$missing VERCEL_ORG_ID"
-          [ -n "$VERCEL_PROJECT_ID" ] || missing="$missing VERCEL_PROJECT_ID"
-          if [ -n "$missing" ]; then
-            echo "::error title=PROMOTE_FROM_WORKFLOW is on but secrets are missing::Missing:$missing. The migration has already been applied, so production is now ahead of its deployed code — promote manually or add the secrets and re-run."
-            exit 1
-          fi
-
-      # `--token` is read from the environment, so it never appears in a command
-      # line that shows up in the log.
-      - name: Deploy and promote
-        run: |
-          npx --yes vercel@latest pull --yes --environment=production
-          npx --yes vercel@latest build --prod
-          npx --yes vercel@latest deploy --prebuilt --prod

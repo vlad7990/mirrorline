@@ -6359,6 +6359,14 @@ A GitHub **Environment** named `production` with Vlad as a **required
 reviewer**, and a workflow — `.github/workflows/migrate-production.yml` — that
 runs `supabase db push` on merge to `main` and waits for him.
 
+> **That mechanism does not exist on this repository, and D104 replaces it with
+> a manual dispatch run before the merge.** Environment protection rules are
+> Enterprise-only for private repositories, and on Free a private repository has
+> no environments at all — so `environment: production` would have waited for
+> nobody. Everything below about **condition 1** stands; **condition 2 is
+> withdrawn**, because migrating before the merge removes the window it existed
+> to close.
+
 This keeps D85 intact. Merging is still the only thing that deploys the app, and
 merging is still his; the schema gets one deliberate extra click, because a bad
 migration is the one deploy that reverting a commit does not undo.
@@ -6396,6 +6404,14 @@ reached `main` — because two individually-additive migrations can merge into a
 broken pair.
 
 ### Condition 2 — the code goes live after its schema, never before
+
+> **Withdrawn by D104.** The condition was right and the mechanism is no longer
+> needed: migrations are applied *before* the merge now, so there is no interval
+> in which the code is live and the migration is still pending. The `promote`
+> job, the `PROMOTE_FROM_WORKFLOW` switch and the Vercel deployment check are
+> all gone. What replaced them is a rule and a check — a PR's migrations must
+> not change once applied, and `production-schema-check.yml` fails `main` if a
+> merge skipped the dispatch.
 
 Production currently auto-deploys on push to `main`, which would put the code
 live **while the migration is still waiting for approval** — precisely the
@@ -6649,3 +6665,113 @@ CI, not from here.
 3. **Arm the gate** (D93): the `production` Environment with himself as required
    reviewer, `PRODUCTION_MIGRATIONS_ENABLED=true`, and the three
    `SUPABASE_PRODUCTION_*` secrets.
+
+> **Item 3 is done, and the Environment is not part of it (D104).** The three
+> `SUPABASE_PRODUCTION_*` repository secrets are set — the access token scoped
+> to `mirrorline-production` alone — and `PRODUCTION_MIGRATIONS_ENABLED=true`.
+> No Environment was created, because required reviewers do not exist for a
+> private repository on this plan; the approval is Vlad running the workflow.
+> Items 1 and 2 were closed on 19 November.
+
+---
+
+## 2026-11-21 · D104 · The gate was a GitHub feature we do not have, so the order changed instead: migrate first, then merge
+
+**Vlad's decision, and he found the fault before the gate was ever armed.** D93
+built the approval out of a GitHub **Environment** with himself as a required
+reviewer. **Environment protection rules are not available for a private
+repository on this plan** — required reviewers need Enterprise, and on Free a
+private repository has no environments at all.
+
+The consequence is the bad kind. `environment: production` is not rejected when
+the environment has no protection rule; the job simply **runs**. So the line
+would have parsed, the workflow would have gone green, and the migration would
+have applied itself on every push to `main` with nobody asked. A gate that
+looks armed and is not — which is the failure this repo keeps rediscovering,
+and the third time it has appeared in a fortnight (D96's silent `200 []`,
+D103's skip that blamed the wrong thing).
+
+### The replacement needs no GitHub feature to be true
+
+Invert the order. Apply the migration **before** merging the pull request that
+needs it:
+
+1. **Actions → Migrate production → Run workflow**, with `ref` set to the
+   **pull request's branch**.
+2. **Confirm it went green.**
+3. **Merge the pull request.**
+
+Clicking *Run workflow* is the approval. It cannot be bypassed by a push,
+because nothing triggers the workflow but a person, and it cannot be bypassed
+by a schedule, because there is none. D85 is untouched: merging is still the
+only thing that deploys, and it is still Vlad's.
+
+**And the Vercel condition disappears with it.** D93's condition 2 existed
+because the migration ran *after* the merge and could still be waiting while
+the code went live — so either Vercel's production deploy had to be turned off
+or a deployment check had to block promotion. Migrating first removes the
+window rather than policing it. The `promote` job, the `PROMOTE_FROM_WORKFLOW`
+switch and the three `VERCEL_*` secrets are **gone**.
+
+### The rule that makes step 3 safe
+
+**A pull request's migrations must not change after they have been applied to
+production.** No amending, no rebasing that rewrites them, no adding one more
+"while I'm here".
+
+The reason is asymmetry. Applied migration history cannot be edited, only
+appended to: production holds a row saying `20261119080000` ran, and a
+force-push that changes what that file contains does not change what ran. The
+tree and the database would disagree about the same version number, and every
+later `db push` would be reasoning from a false premise. If something must
+change, **add another migration and dispatch again.**
+
+### What catches a merge that skipped step 1
+
+Nothing in the dispatch workflow can, because nothing starts it automatically
+any more. So the push trigger did not disappear — it moved to a **read-only**
+check, `production-schema-check.yml`:
+
+| | Migrate production | Production schema check |
+|---|---|---|
+| Trigger | `workflow_dispatch` only | push to `main`, plus dispatch |
+| Touches production | `db push` — writes | `migration list` — reads |
+| Fails when | a migration is destructive, or the push fails | `main` has a migration production does not |
+
+The comparison is `scripts/migration-drift.mjs`, with **15 tests**, and it is
+deliberately suspicious of its own input: `migration list` prints a table, so
+the parser accepts box-drawing and ASCII separators and a JSON array, and
+**finding no rows is a failure rather than a pass**. A check that cannot read
+the schema must not report that the schema is fine — the same lesson as D103,
+applied before it had a chance to bite.
+
+The reverse direction — production holding a migration this tree does not — is
+**reported and not failed**, because that is exactly what the correct procedure
+produces between step 1 and step 3.
+
+### Expand/contract did not change, but its reasoning inverted
+
+D93 argued it from the window between the merge and the approval: new code,
+old schema. That window is gone. The new one is its mirror — **between the
+apply and the merge, production runs the old code against the new schema** —
+and a Vercel rollback reopens it.
+
+So the conclusion is unchanged and now follows from one direction instead of
+two: the schema is deliberately ahead of the code, and only an additive
+migration survives that. `pnpm migration-safety` still runs on the branch in
+`ci.yml` and again on the dispatched ref, which matters more than before — the
+dispatch can be pointed at *any* ref, including one whose own CI never ran.
+
+### What this cost, and what it bought
+
+One GitHub feature we cannot have, exchanged for one habit we have to keep. The
+habit is weaker than a protection rule — a forgotten dispatch is possible in a
+way a bypassed reviewer is not — which is the whole reason the drift check is
+part of this decision rather than a nice-to-have. The gate is a person plus a
+tripwire, and the tripwire is tested.
+
+Still true, and worth repeating because the dispatch makes it easier to get
+wrong: **production is touched only through this workflow or under an explicit
+one-time approval, never from a local link** (D94). The `ref` box takes a
+branch name, not a project ref; nothing in it can point at a different
+database.

@@ -1,27 +1,27 @@
 /**
- * Expand/contract gate for `supabase/migrations/` (docs/DECISIONS.md D93).
+ * Expand/contract gate for `supabase/migrations/` (docs/DECISIONS.md D93, D104).
  *
  * ============================================================================
  * Why a script and not a review checklist
  * ============================================================================
  *
- * Production tracks `main` (D85) and migrations are applied through a gated
- * job that **waits for a human** (D93). That pause is the whole point, and it
- * creates a window: between the merge and the approval, production runs new
- * code against the old schema — and after a Vercel rollback it runs old code
- * against the new schema, because a rollback moves the code back and nothing
- * moves the schema back.
+ * Production tracks `main` (D85) and migrations are applied **before** the
+ * merge, by a manual dispatch (D104). That order is deliberate, and it means
+ * there is always a window in which **production runs the old code against the
+ * new schema** — from the moment the migration is applied until the pull
+ * request is merged and deployed. A Vercel rollback afterwards reopens the same
+ * window, because it moves the code back and nothing moves the schema back.
  *
- * Both directions are survivable **only if every migration is additive**. Add a
+ * One direction, then, but a guaranteed one: the schema is ahead of the code by
+ * design. That is survivable **only if every migration is additive**. Add a
  * column, ship code that writes it, backfill, then drop the old one in a later
  * PR once nothing reads it. That is expand/contract, and a checklist item is
  * not enough: the one time it is forgotten is the one time it is 2am.
  *
- * **Right now it matters more than the gate does.** Production and preview
- * share one Supabase project — every `SUPABASE_*` variable in Vercel targets
- * both with a single value — so a destructive statement applied "for preview"
- * is applied to production in the same breath. The gate becomes load-bearing
- * when the projects split; this check is load-bearing today.
+ * **And it is the half that cannot be undone.** Reverting a commit un-deploys
+ * code; nothing un-applies a migration. A dropped column on a database holding
+ * real rows is gone — which is why this runs on the branch in `ci.yml` and
+ * again on the ref being migrated in `migrate-production.yml`.
  *
  * ============================================================================
  * The escape hatch, and why it is a comment rather than a flag
@@ -122,10 +122,10 @@ function main() {
   console.error(
     [
       '',
-      'Production tracks main and the migration job waits for a human (D93), so',
-      'between the merge and the approval production runs new code against the old',
-      'schema — and after a rollback, old code against the new one. Only additive',
-      'migrations survive both.',
+      'Production tracks main and migrations are applied before the merge (D104),',
+      'so between the apply and the merge production runs old code against the new',
+      'schema — and after a rollback, the same again. Only additive migrations',
+      'survive that, and nothing un-applies a migration.',
       '',
       'Split it: add the new shape now, move the code, drop the old shape in a later',
       'PR once nothing reads it.',

@@ -39,10 +39,12 @@ jobs:
       - name: Licence check
         run: pnpm licence-check
 
-      # Expand/contract (D93). Production tracks main and the migration job
-      # waits for a human, so a destructive migration would leave production
-      # running one half of the change. Checked here on the branch, and again in
-      # migrate-production.yml on what actually reached main.
+      # Expand/contract (D93, D104). Production tracks main and migrations are
+      # applied before the merge, so production runs the old code against the
+      # new schema until the merge deploys — and a destructive migration would
+      # leave it running one half of the change, with no way back. Checked here
+      # on the branch, and again in migrate-production.yml on the ref being
+      # migrated.
       - name: Migration safety
         run: pnpm migration-safety
 
