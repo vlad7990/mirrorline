@@ -7751,3 +7751,72 @@ The UI can afford to be kinder than the database here, because it already knows
 which accounts the workspace has — it can say "we do not have that handle, here
 are the three you connected" without the database confirming anything about
 anybody else.
+
+---
+
+## 2026-11-21 · D109 · The Connected accounts card gets a handle field, and one line saying what "Connected" means
+
+**Vlad's decision, and the first approved change to the locked design.**
+`CLAUDE.md` makes the handoff-v4 design the authority and calls an unrequested
+visual change a bug to revert. This is neither a bug nor a conflict: the design
+drew this card for an **OAuth flow we do not have**, and §6 keeps us from having
+one until Meta, TikTok and YouTube approve the apps.
+
+### Why it could not be deferred
+
+Two facts met:
+
+1. **A real workspace has no `social_accounts` rows.** Nothing seeds them; the
+   pipeline writes rows for accounts that exist. So the moment Settings stopped
+   reading the fixtures, the card had nothing to iterate — no rows, no buttons.
+2. **`connect_social_account` needs a handle** (D107), and the card had nowhere
+   to type one. `onConnect(accountId)` assumed a row that already carried it,
+   which is what an OAuth callback would have provided.
+
+Listing only stored rows would have left a client with an empty card and no way
+to connect anything, which is not a smaller change — it is the feature not
+working.
+
+### What was added, and what was deliberately not
+
+- **A handle field on every not-connected row**, with the platform's label, a
+  hint ("The @handle as the platform shows it"), and Connect disabled until it
+  is non-empty. Built from the existing `Input` and `Label` primitives, so no
+  new component and no new token.
+- **One line under the card as a whole:** *"We record which account is yours.
+  Nothing posts until the platforms approve our app."* Vlad's wording, and
+  **under the card rather than per row** — his call, and the right one: the
+  claim is about the product, and four repetitions would read as fine print.
+- **The per-platform limit notes stay exactly where they were**, on their own
+  rows: TikTok and YouTube private until approved, LinkedIn coming soon. Those
+  are platform-specific; the new line is not.
+- **No row per stored account was collapsed.** `(workspace_id, platform,
+  handle)` is unique, so two handles on one platform are already legal —
+  deferred for agencies, not blocked (Vlad's point b) — and the card renders
+  every stored row, because collapsing per platform could hide an account
+  somebody connected. With one handle per platform it is the same four rows the
+  card has always shown.
+
+### It also corrected a claim the card used to make
+
+The old connect stub toasted *"Instagram is ready for scheduled posts"*. Under
+§6 that is false, and a toast is read as a promise. It now says the handle has
+been recorded and that nothing posts until the platform approves our app — the
+same correction the new line under the card makes, in the one place a person
+sees immediately after acting.
+
+### Before and after
+
+The **before** is in the repository: `docs/screens-built/app-settings--1440--light.png`
+and its three siblings, committed from the last screenshots run. The **after**
+is not yet regenerated — that needs a full `screenshots` project run, and it is
+an open item on the B2.3 pull request rather than something to describe as done.
+When it lands, only the `app-settings--*` images are to be committed; the rest
+of that run is the rendering churn D-prior sessions have twice reverted.
+
+### The rule this sets for later
+
+A design change is allowed when the design assumes a capability we do not have,
+it is named in a decision, and the owner approves it. It is not allowed as
+"while I was in there". Two of those three are mechanical; the third is why this
+entry exists.

@@ -93,6 +93,94 @@ exercised by CI on the PR itself, which is the point of making them a PR.
 
 ---
 
+## Handoff — 21 November 2026, late (B2.3 is built: accounts are real, no figure is invented, and the PR waits for a dispatch)
+
+**Branch** `backend/b2-3-accounts`, cut from `main` at `d16eaa6` · **PR open.**
+**It carries one migration**, so the D104 order applies: dispatch *Migrate
+production* on this branch, confirm green, then merge.
+
+```
+supabase/migrations/20261121160000_social_account_connection_state.sql
+```
+
+### 1. What B2.3 is
+
+`social_accounts` already existed with the right columns and **no token
+column** — B2.3 is the write path, the read path and the honesty rules.
+
+| Slice | Commit | What |
+|---|---|---|
+| a | `3e2fe71` | `connect_social_account` / `disconnect_social_account`, both `security definer` (D107) |
+| b | `edf3a7c` | the Accounts board reads real rows; KPIs are `unmeasured`, never sample figures |
+| c | `84f032a` | Settings connects and disconnects for real; the card gains a handle field (D109) |
+
+### 2. The three decisions, and one correction Vlad made
+
+**D107** — a definer function rather than member INSERT/UPDATE policies, which
+would have undone D96 on a table whose other writer is the pipeline. Neither
+function takes a workspace id. Disconnect takes platform and handle rather than
+the row id the UI holds, because an id would need a membership check to be
+*correct* where this needs one to *find the row at all*.
+
+**D108** — `45007` answers both "no such account" and "not yours", so an error
+code cannot report whether a handle exists in somebody else's workspace.
+
+**D109** — the approved design change: a handle field on not-connected rows,
+because the card was drawn for an OAuth flow §6 forbids, and a real workspace
+starts with no rows at all. Plus Vlad's line under the card: *"We record which
+account is yours. Nothing posts until the platforms approve our app."*
+
+**Vlad's correction, and it changed the work:** I had planned to leave the
+per-account KPIs on sample data. He refused it — a sample number beside the
+client's own handle reads as their result whatever label sits next to it. So
+`KpiValue` has a fourth state, `unmeasured`, carrying **no `value` field at
+all**, rendered as "Not measured yet" with no figure and no button.
+
+### 3. Two silent passes caught, neither by a gate
+
+- **The compiler caught the co-pilot.** `grounding.ts` formatted `value.value`
+  without narrowing, which would have turned an unmeasured KPI into a figure.
+  `kpiFact` is now exported and tested, because that branch is required by the
+  type system and **unreachable in production today** — `buildStudioFacts` only
+  feeds it `SAMPLE_KPIS`.
+- **Typecheck passed on a wiring bug.** Changing the card's callbacks from
+  `(accountId)` to `(platform, handle)` left the board's old one-parameter
+  handlers assignable, so it would silently have received a platform where it
+  expected an id. No gate could catch it; the rewrite was the fix.
+
+A third was in my own test: the first version of the no-digit e2e assertion
+failed on the account's **handle and connection date**, and would also have
+failed on the KPI name "3-second hold". It now asserts on `.machine`, this
+repo's marker for a rendered figure, plus the three sample hold values by name.
+
+### 4. Gates
+
+lint · typecheck · **1,036 unit** · build · migration-safety (**13 additive**) ·
+**RLS/DB 104** · `accounts-persist.spec.ts` **5 passed**.
+
+### 5. Still needs you
+
+1. **Dispatch *Migrate production* with `ref: backend/b2-3-accounts`**, confirm
+   the dry run lists exactly the one migration above, then merge the PR.
+2. **`E2E_SIGNUP_EMAIL`** — still unset; one UI sign-up test skips.
+3. **PR #7** (`--remote`, the actions off Node 20) — still open, and after
+   merging it, one manual *Production schema check* dispatch is the only thing
+   that exercises `setup-cli@v3` and `--remote`.
+4. **PR #3** (`docs/plan-v2`), still blocked on **D-b, where the renderer runs**.
+
+### 6. Not done, and not pretended to be
+
+- **The Settings connect round-trip has no e2e.** `connect_social_account` is
+  proved by RLS/DB tests and the card is wired, but nothing drives a browser
+  through type-handle → Connect → reload. It is the obvious next test.
+- **The `app-settings` screenshots are not regenerated**, so D109's "after"
+  images do not exist yet. Only `app-settings--*` should be committed when they
+  are; the rest of a screenshots run is churn.
+- **The full e2e suite has not been run on this branch** — only the new spec.
+  CI on the PR covers lint, typecheck, unit and build, not Playwright.
+
+---
+
 ## Handoff — 21 November 2026, after the rebase (B2 is rebased onto main and green; it carries six migrations, not five)
 
 **Branch** `backend/b2-studio`, rebased onto `main` at `e40f484` (PR #4 merged).

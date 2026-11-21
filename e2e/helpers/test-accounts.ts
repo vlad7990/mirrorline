@@ -595,6 +595,70 @@ export interface SeededCalendar {
  * `WORKSPACE_CHILD_TABLES` includes the table so that cascade is asserted
  * rather than assumed.
  */
+/** What `seedSocialAccount` wrote, for the assertions to name. */
+export interface SeededSocialAccount {
+  readonly id: string
+  readonly platform: string
+  readonly handle: string
+}
+
+/**
+ * One account on this user's workspace (B2.3).
+ *
+ * The service role, for the same reason the calendar fixture uses it: a member
+ * cannot insert into `social_accounts` at all — members hold a SELECT policy
+ * and D96 revoked the rest — so the only non-service route is
+ * `connect_social_account`, which is the thing under test in the Settings spec
+ * and must not also be the fixture for the Accounts one.
+ *
+ * `status` is a parameter because the two states the cards render differently
+ * are exactly what wants proving: a connected account shows four unmeasured
+ * KPIs, a not-connected one shows none.
+ */
+export async function seedSocialAccount(
+  config: SupabaseTestConfig,
+  options: {
+    readonly userId: string
+    readonly runId: string
+    readonly platform?: string
+    readonly status?: string
+  },
+): Promise<SeededSocialAccount | null> {
+  const workspaceId = await findOwnedWorkspaceId(config, options.userId)
+  if (workspaceId === null) return null
+
+  const platform = options.platform ?? 'instagram'
+  const status = options.status ?? 'connected'
+  // Tagged with the run id so an assertion can name this account among any
+  // others, and so a leftover row is traceable to the run that made it.
+  const handle = `@e2e_${options.runId}`
+
+  const response = await fetch(`${config.url}/rest/v1/social_accounts`, {
+    method: 'POST',
+    headers: {
+      ...adminHeaders(config),
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify([
+      {
+        workspace_id: workspaceId,
+        platform,
+        handle,
+        status,
+        connected_on: status === 'not-connected' ? null : '2026-11-21',
+      },
+    ]),
+  })
+
+  if (!response.ok) return null
+
+  const rows = (await response.json()) as readonly { readonly id?: unknown }[]
+  const id = rows[0]?.id
+
+  return typeof id === 'string' ? { id, platform, handle } : null
+}
+
 export async function seedScheduledPosts(
   config: SupabaseTestConfig,
   options: { readonly userId: string; readonly runId: string; readonly now?: Date },
