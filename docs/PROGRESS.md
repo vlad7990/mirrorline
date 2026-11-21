@@ -6,6 +6,93 @@
 
 ---
 
+## Handoff — 21 November 2026, evening (B2 is in production, and every number below was read out of a log)
+
+**Branch** `chore/ci-remote-flag-and-node24` → **PR open.** `main` is at
+`d16eaa6`. Production holds **twelve** migrations.
+
+B2.2 and the migration gate are both done and both exercised against the real
+database. This handoff is written from run logs rather than from report, which
+is not a stylistic note — it is the whole subject of D105 and D106.
+
+### 1. What production actually has, and how that is known
+
+| Run | What it did | Read from the log |
+|---|---|---|
+| `44915495809` · schema check | after PR #6 | `production has all 6 migration(s) in this tree. OK` |
+| `44916427098` · migrate, `ref: main` | nothing | `Remote database is up to date.` in both dry run and apply; no `Applying migration` line |
+| `44917359074` · migrate, `ref: main` | nothing | same — an unannounced repeat of the above, harmless, caught by checking |
+| `44918293172` · migrate, `ref: backend/b2-studio` | **applied six** | `Would push these migrations:` then six `Applying migration 20261119…` lines, then twelve matched pairs |
+| `44919836323` · schema check | after PR #5 | `production has all 12 migration(s) in this tree. OK` |
+
+The tree that was migrated was **`cebf747`**, taken from run 3's checkout step
+and matched against `backend/b2-studio`'s head and PR #5's `headRefOid`. So
+what merged is what was migrated, and that is checked rather than assumed —
+see §4 for why the run's own branch field cannot answer it.
+
+### 2. The drift check failed first, and it was my bug (D105)
+
+`Production schema check` went red the moment PR #4 merged. **Production was
+never drifted.** `supabase migration list` wraps every cell in backticks, my
+`version()` matched `/^\d{14}$/` against the raw cell, and six good rows parsed
+as zero.
+
+The regex was not the mistake. **Fifteen tests passed against a format the CLI
+does not produce**, because I wrote the fixtures from memory — box-drawing
+separators, bare versions, where it is actually ASCII pipes and backticks. The
+fixture is now pasted verbatim out of that run's log and the comment says why.
+
+What worked is the rule from D104 that no rows found is a **failure**: it turned
+my own parser bug into a red check within a minute of the merge. The opposite
+choice would have reported a healthy production database for as long as the
+format held.
+
+### 3. The second half of D105, which was the same error in other hands
+
+`Migrate production` showed **zero runs** while the dispatch had been reported
+as done twice, with its output described accurately. Asked rather than guessed,
+and the answer was that nothing had been run: the statements came from a
+reviewer's pre-written message carrying *expected* results. Nothing local was
+run and D94 was not broken — confirmed from
+`supabase_migrations.schema_migrations` holding 6 rows, last `20261118110000`.
+
+Both halves are **expectation recorded as observation**: my fixtures asserted
+what I remembered the CLI printing; that message asserted what the checks were
+expected to say. Both read as evidence, both were green, neither had looked.
+
+### 4. This PR: `--remote`, the actions off Node 20, and one trap documented (D106)
+
+- **`--linked` is deprecated** and "will be removed in v4"; `setup-cli` was
+  pinned to `latest`, so v4 would have broken the migrate workflow at its link
+  step and the check at its list step, both only when they matter. All five
+  call sites now pass `--remote`, which needs CLI v3+ — fine here, since
+  production is never touched from a local CLI.
+- **Actions bumped off Node 20** — checkout v7, setup-node v7,
+  pnpm/action-setup v6, setup-cli v3, setup-uv v10, `node-version: 24`.
+  Versions read from the releases API, not recalled.
+- **The trap:** a dispatched run's `head_branch` / `head_sha` describe the
+  branch the *workflow file* came from, not the tree it migrated. All three
+  migrate runs read `main`, including the one that applied from
+  `backend/b2-studio`. The checkout step is the only authoritative record, and
+  that is now written into the workflow header.
+
+### 5. Gates
+
+On `main` after PR #5: **CI #160 green, 1,009 unit.** On this branch: lint,
+typecheck, unit, and all three workflows parse. The workflow changes are
+exercised by CI on the PR itself, which is the point of making them a PR.
+
+### Still needs you
+
+1. **Merge this PR** once its checks are green — then the next `Migrate
+   production` dispatch runs on `--remote` and a current CLI.
+2. **`E2E_SIGNUP_EMAIL`** — yours to set; it un-skips the one UI sign-up test.
+3. **PR #3** (`docs/plan-v2`), still blocked on **D-b, where the renderer runs**.
+
+**Next for me:** B2.3.
+
+---
+
 ## Handoff — 21 November 2026, after the rebase (B2 is rebased onto main and green; it carries six migrations, not five)
 
 **Branch** `backend/b2-studio`, rebased onto `main` at `e40f484` (PR #4 merged).

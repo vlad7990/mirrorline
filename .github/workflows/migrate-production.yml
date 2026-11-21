@@ -78,6 +78,29 @@
 # `PROMOTE_FROM_WORKFLOW` switch are gone with it (D104).
 #
 # ==============================================================================
+# How to read a run, because one field lies about what was migrated
+# ==============================================================================
+#
+# A dispatched run's **branch and commit, as shown in the Actions list and the
+# API (`head_branch`, `head_sha`), are the branch the workflow *file* came
+# from** — normally `main`. They are **not** the tree that was migrated. That
+# comes from the `ref` input, and the only authoritative record of it is the
+# `migrate` job's checkout step, which logs `ref: <input>` and the SHA it
+# resolved to.
+#
+# So a run that applied `backend/b2-studio` reads `main` in every summary view.
+# Checked on run 3 (21 November): `head_sha` was `main`'s merge commit while the
+# checkout resolved `cebf747`, which was that branch's head and the commit the
+# pull request then merged. Verify the SHA against the PR's head before
+# believing the two are the same thing.
+#
+# `--remote` rather than `--linked`: the CLI deprecated the latter and will drop
+# it in v4. Note that `--remote` needs **CLI v3 or newer**, which is what
+# `supabase/setup-cli@v3` installs here; an older CLI locally will not recognise
+# it. That is not a problem for this repo, because production is never touched
+# from a local CLI (D94).
+#
+# ==============================================================================
 # The companion check
 # ==============================================================================
 #
@@ -153,13 +176,13 @@ jobs:
     if: needs.preflight.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm migration-safety
@@ -181,11 +204,11 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_PRODUCTION_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
           version: latest
 
@@ -203,21 +226,21 @@ jobs:
         run: supabase link --project-ref "${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF }}"
 
       - name: What production has now
-        run: supabase migration list --linked
+        run: supabase migration list --remote
 
       # The dry run earns its place: it names exactly what the apply will do, in
       # the log, before anything is written — so a surprise (a migration nobody
       # expected, or none at all) is visible in the step above the one that acts
       # on it.
       - name: Dry run
-        run: supabase db push --linked --dry-run
+        run: supabase db push --remote --dry-run
 
       # `--yes` is passed rather than relied upon. D94's near-miss was learning
       # that a closed stdin answers **Y** to `[Y/n]`, so omitting the flag in CI
       # is indistinguishable from passing it — and where the default is the
       # acting direction, the safe thing is to say it out loud.
       - name: Apply
-        run: supabase db push --linked --yes
+        run: supabase db push --remote --yes
 
       - name: Confirm local and remote agree
-        run: supabase migration list --linked
+        run: supabase migration list --remote
