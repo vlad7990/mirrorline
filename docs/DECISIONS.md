@@ -6775,3 +6775,82 @@ wrong: **production is touched only through this workflow or under an explicit
 one-time approval, never from a local link** (D94). The `ref` box takes a
 branch name, not a project ref; nothing in it can point at a different
 database.
+
+---
+
+## 2026-11-21 · D105 · The drift check failed on its first real run, because I wrote its fixtures from memory instead of capturing them
+
+`Production schema check` went red on `main` the moment PR #4 merged — run
+`44871564148`. Production was **not** drifted. All six migrations were present
+on both sides; the parser read **zero rows out of six**.
+
+### The format
+
+`supabase migration list --linked` prints every cell wrapped in backticks:
+
+```
+Local            | Remote           | Time (UTC)
+  ------------------|------------------|-----------------------
+   `20261113120000` | `20261113120000` | `2026-11-13 12:00:00`
+```
+
+`version()` matched `/^\d{14}$/` against the trimmed cell, and
+`` `20261113120000` `` is not fourteen digits. Every row fell out, the row count
+hit zero, and the "no rows found is a failure" rule did what it was written to
+do. Stripping the backticks fixes it.
+
+### The actual mistake, which was not the regex
+
+**Fifteen tests passed against a shape the CLI does not produce.** I wrote those
+fixtures from my recollection of what `migration list` looks like — box-drawing
+separators, bare versions — and never ran the command to check. Both details
+were wrong: the separator is an ASCII pipe and the cells are backticked.
+
+So the tests were not testing the parser. They were testing that the parser
+agreed with my memory, and it did, which is why they were green and useless.
+`REAL_OUTPUT` in the test file is now pasted **verbatim** out of that run's log,
+untidied, and the comment says why: a fixture that has passed through somebody's
+idea of the format is the bug rather than the test.
+
+The irony is worth keeping. D104 added this check with the explicit lesson that
+a gate which cannot read the schema must not vouch for it — and the first thing
+that happened was my own gate not being able to read the schema. It said so,
+loudly, within a minute of the merge. **That is the part that worked.** A check
+written the other way — "no rows, nothing missing, green" — would have reported
+a healthy production database for as long as the format held, including on the
+day it was genuinely drifted.
+
+### Fixed on a branch off `main`, not on the B2 branch
+
+PR #5's six migrations had already been dispatched when this surfaced, and
+D104's rule is that a PR's migrations must not change after they are applied.
+Carrying an unrelated script fix on that branch would have meant re-running the
+dispatch for no reason, so the fix goes to `main` as its own small pull request.
+Nothing in it touches a migration.
+
+### The second finding, which came from the same red check
+
+`Migrate production` showed **zero runs** in the Actions API while the dispatch
+had been reported as done, twice, with its output described accurately — "green,
+nothing to apply" on `main` and "the dry run listed the six" on
+`backend/b2-studio`.
+
+Raised rather than guessed at, because the two candidate explanations differ in
+consequence, and Vlad's answer was neither of the alarming ones: **nothing was
+run at all.** The statements came from a message his reviewer had pre-written
+with the *expected* results, pasted without running the checks. Nothing was
+applied locally, and D94's rule was not broken.
+
+Confirmed from the database rather than from the absence of runs:
+`supabase_migrations.schema_migrations` holds **6 rows, the last
+`20261118110000`** — exactly `main`. B2's six are not applied.
+
+So the two findings in this entry are the same error in different hands.
+**Expectation was recorded as observation**: my fixtures asserted what I
+remembered the CLI printing, and that message asserted what the checks were
+expected to say. Both read as evidence, both were green, neither had looked.
+The drift check caught one and asking caught the other.
+
+A practical consequence worth keeping: **a pre-written "expected results"
+message is not a status report, and should not be pasted as one.** If a
+reviewer supplies one, run the thing and replace the numbers.

@@ -90,9 +90,19 @@ function toRow(line) {
   return { local, remote }
 }
 
-/** A 14-digit version, or null for a header, a divider, or an empty cell. */
+/**
+ * A 14-digit version, or null for a header, a divider, or an empty cell.
+ *
+ * **The backticks are not decoration, they are the format.** Current CLIs print
+ * every cell as `` `20261113120000` ``, and the first version of this matched
+ * `/^\d{14}$/` against the cell as-is — so a perfectly readable table parsed as
+ * zero rows and the check failed on its first real run. Stripped rather than
+ * matched around, so a future CLI that drops them keeps working.
+ */
 function version(cell) {
-  const trimmed = String(cell ?? '').trim()
+  const trimmed = String(cell ?? '')
+    .replace(/`/g, '')
+    .trim()
   return VERSION.test(trimmed) ? trimmed : null
 }
 
