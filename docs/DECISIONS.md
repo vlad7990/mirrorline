@@ -6775,3 +6775,65 @@ wrong: **production is touched only through this workflow or under an explicit
 one-time approval, never from a local link** (D94). The `ref` box takes a
 branch name, not a project ref; nothing in it can point at a different
 database.
+
+---
+
+## 2026-11-21 · D105 · The drift check failed on its first real run, because I wrote its fixtures from memory instead of capturing them
+
+`Production schema check` went red on `main` the moment PR #4 merged — run
+`44871564148`. Production was **not** drifted. All six migrations were present
+on both sides; the parser read **zero rows out of six**.
+
+### The format
+
+`supabase migration list --linked` prints every cell wrapped in backticks:
+
+```
+Local            | Remote           | Time (UTC)
+  ------------------|------------------|-----------------------
+   `20261113120000` | `20261113120000` | `2026-11-13 12:00:00`
+```
+
+`version()` matched `/^\d{14}$/` against the trimmed cell, and
+`` `20261113120000` `` is not fourteen digits. Every row fell out, the row count
+hit zero, and the "no rows found is a failure" rule did what it was written to
+do. Stripping the backticks fixes it.
+
+### The actual mistake, which was not the regex
+
+**Fifteen tests passed against a shape the CLI does not produce.** I wrote those
+fixtures from my recollection of what `migration list` looks like — box-drawing
+separators, bare versions — and never ran the command to check. Both details
+were wrong: the separator is an ASCII pipe and the cells are backticked.
+
+So the tests were not testing the parser. They were testing that the parser
+agreed with my memory, and it did, which is why they were green and useless.
+`REAL_OUTPUT` in the test file is now pasted **verbatim** out of that run's log,
+untidied, and the comment says why: a fixture that has passed through somebody's
+idea of the format is the bug rather than the test.
+
+The irony is worth keeping. D104 added this check with the explicit lesson that
+a gate which cannot read the schema must not vouch for it — and the first thing
+that happened was my own gate not being able to read the schema. It said so,
+loudly, within a minute of the merge. **That is the part that worked.** A check
+written the other way — "no rows, nothing missing, green" — would have reported
+a healthy production database for as long as the format held, including on the
+day it was genuinely drifted.
+
+### Fixed on a branch off `main`, not on the B2 branch
+
+PR #5's six migrations had already been dispatched when this surfaced, and
+D104's rule is that a PR's migrations must not change after they are applied.
+Carrying an unrelated script fix on that branch would have meant re-running the
+dispatch for no reason, so the fix goes to `main` as its own small pull request.
+Nothing in it touches a migration.
+
+### What this does not explain
+
+`Migrate production` shows **zero runs** in the Actions API — no dispatch on
+`main`, none on `backend/b2-studio` — while that work was reported as done and
+its dry-run output described accurately. That is a separate question, raised
+with Vlad rather than guessed at here, because the candidate explanations differ
+in consequence: a dispatch that never registered, or migrations applied to
+production by another route, which D94 forbids and which would mean the six are
+live ahead of their merge.

@@ -36,6 +36,65 @@ const ASCII_PIPES = `
    20261119080000 |                | 2026-11-19 08:00:00
 `
 
+/**
+ * **What the CLI actually prints**, copied verbatim out of the first real run
+ * (GitHub run 44871564148, 21 November).
+ *
+ * Every cell is wrapped in **backticks**, and the separator is an ASCII pipe
+ * rather than the box-drawing character. The fixtures above were written from
+ * memory of the format instead of captured from a real invocation, so all
+ * fifteen of them passed against a shape `supabase migration list` does not
+ * produce — and the check failed on its first contact with production, reading
+ * zero rows out of six perfectly good ones.
+ *
+ * This constant is the regression test for that, and the reason it is pasted
+ * rather than tidied: a fixture that has been through somebody's idea of what
+ * the output looks like is the bug, not the test.
+ */
+const REAL_OUTPUT = `
+Local            | Remote           | Time (UTC)
+  ------------------|------------------|-----------------------
+   \`20261113120000\` | \`20261113120000\` | \`2026-11-13 12:00:00\`
+   \`20261116230000\` | \`20261116230000\` | \`2026-11-16 23:00:00\`
+   \`20261116230100\` | \`20261116230100\` | \`2026-11-16 23:01:00\`
+   \`20261117180000\` | \`20261117180000\` | \`2026-11-17 18:00:00\`
+   \`20261118100000\` | \`20261118100000\` | \`2026-11-18 10:00:00\`
+   \`20261118110000\` | \`20261118110000\` | \`2026-11-18 11:00:00\`
+`
+
+/** The same shape, with one migration not applied anywhere yet. */
+const REAL_OUTPUT_PENDING = `
+Local            | Remote           | Time (UTC)
+  ------------------|------------------|-----------------------
+   \`20261113120000\` | \`20261113120000\` | \`2026-11-13 12:00:00\`
+   \`20261119030000\` |                  | \`2026-11-19 03:00:00\`
+`
+
+describe('parseMigrationList, on output captured from a real run', () => {
+  test('reads all six rows the CLI actually printed', () => {
+    expect(parseMigrationList(REAL_OUTPUT)).toEqual([
+      { local: '20261113120000', remote: '20261113120000' },
+      { local: '20261116230000', remote: '20261116230000' },
+      { local: '20261116230100', remote: '20261116230100' },
+      { local: '20261117180000', remote: '20261117180000' },
+      { local: '20261118100000', remote: '20261118100000' },
+      { local: '20261118110000', remote: '20261118110000' },
+    ])
+  })
+
+  test('calls that in sync rather than failing — the bug was reading zero rows', () => {
+    const rows = parseMigrationList(REAL_OUTPUT)
+    expect(rows).toHaveLength(6)
+    expect(findUnapplied(rows)).toEqual([])
+    expect(findRemoteOnly(rows)).toEqual([])
+  })
+
+  test('still spots a pending migration through the backticks', () => {
+    const rows = parseMigrationList(REAL_OUTPUT_PENDING)
+    expect(findUnapplied(rows)).toEqual(['20261119030000'])
+  })
+})
+
 describe('parseMigrationList', () => {
   test('reads a table where every migration is applied', () => {
     expect(parseMigrationList(IN_SYNC)).toEqual([
