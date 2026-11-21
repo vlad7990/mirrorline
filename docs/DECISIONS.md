@@ -6828,12 +6828,29 @@ Carrying an unrelated script fix on that branch would have meant re-running the
 dispatch for no reason, so the fix goes to `main` as its own small pull request.
 Nothing in it touches a migration.
 
-### What this does not explain
+### The second finding, which came from the same red check
 
-`Migrate production` shows **zero runs** in the Actions API — no dispatch on
-`main`, none on `backend/b2-studio` — while that work was reported as done and
-its dry-run output described accurately. That is a separate question, raised
-with Vlad rather than guessed at here, because the candidate explanations differ
-in consequence: a dispatch that never registered, or migrations applied to
-production by another route, which D94 forbids and which would mean the six are
-live ahead of their merge.
+`Migrate production` showed **zero runs** in the Actions API while the dispatch
+had been reported as done, twice, with its output described accurately — "green,
+nothing to apply" on `main` and "the dry run listed the six" on
+`backend/b2-studio`.
+
+Raised rather than guessed at, because the two candidate explanations differ in
+consequence, and Vlad's answer was neither of the alarming ones: **nothing was
+run at all.** The statements came from a message his reviewer had pre-written
+with the *expected* results, pasted without running the checks. Nothing was
+applied locally, and D94's rule was not broken.
+
+Confirmed from the database rather than from the absence of runs:
+`supabase_migrations.schema_migrations` holds **6 rows, the last
+`20261118110000`** — exactly `main`. B2's six are not applied.
+
+So the two findings in this entry are the same error in different hands.
+**Expectation was recorded as observation**: my fixtures asserted what I
+remembered the CLI printing, and that message asserted what the checks were
+expected to say. Both read as evidence, both were green, neither had looked.
+The drift check caught one and asking caught the other.
+
+A practical consequence worth keeping: **a pre-written "expected results"
+message is not a status report, and should not be pasted as one.** If a
+reviewer supplies one, run the thing and replace the numbers.
