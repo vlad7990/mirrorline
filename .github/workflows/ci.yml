@@ -89,9 +89,37 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Both caches exist because the first real run took 7m34s against a ~5
+      # minute target, and the breakdown said where it went: 32s downloading a
+      # browser that does not change, and 6m14s in a step whose bulk is
+      # `next build` from cold. The runner is roughly twice as slow as the
+      # laptop these were first measured on.
+      - name: Cache Playwright's browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          # Keyed on the lockfile: the browser revision is pinned by the
+          # @playwright/test version, so a dependency bump invalidates it and
+          # nothing else needs to.
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      # Next's incremental cache. Keyed on the lockfile and restored across
+      # commits, so a rebuild reuses what did not change rather than starting
+      # from nothing. The suite's own distDir (D111), so it cannot collide with
+      # the `verify` job's `.next`.
+      - name: Cache the e2e build
+        uses: actions/cache@v4
+        with:
+          path: apps/web/.next-e2e/cache
+          key: next-e2e-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            next-e2e-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            next-e2e-${{ runner.os }}-
+
       # Chromium only: every project in playwright.config.ts uses
       # `devices['Desktop Chrome']`, so the other browsers would be downloaded
-      # and never launched.
+      # and never launched. `--with-deps` still runs on a cache hit, because the
+      # system libraries are not part of what was cached.
       - name: Install Playwright's browser
         run: pnpm exec playwright install --with-deps chromium
 
