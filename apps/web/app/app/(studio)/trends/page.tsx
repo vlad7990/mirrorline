@@ -1,4 +1,3 @@
-import { trends } from '@mirrorline/mock'
 import { AlertBar, Button, EmptyState, PageHeader } from '@mirrorline/ui'
 import { Info } from 'lucide-react'
 import type { Metadata } from 'next'
@@ -69,11 +68,15 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
     window: parseTimeWindow(firstParam(params[WINDOW_PARAM])),
   }
 
-  const visible = filterTrends(trends, filters)
-
   // Null means the read failed, which the panel's three-state branch below
   // renders as our problem rather than as an empty niche.
   const reportResult = await readLatestNicheReport()
+
+  // This workspace's own formats, or none. **Never a fixture** — until V1
+  // this screen drew `@mirrorline/mock`'s eight trends to everybody, and the
+  // labelled report landing above them made the invented cards read as real.
+  const allCards = reportResult?.cards ?? []
+  const visible = filterTrends(allCards, filters)
 
   return (
     <div className="flex flex-col gap-6">
@@ -129,11 +132,27 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
         />
       )}
 
-      <p role="status" className="m-0 text-meta text-text-muted">
-        {matchCountLine(visible.length)}
-      </p>
+      {/*
+        Two empty states, and they say different things.
 
-      {visible.length === 0 ? (
+        "No scan yet" is about *us* — nothing has run. "No formats match
+        these filters" is about the filters, and only makes sense once there
+        are formats to filter. Showing the second to a workspace that has
+        never been scanned would blame the client's filter choice for our
+        not having done the work.
+      */}
+      {allCards.length > 0 ? (
+        <p role="status" className="m-0 text-meta text-text-muted">
+          {matchCountLine(visible.length)}
+        </p>
+      ) : null}
+
+      {allCards.length === 0 ? (
+        <EmptyState
+          title="No scan yet"
+          description="When the Trend Scout runs, the formats it finds in your niche appear here as recipes you can remake — each one a set of beats, never anyone else's footage."
+        />
+      ) : visible.length === 0 ? (
         <EmptyState
           title="No formats match these filters"
           description="The Trend Scout only keeps formats it can describe as beats. Widen the niche or pick another platform."
@@ -146,7 +165,10 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
       ) : (
         <ul className="m-0 grid list-none grid-cols-1 gap-5 p-0 sm:grid-cols-2 xl:grid-cols-4">
           {visible.map((trend) => (
-            <TrendCard key={trend.id} trend={trend} />
+            // No remake studio for a real scanned format until V2 writes the
+            // script and the compliance verdict. The card says so rather than
+            // offering a link that would 404.
+            <TrendCard canRemake={false} key={trend.id} trend={trend} />
           ))}
         </ul>
       )}

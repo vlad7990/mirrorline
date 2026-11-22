@@ -75,7 +75,11 @@ jobs:
   # save nothing.
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The keyed suite is 422 browser tests and has taken 12m38s and 15m31s on
+    # this runner, so 20 left under five minutes of head-room — and `retries: 1`
+    # now adds a second attempt for anything that fails. 30 is not a fix for
+    # anything; it is the cap being wider than the run it has to contain.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -95,14 +99,67 @@ jobs:
       - name: Install Playwright's browser
         run: pnpm exec playwright install --with-deps chromium
 
+      # ======================================================================
+      # The keys are preview's, and the job proves both halves of that
+      # ======================================================================
+      #
+      # D116: this job ran keyless, so `playwright.config.ts` excluded
+      # `SESSION_DEPENDENT_SPECS` — nineteen specs, every one of which drives
+      # the studio. A run was ~214 passed and 241 skipped, and the skipped
+      # half was the product. Two real defects sat behind it for days while CI
+      # stayed green, one of them a calendar telling a client their empty week
+      # was approved.
+      #
+      # Two checks, and the second is the one that is easy to leave out:
+      #
+      # 1. **Never production.** The suite creates and deletes users and
+      #    workspaces. Pointed at production it would do that to real
+      #    accounts, so a URL carrying the production ref stops the job dead
+      #    rather than running against it.
+      # 2. **Never silently keyless.** If a secret is renamed, unset, or
+      #    unavailable to a fork, the config would quietly fall back to
+      #    skipping the studio specs and the job would still go green — which
+      #    is precisely the failure D116 is about. Absence has to be loud, or
+      #    we rebuild the hole we just closed.
+      #
+      # No secret is echoed: the guard matches patterns and prints a verdict.
+      - name: The keys are preview's, and they exist
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PRODUCTION_REF: uvwedufzjldfahlqtisk
+        run: |
+          set -euo pipefail
+
+          fail() { echo "::error title=Keyed e2e refused to run::$1"; exit 1; }
+
+          [ -n "$SUPABASE_URL" ] || fail "NEXT_PUBLIC_SUPABASE_URL is empty. The suite would silently skip the nineteen studio specs and still pass - see docs/DECISIONS.md D116."
+          [ -n "$SUPABASE_ANON_KEY" ] || fail "NEXT_PUBLIC_SUPABASE_ANON_KEY is empty."
+          [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] || fail "SUPABASE_SERVICE_ROLE_KEY is empty."
+
+          case "$SUPABASE_URL" in
+            *"$PRODUCTION_REF"*)
+              fail "The URL carries the production project ref. This suite creates and deletes users and workspaces; it must only ever point at mirrorline-preview."
+              ;;
+          esac
+
+          echo "Keys present, and the URL is not production."
+
       # `chromium` and `mobile` only. The `screenshots` project regenerates the
       # reference PNGs in docs/screens-built/ and takes twelve minutes to do it;
       # those are a deliberate, reviewed commit rather than something CI should
       # be producing. `setup` still runs, as their declared dependency.
+      #
+      # `E2E_ALLOW_NO_SUPABASE` is deliberately **not** set any more. It was
+      # what let a keyless run be a pass; with keys it would only serve to let
+      # a broken secret look like a green build.
       - name: End-to-end tests
         run: pnpm test:e2e --project=chromium --project=mobile
         env:
-          E2E_ALLOW_NO_SUPABASE: '1'
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
       # Only on failure, and only what explains one: Playwright writes a trace
       # and a screenshot per failed test and nothing per passing one, so a green

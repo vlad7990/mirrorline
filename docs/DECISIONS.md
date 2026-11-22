@@ -8231,3 +8231,143 @@ media-column check ran before any `trends` or `agent_runs` row existed, and
 the guard I had written for exactly that case said "had no row to read columns
 from" instead of passing over an empty set. A silent pass there would have
 been a test that proved nothing for two of the three tables.
+
+## 2026-11-22 · D116 · The CI browser suite skips nineteen specs, and two real defects were sitting behind them
+
+**Found while doing V1's trend cards.** Not a decision about what to build —
+a decision about what our green tick currently means.
+
+### What happened
+
+Converting `/app/trends` off `@mirrorline/mock` meant running
+`demo-path.spec.ts` with keys for the first time in a while. It failed
+immediately, on a step I had not touched. Checked against clean `main` before
+blaming anything: **the same failure, same line, with none of my files
+present.** Then, once that was fixed, it failed again further along — on
+another step I had not touched.
+
+Both had been broken for days and CI was green throughout.
+
+### Why CI could not see them
+
+D111 added the `e2e` job, which is **keyless on purpose**: it holds no
+Supabase secrets, so `playwright.config.ts` excludes
+`SESSION_DEPENDENT_SPECS` — **nineteen specs**, every one of which drives the
+studio. A run reports roughly **214 passed and 241 skipped**, and the skipped
+half is the product.
+
+So the keyless job proves the marketing site renders and the app builds. It
+does not prove the studio works, and it has never claimed to — but a green
+tick reads as if it does.
+
+### The two defects
+
+1. **`demo-path` still asserted the demo workspace's alerts.** B2.4 (#11) made
+   the alert bar read the workspace's own rows, which was its entire point —
+   "Instagram signed us out" on the front page of a client who never connected
+   Instagram does not merely misinform, it asks them to fix something that was
+   not broken. The spec kept asserting the fixtures and went red the moment
+   #11 merged. **Nobody saw it.**
+
+2. **The calendar's batch bar claimed an approval that had not happened.** With
+   nothing scheduled it read: *"Tomorrow is approved. The Publisher will post
+   0 videos on ."* — work approved that does not exist, a zero presented as a
+   result, and an unfinished sentence, because with no posts there is no day
+   to name. That is a **user-facing bug on a studio screen**, not a stale
+   test, and it is the same family as B2.4's phantom alert and D110's missing
+   empty state.
+
+The second is the one that matters. A stale assertion costs an afternoon; a
+calendar telling a client their empty week is approved is the kind of thing
+the Pilot is meant to prevent.
+
+### What changes
+
+**Both are fixed here**, and `demo-path` now asserts the honest shape for a
+fresh account: no alerts region, no formats, nothing scheduled.
+
+**The gap itself is Vlad's to close, because it needs secrets.** The fix is a
+second CI job holding `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` as repository
+secrets, running the same suite with the studio half enabled. It is on the
+"stop and ask" list, so it is proposed rather than done.
+
+Until it exists, the rule is: **a change that touches a studio screen gets the
+keyed suite run locally before the PR**, and the PR says so. A green CI tick
+is not evidence about the studio.
+
+### The pattern, which is D111 again
+
+D111's lesson was "the check fooled me" — a comparison that looked like
+evidence and was not. This is the same shape one level up: the check is real,
+it runs, it passes, and it is silent about the half of the product that
+matters. **A suite that skips nineteen specs is indistinguishable from a suite
+that covers them, right up until you look at the skip count.**
+
+## 2026-11-22 · D117 · The nav-marker flake was hydration, not animation — and CI gets one retry with the retry made loud
+
+`motion.spec.ts › the nav markers sit exactly on the active item, and follow it`
+was the single failure in PR #16's first keyed run: **421 passed, 1 failed**
+(run `45058556633`). The guess on the way in was "measured mid-animation on a
+slower runner". That was wrong, and the log said so in two lines:
+
+```
+Expected: "0px"
+Received: ""
+  at e2e/motion.spec.ts:845
+```
+
+`""` is not a marker in the wrong place. It is a marker with **no inline
+custom property at all**. `SlidingIndicator` sets `--indicator-offset` from a
+`useLayoutEffect`, so the value does not exist until React has hydrated —
+and `page.goto` resolves on `load`, which is earlier. The test read the gap.
+
+**Reproduced rather than reasoned about.** A throwaway spec throttled the CPU
+20x via CDP and read the same property at `load`:
+
+```
+[proof] at load: {"offset":"","actual":"0px","markerPresent":true,"activePresent":true}
+[proof] settled: {"offset":"0px","actual":"0px","markerPresent":true,"activePresent":true}
+```
+
+Identical to CI, on demand, in two seconds. The spec was deleted; its only job
+was to turn a hypothesis into an observation.
+
+**Why it failed loudly instead of passing vacuously**, which is the part worth
+keeping: the marker *and* the active item are both in the server-rendered HTML,
+so the helper's `if (!marker || !active) return null` guard did not fire. Had
+either been absent, `before.tabs` would have been `null`, both sides of the
+comparison would have been `undefined`, and the assertion would have **passed**
+while testing nothing — the exact failure mode D-logged earlier against this
+same file. This test was lucky; the guard is still the dangerous shape.
+
+**The fix is the one already recorded for this file: the same assertion as a
+condition.** `toPass` wraps the read, so the measurement is waited for rather
+than hoped for, with a one-pixel tolerance because `offsetLeft` rounds to an
+integer while the box it is compared against can land on a fraction. Not a
+sleep: long enough for the slowest runner is dead time on every other run, and
+nearly long enough is the same flake back, rarer and harder to find. The
+numbers are now compared as numbers, so `""` can no longer masquerade as a
+position.
+
+**`retries: 1`, in CI only — and never without the reporter.** A shared runner
+is slower and more variable than this machine, and a 422-test browser suite
+that blocks a merge on one timing artefact teaches everybody to re-run without
+reading. But a retry on its own is a flake-hiding machine: green run, exit 0,
+and the only evidence a `✘` followed by a `✓` inside a log nobody opens on a
+passing build. **That is strictly worse than no retries at all** — the flake
+survives and becomes invisible.
+
+So `e2e/reporters/flaky.ts` names anything that passed only on a retry: which
+test, where, how many attempts, and the first attempt's error — at the end of
+the log and in GitHub's run summary, where it is the first thing on the run's
+page. It does not fail the build. A flake is an item of work, not a failure.
+Proven the same way as the diagnosis: a deliberately-flaky throwaway spec made
+the run go green *and* print the block.
+
+**None locally**, because an edit-and-rerun loop wants the failure, not a
+second opinion about it.
+
+The job's `timeout-minutes` went 20 → 30. Not a fix for anything — the two
+observed runs took 12m38s and 15m31s, so 20 left under five minutes of
+head-room, and a retry now adds a second attempt.

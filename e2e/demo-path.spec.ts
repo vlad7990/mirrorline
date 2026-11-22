@@ -170,14 +170,29 @@ test('the whole demo path holds up', async ({ page }) => {
   // 15 §1: a target is a proposal with a stated basis, never a promise.
   await expect(goal).toContainText('Target 10 · 14-day baseline')
 
-  // 15 §5: a *trend* alert appears only after two periods off track, and says
-  // so. A disconnection does not wait — nothing is publishing, so there is
-  // nothing to wait and see about, and the two sentences differ on the page.
-  const alerts = page.getByRole('region', { name: 'Alerts', exact: true })
-  await expect(alerts).toContainText('Leads behind pace for two weeks')
-  await expect(alerts).toContainText('we raise this after two, not after one')
-  await expect(alerts).toContainText('Instagram needs reconnecting')
-  await expect(alerts).toContainText('We raise this the same day')
+  /*
+   * A fresh workspace has no alerts, so the region is absent (B2.4).
+   *
+   * **This assertion was stale and CI could not see it.** Until B2.4 the
+   * board defaulted to `RAISED_ALERTS`, so this step read "Leads behind pace
+   * for two weeks" and "Instagram needs reconnecting" — the *demo
+   * workspace's* alerts, shown to every account. #11 fixed exactly that,
+   * because a red bar reading "Instagram signed us out" on the front page of
+   * a client who never connected Instagram does not merely misinform: it asks
+   * them to go and fix something that was not broken.
+   *
+   * The spec kept asserting the fixtures and went red the moment #11 merged.
+   * Nobody noticed because `demo-path.spec.ts` is in
+   * `SESSION_DEPENDENT_SPECS`, and the keyless CI job skips it — so the one
+   * check that walks the whole product has not run in CI since the list was
+   * introduced. Noted in `docs/PROGRESS.md`; the fix is a keyed e2e job.
+   *
+   * `AlertsBoard` renders `null` for an empty list, so "absent" is the honest
+   * assertion rather than an empty region. The alert *content* is covered by
+   * `results-persist.spec.ts`, which seeds rows and asserts the demo's alert
+   * does not reach a real workspace.
+   */
+  await expect(page.getByRole('region', { name: 'Alerts', exact: true })).toHaveCount(0)
 
   // "Needs you" is the morning to-do: 2 cuts to review, 1 post to approve,
   // 1 cut blocked by Compliance.
@@ -220,27 +235,63 @@ test('the whole demo path holds up', async ({ page }) => {
   await openFromSidebar(page, 'Niche Scan')
   await expect(heading(page, 'Niche Scan')).toBeVisible()
 
-  // 12 §Niche Scan: the benchmark that makes formats comparable across
-  // accounts of different sizes, beside the fit score.
-  await expect(page.getByText('views per follower in this niche').first()).toBeVisible()
+  /*
+   * 12 §Niche Scan: the benchmark that makes formats comparable across
+   * accounts of different sizes.
+   *
+   * Asserted against the report panel rather than a card. It used to read
+   * "views per follower in this niche" off `TrendCard`, which a workspace
+   * with no scan no longer draws — but the benchmark itself did not move, it
+   * is just stated where the research is now shown.
+   */
+  await expect(page.getByText('Examples, ranked by views per follower')).toBeVisible()
+
+  /*
+   * Non-negotiable 7, on the surface most likely to be screenshotted and sent
+   * to a prospect. With no scan the panel shows the sample report, and an
+   * unlabelled sample here is the exact mistake this walk should catch.
+   */
+  await expect(page.getByText('Sample data').first()).toBeVisible()
 
   await expect(page.getByRole('region', { name: 'How remakes work', exact: true })).toContainText(
     'We remake the format, never the footage.',
   )
 
-  // The visible live region and the card count have to agree.
-  await expect(page.getByRole('status').filter({ hasText: 'formats match' })).toHaveText(
-    '8 formats match these filters',
-  )
-
-  const remakeLinks = page.getByRole('link', { name: /^Remake for my brand/ })
-  await expect(remakeLinks).toHaveCount(8)
-  await expect(page.getByRole('heading', { level: 2, name: 'The 3-word reframe' })).toBeVisible()
-  await expect(page.getByText('+340%')).toBeVisible()
-
-  await remakeLinks.first().click()
+  /*
+   * A fresh workspace has not been scanned, so there are no formats — and
+   * that is the assertion now (V1).
+   *
+   * This step used to read "8 formats match these filters", eight "Remake for
+   * my brand" links, "The 3-word reframe" and "+340%". Every one of those was
+   * `@mirrorline/mock`, drawn to every workspace including one that had never
+   * been scanned. The niche report landing above them made it worse rather
+   * than merely stale: a panel carrying a visible "Sample data" label sitting
+   * on top of unlabelled cards says plainly that the cards are real.
+   *
+   * So the cards read this workspace's own `trends` rows now, and a demo
+   * account that has run no scan correctly has none. The empty state is the
+   * thing worth asserting, and the counter is deliberately absent — "0
+   * formats match these filters" would blame the filters for work we have
+   * not done.
+   */
+  await expect(page.getByText('No scan yet')).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: 'formats match' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: /^Remake for my brand/ })).toHaveCount(0)
 
   /* --- 8. Remake studio ------------------------------------------------- */
+
+  /*
+   * Reached by URL rather than by clicking a card.
+   *
+   * The remake studio is still fixture-backed — its script, compliance
+   * verdict and preview are written by the script and hook agent (V2), which
+   * is not built. There is therefore no card to click through from, and the
+   * card's control says so rather than linking into a 404.
+   *
+   * The screen itself is unchanged and worth keeping covered, so the walk
+   * continues from its route. `routes.ts` lists the same id.
+   */
+  await page.goto(`/app/remake/${REMAKE_TREND_ID}`)
 
   await expect(page).toHaveURL(new RegExp(`/app/remake/${REMAKE_TREND_ID}$`))
   await expect(heading(page, 'Remake: The 3-word reframe')).toBeVisible()
@@ -276,15 +327,25 @@ test('the whole demo path holds up', async ({ page }) => {
   await expect(heading(page, /^Week of \d{1,2} [A-Z][a-z]+$/)).toBeVisible()
 
   const batchBar = page.getByRole('region', { name: "Tomorrow's approvals", exact: true })
-  await expect(batchBar).toContainText(/Tomorrow: \d+ posts ready\. All \d+ need your eye\./)
 
-  const approveAll = batchBar.getByRole('button', { name: /^Approve all \d+ for tomorrow$/ })
-  await approveAll.click()
-
-  await expect(batchBar).toContainText(
-    /Tomorrow is approved\. The Publisher will post \d+ videos on [A-Z][a-z]{2} \d{1,2}\./,
-  )
-  await expect(approveAll).toBeHidden()
+  /*
+   * This workspace has nothing scheduled, and the bar must say so.
+   *
+   * **A real bug lived here.** The bar read "Tomorrow is approved. The
+   * Publisher will post 0 videos on ." — a claim that work was approved when
+   * none exists, a zero presented as a result, and an unfinished sentence,
+   * because with no posts there is no day to name. `demo-path` would have
+   * caught it the day it appeared, except the keyless CI job skips this spec.
+   *
+   * The approval flow itself is not dropped: `calendar-persist.spec.ts` seeds
+   * posts and drives approve-all against them, which is where that assertion
+   * belongs anyway — it needs rows, and this walk is about a fresh account.
+   */
+  await expect(batchBar).toContainText('Nothing is scheduled for tomorrow yet.')
+  await expect(batchBar).not.toContainText('approved')
+  await expect(
+    batchBar.getByRole('button', { name: /^Approve all \d+ for tomorrow$/ }),
+  ).toHaveCount(0)
 
   /* --- 10. Results ------------------------------------------------------ */
 

@@ -818,33 +818,106 @@ test('under reduced motion the argument sections are at their final state', asyn
 /* Motion v2 — 17 §2, the studio                                               */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * One pixel of slack when the marker is compared with the item it sits on.
+ *
+ * The marker's numbers come from `offsetLeft`/`offsetWidth`, which round to
+ * integers, while the box they are checked against can land on a fraction once
+ * a layout does. A pixel absorbs that and nothing else: the failure this test
+ * exists to catch — an index-times-a-width marker on the wrong tab — is tens of
+ * pixels out, not one.
+ */
+const MARKER_TOLERANCE_PX = 1
+
+/** How long the marker gets to be measured before that counts as broken. */
+const MARKER_SETTLE_TIMEOUT_MS = 10_000
+
 test('the nav markers sit exactly on the active item, and follow it', async ({ page }) => {
   await page.goto('/app/results')
 
   const read = () =>
     page.evaluate(() => {
+      /** `null` rather than `NaN` for "no value yet", so the gap stays readable. */
+      const px = (value: string) => {
+        const parsed = Number.parseFloat(value)
+        return Number.isFinite(parsed) ? parsed : null
+      }
+
       const of = (navLabel: string, axis: 'x' | 'y') => {
         const nav = document.querySelector(`nav[aria-label="${navLabel}"]`)
         const marker = nav?.querySelector<HTMLElement>('.nav-indicator')
         const active = nav?.querySelector<HTMLElement>('[aria-current="page"]')
         if (!marker || !active) return null
         return {
-          offset: marker.style.getPropertyValue('--indicator-offset'),
-          size: marker.style.getPropertyValue('--indicator-size'),
-          actualOffset: `${axis === 'y' ? active.offsetTop : active.offsetLeft}px`,
-          actualSize: `${axis === 'y' ? active.offsetHeight : active.offsetWidth}px`,
+          offset: px(marker.style.getPropertyValue('--indicator-offset')),
+          size: px(marker.style.getPropertyValue('--indicator-size')),
+          actualOffset: axis === 'y' ? active.offsetTop : active.offsetLeft,
+          actualSize: axis === 'y' ? active.offsetHeight : active.offsetWidth,
           hidden: marker.getAttribute('aria-hidden'),
         }
       }
+
       return { tabs: of('Results sections', 'x'), sidebar: of('Studio', 'y') }
     })
 
-  const before = await read()
-  // Measured, not counted: the tabs are all different widths, so an
-  // index-times-a-width marker lands on the wrong one.
-  expect(before.tabs?.offset).toBe(before.tabs?.actualOffset)
-  expect(before.tabs?.size).toBe(before.tabs?.actualSize)
-  expect(before.sidebar?.offset).toBe(before.sidebar?.actualOffset)
+  type Strip = NonNullable<Awaited<ReturnType<typeof read>>['tabs']>
+
+  const sitsOnActiveItem = (strip: Strip | null, name: string, alsoSize: boolean) => {
+    expect(strip, `${name}: a marker and an active item both exist`).not.toBeNull()
+    // `expect` has already thrown by here; this is the narrowing TypeScript
+    // needs in order to read `strip` as present.
+    if (!strip) return
+
+    expect(strip.offset, `${name}: the marker has been measured`).not.toBeNull()
+    if (strip.offset === null) return
+
+    // Measured, not counted: the tabs are all different widths, so an
+    // index-times-a-width marker lands on the wrong one.
+    expect(
+      Math.abs(strip.offset - strip.actualOffset),
+      `${name}: the marker's offset matches the active item's`,
+    ).toBeLessThanOrEqual(MARKER_TOLERANCE_PX)
+
+    if (!alsoSize) return
+
+    expect(strip.size, `${name}: the marker has a size`).not.toBeNull()
+    if (strip.size === null) return
+    expect(
+      Math.abs(strip.size - strip.actualSize),
+      `${name}: the marker's size matches the active item's`,
+    ).toBeLessThanOrEqual(MARKER_TOLERANCE_PX)
+  }
+
+  /**
+   * Waits for the measurement, then asserts it — rather than asserting once and
+   * trusting that it has already happened.
+   *
+   * `SlidingIndicator` sets `--indicator-offset` from a `useLayoutEffect`, so
+   * the value does not exist until React has hydrated, and `page.goto` resolves
+   * on `load`, which is earlier than that. On a slow CI runner the first read
+   * saw `--indicator-offset: ""` and this test failed claiming the marker was
+   * on the wrong item when it had simply not been measured yet — CI run
+   * 45058556633, `Expected: "0px" Received: ""`. The same gap reopens after the
+   * click, where the new offset arrives with React's commit.
+   *
+   * This is the one-shot-read bug D-logged against this very file: a reading
+   * taken once, with no retry, that samples a page mid-arrival. The recorded
+   * fix is the same assertion expressed as a condition, and `toPass` is that.
+   * A sleep is the wrong instrument twice over — long enough for the slowest
+   * runner is dead time on every other run, and nearly long enough is the same
+   * flake back, rarer and harder to find.
+   */
+  const whenMarkersSettle = async () => {
+    await expect(async () => {
+      const seen = await read()
+      sitsOnActiveItem(seen.tabs, 'the Results tabs', true)
+      sitsOnActiveItem(seen.sidebar, 'the studio sidebar', false)
+    }).toPass({ timeout: MARKER_SETTLE_TIMEOUT_MS })
+
+    return read()
+  }
+
+  const before = await whenMarkersSettle()
 
   // It is decoration; `aria-current` is what carries the selection.
   expect(before.tabs?.hidden).toBe('true')
@@ -853,9 +926,7 @@ test('the nav markers sit exactly on the active item, and follow it', async ({ p
   await page.getByRole('link', { name: 'Agent insights' }).click()
   await expect(page).toHaveURL(/tab=insights/)
 
-  const after = await read()
-  expect(after.tabs?.offset).toBe(after.tabs?.actualOffset)
-  expect(after.tabs?.size).toBe(after.tabs?.actualSize)
+  const after = await whenMarkersSettle()
   // It really moved, rather than being re-rendered in place.
   expect(after.tabs?.offset).not.toBe(before.tabs?.offset)
 })

@@ -15,12 +15,26 @@ import { OWNER_FIRST_NAME, storyboardBeats } from '@/components/trends/trend-bea
 
 export interface TrendCardProps {
   trend: Trend
+  /**
+   * Whether a remake studio exists for this format.
+   *
+   * **False for a real scanned format, and that is not a stub.** The remake
+   * studio shows a script, a compliance verdict and a preview, and those are
+   * written by the script and hook agent — V2, which is not built. A card
+   * from this workspace's own `trends` rows therefore has nothing to open:
+   * `/app/remake/<id>` would `notFound()`.
+   *
+   * So the control says what is true rather than linking into a 404. An
+   * affordance that looks live and 404s is worse than one that explains
+   * itself, and this is the honest shape until V2 lands.
+   */
+  canRemake?: boolean
 }
 
 /** Fit is a 0–100 score, so the bar needs no other scale. */
 const FIT_MAX = 100
 
-export function TrendCard({ trend }: TrendCardProps) {
+export function TrendCard({ trend, canRemake = false }: TrendCardProps) {
   const fitLabel = `Fit for ${OWNER_FIRST_NAME}`
 
   return (
@@ -72,12 +86,19 @@ export function TrendCard({ trend }: TrendCardProps) {
 
       {/* DESIGN.md "Motion — Press": a 3% dip on :active, fine pointers only,
           dropped under prefers-reduced-motion. */}
-      <Button asChild variant="primary" className="press" fullWidth>
-        <Link href={`/app/remake/${trend.id}`}>
-          Remake for my brand
+      {canRemake ? (
+        <Button asChild variant="primary" className="press" fullWidth>
+          <Link href={`/app/remake/${trend.id}`}>
+            Remake for my brand
+            <span className="sr-only">: {trend.format}</span>
+          </Link>
+        </Button>
+      ) : (
+        <Button variant="secondary" fullWidth disabled>
+          Remake comes with the script agent
           <span className="sr-only">: {trend.format}</span>
-        </Link>
-      </Button>
+        </Button>
+      )}
     </Card>
   )
 }
