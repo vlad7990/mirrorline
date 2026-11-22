@@ -8303,3 +8303,71 @@ evidence and was not. This is the same shape one level up: the check is real,
 it runs, it passes, and it is silent about the half of the product that
 matters. **A suite that skips nineteen specs is indistinguishable from a suite
 that covers them, right up until you look at the skip count.**
+
+## 2026-11-22 · D117 · The nav-marker flake was hydration, not animation — and CI gets one retry with the retry made loud
+
+`motion.spec.ts › the nav markers sit exactly on the active item, and follow it`
+was the single failure in PR #16's first keyed run: **421 passed, 1 failed**
+(run `45058556633`). The guess on the way in was "measured mid-animation on a
+slower runner". That was wrong, and the log said so in two lines:
+
+```
+Expected: "0px"
+Received: ""
+  at e2e/motion.spec.ts:845
+```
+
+`""` is not a marker in the wrong place. It is a marker with **no inline
+custom property at all**. `SlidingIndicator` sets `--indicator-offset` from a
+`useLayoutEffect`, so the value does not exist until React has hydrated —
+and `page.goto` resolves on `load`, which is earlier. The test read the gap.
+
+**Reproduced rather than reasoned about.** A throwaway spec throttled the CPU
+20x via CDP and read the same property at `load`:
+
+```
+[proof] at load: {"offset":"","actual":"0px","markerPresent":true,"activePresent":true}
+[proof] settled: {"offset":"0px","actual":"0px","markerPresent":true,"activePresent":true}
+```
+
+Identical to CI, on demand, in two seconds. The spec was deleted; its only job
+was to turn a hypothesis into an observation.
+
+**Why it failed loudly instead of passing vacuously**, which is the part worth
+keeping: the marker *and* the active item are both in the server-rendered HTML,
+so the helper's `if (!marker || !active) return null` guard did not fire. Had
+either been absent, `before.tabs` would have been `null`, both sides of the
+comparison would have been `undefined`, and the assertion would have **passed**
+while testing nothing — the exact failure mode D-logged earlier against this
+same file. This test was lucky; the guard is still the dangerous shape.
+
+**The fix is the one already recorded for this file: the same assertion as a
+condition.** `toPass` wraps the read, so the measurement is waited for rather
+than hoped for, with a one-pixel tolerance because `offsetLeft` rounds to an
+integer while the box it is compared against can land on a fraction. Not a
+sleep: long enough for the slowest runner is dead time on every other run, and
+nearly long enough is the same flake back, rarer and harder to find. The
+numbers are now compared as numbers, so `""` can no longer masquerade as a
+position.
+
+**`retries: 1`, in CI only — and never without the reporter.** A shared runner
+is slower and more variable than this machine, and a 422-test browser suite
+that blocks a merge on one timing artefact teaches everybody to re-run without
+reading. But a retry on its own is a flake-hiding machine: green run, exit 0,
+and the only evidence a `✘` followed by a `✓` inside a log nobody opens on a
+passing build. **That is strictly worse than no retries at all** — the flake
+survives and becomes invisible.
+
+So `e2e/reporters/flaky.ts` names anything that passed only on a retry: which
+test, where, how many attempts, and the first attempt's error — at the end of
+the log and in GitHub's run summary, where it is the first thing on the run's
+page. It does not fail the build. A flake is an item of work, not a failure.
+Proven the same way as the diagnosis: a deliberately-flaky throwaway spec made
+the run go green *and* print the block.
+
+**None locally**, because an edit-and-rerun loop wants the failure, not a
+second opinion about it.
+
+The job's `timeout-minutes` went 20 → 30. Not a fix for anything — the two
+observed runs took 12m38s and 15m31s, so 20 left under five minutes of
+head-room, and a retry now adds a second attempt.

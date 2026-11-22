@@ -98,7 +98,26 @@ const WEB_SERVER_TIMEOUT_MS = USE_DEV_SERVER ? 120_000 : 300_000;
 export default defineConfig({
   testDir: './e2e',
   forbidOnly: !!process.env.CI,
-  reporter: 'list',
+  /**
+   * One retry in CI, none locally — and every retry reported.
+   *
+   * The pair matters more than either half. A shared runner is slower and more
+   * variable than this machine, and a suite of 422 browser tests that blocks a
+   * merge on one timing artefact trains everybody to re-run it without reading
+   * it, which is worse than a retry. But a retry on its own hides the thing it
+   * absorbs: the run goes green and the only evidence is a `✘` followed by a
+   * `✓` inside a log nobody opens on a passing build.
+   *
+   * So `e2e/reporters/flaky.ts` names anything that passed only on a retry, at
+   * the end of the log and in GitHub's run summary. The retry keeps the merge
+   * moving; the reporter keeps the debt visible.
+   *
+   * **None locally**, because an edit-and-rerun loop wants the failure, not a
+   * second opinion about it — and a local flake that gets retried away is a
+   * flake that never gets fixed.
+   */
+  retries: process.env.CI ? 1 : 0,
+  reporter: [['list'], ['./e2e/reporters/flaky.ts']],
   use: {
     baseURL: BASE_URL,
     // Keep artefacts cheap: capture only when something actually broke.

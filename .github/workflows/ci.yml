@@ -75,7 +75,11 @@ jobs:
   # save nothing.
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The keyed suite is 422 browser tests and has taken 12m38s and 15m31s on
+    # this runner, so 20 left under five minutes of head-room — and `retries: 1`
+    # now adds a second attempt for anything that fails. 30 is not a fix for
+    # anything; it is the cap being wider than the run it has to contain.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
