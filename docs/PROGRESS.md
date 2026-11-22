@@ -6,6 +6,88 @@
 
 ---
 
+## Demo note — 22 November 2026, day 1 of the value sprint
+
+**What a user can now do, and one thing they should not be shown.**
+
+### What works
+
+Open **Niche Scan** in the studio (`/app/trends`) and the account now has a
+**niche report** at the top of the screen: the formats working in the niche
+with a fit score and their beats, the hooks, the topics, the lengths, the
+posting patterns, and the examples those were read from — each one a **link
+out, a description and a source note**, with no thumbnail, no embed and no
+stored media anywhere.
+
+Examples are **ranked by views per follower, never by raw views**, so a small
+account with a high ratio outranks a large one coasting (`12 §1`). An
+unmeasured ratio reads "Not measured yet" rather than sorting as zero.
+
+![The niche report at 1440px](screens-built/app-niche-scan-report-1440.png)
+
+Also at 390px: `screens-built/app-niche-scan-report-390.png`, exactly 390
+wide, no sideways scroll.
+
+**Today it is the labelled sample**, because the live scan agent is tomorrow's
+first task. The label is `SampleDataLabel`, the same component the marketing
+pages use, rather than a second badge invented for the studio.
+
+### What is honestly not right yet, and it is on this screen
+
+**Below the report sit eight unlabelled mock trend cards** — "Fit for Maya",
+"+340%", "Remake for my brand" — still coming from `@mirrorline/mock`.
+
+They pre-date today. B2.1–B2.5 took demo data off Home, Accounts, Calendar and
+Results; the Niche Scan's cards were never converted. **But today's change
+makes the screen worse rather than better**: a *labelled* sample sitting
+directly above *unlabelled* fixtures implies the unlabelled ones are real.
+That is the same failure the YouTube sweep's own header describes — "a true
+sentence that is silent about an identical limit on the platform standing next
+to it" — and the same shape as D110 and as B2.4's alert bar telling a client
+that an account they never connected had signed them out.
+
+**Recommended as the next PR, before the live agent**: point those cards at
+this workspace's `trends` rows, which now have a read path, and show the
+empty state when there has been no scan. Hiding them would also do, but
+converting is the B2.4 pattern and is not much more work.
+
+### Under it, where the money is
+
+- **A web search costs money separately from tokens.** The projection now
+  charges for the search *ceiling*, because a token-only projection made the
+  "hard cap" soft with **no error attached to it** — the scan works, the cap
+  reports room, the invoice is bigger.
+- **The cap reads a table, not a `Map`.** `agent_runs` is the row
+  `spend.ts` asked for in its own comments. It **fails closed**: a ledger read
+  that errors is a refusal, never "a month at zero", because guessing zero
+  turns one database hiccup into an uncapped month. A refused run is still a
+  row, at $0 — a cap that works must not look like a feature nobody used.
+- **Model output is parsed, never trusted.** An example with no `https` link
+  is dropped (its `source_note` would name a source nobody can check — D115),
+  and anything spelled like a media file is dropped whether or not we would
+  ever fetch it (non-negotiable 1).
+
+### Merged today
+
+#10, #11 (B2 complete), #3 (D113 the sprint, D114 merge authority), #12 (V1
+data, D115, production migrated), #13 (the SDK/key chokepoint), #14 (this
+screen) — `main` at `1fd6e07`. **#13 and #14 auto-merged on green**, which is
+D114 working as written; #12 waited for Vlad because it carried a migration.
+
+### Next
+
+1. The unlabelled trend cards, above.
+2. The **live scan agent**: count tokens → check the cap → refuse before
+   calling → web search with structured output → parse → write rows → log the
+   run.
+3. Then PDF export. Vlad's call: a screenshot is a sufficient prospect artifact
+   for now, and building the agent first means the first PDF we ever send is a
+   real report rather than a polished sample.
+
+**Stopping here for Vlad's ten-minute review** (D114).
+
+---
+
 ## Handoff — 22 November 2026, evening (B2 closed, the value sprint started, and the migration gate earned its keep)
 
 **Everything below this heading supersedes the handoff beneath it.**
