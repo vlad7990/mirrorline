@@ -7895,3 +7895,70 @@ So it is replaced in two commits rather than one, and the diff reads honestly:
 first the blank board as it actually was, then the empty state.
 
 No migration, no schema change, no new dependency.
+
+## 2026-11-21 · D111 · "It reproduces on `main`" was not evidence, because the build directory is shared and gitignored
+
+I reported a bug on `main` that did not exist, and the reasoning that produced
+it is worth more than the retraction.
+
+### What I claimed, and what was true
+
+**Claimed:** the full e2e suite had two failures, `GET /api/copilot/status`
+threw `TypeError: (0 , x.CH) is not a function`, and the same two specs failed
+identically on `main` at `24f454a` — so the fault was pre-existing and not from
+the PR in hand. It went into PR #9's description and was reported to Vlad.
+
+**True:** there is no such bug. The full suite on a clean build is **424
+passed, 864 skipped, 0 failed**, all 37 co-pilot tests among them. A keyless
+production build, started keyless and curled directly, answers **HTTP 200**
+with `"mode":"sample"`.
+
+### The cause was mine, and it was concurrency
+
+I started the full suite in the background and then ran `pnpm build` in the
+foreground. Playwright's `webServer` runs `next build && next start` itself, so
+**two `next build` processes were writing `.next` at the same time**. A minified
+chunk that is half-written produces exactly this: a module whose export is
+`undefined` at the call site, reported as "is not a function" with a name like
+`x.CH` that matches nothing in the source.
+
+### The evidence mistake, which is the point
+
+The check I trusted was: *check out `main`, run the same two specs, see them
+fail, conclude the fault predates my branch.*
+
+**`.next` is gitignored and lives outside the working tree's version control,
+so `git checkout main` does not change it.** The second run reused the same
+corrupted artifacts. The test could only ever confirm that the build directory
+was bad; it had no power to say anything about the code, in either direction.
+It looked like a controlled comparison and controlled nothing.
+
+The general form, worth remembering past this instance: **switching branches
+only isolates what git tracks.** Anything gitignored and shared — `.next`,
+`node_modules`, `.playwright`, a database — crosses the switch untouched and
+will reproduce a problem on any branch you try. A "it happens on `main` too"
+result is only evidence once the shared state has been rebuilt or cleared.
+
+### What changes, mechanically
+
+A note would not have saved me, because I believed the comparison. So:
+
+- **Playwright builds into its own `distDir`** (`.next-e2e`, via
+  `NEXT_DIST_DIR`), so a manual `pnpm build` and a running suite cannot write
+  the same files whatever order they happen in. The collision becomes
+  impossible rather than discouraged.
+- **CI runs the suite**, keyless and against a production build — the gap that
+  let a browser-only regression reach `main` unchallenged, and which this false
+  alarm was mistakenly blamed on.
+- The reasoning is written beside `reuseExistingServer` in the config and in
+  CLAUDE.md's working rules, for the case where somebody reaches for a manual
+  build anyway.
+
+### What I should have done
+
+Rebuilt from clean before drawing any conclusion, and treated "I have been
+running builds in this directory" as a confound to eliminate rather than
+background noise. One `rm -rf .next` would have cost a minute and saved a
+false report.
+
+No migration, no schema change, no new dependency.

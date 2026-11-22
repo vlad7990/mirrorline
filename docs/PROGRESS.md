@@ -6,6 +6,43 @@
 
 ---
 
+## Handoff — 22 November 2026 (a bug I reported on `main` was not there; the fix is mechanical, and CI gets the suite)
+
+**Read this before trusting the co-pilot note in PR #9's history.** I reported
+that `GET /api/copilot/status` threw `TypeError: (0 , x.CH) is not a function`
+on `main` at `24f454a`, and that two co-pilot specs failed there independently
+of the branch in hand. **No such bug exists.** PR #9's description is corrected
+and the claim is retracted; this is the version to believe.
+
+**What really happened.** I started the full e2e suite in the background and
+then ran `pnpm build` in the foreground. Playwright's `webServer` runs
+`next build && next start` itself, so two builds were writing `.next` at once,
+and a half-written minified chunk reads at runtime as "is not a function".
+
+**Why my isolation test proved nothing.** `.next` is gitignored, so
+`git checkout main` reused the same corrupted artifacts. That comparison could
+only confirm the build directory was bad — it had no power to say anything
+about the code. Logged as **D111**, because the evidence mistake is the part
+worth keeping: *switching branches only isolates what git tracks.*
+
+**Clean-build truth:** full suite **424 passed, 864 skipped, 0 failed**, all 37
+co-pilot tests among them; keyless production build curled directly answers
+**200** with `"mode":"sample"`. 424 reconciles against the 423 before PR #9,
+the difference being the empty-state test it added.
+
+### Next, in order
+
+1. **CI PR** — `ci/e2e-job-and-build-isolation`. Playwright gets its own
+   `distDir` so the collision becomes impossible rather than discouraged, and
+   CI finally runs the suite: keyless, production build, sharded, with the
+   Supabase-dependent specs skipping cleanly when secrets are absent. No
+   migration.
+2. **B8 on `docs/plan-v2`** (PR #3) — plan only, no code. No migration.
+3. **B2.4.** If it carries a migration it follows the D104 routine: dispatch
+   *Migrate production* on the branch, confirm green, then merge.
+
+---
+
 ## Handoff — 21 November 2026, late night (B2.3 is merged and production agrees; the Accounts empty state is a follow-up PR)
 
 **B2.3 is done.** PR #8 merged to `main` at **`24f454a`**, and the
