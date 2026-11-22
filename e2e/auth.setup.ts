@@ -1,3 +1,6 @@
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { dirname } from 'node:path'
+
 import { expect, test as setup } from '@playwright/test'
 
 import {
@@ -36,6 +39,30 @@ import {
  */
 setup('sign in and save the session', async ({ page }) => {
   const config = supabaseConfig()
+
+  /**
+   * No keys, and the caller said that is expected: skip rather than fail.
+   *
+   * **Opt-in, and the default is still to fail.** A developer whose keys have
+   * gone missing wants the loud version — the sentence below, once, rather
+   * than a wall of redirects six specs later. Only a caller that has
+   * deliberately set `E2E_ALLOW_NO_SUPABASE` gets the quiet one, and the CI
+   * job that sets it runs the half of the suite needing no session at all:
+   * the marketing site, the co-pilot in sample mode, routing, accessibility
+   * and responsive behaviour.
+   *
+   * **An empty storage state is written anyway**, because `storageState`
+   * names a file that must exist — every dependent project fails to start
+   * without it, which would turn a clean skip back into a wall of failures.
+   * Empty is the honest content: there is no session, and the studio specs
+   * skip themselves on the same missing config.
+   */
+  if (config === null && process.env.E2E_ALLOW_NO_SUPABASE === '1') {
+    mkdirSync(dirname(STUDIO_STORAGE_STATE), { recursive: true })
+    writeFileSync(STUDIO_STORAGE_STATE, JSON.stringify({ cookies: [], origins: [] }), 'utf8')
+    setup.skip(true, 'No Supabase keys, and E2E_ALLOW_NO_SUPABASE=1: the studio specs skip.')
+    return
+  }
 
   // Fail rather than skip. A suite that quietly ran the whole studio
   // unauthenticated would report a wall of redirects and bury the cause.

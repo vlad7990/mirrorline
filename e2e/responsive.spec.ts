@@ -11,9 +11,26 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { onlyProject } from './helpers/project-gate'
-import { prepareSessionFor, ROUTES, STUDIO_SHELL_ROUTES } from './helpers/routes'
+import {
+  HAS_STUDIO_SESSION,
+  prepareSessionFor,
+  ROUTES,
+  STUDIO_SHELL_ROUTES,
+} from './helpers/routes'
 
 onlyProject('mobile', 'This spec is about the 390x844 viewport the mobile project sets.')
+
+/**
+ * The two shell tests below open `/app/home` directly rather than iterating
+ * `ROUTES`, so the route table's own narrowing cannot reach them. With no
+ * Supabase keys that redirects to `/sign-in`, where there is no drawer to
+ * open — the failure would read "Open menu not found", which is true and about
+ * the wrong page.
+ *
+ * The sideways-scroll sweep above needs no session and runs either way, which
+ * is the half that matters on a keyless CI run.
+ */
+const NO_SESSION = 'No Supabase keys: /app/home redirects to sign-in, so there is no shell to test.'
 
 /** One pixel of slack: sub-pixel layout can round a width up by a fraction. */
 const SCROLL_SLACK = 1
@@ -43,6 +60,7 @@ for (const route of ROUTES) {
 }
 
 test('the studio sidebar is gone at 390px and the drawer replaces it', async ({ page }) => {
+  test.skip(!HAS_STUDIO_SESSION, NO_SESSION)
   await page.goto('/app/home')
 
   // The sidebar's nav is the only "Studio" navigation landmark; while the
@@ -63,6 +81,7 @@ test('the studio sidebar is gone at 390px and the drawer replaces it', async ({ 
 })
 
 test('the drawer traps focus and Escape closes it', async ({ page }) => {
+  test.skip(!HAS_STUDIO_SESSION, NO_SESSION)
   await page.goto('/app/home')
   await page.getByRole('button', { name: 'Open menu' }).click()
 
