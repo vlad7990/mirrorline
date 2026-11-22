@@ -6,6 +6,76 @@
 
 ---
 
+## Handoff — 21 November 2026, late night (B2.3 is merged and production agrees; the Accounts empty state is a follow-up PR)
+
+**B2.3 is done.** PR #8 merged to `main` at **`24f454a`**, and the
+*Production schema check* on it is green:
+
+```
+migration-drift: production has all 13 migration(s) in this tree. OK
+```
+
+All thirteen rows list Local == Remote, so `main` and production agree again —
+the D104 window in which production ran one ahead is closed.
+
+**Branch** `feat/accounts-empty-state`, cut from `24f454a` · **PR open, and it
+carries no migration.**
+
+### 1. What it is, and why it is not in PR #8
+
+The gap found while regenerating D109's screenshots: **a workspace with no
+accounts got a header and nothing else.** `AccountsBoard` had a read-failure
+state and no zero-length one, and every real workspace starts with no rows.
+
+Vlad scoped it as a follow-up rather than a widening of PR #8 — that PR was
+open and its migration already applied — so this is one line and one link:
+
+```
+No accounts connected yet.
+Connect one in Settings → Connected accounts
+```
+
+A link rather than a button, because connecting is a write with a consent
+record attached and it lives in Settings (D107, D109). Not the four
+placeholder rows Settings invents, because this screen reports measurements
+per connected account — four rows saying "nothing measured" for four accounts
+nobody has would invent the accounts rather than describe their absence.
+Logged as **D110**.
+
+### 2. The "before" image was not what was in the repo
+
+Worth knowing, because it changes what the diff means. The committed
+`app-accounts--*` **predated B2.3**: they showed the demo workspace's three
+accounts with 51.4%, 46.8% and 42.1% rendered as a client's own results — the
+exact three values `accounts-persist.spec.ts` now asserts must never appear
+beside a real handle.
+
+So the reference was not merely stale; it claimed something non-negotiable 7
+forbids and the screen can no longer do. It is replaced in two commits so the
+diff reads honestly: first the blank board as it actually was, then the empty
+state.
+
+### 3. Test-first, and what the test guards
+
+The e2e failed on the missing sentence before the component changed. It then
+asserts the thing that would be easy to get wrong: `AccountsBoard` still
+defaults its `accounts` prop to `ACCOUNT_METRICS`, and Results relies on that
+default — so "render nothing" and "render the demo workspace" are one mistake
+apart, and that mistake would look like a working dashboard rather than an
+error. The demo handle and the three sample hold values are asserted absent.
+
+`signedInWithAccount` now delegates to a `signedIn` helper so a test can sign
+in without seeding a row; the four existing tests are unchanged and pass.
+
+### 4. Still needs you
+
+1. **Review and merge the empty-state PR.** No migration, so no dispatch — the
+   D104 order does not apply to it.
+2. **`E2E_SIGNUP_EMAIL`** — still unset; one UI sign-up test skips.
+3. **PR #3** (`docs/plan-v2`), still blocked on **D-b, where the renderer runs**.
+
+---
+
 ## Handoff — 21 November 2026, night (PR #8 is finished: the round-trip is proved, the references are D109's, and the migration count was wrong)
 
 **Branch** `backend/b2-3-accounts`, **rebased onto `main` at `a33c892`**, head

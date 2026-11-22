@@ -44,11 +44,14 @@ onlyProject('chromium', 'a figure is either rendered or it is not, at any width'
 /** A handle from `@mirrorline/mock`. Must never appear in a real studio. */
 const DEMO_HANDLE = '@thequietpractice'
 
-async function signedInWithAccount(
-  browser: Browser,
-  config: SupabaseTestConfig,
-  status?: string,
-) {
+/**
+ * A signed-in browser on a workspace with **no accounts at all**.
+ *
+ * Split out of `signedInWithAccount` because that is the state every real
+ * workspace is created in, and it is the one state this screen had nothing to
+ * say about.
+ */
+async function signedIn(browser: Browser, config: SupabaseTestConfig) {
   const runId = newRunId()
   const email = testEmail(runId, 'accounts')
   const password = testPassword(runId)
@@ -64,11 +67,25 @@ async function signedInWithAccount(
   await page.getByRole('button', { name: 'Sign in' }).click()
   await page.waitForURL(/\/app\//, { timeout: 30_000 })
 
+  return { page, context, user, runId }
+}
+
+async function signedInWithAccount(
+  browser: Browser,
+  config: SupabaseTestConfig,
+  status?: string,
+) {
+  const session = await signedIn(browser, config)
+
   // After the sign-in, because `ensure_workspace_for_current_user` runs there
   // and the account needs a workspace to belong to.
-  const seeded = await seedSocialAccount(config, { userId: user.id, runId, status })
+  const seeded = await seedSocialAccount(config, {
+    userId: session.user.id,
+    runId: session.runId,
+    status,
+  })
 
-  return { page, context, user, runId, seeded }
+  return { ...session, seeded }
 }
 
 test('the board shows this workspace’s account, never the demo’s', async ({ browser }) => {
@@ -150,6 +167,42 @@ test('no KPI card on a real account contains a digit', async ({ browser }) => {
     await expect(
       page.getByText(sample, { exact: false }),
       `the sample figure ${sample} reached a real account`,
+    ).toHaveCount(0)
+  }
+
+  await context.close()
+})
+
+test('a workspace with no accounts says so, and points at Settings', async ({ browser }) => {
+  const config = supabaseConfig()
+  test.skip(config === null, 'No Supabase keys in apps/web/.env.local')
+  if (config === null) return
+
+  // No `seedSocialAccount` here, deliberately: this is the state every real
+  // workspace is created in, and the one the board used to render as a header
+  // over nothing at all.
+  const { page, context } = await signedIn(browser, config)
+
+  await page.goto('/app/accounts')
+
+  await expect(page.getByText('No accounts connected yet')).toBeVisible()
+
+  // The way out has to be a real link, not a sentence mentioning Settings —
+  // the screen is a dead end otherwise, which is what made the blank board
+  // worth fixing rather than worth labelling.
+  const link = page.getByRole('link', { name: /Connected accounts/i })
+  await expect(link).toBeVisible()
+  await expect(link).toHaveAttribute('href', '/app/settings')
+
+  // And the empty path must not reach for the samples. `AccountsBoard` still
+  // defaults its `accounts` prop to `ACCOUNT_METRICS`, so "render nothing"
+  // and "render the demo workspace" are one mistake apart — this is the
+  // assertion that tells them apart.
+  await expect(page.getByText(DEMO_HANDLE)).toHaveCount(0)
+  for (const sample of ['51.4', '46.8', '42.1']) {
+    await expect(
+      page.getByText(sample, { exact: false }),
+      `the sample figure ${sample} reached an empty workspace`,
     ).toHaveCount(0)
   }
 
