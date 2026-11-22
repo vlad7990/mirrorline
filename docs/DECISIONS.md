@@ -7962,3 +7962,71 @@ background noise. One `rm -rf .next` would have cost a minute and saved a
 false report.
 
 No migration, no schema change, no new dependency.
+
+## 2026-11-22 · D112 · B8 is a content engine, and the things that would make it a content farm are named now
+
+**Vlad's decision**, scoped before any of it is built. Planned in
+`docs/plan/BACKEND_PHASE.md` §6.5; no code in this PR.
+
+> **Numbering note.** This branch is behind `main`, which carries D92–D110,
+> and D111 lands with the CI pull request. D112 is chosen so the entry sorts
+> correctly once this is rebased — expect a mechanical conflict at the end of
+> this file and resolve it by order, not by renumbering.
+
+### Why it needed a decision rather than a ticket
+
+B8 is "more output per client", and the previous project died doing exactly
+that: it reposted other creators' videos across accounts nobody owned, evaded
+detection, and ran fake accounts. The difference between this and that is not a
+difference of degree — but it *is* the kind of line that erodes under pressure
+to ship more, one reasonable-sounding exception at a time.
+
+So the boundary is written before the factory exists. The point is not that we
+might forget it; the point is that in six months somebody optimising throughput
+should find the answer already written down, and written as a refusal rather
+than a preference.
+
+### What was decided
+
+**We recreate what is working, not what someone made.** The Niche Scan
+identifies a *pattern* — hook, format, structure, pacing, topic, trend — and
+Format Remix writes an original script and shoots an original video in the
+client's own voice against it. A pattern is a shape; a shape is not a work.
+That is non-negotiable 2 scaled from one video to a pipeline.
+
+**Four things are out of scope as non-negotiables**, not as "not yet":
+multiple accounts per client, faceless mass channels, detection evasion,
+account rotation. Each one works, commercially, which is precisely why each is
+named. A list of things we merely have not built is an invitation; a list of
+things we will not build is a boundary.
+
+**Three nevers**: no reuse of another creator's footage, audio, script or
+captions; no shot-for-shot remakes; no reproduction of a real person's face or
+voice. The middle one is the load-bearing addition — "matching the format" and
+"matching the work frame by frame" can be described in almost the same words,
+and only one of them is the thing we were told not to do.
+
+**AI scene sources sit behind the pipeline adapter** (D99), swappable and
+labelled in the UI and on the platform, because non-negotiable 4 has no volume
+exemption. **Each generator's commercial-use terms are verified before it is
+added**, the way D11 and D41 treat a licence — a model whose terms forbid
+commercial output, or claim rights in it, is inadmissible however good it is.
+
+**Every output passes the Originality Gate** (spec 12), with no volume-based
+fast path. A gate skipped when the queue is long is not a gate.
+
+### Sequence, and why it is not sooner
+
+**After B5 and the first paid Pilots.** B5 is the pipeline this runs on, and
+the Pilots are what tell us which formats are worth multiplying. Building it
+earlier would be scaling a guess, and scaling a guess is how the output starts
+having to be justified by its volume.
+
+### How it is proved
+
+The "done when" in §6.5 is deliberately mechanical: a scene source without a
+verified commercial-use record must be unable to produce a cut — **the adapter
+refuses** — and a cut aimed at an account the workspace does not own is
+refused **by the database**, not by the scheduler. The same reasoning as D107:
+a rule enforced where it cannot be forgotten beats a rule enforced where
+somebody has to remember it.

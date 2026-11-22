@@ -786,6 +786,85 @@ sends. **The honest version of this is already shipped.**
 
 ---
 
+## 6.5 B8 — The content engine, which is not a content farm
+
+**Vlad's scope, and the distinction in the title is the whole specification.**
+The failed project this one replaces scaled by reposting other people's videos
+across accounts nobody owned. B8 scales too, and must be structurally unable to
+become that — so the boundary is written here, before any of it exists, rather
+than discovered later by somebody optimising throughput.
+
+### What it is
+
+More output per client, from **their** material and from what is working in
+their niche: many cuts from one upload, hook variants, per-platform formats,
+A/B tests — posted **only to that client's own connected accounts**.
+
+### The line, stated as a sentence we could show a platform
+
+**We recreate what is working, not what someone made.**
+
+- The **Niche Scan** identifies a viral *pattern*: hook, format, structure,
+  pacing, topic, trend. A pattern is a shape, and a shape is not a work.
+- **Format Remix** then produces an **original script and an original video in
+  the client's voice** against that shape.
+
+Non-negotiable 2 already says "remakes copy the format only: new script, new
+footage, new voice". B8 is where that stops being a rule about one video and
+becomes a rule about a factory.
+
+### Never — and these become non-negotiables, not guidelines
+
+- **Never reuse another creator's footage, audio, script or captions.**
+- **Never a shot-for-shot remake.** Matching a pattern is allowed; matching a
+  work frame by frame is the thing we were told not to do, wearing a new name.
+- **Never reproduce a real person's face or voice.** Non-negotiable 5 already
+  bars face-swaps and requires a stored consent record; volume does not soften
+  it.
+
+### Out of scope, logged as non-negotiable so it cannot be "optimised" in later
+
+- **Multiple accounts per client.** One client, their own accounts.
+- **Faceless mass channels.**
+- **Detection evasion**, in any form.
+- **Account rotation.**
+
+Every one of those is a growth tactic that works, which is exactly why it is
+named here. "We did not think of it" must not be available as an explanation.
+
+### AI scene sources
+
+Grok, Veo, Kling and Runway plug in **behind the pipeline adapter** as
+swappable, labelled scene sources (D99) — labelled in the UI and on the
+platform, because non-negotiable 4 has no volume exemption.
+
+**Verify each one's commercial-use terms before adding it**, the way D11 and
+D41 treat a licence. A generator whose terms forbid commercial output, or claim
+rights in what it makes, is not admissible however good it looks. That check is
+part of adding the adapter, not something to do afterwards.
+
+### The gate
+
+**Every output passes the Originality Gate** (spec 12) — no exception, and no
+volume-based fast path. A gate that is skipped when the queue is long is not a
+gate.
+
+### Sequence
+
+**After B5 and the first paid Pilots.** B5 is the pipeline this runs on, and
+the Pilots are what tell us which formats are worth multiplying. Building the
+factory before either exists would be scaling a guess.
+
+- **Done when:** one upload produces many cuts with hook variants and
+  per-platform formats, every one carrying an Originality Gate verdict; an A/B
+  test runs inside a single client's own accounts; a cut whose scene source has
+  no verified commercial-use record **cannot be produced**, proved by the
+  adapter refusing rather than by a reviewer noticing; and an attempt to post a
+  client's cut to an account their workspace does not own is refused **by the
+  database**, not by the scheduler.
+
+---
+
 ## 7. What I need from you, exactly
 
 Nothing below is in the repo and nothing should be pasted into a chat — put
@@ -914,6 +993,7 @@ survived two days.
 | **B5c compliance + ops** | A staff user approves a cut in a workspace they are not a member of, it is attributed, the audit row exists, and a non-staff user gets a **404**. A cut with no passing verdict cannot be scheduled — **proved by the constraint, not the UI**. |
 | **B6 metrics** | A connected account's yesterday appears in `metric_snapshots`; a re-run adds no second row; a disconnected account produces **no row rather than a zero**. |
 | **B7 posting** | A scheduled post reaches a real test account through Postiz; a token is unreadable from a database dump without the environment key; disconnecting **revokes before deleting**. |
+| **B8 content engine** | One upload yields many cuts, hook variants and per-platform formats, each with an Originality Gate verdict; a scene source with no verified commercial-use record **cannot produce a cut**, proved by the adapter refusing; and a cut aimed at an account the workspace does not own is refused **by the database**. |
 
 Every step keeps the existing gates: `pnpm lint && pnpm typecheck && pnpm test
 && pnpm build && pnpm licence-check`, the e2e suite, and the axe gate — which
