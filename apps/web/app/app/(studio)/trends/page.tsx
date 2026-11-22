@@ -4,8 +4,11 @@ import { Info } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+import { NicheReportPanel } from '@/components/trends/niche-report-panel'
 import { TrendCard } from '@/components/trends/trend-card'
 import { TrendFilterBar } from '@/components/trends/trend-filter-bar'
+import { SAMPLE_REPORT } from '@/lib/niche-scan/canned'
+import { readLatestNicheReport } from '@/lib/workspace/read-niche-report'
 import {
   NICHE_PARAM,
   PLATFORM_PARAM,
@@ -68,6 +71,10 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
 
   const visible = filterTrends(trends, filters)
 
+  // Null means the read failed, which the panel's three-state branch below
+  // renders as our problem rather than as an empty niche.
+  const reportResult = await readLatestNicheReport()
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -94,6 +101,33 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
         }
         description="Each card is a recipe of beats, not someone else's video. Every remake gets a new script, your footage and a compliance check."
       />
+
+      {/*
+        V1 · the niche report. Above the recipe cards, because the report is
+        what the scan produced and the cards are what we would make from it.
+
+        Three states, kept distinct on purpose (D110, B2.4's lesson): a real
+        report renders plainly; no scan yet renders the labelled sample so the
+        screen is never empty for a new workspace; a failed read says so
+        rather than rendering "no formats", which would read as a claim about
+        the client's niche instead of about our request.
+      */}
+      {reportResult === null ? (
+        <AlertBar
+          aria-label="Niche report unavailable"
+          description="This is about our request, not about your niche. Reload in a moment."
+          role="region"
+          title="We could not load your niche report just now."
+          tone="warning"
+        />
+      ) : (
+        <NicheReportPanel
+          findings={reportResult.report?.findings ?? SAMPLE_REPORT}
+          isSample={reportResult.report === null}
+          niche={reportResult.report?.niche}
+          scannedAt={reportResult.report?.completedAt ?? reportResult.report?.createdAt}
+        />
+      )}
 
       <p role="status" className="m-0 text-meta text-text-muted">
         {matchCountLine(visible.length)}

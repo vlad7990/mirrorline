@@ -426,6 +426,29 @@ second pattern would be a second thing to audit:
   exactly as the co-pilot does it. Every V item must be previewable and
   testable before a key exists.
 
+### Known debt, with the trigger that makes it urgent
+
+**Move the co-pilot's spend onto `agent_runs`.** Vlad's call, 22 November: the
+in-memory ledger is fine *for now*, and this must land **before we run more
+than one server instance**.
+
+`lib/copilot/spend.ts` keeps the month's total in a process-local `Map`, and
+says so in its own header: *"that is not a cap across instances — on Vercel
+each function instance would keep its own ledger, so N instances could each
+spend up to the cap"*. V1's `agent_runs` table (D115) is the row it asked for,
+and V1's scan uses it. The co-pilot does not yet.
+
+**Why it is safe to defer and not safe to forget.** Today the per-request
+ceiling is enforced from a projection rather than from the ledger, so a single
+runaway request is impossible even on a cold instance — the hole is only in
+the *monthly* total, and only once concurrency is real. The moment a second
+instance serves traffic, the cap silently becomes "the cap, times however many
+instances are warm", which is a failure with no error attached to it.
+
+**Done when**: two independent ledger readers agree on a workspace's month
+total, proved by writing a run through one and reading it through the other —
+which the `Map` cannot do and a table can.
+
 ### V1 — Niche Scan agent
 
 The onboarding form triggers a research run that produces a **structured niche

@@ -57,6 +57,8 @@ const NOT_A_POSTING_CLAIM: Readonly<Record<string, string>> = {
     'Holds the platform label map — "youtube" to "YouTube Shorts" — and builds the calendar grid from it. It names the platform in a lookup table and promises nothing: the caveat belongs to copy that claims a post will go out, not to the row header a post sits in.',
   'workspace/week-schedule.test.ts': 'Tests that label map, and has to quote it to do so.',
   'copy/youtube-claims.test.ts': 'This file, which names the claim in order to search for it.',
+  'niche-scan/report.test.ts':
+    'Quotes "YouTube Data API search" because that is one of the Niche Scan\'s allowed sources (12 §1), and uses the word "post" because the thing it validates is a link to one. A source we read a format *from* is the opposite direction to a destination we publish *to* — the same reason trend-filters.ts is here.',
   'copy/platform-limits.test.ts': 'Tests the caveat, so it quotes both halves on purpose.',
   'app/(marketing)/pricing/page.tsx':
     'Names YouTube only in its own doc comment. The rendered page carries the caveat through <LongFormAddon />, and the test below checks that rather than taking it on trust.',
