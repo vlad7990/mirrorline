@@ -8144,3 +8144,90 @@ exception list, rather than by a blanket ban.
 **This PR is not auto-merged.** The PR that grants me merge authority is merged
 by Vlad, because a change that widens my own permissions is the one case where
 using the new permission to land it would be indefensible.
+
+## 2026-11-22 · D115 · The `trends` url comes back, because the comment that removed it over-read non-negotiable 1
+
+**Vlad confirmed it** ("keep the url") after I raised the conflict. V1's
+migration, `20261122160000_niche_scan.sql`.
+
+### What the old migration said, and why it is wrong
+
+`20261113120000_metrics_and_goals.sql` created `trends` with no url column, and
+explained itself in a comment:
+
+> The anonymised beat list. A recipe, never a copy: non-negotiables 1 and 2
+> mean we hold the shape of a format and never its footage, audio **or URL**.
+
+The first two clauses are right and the last one does not follow.
+**Non-negotiable 1 forbids downloading, storing or reusing other creators'
+videos or audio.** A URL is neither. `12 §1` says the opposite in as many
+words — what a scan records is *"stored in `trends`, links only, no media"* —
+and `url` is the first field it lists. `04 §Niche Scan` repeats it: *"What a
+scan stores: links and descriptions, never media."*
+
+### Why it mattered rather than being a tidy-up
+
+**Dropping the url did not make us safer; it made us unauditable.** `12 §1`
+puts `source_note` on every row precisely so that an audit of our sources is
+answerable from the data rather than from memory. A `source_note` reading
+"TikTok Creative Center, top ads by industry" with no link names a source
+**nobody can check** — which is the shape of a compliance record that cannot
+be verified, and this project exists because of a predecessor whose compliance
+records could not be verified.
+
+The distinction the whole legal position rests on is **pointer versus work**:
+we keep the link and the description, never the thing itself. Collapsing those
+two into one prohibition sounds stricter and is actually worse, because it
+removes the evidence and keeps the risk.
+
+### What stops this becoming the hole it was feared to be
+
+The fear behind the original comment is real — a url column is where somebody
+later stores a filename. So:
+
+1. **A check constraint**: `url ~ '^https?://'`. Not a validator for the whole
+   web; the cheap structural check that a storage key or a `.mp4` path cannot
+   be written to a column everyone reads as "a pointer to a public post".
+2. **No column on any of the three tables can hold media**, and
+   `niche-scan.db.test.ts` asserts that against the live column list rather
+   than trusting the comment — a denylist of *names* (`thumbnail`, `storage`,
+   `blob`, `file`, …), because a `text` column called `thumbnail_url` is the
+   realistic way the rule gets broken and no type system catches it.
+3. **The old comment is rewritten**, not left in place. A comment that
+   misstates a non-negotiable is worse than no comment: the next reader
+   inherits the error and defends it.
+
+### Also in this migration
+
+`posted_at`, `views`, `hook_type`, `length_seconds`, `cta_type`,
+`growth_velocity`, `report_id`, and `account_size_bucket` — the rest of what
+`12 §1` asks a scan to record and `trends` never had.
+
+**Account size is a bucket, never an exact follower count.** `12 §1` asks for
+a bucket, and the ranking rule is why: "best" is views per follower over 30
+days, so the precise count is a number we would store and never use. Keeping
+precise figures about other people's accounts is a habit worth not forming.
+
+`niche_reports` and `agent_runs` arrive in the same migration. `agent_runs` is
+the row `lib/copilot/spend.ts` asked for in its own comments: its ledger lives
+"in this process, in a `Map`", which "is not a cap across instances — on
+Vercel each function instance would keep its own ledger, so N instances could
+each spend up to the cap", and it named "a row in Supabase" as the real fix.
+One table serves both the log `04 §Shared rules` requires and the meter
+`18 §6` requires, because the month's spend *is* the sum of the log — separate
+totals would be a number that can disagree with its own evidence.
+
+### How it is proved
+
+`pnpm test:rls-db`, 117 passing. A storage path in `url` is refused with
+`23514`; an invented size bucket is refused with `23514`; a signed-in user
+writing to `agent_runs` or `niche_reports` is refused with `42501`; a second
+workspace's report returns **no rows** rather than an error, because a policy
+filters rather than refuses. The suite fails without the migration: its
+fixture inserts into `niche_reports`, which did not exist.
+
+The first run of it failed honestly, which is worth recording: the
+media-column check ran before any `trends` or `agent_runs` row existed, and
+the guard I had written for exactly that case said "had no row to read columns
+from" instead of passing over an empty set. A silent pass there would have
+been a test that proved nothing for two of the three tables.
