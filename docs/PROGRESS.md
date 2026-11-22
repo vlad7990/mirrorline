@@ -6,6 +6,111 @@
 
 ---
 
+## Handoff — 21 November 2026, night (PR #8 is finished: the round-trip is proved, the references are D109's, and the migration count was wrong)
+
+**Branch** `backend/b2-3-accounts`, **rebased onto `main` at `a33c892`** · **PR
+#8 open, not merged.** The three things the B2.3 handoff listed as not done are
+done. Nothing is left on this PR but your dispatch.
+
+**Rebased mid-session, because PR #7 merged while this was being finished.** The
+only conflicts were `DECISIONS.md` and `PROGRESS.md`, both append-only files;
+no code conflicted. Two consequences worth knowing before you dispatch:
+
+- **`--remote` and `setup-cli@v3` are already proven.** *Corrected by Vlad — I
+  had written that this dispatch would be the first to exercise them, and that
+  was wrong.* **Migrate production run `44934926852`** was dispatched on `main`
+  at `a33c892` once PR #7 merged, and went green through every real step:
+  `supabase/setup-cli@v3`, Link, "What production has now", Dry run, Apply and
+  "Confirm local and remote agree" — 12 in the tree, nothing to apply. D106 is
+  therefore exercised end to end, and a failure at the link or list step is no
+  longer the thing to watch for. This dispatch is the first to *apply*
+  something on that toolchain, not the first to use it.
+- **The count is unchanged.** PR #7 carried no migrations, so `main` is still
+  on 12 and this is still 13 after merge.
+
+### 1. The Settings connect round-trip now has an e2e
+
+`e2e/settings-connect.spec.ts`, two tests: type a handle → Connect → **reload**
+→ still connected, and a seeded connected account → Disconnect → **reload** →
+not connected, with the row and its handle surviving and Connect live again.
+
+**The reload is the assertion, and the optimistic update is why.**
+`SettingsBoard` flips the row before the server answers and rolls back if it
+refuses, so a "Connected" chip read straight after the click proves nothing.
+
+**It was falsified before it was trusted**, and that is the part worth reading.
+It passed first time, so the D107 wiring bug was reintroduced on purpose —
+`p_handle: platform` — to watch it fail. It failed, but **not where I
+expected**: the RPC *succeeded*, because `"instagram"` is a perfectly valid
+non-blank handle, so the toast said "Instagram connected" over a row stored
+under the wrong handle. The new service-role read (`readSocialAccountStatus`)
+is what caught it; the reload would have caught it one assertion later. A
+connect test that only watched the toast would have been green on that bug.
+
+### 2. The `app-settings` references are D109's "after"
+
+Four images, and only those four from a `screenshots` run. The **before** had
+the demo workspace on a real client's Settings screen — `@mayatorres.coach`
+needing a reconnect, `@mayaleads` and a YouTube account connected, and the red
+"Instagram needs to reconnect" bar. The **after** is four not-connected rows
+with the handle field, the per-platform limits on their own rows, your line
+under the card, and no alert bar.
+
+They came out byte-identical on a second independent run, so they are not
+capturing anything nondeterministic.
+
+### 3. The full e2e suite, on a production build
+
+**423 passed, 862 skipped, 0 failed**, exit 0. The skips are almost all
+`onlyProject` gating — every spec is defined in three projects and runs in one
+— plus the one real one: `sign-up-ui.spec.ts` "creates an account and asks the
+person to check their email", still waiting on `E2E_SIGNUP_EMAIL`.
+
+Run **before** the rebase. Nothing in PR #7 touches the app — it is workflows
+and docs — so it is not re-run, and CI on the rebased branch covers lint,
+typecheck, unit and build.
+
+### 4. The PR said 14 migrations. It is 13
+
+`main` carries 12 and this PR adds one. Checked against git rather than the
+working tree: `git ls-tree origin/main` gives 12, `HEAD` gives 13, and
+`git diff --diff-filter=A origin/main...HEAD` names exactly the one file. The
+PR description is corrected and now says where the number came from.
+
+### 5. Still needs you
+
+1. **Dispatch *Migrate production* with `ref: backend/b2-3-accounts`**, confirm
+   the dry run lists exactly the one migration, then merge PR #8. *Production
+   schema check* should then report **`all 13 migration(s)`**, not 14.
+2. **`E2E_SIGNUP_EMAIL`** — still unset; one UI sign-up test skips.
+3. **PR #3** (`docs/plan-v2`), still blocked on **D-b, where the renderer runs**.
+
+**Next for me, once PR #8 is merged:** the Accounts empty state, as a small
+follow-up PR — Vlad's scope, agreed rather than assumed. One line, *"No
+accounts connected yet"*, plus a link to Settings → Connected accounts, in the
+existing styles. Logged as a design change with before-and-after screenshots.
+Deliberately not folded into PR #8.
+
+### 6. Found and not fixed: the Accounts board is blank on a new workspace
+
+`app-accounts--*` also changed in the screenshots run, and reverting it was
+right for a reason that is not churn: **against a workspace with no accounts
+the board renders a header and nothing at all.** `AccountsBoard` has a
+read-failure state and no zero-length one, so the regenerated reference was a
+blank screen — a worse reference than a stale one.
+
+Every real workspace starts in exactly that state, so it wants an empty state
+with its words chosen rather than defaulted. That is a design decision on a
+locked design, so it is yours, and I did not widen this PR with it.
+
+**Scoped since, by Vlad:** a follow-up PR after #8 merges, not a change to it.
+*"No accounts connected yet"* and a link to Settings → Connected accounts, in
+the existing styles, logged as a design change with before-and-after
+screenshots. The "before" is the blank board this run produced, which is why
+the stale `app-accounts--*` references stay as they are until then.
+
+---
+
 ## Handoff — 21 November 2026, evening (B2 is in production, and every number below was read out of a log)
 
 **Branch** `chore/ci-remote-flag-and-node24` → **PR open.** `main` is at
