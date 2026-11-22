@@ -51,6 +51,16 @@ only.** Written 16 November 2026 at the end of the site/prototype phase;
   after a rebase. Relevant here because §1.5's migration gate and its e2e
   sharding both assume feature branches are rebased rather than merged back
   into.
+- **D113 — the value sprint comes first**, added 22 November 2026. A new
+  **§2.5** inserts V1–V7 *before* B3, B6 and B7: the Niche Scan agent, the
+  script and hook agent, the Originality Gate, the inline AI assists, the video
+  agent, an internal ops console, and the co-pilot triggers. The target is a
+  **hand-run Pilot on day 7**, which needs no checkout, no metrics ingestion
+  and no posting API. **B3, B6 and B7 are deferred, not cut**, and keep their
+  section numbers — §2.5 is a decimal section for the reason §0's note gives.
+  **B2 is complete once PR #11 merges** (B2.1–B2.5 are all built; #11 was
+  green and unmerged when this was written), which is what frees the sequence
+  to change.
 
 Read `docs/plan/ENGINE_WIRING.md` for how the media engine is already joined to
 the app, and `supabase/README.md` for the database's history.
@@ -370,6 +380,175 @@ assertion — if the export ever bypasses a policy, that is where it shows.
 The copy on `/legal/cancellation-refunds` says the export "keeps working after
 you cancel", so **export is not gated on subscription status** — only on
 having an account. B3 must not break that, and §8 proves it.
+
+## 2.5 V1–V7 — The value sprint, which comes before the plumbing
+
+**Vlad's re-sequencing, 22 November 2026 (D113).** A one-week sprint to a
+**hand-run Pilot on day 7**. B3, B6 and B7 keep their section numbers and their
+content; they move *after* this. Nothing below is deleted — it is deferred.
+
+### Why the order changed
+
+The plan as written reached a paying customer through checkout (B3), then
+metrics (B6), then posting (B7) — three pieces of plumbing before the client
+saw a single thing the product had made. **The AI that creates is the product.**
+A Pilot we run by hand needs no checkout (we invoice), no metrics ingestion (we
+read the platform dashboards), and no posting API (we hand the client the files
+and they post). What it does need is a niche report, scripts the client
+recognises as their own voice, cuts from their own footage, and a gate that
+proves none of it is anybody else's work.
+
+So the sprint builds the seven things a Pilot actually consumes, and the
+plumbing waits for the second client — when doing it by hand stops scaling,
+which is the honest trigger for automating it.
+
+**This does not loosen any non-negotiable.** It removes a *payment* step from
+the critical path, not a *compliance* one. V3 is in the sprint precisely
+because the Originality Gate (non-negotiable 6) cannot be the thing that waits.
+
+### The contract every V item obeys
+
+Lifted from `18 §4` and `18 §6`, because the co-pilot already solved this and a
+second pattern would be a second thing to audit:
+
+- **Server-side only.** The Anthropic SDK is imported in one module per agent,
+  under `app/api/*` or a worker. **No key ever reaches a browser bundle**, and
+  a unit test asserts no `'use client'` module imports an adapter.
+- **Metered per workspace, with a hard monthly cap.** `countTokens` before the
+  call; if the projected spend crosses the cap the call is **not made** and the
+  surface says so. Real usage read off the response after
+  (`input_tokens`, `output_tokens`, `cache_read_input_tokens`,
+  `cache_creation_input_tokens`) and added to the workspace's month. The cap is
+  a stop, not a warning — non-negotiable 11 means the ceiling has to hold.
+- **Logged.** Every call written to the agent log with time, input, output,
+  cost and reason (`04 §Shared rules`).
+- **Works with no key.** Canned mode is a supported path, labelled in the UI,
+  exactly as the co-pilot does it. Every V item must be previewable and
+  testable before a key exists.
+
+### V1 — Niche Scan agent
+
+The onboarding form triggers a research run that produces a **structured niche
+report**: top formats, hooks, topics, lengths, posting patterns. Viewable in
+the studio, downloadable as PDF, and usable by us for prospects.
+
+**Sources, and a conflict that needs your eye.** `04` and `12 §1` give the scan
+a *closed* allow-list — TikTok Creative Center, Meta Ad Library, YouTube Data
+API, the client's own insights, and manual review of up to 30 public examples —
+phrased "Allowed, and nothing else". The instruction for V1 is "Anthropic API
+with web search", which is **not on that list**. I have built to the
+instruction and recorded the widening as **D113**, with the constraints that
+actually carry the legal weight kept intact:
+
+- **Links and descriptions only, never media.** No video, no audio, no image is
+  downloaded or stored. This is non-negotiable 1 and it does not move.
+- **`source_note` per row**, as `12 §1` requires, so an audit of our sources is
+  answerable from the data rather than from memory.
+- No scraping of private data, no logging into other accounts, no bulk
+  collection. `tt_collect.py` and `ig_account_dump.py` stay banned.
+
+If you would rather the scan stay inside the closed list, say so and V1 narrows
+to the four APIs plus manual review — it is a source swap behind one adapter,
+not a rebuild.
+
+**Ranking is views-per-follower over 30 days**, never follower count (`12 §1`).
+Ranking by raw views recommends the coasting two-million-follower account.
+
+**Done when**: a scan for a niche with no seed row in `12 §2` still returns
+ranked recipes; every stored row carries a `source_note` and a URL; and a test
+asserts the scan wrote **no media object** to Storage.
+
+### V2 — Script & hook agent (Format Remix)
+
+From the niche report plus the client's own material, produce **original**
+scripts, hooks and captions in the client's voice.
+
+Recreates **patterns, never expression** — the B8 principle (D112), and
+`12 §3`'s sequence: take the recipe's beats (hook → setup → payoff → CTA),
+never its footage or audio; write from the client's Voice and Facts profile
+with at least one real business fact per script.
+
+**Done when**: a script generated from a recipe shares the recipe's beat
+structure and **no sentence** with the source example, and a script with no
+business fact is rejected rather than shipped.
+
+### V3 — Originality Gate
+
+An automated check on **every** output: no copied text or captions, no reused
+footage, not a shot-for-shot remake. Verdict plus reasons stored; **blocks
+approval when it fails**.
+
+`04 §Originality Gate` governs it and nothing here softens it: compared against
+the source format *and* the client's own last 90 posts; over the limit the
+draft goes back to V2 with the offending lines named; **no warn-and-continue
+and no override, from anywhere**; two failures block and tell the Concierge.
+The verdict is shown to the client with the number, the limit and what the gate
+did — a gate whose failures are invisible is the predecessor project's gate.
+
+**Done when**: a deliberately-copied draft is blocked and the block is visible
+in the studio; the approve action is refused server-side, not merely hidden;
+and "blocked twice" reaches a terminal state rather than looping.
+
+### V4 — "Generate with AI" inline assists
+
+User-initiated, never automatic, in four places: onboarding (goal and outcome
+wording), hooks and captions, brand-kit voice, KPI target suggestions.
+
+Every suggestion is **labelled "AI-suggested"** and **the user edits before
+saving** — the same shape as `18 §2.3`'s propose-don't-dispose, and it is
+deliberate that an assist is trusted no further than the co-pilot.
+
+**Done when**: no assist writes to the database without an explicit save; the
+label is present on every suggested value; and with no key the buttons still
+work in canned mode.
+
+### V5 — Video agent
+
+Client uploads raw video **direct to Supabase Storage** — resumable, and
+**never through Vercel** (a function body limit is not an upload strategy).
+`services/pipeline` is wired behind the existing adapter as a worker job:
+transcribe → moments → 9:16 cuts with captions. **AI-generated scenes are
+labelled** (D99, non-negotiable 4).
+
+**The generator choice is yours and is not made here.** Build the adapter so a
+vetted generator plugs in; do not pick one. This is one of the four things the
+sprint stops for.
+
+**Done when**: a 2GB upload survives an interrupted and resumed connection; no
+request body crosses the function limit; a second workspace can neither read
+the object nor see the row; and a cut carrying an AI scene is labelled in the
+UI *and* in its stored metadata.
+
+### V6 — Ops console (internal)
+
+Lists a client's niche report, scripts and cuts. Approve or reject with notes.
+**Approved items appear in the client's studio for download.**
+
+This is the hand-run half of the Pilot made visible: on day 7 the thing a
+client receives was approved by a person, through this screen, and the approval
+is a row rather than an email.
+
+**Done when**: a rejected item never appears in the client's studio; an
+approval is attributable to a named operator; and an item that failed V3 cannot
+be approved at all.
+
+### V7 — Co-pilot triggers
+
+The studio co-pilot ("Milo", `18 §2`) can trigger V1, V2 and V4 on request.
+
+It **proposes and does not execute** — `18 §2.3` is unchanged, so a triggered
+run renders as a card with Approve and Dismiss, and the run starts on Approve.
+Proposals come back as **structured output**, never parsed out of prose.
+
+**Done when**: asking the co-pilot to run a scan produces a proposal, not a
+scan; and the run is absent from the agent log until Approve is pressed.
+
+### What the sprint deliberately does not build
+
+B3 checkout, B6 metrics ingestion and B7 posting. The Pilot is invoiced by
+hand, read from platform dashboards by hand, and posted by the client. When
+the second Pilot makes that stop scaling, the sections below are waiting,
+unchanged.
 
 ## 3. B3 — Stripe, test mode only
 
@@ -984,7 +1163,15 @@ survived two days.
 | **B1.5f axe at 390px** | Axe runs at both viewports on the public pages and the studio shell at the D75 `moderate` threshold, and each skip reason names what actually covers what. |
 | B2 studio | Goals, targets and calendar moves survive a reload and a different browser. **An unmeasured value reads "Not measured yet", never `0`.** Sample data still only on marketing. |
 | B2 export | "Export my data" returns this workspace's rows and **none of a second workspace's**, run as the user rather than the service role. |
-| B3 Stripe | A test card buys a Pilot and a Creator; a replayed webhook changes nothing; a live key is refused at startup. |
+| **V — every item** | No `'use client'` module imports an agent adapter; a workspace at its monthly cap gets **no call made**, not a refund after; every run is in the agent log with its cost; and with no key every surface answers in labelled canned mode. |
+| **V1 Niche Scan** | A niche with no seed row in `12 §2` still returns ranked recipes; every stored row carries a `source_note` and a URL; and **no media object is written to Storage** by a scan. Ranking is views-per-follower, so a small high-ratio account outranks a coasting large one. |
+| **V2 script + hook** | A generated script shares the recipe's beat structure and **no sentence** with the source example; a script with no real business fact is rejected rather than shipped. |
+| **V3 Originality Gate** | A deliberately-copied draft is **blocked**, the block is visible in the studio with its number and limit, the approve action is refused **server-side**, and a second failure is terminal rather than a loop. There is no override path. |
+| **V4 inline assists** | No assist writes to the database without an explicit save; every suggested value carries the "AI-suggested" label; the buttons still work with no key. |
+| **V5 video** | A 2GB upload survives an interrupted and resumed connection; **no request body crosses the function limit**; a second workspace can neither read the object nor see the row; a cut with an AI scene is labelled in the UI **and** in stored metadata. |
+| **V6 ops console** | A rejected item never reaches the client's studio; an approval names the operator who made it; an item that failed V3 **cannot be approved at all**. |
+| **V7 co-pilot triggers** | Asking the co-pilot to run a scan produces a **proposal, not a scan**, and nothing reaches the agent log until Approve is pressed. |
+| B3 Stripe *(deferred — after V)* | A test card buys a Pilot and a Creator; a replayed webhook changes nothing; a live key is refused at startup. |
 | **B3 entitlements** | A Pilot past `pilot_expires_at` still reads every screen and still exports, and is refused **exactly one** thing — scheduling — with a sentence naming the expiry. An add-on cannot grant a capability the build does not have. |
 | B3 cancellation | Cancel from Settings sets `cancel_at_period_end`, the webhook writes it to our table, "Keep my plan" reverses it, and **the export still works after the period ends**. |
 | B4 scan | A scan request lands in `leads` and emails the notification; **with no mail key the lead is still written** and the notification is logged. |
