@@ -99,6 +99,26 @@ export type KpiValue =
       /** What the projection is based on, in one phrase. */
       readonly basis: string
     }
+  | {
+      /**
+       * Connected, and nothing has measured it yet (B2.3).
+       *
+       * **Distinct from `not-connected`, and the difference is not cosmetic.**
+       * That state says we have no way to read the number; this one says we do
+       * and there is nothing there yet. Rendering a real account's card as
+       * "not connected" would be false, and rendering it with sample figures
+       * would be worse — a number beside the client's own handle reads as
+       * their result whatever label sits next to it, which is what
+       * non-negotiable 7 forbids.
+       *
+       * It is the `current: number | null` of the goal cascade in the shape
+       * `KpiValue` needs: there is no `value` field here, so no caller can
+       * format one by accident.
+       */
+      readonly state: 'unmeasured'
+      /** What will fill it, in one phrase: "the first post we publish here". */
+      readonly awaiting: string
+    }
 
 /** A target is a proposal. 15 §1: the UI says "target", never "guaranteed". */
 export interface KpiTarget {

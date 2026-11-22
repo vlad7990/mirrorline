@@ -7670,3 +7670,153 @@ Written into the workflow's header under "How to read a run", because somebody
 glancing at three runs all labelled `main` would reasonably conclude the
 dispatch never happened — which is, with some irony, the exact wrong conclusion
 that D105's zero-runs scare was the right one.
+
+## 2026-11-21 · D107 · Connection state is written by a function, because re-opening the table would undo D96
+
+**Vlad's decision**, confirming the approach before it was built. B2.3 needs a
+person to be able to say "this account is mine", and `social_accounts` has been
+**read-only to the browser** since B1: members hold a SELECT policy, and D96
+revoked insert, update and delete from `authenticated` and `anon` because the
+table is written by the pipeline under the service role.
+
+Two ways to let a user change it:
+
+| | What it costs |
+|---|---|
+| **Member INSERT/UPDATE policies** on the table | Re-opens the verbs D96 closed, on a table whose other writer is a background worker. Every future column becomes browser-writable by default — which is the shape of the bug D96 was. |
+| **A `security definer` function** | One more function to grant correctly, and the write path is a named operation rather than a verb on a table. |
+
+**The function.** The same shape `save_onboarding` (D97) and
+`set_workspace_timezone` already use, which also means there is one idiom here
+rather than two.
+
+### What the shape buys, beyond the grant
+
+**Neither function takes a workspace id.** The caller's own is looked up from
+`memberships`, so there is no parameter in which to name somebody else's — D97's
+sentence, holding for the same reason.
+
+That decided the disconnect's signature, which is the part worth recording
+because the obvious version is worse. The UI already holds the row id, so
+`disconnect_social_account(p_account_id uuid)` is the natural shape — and it
+would need a membership check to be **correct**. `(workspace_id, platform,
+handle)` is already unique, so taking a platform and a handle instead needs a
+membership check to **find the row at all**. A lookup that cannot address a
+foreign row is stronger than a check that refuses one: forgetting the check is a
+code change, forgetting the scoping is a syntax error.
+
+### The grants are three statements, not two
+
+`revoke all … from public` removes the implicit grant and leaves `anon`'s
+**direct** grant from Supabase's default privileges untouched. That was the D98
+hole on four functions, so both new functions carry the explicit
+`revoke execute … from anon`, and both are in the anonymous-execution test list
+rather than trusted to the pattern.
+
+### And no column was added
+
+§6 keeps posting off until Meta, TikTok and YouTube approve the apps and Postiz
+runs. "Connected" means **the client told us this account is theirs** — not that
+we hold an OAuth grant. One test asserts that no column of `social_accounts` is
+named for a token, secret, credential or password, so the day that stops being
+true it fails rather than waits to be noticed.
+
+---
+
+## 2026-11-21 · D108 · "No such account" and "not yours" are the same answer, deliberately
+
+**Vlad's decision**, agreeing with the single error. `disconnect_social_account`
+raises `45007` both when the platform and handle match nothing and when they
+match a row in a workspace the caller does not own.
+
+The alternative is more helpful, and that is the problem. Distinguishing them —
+`45007` for missing, `45008` for forbidden — answers a question nobody should be
+able to ask: **does this handle exist in somebody else's workspace?** Two
+clients in the same niche can have the same handle in mind; one of them probing
+the other's connection state through an error code is a disclosure, however
+small, and it is the kind that compounds because it is cheap to automate.
+
+So the function does not check-then-refuse. It scopes the `update` to the
+caller's workspace and raises when nothing was updated, which makes the two
+cases **indistinguishable by construction** rather than by a decision somebody
+could later optimise away in pursuit of better error messages.
+
+Tested from both sides: a member of workspace A naming their own handle
+succeeds, and the same member naming workspace D's `@rls_…` handle gets `45007`
+— followed by the assertion that matters, which is that D's row is untouched.
+
+The cost is a worse message in one real case: a person who mistypes their own
+handle is told it does not exist on this workspace, which is true and unhelpful.
+The UI can afford to be kinder than the database here, because it already knows
+which accounts the workspace has — it can say "we do not have that handle, here
+are the three you connected" without the database confirming anything about
+anybody else.
+
+---
+
+## 2026-11-21 · D109 · The Connected accounts card gets a handle field, and one line saying what "Connected" means
+
+**Vlad's decision, and the first approved change to the locked design.**
+`CLAUDE.md` makes the handoff-v4 design the authority and calls an unrequested
+visual change a bug to revert. This is neither a bug nor a conflict: the design
+drew this card for an **OAuth flow we do not have**, and §6 keeps us from having
+one until Meta, TikTok and YouTube approve the apps.
+
+### Why it could not be deferred
+
+Two facts met:
+
+1. **A real workspace has no `social_accounts` rows.** Nothing seeds them; the
+   pipeline writes rows for accounts that exist. So the moment Settings stopped
+   reading the fixtures, the card had nothing to iterate — no rows, no buttons.
+2. **`connect_social_account` needs a handle** (D107), and the card had nowhere
+   to type one. `onConnect(accountId)` assumed a row that already carried it,
+   which is what an OAuth callback would have provided.
+
+Listing only stored rows would have left a client with an empty card and no way
+to connect anything, which is not a smaller change — it is the feature not
+working.
+
+### What was added, and what was deliberately not
+
+- **A handle field on every not-connected row**, with the platform's label, a
+  hint ("The @handle as the platform shows it"), and Connect disabled until it
+  is non-empty. Built from the existing `Input` and `Label` primitives, so no
+  new component and no new token.
+- **One line under the card as a whole:** *"We record which account is yours.
+  Nothing posts until the platforms approve our app."* Vlad's wording, and
+  **under the card rather than per row** — his call, and the right one: the
+  claim is about the product, and four repetitions would read as fine print.
+- **The per-platform limit notes stay exactly where they were**, on their own
+  rows: TikTok and YouTube private until approved, LinkedIn coming soon. Those
+  are platform-specific; the new line is not.
+- **No row per stored account was collapsed.** `(workspace_id, platform,
+  handle)` is unique, so two handles on one platform are already legal —
+  deferred for agencies, not blocked (Vlad's point b) — and the card renders
+  every stored row, because collapsing per platform could hide an account
+  somebody connected. With one handle per platform it is the same four rows the
+  card has always shown.
+
+### It also corrected a claim the card used to make
+
+The old connect stub toasted *"Instagram is ready for scheduled posts"*. Under
+§6 that is false, and a toast is read as a promise. It now says the handle has
+been recorded and that nothing posts until the platform approves our app — the
+same correction the new line under the card makes, in the one place a person
+sees immediately after acting.
+
+### Before and after
+
+The **before** is in the repository: `docs/screens-built/app-settings--1440--light.png`
+and its three siblings, committed from the last screenshots run. The **after**
+is not yet regenerated — that needs a full `screenshots` project run, and it is
+an open item on the B2.3 pull request rather than something to describe as done.
+When it lands, only the `app-settings--*` images are to be committed; the rest
+of that run is the rendering churn D-prior sessions have twice reverted.
+
+### The rule this sets for later
+
+A design change is allowed when the design assumes a capability we do not have,
+it is named in a decision, and the owner approves it. It is not allowed as
+"while I was in there". Two of those three are mechanical; the third is why this
+entry exists.

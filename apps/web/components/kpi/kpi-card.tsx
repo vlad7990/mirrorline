@@ -153,6 +153,8 @@ export function KpiCard({
 
       {value.state === 'not-connected' ? <NotConnected source={value.missingSource} /> : null}
 
+      {value.state === 'unmeasured' ? <Unmeasured awaiting={value.awaiting} /> : null}
+
       {value.state === 'measured' ? (
         <>
           {animateValue ? (
@@ -216,6 +218,29 @@ export function KpiCard({
  * same class of untruth as an unlabelled AI scene — the interface stating
  * something it does not know.
  */
+/**
+ * Connected, and nothing has measured it yet (B2.3).
+ *
+ * **No button, unlike `NotConnected`.** There is nothing for the reader to do:
+ * the account is linked and the measurement is ours to produce. An action here
+ * would imply the emptiness is their fault.
+ *
+ * The figure's place is left genuinely empty rather than filled with a dash.
+ * 15 §8 is about not showing a zero, and a dash still occupies the spot where
+ * a measurement goes — it reads as "measured, and the answer is nothing".
+ */
+function Unmeasured({ awaiting }: { awaiting: string }) {
+  return (
+    <div className="flex flex-col items-start gap-2">
+      <span className="text-subtitle font-semibold text-text-muted">Not measured yet</span>
+      <p className="m-0 text-caption text-text-muted">
+        This account is connected. We start measuring with {awaiting}, and we will not show a zero
+        in the meantime.
+      </p>
+    </div>
+  )
+}
+
 function NotConnected({ source }: { source: string }) {
   return (
     <div className="flex flex-col items-start gap-2">

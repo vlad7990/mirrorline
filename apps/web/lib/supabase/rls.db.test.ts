@@ -1015,6 +1015,14 @@ describe('a signed-out caller cannot execute the functions that write (D98)', ()
       },
     },
     { name: 'set_workspace_timezone', args: { p_timezone: 'Europe/London' } },
+    {
+      name: 'connect_social_account',
+      args: { p_platform: 'instagram', p_handle: 'probe', p_note: null },
+    },
+    {
+      name: 'disconnect_social_account',
+      args: { p_platform: 'instagram', p_handle: 'probe' },
+    },
   ]
 
   test.each(WRITERS)('anonymous cannot execute $name', async ({ name, args }) => {
@@ -1039,6 +1047,161 @@ describe('a signed-out caller cannot execute the functions that write (D98)', ()
     // the helper does not cover rather than an answer of "none".
     expect(allowed.ok).toBe(true)
     expect(allowed.errorCode).toBeNull()
+  })
+})
+
+/**
+ * B2.3 — connection state, and nothing that could post (BACKEND_PHASE §2.3, §6).
+ *
+ * `social_accounts` is read-only to the browser: members get a SELECT policy
+ * and D96 revoked the other three verbs. So connecting is an RPC, and these
+ * tests are about the two things that could go wrong with one — reaching
+ * another workspace's row, and storing a credential.
+ *
+ * **Neither function takes a workspace id**, the same shape as
+ * `save_onboarding` and `set_workspace_timezone`: there is no parameter in
+ * which to name somebody else's workspace. `(workspace_id, platform, handle)`
+ * is already unique, so a platform and a handle identify the row inside the
+ * caller's own workspace and nowhere else.
+ */
+describe('a member records which accounts are theirs, and no token (B2.3)', () => {
+  const PLATFORM = 'instagram'
+  const handle = `@b23_${runId}`
+
+  test('connecting records the handle, the status and the date', async () => {
+    // Act
+    const connected = await restRpc<string>(asUser(user('a').token), 'connect_social_account', {
+      p_platform: PLATFORM,
+      p_handle: handle,
+      p_note: null,
+    })
+
+    // Assert
+    expect(connected.ok).toBe(true)
+
+    const rows = await restSelect<{
+      readonly platform: string
+      readonly handle: string
+      readonly status: string
+      readonly connected_on: string | null
+    }>(
+      asUser(user('a').token),
+      `social_accounts?workspace_id=eq.${workspace('a')}&handle=eq.${encodeURIComponent(handle)}&select=platform,handle,status,connected_on`,
+    )
+
+    expect(rows.rows).toHaveLength(1)
+    expect(rows.rows[0]?.status).toBe('connected')
+    expect(rows.rows[0]?.connected_on).not.toBeNull()
+  })
+
+  test('connecting the same handle again updates the row rather than adding one', async () => {
+    // Act — the second call carries the platform note, which is the field the
+    // honest TikTok limit lives in.
+    const again = await restRpc(asUser(user('a').token), 'connect_social_account', {
+      p_platform: PLATFORM,
+      p_handle: handle,
+      p_note: 'Posts stay private until our app is audited.',
+    })
+
+    // Assert — one row, not two. The unique index would refuse a duplicate
+    // insert with 23505; this asserts the function never tries one.
+    expect(again.ok).toBe(true)
+
+    const rows = await restSelect<{ readonly note: string | null }>(
+      asUser(user('a').token),
+      `social_accounts?workspace_id=eq.${workspace('a')}&handle=eq.${encodeURIComponent(handle)}&select=note`,
+    )
+    expect(rows.rows).toHaveLength(1)
+    expect(rows.rows[0]?.note).toBe('Posts stay private until our app is audited.')
+  })
+
+  test('disconnecting keeps the account and forgets the date', async () => {
+    // Act
+    const disconnected = await restRpc(asUser(user('a').token), 'disconnect_social_account', {
+      p_platform: PLATFORM,
+      p_handle: handle,
+    })
+
+    // Assert — the row survives, because the card still has to say which
+    // account this was. Only the state changes.
+    expect(disconnected.ok).toBe(true)
+
+    const rows = await restSelect<{
+      readonly status: string
+      readonly connected_on: string | null
+    }>(
+      asUser(user('a').token),
+      `social_accounts?workspace_id=eq.${workspace('a')}&handle=eq.${encodeURIComponent(handle)}&select=status,connected_on`,
+    )
+    expect(rows.rows).toHaveLength(1)
+    expect(rows.rows[0]?.status).toBe('not-connected')
+    expect(rows.rows[0]?.connected_on).toBeNull()
+  })
+
+  test('a platform we do not support is refused by the function, not by the constraint', async () => {
+    // Act
+    const refused = await restRpc(asUser(user('a').token), 'connect_social_account', {
+      p_platform: 'myspace',
+      p_handle: handle,
+      p_note: null,
+    })
+
+    // Assert — `45006` rather than `23514`: the check constraint would also
+    // refuse it, but a named error is what the form can show a person.
+    expect(refused.ok).toBe(false)
+    expect(refused.errorCode).toBe('45006')
+  })
+
+  test('a blank handle is refused, because it is not an account', async () => {
+    // Act
+    const refused = await restRpc(asUser(user('a').token), 'connect_social_account', {
+      p_platform: PLATFORM,
+      p_handle: '   ',
+      p_note: null,
+    })
+
+    // Assert
+    expect(refused.errorCode).toBe('45006')
+  })
+
+  test('disconnecting an account the caller does not have is refused', async () => {
+    // Act — D's instagram handle, named exactly, by a member of A.
+    const refused = await restRpc(asUser(user('a').token), 'disconnect_social_account', {
+      p_platform: 'instagram',
+      p_handle: `@rls_${runId}`,
+    })
+
+    // Assert — `45007`, and the row is somebody else's rather than missing.
+    expect(refused.ok).toBe(false)
+    expect(refused.errorCode).toBe('45007')
+  })
+
+  test('and that account is untouched, which is the assertion that matters', async () => {
+    // Act — read as the service role, so the check does not depend on a policy.
+    const theirs = await restSelect<{ readonly status: string }>(
+      serviceRole,
+      `social_accounts?id=eq.${workspaceDChildren.socialAccountId}&select=status`,
+    )
+
+    // Assert
+    expect(theirs.rows[0]?.status).toBe('not-connected')
+  })
+
+  test('there is no column a token could be stored in (non-negotiable 3, §6)', async () => {
+    // Act — every column of a real row, read as the service role so nothing is
+    // hidden by a policy.
+    const rows = await restSelect<Record<string, unknown>>(
+      serviceRole,
+      `social_accounts?id=eq.${workspaceDChildren.socialAccountId}&select=*`,
+    )
+
+    // Assert — posting is off until the platform approvals exist, and the
+    // schema is where that is enforced rather than remembered. A column named
+    // for a credential would be the first sign it had changed without a
+    // decision.
+    const columns = Object.keys(rows.rows[0] ?? {})
+    expect(columns.length).toBeGreaterThan(0)
+    expect(columns.filter((name) => /token|secret|credential|password/i.test(name))).toEqual([])
   })
 })
 

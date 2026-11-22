@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, test } from 'vitest'
 
+import { KPI_DEFINITIONS } from '../../components/kpi/sample-dashboard'
 import { FAQ_ENTRIES, faqAnswerText } from '../../components/marketing/faq-text'
 import { PROOF_CARDS } from '../../components/marketing/home-content'
 import { findBannedClaims } from '../copy/banned-phrases'
@@ -33,6 +34,7 @@ import {
   buildSiteCorpus,
   buildStudioFacts,
   corpusFloorTokens,
+  kpiFact,
   measureCorpus,
   renderCorpusSection,
 } from './grounding'
@@ -262,5 +264,72 @@ describe('the floor used when there is no key', () => {
     // better, the floor stops being a floor and the guarantee is gone.
     expect(corpusFloorTokens('a'.repeat(600))).toBe(100)
     expect(corpusFloorTokens('')).toBe(0)
+  })
+})
+
+/**
+ * An unmeasured KPI, which the co-pilot will meet when it grounds on a real
+ * workspace rather than on the sample week (B2.3).
+ *
+ * Nothing reaches this branch today — `buildStudioFacts` only ever feeds it
+ * `SAMPLE_KPIS` — so these are the tests that read the sentence before a client
+ * does.
+ */
+describe('a KPI nothing has measured becomes a fact that says so', () => {
+  const definition = KPI_DEFINITIONS[0]
+  // An empty definition list is a programming error, not a test condition, and
+  // `noUncheckedIndexedAccess` is right to insist the difference be stated.
+  if (definition === undefined) throw new Error('KPI_DEFINITIONS is empty')
+
+  test('it states the absence rather than a number', () => {
+    // Arrange
+    const kpi = {
+      definition,
+      value: { state: 'unmeasured', awaiting: 'the first post we publish to this account' },
+    } as const
+
+    // Act
+    const fact = kpiFact(kpi)
+
+    // Assert
+    expect(fact.value).toContain('No figure yet')
+    expect(fact.value).toContain('the first post we publish to this account')
+  })
+
+  test('it says "not zero" out loud, because that is the wrong reading to invite', () => {
+    // Arrange
+    const kpi = { definition, value: { state: 'unmeasured', awaiting: 'the first week' } } as const
+
+    // Act
+    const fact = kpiFact(kpi)
+
+    // Assert — 15 §8 forbids showing a zero for something nobody measured, and
+    // a bot that omits the distinction invites the reader to supply it.
+    expect(fact.value).toContain('not zero')
+  })
+
+  test('it carries no digit at all, which is the claim that matters', () => {
+    // Arrange
+    const kpi = { definition, value: { state: 'unmeasured', awaiting: 'the first week' } } as const
+
+    // Act
+    const fact = kpiFact(kpi)
+
+    // Assert — any digit here would be a figure the co-pilot could quote, and
+    // the only numbers in scope belong to the sample workspace.
+    expect(fact.value).not.toMatch(/\d/)
+  })
+
+  test('it still cites a source and a page, so the chip is clickable', () => {
+    // Arrange
+    const kpi = { definition, value: { state: 'unmeasured', awaiting: 'the first week' } } as const
+
+    // Act
+    const fact = kpiFact(kpi)
+
+    // Assert — 18 §2.2: an uncitable fact must not be able to exist, and
+    // "we have not measured this" is still a fact about a row we hold.
+    expect(fact.source).toBe(definition.source)
+    expect(fact.href).toBe('/app/results')
   })
 })

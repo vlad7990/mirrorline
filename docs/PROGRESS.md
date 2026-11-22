@@ -6,6 +6,146 @@
 
 ---
 
+## Handoff — 21 November 2026, night (PR #8 is finished: the round-trip is proved, the references are D109's, and the migration count was wrong)
+
+**Branch** `backend/b2-3-accounts`, **rebased onto `main` at `a33c892`**, head
+`d963b4a` · **PR #8 open.** The three things the B2.3 handoff listed as not
+done are done, and **the migration is already applied to production.** Nothing
+is left on this PR but the merge.
+
+### 0. The migration is applied — production is on 13
+
+**Migrate production run `44966789186`**, dispatched on
+`ref: backend/b2-3-accounts`, green. Exactly one migration, named at both the
+dry run and the apply:
+
+```
+Would push these migrations:
+ • 20261121160000_social_account_connection_state.sql
+
+Confirmed by --yes: Apply 1 migration on project mirrorline-production
+Applying migration 20261121160000_social_account_connection_state.sql...
+```
+
+Before it, the list showed twelve matched rows and `20261121160000` present
+locally with a blank remote. After it, thirteen rows with Local == Remote on
+every one. Nothing else was applied and nothing was skipped.
+
+**It ran on `e4bc80c`, the pre-rebase commit**, because the dispatch went out
+before the force-push landed. That is safe, and it was checked rather than
+assumed: `git diff e4bc80c d963b4a -- supabase/` is empty, and the `supabase/`
+tree hash is `47e7bb84…` on both sides — byte-identical, not merely
+same-named. The SQL production ran is the SQL this branch carries; the rebase
+moved only `DECISIONS.md` and `PROGRESS.md`.
+
+**The run is labelled `main` / `a33c892` in the runs list, and that is D106's
+lying field, not a mis-dispatch.** The checkout step is the truth and reads
+`ref: backend/b2-3-accounts`. Anyone auditing this later should read the step,
+not the label.
+
+**Until the merge, production is on 13 and `main` on 12.** That is the D104
+order working as intended rather than drift: `migration-drift.mjs` fails on
+versions the tree has and the remote lacks, while a remote-only version is
+"reported, not failed" (its own header says so). A *Production schema check*
+on `main` before the merge should report the extra and stay green.
+
+### 0b. The rebase, and a correction
+
+**Rebased mid-session, because PR #7 merged while this was being finished.**
+Only `DECISIONS.md` and `PROGRESS.md` conflicted, both append-only; no code
+did. D106 now sits in numeric order ahead of D107–D109.
+
+**`--remote` and `setup-cli@v3` were already proven before this dispatch.**
+*Corrected by Vlad — I had written that this would be the first run to
+exercise them, and that was wrong.* Run `44934926852` on `main` at `a33c892`
+had already gone green through setup-cli v3, Link, the list step, Dry run,
+Apply and the agreement check, with 12 in the tree and nothing to apply. So
+run #5 was the first to *apply* on that toolchain, not the first to use it,
+and the link and list steps were never the risk I billed them as.
+
+### 1. The Settings connect round-trip now has an e2e
+
+`e2e/settings-connect.spec.ts`, two tests: type a handle → Connect → **reload**
+→ still connected, and a seeded connected account → Disconnect → **reload** →
+not connected, with the row and its handle surviving and Connect live again.
+
+**The reload is the assertion, and the optimistic update is why.**
+`SettingsBoard` flips the row before the server answers and rolls back if it
+refuses, so a "Connected" chip read straight after the click proves nothing.
+
+**It was falsified before it was trusted**, and that is the part worth reading.
+It passed first time, so the D107 wiring bug was reintroduced on purpose —
+`p_handle: platform` — to watch it fail. It failed, but **not where I
+expected**: the RPC *succeeded*, because `"instagram"` is a perfectly valid
+non-blank handle, so the toast said "Instagram connected" over a row stored
+under the wrong handle. The new service-role read (`readSocialAccountStatus`)
+is what caught it; the reload would have caught it one assertion later. A
+connect test that only watched the toast would have been green on that bug.
+
+### 2. The `app-settings` references are D109's "after"
+
+Four images, and only those four from a `screenshots` run. The **before** had
+the demo workspace on a real client's Settings screen — `@mayatorres.coach`
+needing a reconnect, `@mayaleads` and a YouTube account connected, and the red
+"Instagram needs to reconnect" bar. The **after** is four not-connected rows
+with the handle field, the per-platform limits on their own rows, your line
+under the card, and no alert bar.
+
+They came out byte-identical on a second independent run, so they are not
+capturing anything nondeterministic.
+
+### 3. The full e2e suite, on a production build
+
+**423 passed, 862 skipped, 0 failed**, exit 0. The skips are almost all
+`onlyProject` gating — every spec is defined in three projects and runs in one
+— plus the one real one: `sign-up-ui.spec.ts` "creates an account and asks the
+person to check their email", still waiting on `E2E_SIGNUP_EMAIL`.
+
+Run **before** the rebase. Nothing in PR #7 touches the app — it is workflows
+and docs — so it is not re-run, and CI on the rebased branch covers lint,
+typecheck, unit and build.
+
+### 4. The PR said 14 migrations. It is 13
+
+`main` carries 12 and this PR adds one. Checked against git rather than the
+working tree: `git ls-tree origin/main` gives 12, `HEAD` gives 13, and
+`git diff --diff-filter=A origin/main...HEAD` names exactly the one file. The
+PR description is corrected and now says where the number came from.
+
+### 5. Still needs you
+
+1. **Merge PR #8.** The dispatch is done (§0), so this is the only step left on
+   it. *Production schema check* should then report **`all 13 migration(s)`**,
+   not 14 — and from the merge onwards `main` and production agree again.
+2. **`E2E_SIGNUP_EMAIL`** — still unset; one UI sign-up test skips.
+3. **PR #3** (`docs/plan-v2`), still blocked on **D-b, where the renderer runs**.
+
+**Next for me, once PR #8 is merged:** the Accounts empty state, as a small
+follow-up PR — Vlad's scope, agreed rather than assumed. One line, *"No
+accounts connected yet"*, plus a link to Settings → Connected accounts, in the
+existing styles. Logged as a design change with before-and-after screenshots.
+Deliberately not folded into PR #8.
+
+### 6. Found and not fixed: the Accounts board is blank on a new workspace
+
+`app-accounts--*` also changed in the screenshots run, and reverting it was
+right for a reason that is not churn: **against a workspace with no accounts
+the board renders a header and nothing at all.** `AccountsBoard` has a
+read-failure state and no zero-length one, so the regenerated reference was a
+blank screen — a worse reference than a stale one.
+
+Every real workspace starts in exactly that state, so it wants an empty state
+with its words chosen rather than defaulted. That is a design decision on a
+locked design, so it is yours, and I did not widen this PR with it.
+
+**Scoped since, by Vlad:** a follow-up PR after #8 merges, not a change to it.
+*"No accounts connected yet"* and a link to Settings → Connected accounts, in
+the existing styles, logged as a design change with before-and-after
+screenshots. The "before" is the blank board this run produced, which is why
+the stale `app-accounts--*` references stay as they are until then.
+
+---
+
 ## Handoff — 21 November 2026, evening (B2 is in production, and every number below was read out of a log)
 
 **Branch** `chore/ci-remote-flag-and-node24` → **PR open.** `main` is at
@@ -90,6 +230,94 @@ exercised by CI on the PR itself, which is the point of making them a PR.
 3. **PR #3** (`docs/plan-v2`), still blocked on **D-b, where the renderer runs**.
 
 **Next for me:** B2.3.
+
+---
+
+## Handoff — 21 November 2026, late (B2.3 is built: accounts are real, no figure is invented, and the PR waits for a dispatch)
+
+**Branch** `backend/b2-3-accounts`, cut from `main` at `d16eaa6` · **PR open.**
+**It carries one migration**, so the D104 order applies: dispatch *Migrate
+production* on this branch, confirm green, then merge.
+
+```
+supabase/migrations/20261121160000_social_account_connection_state.sql
+```
+
+### 1. What B2.3 is
+
+`social_accounts` already existed with the right columns and **no token
+column** — B2.3 is the write path, the read path and the honesty rules.
+
+| Slice | Commit | What |
+|---|---|---|
+| a | `3e2fe71` | `connect_social_account` / `disconnect_social_account`, both `security definer` (D107) |
+| b | `edf3a7c` | the Accounts board reads real rows; KPIs are `unmeasured`, never sample figures |
+| c | `84f032a` | Settings connects and disconnects for real; the card gains a handle field (D109) |
+
+### 2. The three decisions, and one correction Vlad made
+
+**D107** — a definer function rather than member INSERT/UPDATE policies, which
+would have undone D96 on a table whose other writer is the pipeline. Neither
+function takes a workspace id. Disconnect takes platform and handle rather than
+the row id the UI holds, because an id would need a membership check to be
+*correct* where this needs one to *find the row at all*.
+
+**D108** — `45007` answers both "no such account" and "not yours", so an error
+code cannot report whether a handle exists in somebody else's workspace.
+
+**D109** — the approved design change: a handle field on not-connected rows,
+because the card was drawn for an OAuth flow §6 forbids, and a real workspace
+starts with no rows at all. Plus Vlad's line under the card: *"We record which
+account is yours. Nothing posts until the platforms approve our app."*
+
+**Vlad's correction, and it changed the work:** I had planned to leave the
+per-account KPIs on sample data. He refused it — a sample number beside the
+client's own handle reads as their result whatever label sits next to it. So
+`KpiValue` has a fourth state, `unmeasured`, carrying **no `value` field at
+all**, rendered as "Not measured yet" with no figure and no button.
+
+### 3. Two silent passes caught, neither by a gate
+
+- **The compiler caught the co-pilot.** `grounding.ts` formatted `value.value`
+  without narrowing, which would have turned an unmeasured KPI into a figure.
+  `kpiFact` is now exported and tested, because that branch is required by the
+  type system and **unreachable in production today** — `buildStudioFacts` only
+  feeds it `SAMPLE_KPIS`.
+- **Typecheck passed on a wiring bug.** Changing the card's callbacks from
+  `(accountId)` to `(platform, handle)` left the board's old one-parameter
+  handlers assignable, so it would silently have received a platform where it
+  expected an id. No gate could catch it; the rewrite was the fix.
+
+A third was in my own test: the first version of the no-digit e2e assertion
+failed on the account's **handle and connection date**, and would also have
+failed on the KPI name "3-second hold". It now asserts on `.machine`, this
+repo's marker for a rendered figure, plus the three sample hold values by name.
+
+### 4. Gates
+
+lint · typecheck · **1,036 unit** · build · migration-safety (**13 additive**) ·
+**RLS/DB 104** · `accounts-persist.spec.ts` **5 passed**.
+
+### 5. Still needs you
+
+1. **Dispatch *Migrate production* with `ref: backend/b2-3-accounts`**, confirm
+   the dry run lists exactly the one migration above, then merge the PR.
+2. **`E2E_SIGNUP_EMAIL`** — still unset; one UI sign-up test skips.
+3. **PR #7** (`--remote`, the actions off Node 20) — still open, and after
+   merging it, one manual *Production schema check* dispatch is the only thing
+   that exercises `setup-cli@v3` and `--remote`.
+4. **PR #3** (`docs/plan-v2`), still blocked on **D-b, where the renderer runs**.
+
+### 6. Not done, and not pretended to be
+
+- **The Settings connect round-trip has no e2e.** `connect_social_account` is
+  proved by RLS/DB tests and the card is wired, but nothing drives a browser
+  through type-handle → Connect → reload. It is the obvious next test.
+- **The `app-settings` screenshots are not regenerated**, so D109's "after"
+  images do not exist yet. Only `app-settings--*` should be committed when they
+  are; the rest of a screenshots run is churn.
+- **The full e2e suite has not been run on this branch** — only the new spec.
+  CI on the PR covers lint, typecheck, unit and build, not Playwright.
 
 ---
 

@@ -63,7 +63,11 @@
  * by anything else, with no key and no network.
  */
 
-import { formatKpiValue } from '@/components/kpi/kpi-types'
+import {
+  type KpiDefinition,
+  type KpiValue,
+  formatKpiValue,
+} from '@/components/kpi/kpi-types'
 import {
   KPI_DEFINITIONS,
   SAMPLE_HEADLINE_KPIS,
@@ -528,7 +532,17 @@ export interface StudioFact {
 
 const RESULTS_HREF = '/app/results'
 
-function kpiFact(kpi: (typeof SAMPLE_KPIS)[number]): StudioFact {
+/**
+ * Exported for its own test, and the reason is worth writing down.
+ *
+ * The `unmeasured` branch below is **required by the type system and
+ * unreachable in production today**: this function is only ever fed
+ * `SAMPLE_KPIS`, which never carries that state, so nothing exercises it until
+ * the co-pilot grounds on a workspace's real KPIs. Leaving it untested would
+ * mean the first real use is also the first time anybody reads the sentence it
+ * produces.
+ */
+export function kpiFact(kpi: { readonly definition: KpiDefinition; readonly value: KpiValue }): StudioFact {
   const { definition, value } = kpi
 
   if (value.state === 'not-connected') {
@@ -536,6 +550,20 @@ function kpiFact(kpi: (typeof SAMPLE_KPIS)[number]): StudioFact {
       id: definition.key,
       label: definition.name,
       value: `Not connected — ${value.missingSource} has not been linked, so there is no figure. It is not zero; nobody measured it.`,
+      source: definition.source,
+      href: RESULTS_HREF,
+    }
+  }
+
+  // Connected, nothing measured yet (B2.3). The co-pilot has to be able to say
+  // this: the alternative is it reaching for the only number in scope, which
+  // would be somebody else's. 18 §2.2 — if a claim cannot be tied to a row we
+  // hold, say so.
+  if (value.state === 'unmeasured') {
+    return {
+      id: definition.key,
+      label: definition.name,
+      value: `No figure yet — this account is connected, and we are waiting on ${value.awaiting}. It is not zero; nothing has measured it.`,
       source: definition.source,
       href: RESULTS_HREF,
     }

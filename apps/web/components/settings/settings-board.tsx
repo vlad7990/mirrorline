@@ -1,8 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { accounts as initialAccounts, type SocialAccount } from '@mirrorline/mock'
+import { useEffect, useState, useTransition } from 'react'
+import type { AccountStatus, SocialAccount } from '@mirrorline/mock'
 import { AlertBar, Button, Toast } from '@mirrorline/ui'
+
+import {
+  connectSocialAccountAction,
+  disconnectSocialAccountAction,
+} from '@/app/app/(studio)/settings/actions'
 
 import { AppearanceCard } from './appearance-card'
 import { ConnectedAccountsCard } from './connected-accounts-card'
@@ -32,6 +37,13 @@ interface Notice {
 /** How long the confirmation stays up before it clears itself. */
 const TOAST_MS = 5000
 
+/** The word in the chip, for a status this board has just set itself. */
+const STATUS_LABELS: Readonly<Record<AccountStatus, string>> = {
+  connected: 'Connected',
+  'reconnect-needed': 'Reconnect needed',
+  'not-connected': 'Not connected',
+}
+
 export interface SettingsBoardProps {
   /**
    * The workspace this viewer owns, read on the server by the page. `null`
@@ -39,11 +51,22 @@ export interface SettingsBoardProps {
    * control that would be refused.
    */
   readonly workspace: { readonly id: string; readonly name: string } | null
+  /**
+   * This workspace's accounts, read on the server under the viewer's own
+   * session (B2.3). One row per supported platform, plus any extra handle
+   * stored on one — `toSettingsAccounts` decides that, not this board.
+   *
+   * **No longer the fixtures.** A real client's Settings screen showing the
+   * demo workspace's three connected accounts would be a claim about their
+   * account, which is what non-negotiable 7 forbids.
+   */
+  readonly accounts: readonly SocialAccount[]
 }
 
-export function SettingsBoard({ workspace }: SettingsBoardProps) {
-  const [accountList, setAccountList] = useState<readonly SocialAccount[]>(initialAccounts)
+export function SettingsBoard({ workspace, accounts }: SettingsBoardProps) {
+  const [accountList, setAccountList] = useState<readonly SocialAccount[]>(accounts)
   const [notice, setNotice] = useState<Notice | null>(null)
+  const [, startTransition] = useTransition()
 
   useEffect(() => {
     if (!notice) return undefined
@@ -53,60 +76,90 @@ export function SettingsBoard({ workspace }: SettingsBoardProps) {
 
   const reconnectAccount = accountList.find((account) => account.status === 'reconnect-needed')
 
-  function labelFor(accountId: string): string {
-    return accountList.find((account) => account.id === accountId)?.platformLabel ?? 'The account'
+  function labelFor(platform: string): string {
+    return (
+      accountList.find((account) => account.platform === platform)?.platformLabel ?? 'The account'
+    )
   }
 
-  function handleReconnect(accountId: string) {
+  /**
+   * One shape for all three controls, because they are one write (B2.3, D107).
+   *
+   * Optimistic, then corrected: the row flips immediately and the action's
+   * answer decides whether it stays. A failure puts the previous list back and
+   * says what happened — the alternative is a row claiming a connection the
+   * database refused, which is the one outcome worse than a slow button.
+   *
+   * Matched on `(platform, handle)` rather than on the row id, because a
+   * not-connected placeholder has no row and therefore no id the database would
+   * recognise (D107). An empty stored handle matches the row the typed handle
+   * is about to fill.
+   */
+  function runConnection(
+    platform: string,
+    handle: string,
+    next: AccountStatus,
+    describe: (label: string) => Notice,
+  ) {
+    const label = labelFor(platform)
+    const previousList = accountList
+
     setAccountList((previous) =>
       previous.map((account) =>
-        account.id === accountId
+        account.platform === platform &&
+        ((account.handle ?? '') === handle || (account.handle ?? '') === '')
           ? {
               ...account,
-              status: 'connected' as const,
-              statusLabel: 'Connected',
-              // "The platform signed us out" stops being true; a standing
-              // limit such as TikTok's private posting still is.
+              handle,
+              status: next,
+              statusLabel: STATUS_LABELS[next],
+              connectedOn: next === 'not-connected' ? null : account.connectedOn,
+              // "The platform signed us out" stops being true; a standing limit
+              // such as TikTok's private posting still is.
               note: account.isPrivatePosting ? account.note : null,
             }
           : account,
       ),
     )
-    const label = labelFor(accountId)
-    setNotice({
+
+    startTransition(async () => {
+      const result =
+        next === 'not-connected'
+          ? await disconnectSocialAccountAction(platform, handle)
+          : await connectSocialAccountAction(platform, handle)
+
+      if (result.status === 'error') {
+        setAccountList(previousList)
+        setNotice({ title: `${label} not changed`, description: result.message })
+        return
+      }
+
+      setNotice(describe(label))
+    })
+  }
+
+  function handleReconnect(platform: string, handle: string) {
+    runConnection(platform, handle, 'connected', (label) => ({
       title: `${label} reconnected`,
       description: `${label} posts are no longer paused.`,
-    })
+    }))
   }
 
-  function handleDisconnect(accountId: string) {
-    setAccountList((previous) =>
-      previous.map((account) =>
-        account.id === accountId
-          ? { ...account, status: 'not-connected' as const, statusLabel: 'Not connected' }
-          : account,
-      ),
-    )
-    const label = labelFor(accountId)
-    setNotice({
+  function handleDisconnect(platform: string, handle: string) {
+    runConnection(platform, handle, 'not-connected', (label) => ({
       title: `${label} disconnected`,
       description: `Nothing posts to ${label} until you connect it again.`,
-    })
+    }))
   }
 
-  function handleConnect(accountId: string) {
-    setAccountList((previous) =>
-      previous.map((account) =>
-        account.id === accountId
-          ? { ...account, status: 'connected' as const, statusLabel: 'Connected' }
-          : account,
-      ),
-    )
-    const label = labelFor(accountId)
-    setNotice({
+  function handleConnect(platform: string, handle: string) {
+    runConnection(platform, handle, 'connected', (label) => ({
       title: `${label} connected`,
-      description: `${label} is ready for scheduled posts.`,
-    })
+      // Not "ready for scheduled posts", which the old stub said: §6 keeps
+      // posting off until the platforms approve the app, and a toast is read
+      // as a promise.
+      description: `We have recorded ${handle} as yours. Nothing posts until ${label} approves our app.`,
+    }))
   }
 
   function handleNotice(title: string, description: string) {
@@ -120,7 +173,12 @@ export function SettingsBoard({ workspace }: SettingsBoardProps) {
           title={`${reconnectAccount.platformLabel} needs to reconnect.`}
           description={`${reconnectAccount.platformLabel} asked you to sign in again. ${reconnectAccount.platformLabel} posts are paused until then.`}
           action={
-            <Button variant="primary" onClick={() => handleReconnect(reconnectAccount.id)}>
+            <Button
+              variant="primary"
+              onClick={() =>
+                handleReconnect(reconnectAccount.platform, reconnectAccount.handle ?? '')
+              }
+            >
               Reconnect {reconnectAccount.platformLabel}
             </Button>
           }
