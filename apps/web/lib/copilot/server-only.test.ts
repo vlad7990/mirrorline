@@ -101,7 +101,14 @@ function valueSpecifiersIn(source: string): readonly string[] {
   const clean = stripComments(source)
   const found: string[] = []
 
-  for (const match of clean.matchAll(/\b(?:import|export)\b([\s\S]*?)from\s*['"]([^'"]+)['"]/g)) {
+  // `[^'"]` on the clause, not `[\s\S]`, and that is load-bearing. A
+  // side-effect import — `import 'server-only'` — has no `from`, so a clause
+  // that could cross quotes would run on to the *next* statement's `from` and
+  // attribute that specifier to the wrong statement. `lib/niche-scan/scan.ts`
+  // caught this: its `import 'server-only'` swallowed the following
+  // `import type Anthropic from '@anthropic-ai/sdk'` and reported an erased
+  // type import as a runtime one.
+  for (const match of clean.matchAll(/\b(?:import|export)\b([^'"]*?)from\s*['"]([^'"]+)['"]/g)) {
     const clause = match[1] ?? ''
     const specifier = match[2]
     if (!specifier) continue
