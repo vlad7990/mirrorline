@@ -7962,3 +7962,185 @@ background noise. One `rm -rf .next` would have cost a minute and saved a
 false report.
 
 No migration, no schema change, no new dependency.
+
+## 2026-11-22 · D112 · B8 is a content engine, and the things that would make it a content farm are named now
+
+**Vlad's decision**, scoped before any of it is built. Planned in
+`docs/plan/BACKEND_PHASE.md` §6.5; no code in this PR.
+
+> **Numbering note.** This branch is behind `main`, which carries D92–D110,
+> and D111 lands with the CI pull request. D112 is chosen so the entry sorts
+> correctly once this is rebased — expect a mechanical conflict at the end of
+> this file and resolve it by order, not by renumbering.
+
+### Why it needed a decision rather than a ticket
+
+B8 is "more output per client", and the previous project died doing exactly
+that: it reposted other creators' videos across accounts nobody owned, evaded
+detection, and ran fake accounts. The difference between this and that is not a
+difference of degree — but it *is* the kind of line that erodes under pressure
+to ship more, one reasonable-sounding exception at a time.
+
+So the boundary is written before the factory exists. The point is not that we
+might forget it; the point is that in six months somebody optimising throughput
+should find the answer already written down, and written as a refusal rather
+than a preference.
+
+### What was decided
+
+**We recreate what is working, not what someone made.** The Niche Scan
+identifies a *pattern* — hook, format, structure, pacing, topic, trend — and
+Format Remix writes an original script and shoots an original video in the
+client's own voice against it. A pattern is a shape; a shape is not a work.
+That is non-negotiable 2 scaled from one video to a pipeline.
+
+**Four things are out of scope as non-negotiables**, not as "not yet":
+multiple accounts per client, faceless mass channels, detection evasion,
+account rotation. Each one works, commercially, which is precisely why each is
+named. A list of things we merely have not built is an invitation; a list of
+things we will not build is a boundary.
+
+**Three nevers**: no reuse of another creator's footage, audio, script or
+captions; no shot-for-shot remakes; no reproduction of a real person's face or
+voice. The middle one is the load-bearing addition — "matching the format" and
+"matching the work frame by frame" can be described in almost the same words,
+and only one of them is the thing we were told not to do.
+
+**AI scene sources sit behind the pipeline adapter** (D99), swappable and
+labelled in the UI and on the platform, because non-negotiable 4 has no volume
+exemption. **Each generator's commercial-use terms are verified before it is
+added**, the way D11 and D41 treat a licence — a model whose terms forbid
+commercial output, or claim rights in it, is inadmissible however good it is.
+
+**Every output passes the Originality Gate** (spec 12), with no volume-based
+fast path. A gate skipped when the queue is long is not a gate.
+
+### Sequence, and why it is not sooner
+
+**After B5 and the first paid Pilots.** B5 is the pipeline this runs on, and
+the Pilots are what tell us which formats are worth multiplying. Building it
+earlier would be scaling a guess, and scaling a guess is how the output starts
+having to be justified by its volume.
+
+### How it is proved
+
+The "done when" in §6.5 is deliberately mechanical: a scene source without a
+verified commercial-use record must be unable to produce a cut — **the adapter
+refuses** — and a cut aimed at an account the workspace does not own is
+refused **by the database**, not by the scheduler. The same reasoning as D107:
+a rule enforced where it cannot be forgotten beats a rule enforced where
+somebody has to remember it.
+
+## 2026-11-22 · D113 · The value sprint comes before the plumbing, and the Niche Scan's sources widen
+
+**Vlad's decision**, taken after B2's work was built. Planned in
+`docs/plan/BACKEND_PHASE.md` §2.5; no code in this PR.
+
+### What was decided
+
+A one-week sprint, V1–V7, to a **hand-run Pilot on day 7**, inserted **before**
+B3 (checkout), B6 (metrics ingestion) and B7 (posting). The seven items are the
+Niche Scan agent, the script and hook agent, the Originality Gate, the inline
+"Generate with AI" assists, the video agent, an internal ops console, and the
+co-pilot triggers.
+
+**The principle: the AI that creates is the product.** The plan as written
+reached a paying customer through three pieces of plumbing before that customer
+saw anything the product had made. A Pilot run by hand needs none of them — we
+invoice, we read the platform dashboards, and the client posts the files we
+hand over. What it needs is a niche report, scripts in the client's voice, cuts
+from the client's own footage, and a gate proving none of it is anybody else's.
+
+**B3, B6 and B7 are deferred, not cut.** They keep their section numbers and
+their content, for the reason §0 of the plan gives: those numbers are printed
+to users by `lib/supabase/env.ts` and `/api/health/supabase`, so renumbering
+would turn a live error message into a wrong one. The sprint is **§2.5**.
+
+### Why this is a re-sequencing and not a loosening
+
+It removes a **payment** step from the critical path, not a **compliance** one.
+V3 — the Originality Gate — is *inside* the sprint precisely because
+non-negotiable 6 cannot be the thing that waits for a second client. Every V
+item inherits the co-pilot's contract from `18 §4` and `18 §6`: server-side
+only, metered per workspace with a hard cap, logged, and working with no key.
+
+### The source widening, which is the part worth arguing about
+
+`04` and `12 §1` give the Niche Scan a **closed** allow-list — TikTok Creative
+Center, Meta Ad Library, YouTube Data API, the client's own insights, and
+manual review of up to 30 public examples — in the words "Allowed, and nothing
+else". V1's instruction is "Anthropic API with web search", which is **not on
+that list**. I have built to the instruction and am recording the gap rather
+than quietly absorbing it, because this project exists as the legal turnaround
+of one that absorbed exactly this kind of gap.
+
+**What does not move**, because it is where the legal weight actually sits:
+
+- Links and descriptions only. **No media is downloaded or stored** — non-
+  negotiable 1, untouched.
+- A `source_note` on every stored row, so an audit of our sources is answerable
+  from the data rather than from memory (`12 §1`).
+- No scraping of private data, no logging into other accounts, no bulk
+  collection tools. `tt_collect.py` and `ig_account_dump.py` stay banned.
+
+**Reversible in one place.** The sources sit behind a single adapter, so
+narrowing V1 back to the four APIs plus manual review is a source swap, not a
+rebuild. Flagged for Vlad in §2.5 rather than decided silently.
+
+### How it is proved
+
+§8's table gains eight rows — one shared row for the contract every V item
+obeys, and one per item. Each names a check that fails without the work, which
+is D91's lesson kept structural.
+
+## 2026-11-22 · D114 · I merge my own green PRs now, with five exceptions, and the exceptions are the point
+
+**Vlad's decision**, 22 November 2026, taken to let the value sprint run
+unattended. It **supersedes the blanket "you never merge to `main`" in D85**
+and in non-negotiable 11, which are amended rather than deleted.
+
+### What changed
+
+When `verify`, `pipeline` and `e2e` are green I enable auto-merge myself —
+`gh pr merge --auto --merge` — and the `main` ruleset requires those three
+checks, so the rule is enforced by the repository and not by my judgement.
+
+**Five exceptions stay Vlad's, and nothing auto-merges if it touches them:**
+
+1. **Anything with a migration** — Vlad dispatches Migrate production first.
+2. **Payments**
+3. **Auth**
+4. **Account deletion**
+5. **Secrets**
+
+### Why the exceptions are drawn there
+
+Each is a thing where a wrong merge is **not cheaply reversible**. A migration
+changes production data; payments move money; auth and account deletion are the
+two places where a mistake destroys a person's access or their records; secrets
+cannot be un-leaked. Everything outside that list is recoverable with a revert,
+which is the honest test for whether a human needs to be in the loop.
+
+**Merging is still the only thing that deploys to production** (D85), and that
+has not changed — what changed is who may press it, for the recoverable subset.
+I state this plainly because the previous rule existed for a reason and the
+reason has not evaporated: the risk is now carried by the ruleset and by the
+exception list, rather than by a blanket ban.
+
+### What else it carries
+
+- **`--force-with-lease` is allowed and plain `--force` is not**, now enforced
+  rather than remembered: `.claude/settings.json` permits
+  `Bash(git push --force-with-lease:*)` and nothing permits `--force`. D92's
+  reasoning is unchanged; this makes it mechanical.
+- **Never a push to `main`.** Changes still reach `main` only through a PR.
+- **A demo note every day** in `docs/PROGRESS.md` — what a user can now do,
+  with screenshots — then a stop for Vlad's ten-minute review.
+- **A handoff at every milestone**, because context is managed by writing it
+  down rather than by hoping auto-compact keeps the right half.
+
+### The bootstrap, stated so it is not clever
+
+**This PR is not auto-merged.** The PR that grants me merge authority is merged
+by Vlad, because a change that widens my own permissions is the one case where
+using the new permission to land it would be indefensible.
