@@ -1,12 +1,20 @@
 /**
  * The one module that talks to the model (spec 18 §4, §5, §6, §7).
  *
- * **This is the only file in the repo allowed to import `@anthropic-ai/sdk`**,
- * and `server-only.test.ts` holds that by walking the import graph: no module
- * marked `'use client'` may reach this one, directly or through anything else.
- * The reason is the key. It is read from `process.env` here and nowhere else,
- * and the whole surface reaches the model through route handlers under
- * `app/api/copilot/*` so that no bundle a browser downloads can contain it.
+ * **No module marked `'use client'` may reach this one**, directly or through
+ * anything else, and `server-only.test.ts` holds that by walking the import
+ * graph. The reason is the key, and the whole surface reaches the model
+ * through route handlers under `app/api/copilot/*` so that no bundle a browser
+ * downloads can contain it.
+ *
+ * **Corrected in V1b.** This header used to say this was the only file allowed
+ * to import `@anthropic-ai/sdk` and the only one to read the key from
+ * `process.env`. Both moved to `lib/agents/anthropic-client.ts` when the Niche
+ * Scan became a second caller: one module owns the key and the SDK's runtime
+ * values, and everything else — this file included — takes the types through
+ * an erased `import type` and the client through that module. The sentence is
+ * rewritten rather than left standing, because a comment that misstates where
+ * a secret is read is worse than no comment: the next reader inherits it.
  *
  * ## Two models, and the defaults are the trap
  *
@@ -49,7 +57,22 @@
  */
 
 import type { ScheduledPost } from '@mirrorline/mock'
-import Anthropic from '@anthropic-ai/sdk'
+// Types only, and that is the point: a type-only import is erased by the
+// compiler, so it cannot put a byte of the SDK in a bundle. Every *runtime*
+// value — the client and the error classes — comes from `lib/agents`, which is
+// the one module that imports the SDK and reads the key. See its header.
+import type Anthropic from '@anthropic-ai/sdk'
+
+import {
+  APIConnectionError,
+  APIError,
+  AuthenticationError,
+  NotFoundError,
+  RateLimitError,
+  anthropicClient,
+  hasAnthropicKey,
+  resetAnthropicClient,
+} from '../agents/anthropic-client'
 
 import {
   SAMPLE_NOTICE,
@@ -123,8 +146,11 @@ export const SAMPLE_FLAG = 'MIRRORLINE_COPILOT_SAMPLE'
 export function copilotMode(env: EnvLike = process.env): CopilotMode {
   // An explicit "do not spend" outranks a key being present.
   if (env[SAMPLE_FLAG]?.trim() === '1') return 'sample'
-  const key = env.ANTHROPIC_API_KEY?.trim()
-  return key ? 'live' : 'sample'
+  // Asked rather than read. `lib/agents/anthropic-client.ts` is the only
+  // reader of the key in the app, and `server-only.test.ts` asserts that by
+  // name — so the mode is derived from its answer and handed on as a
+  // `CopilotMode`, which is all any other module ever needs.
+  return hasAnthropicKey(env) ? 'live' : 'sample'
 }
 
 /**
@@ -173,24 +199,25 @@ Never promise an outcome, never quote a result we have not measured, and label a
 
 Be brief and concrete. The client is looking at the screen you are describing.`
 
-let client: Anthropic | null = null
+/**
+ * The client, from the one module allowed to build one.
+ *
+ * Kept as a local alias rather than replacing 3 call sites with a longer name:
+ * `anthropic(env).messages.stream(...)` reads the same as it always did, and
+ * the indirection is where the key lives now.
+ */
+const anthropic = anthropicClient
 
-/** The client, built once, and only when there is a key to build it with. */
-function anthropic(env: EnvLike = process.env): Anthropic {
-  const apiKey = env.ANTHROPIC_API_KEY?.trim()
-  if (!apiKey) {
-    // Unreachable through the public functions, which check the mode first.
-    // Thrown rather than silently returning a client that would 401, so a
-    // mistake here surfaces as this sentence and not as an auth error.
-    throw new Error('copilot: asked for a live client with no ANTHROPIC_API_KEY')
-  }
-  client ??= new Anthropic({ apiKey })
-  return client
-}
-
-/** Only for tests: the memoised client would otherwise outlive a changed env. */
+/**
+ * Only for tests: the memoised client would otherwise outlive a changed env.
+ *
+ * Still exported under this name, and still from here, because
+ * `adapter.test.ts` and `stops-requests.test.ts` call it — the client it
+ * resets simply lives in `lib/agents` now. Re-pointing five call sites in two
+ * test files would have been churn with no reader-facing gain.
+ */
 export function resetClient(): void {
-  client = null
+  resetAnthropicClient()
 }
 
 let corpusVerdict: Promise<CorpusMeasurement> | null = null
@@ -413,25 +440,25 @@ export function studioCitationsFromText(text: string): readonly Citation[] {
  * other order would swallow it.
  */
 function failure(error: unknown): CopilotEvent {
-  if (error instanceof Anthropic.RateLimitError) {
+  if (error instanceof RateLimitError) {
     return {
       type: 'error',
       kind: 'rate-limited',
       message: 'It is busy right now. Try again in a moment.',
     }
   }
-  if (error instanceof Anthropic.AuthenticationError) {
+  if (error instanceof AuthenticationError) {
     console.error('[copilot] the API key was rejected')
     return { type: 'error', kind: 'failed', message: 'The assistant is not configured correctly.' }
   }
-  if (error instanceof Anthropic.NotFoundError) {
+  if (error instanceof NotFoundError) {
     console.error('[copilot] no such model — check the ids in 18 §0', error)
     return { type: 'error', kind: 'failed', message: 'The assistant is not configured correctly.' }
   }
-  if (error instanceof Anthropic.APIConnectionError) {
+  if (error instanceof APIConnectionError) {
     return { type: 'error', kind: 'unreachable', message: 'I could not reach the model just now.' }
   }
-  if (error instanceof Anthropic.APIError) {
+  if (error instanceof APIError) {
     console.error('[copilot] API error', error.status, error.message)
     return { type: 'error', kind: 'failed', message: 'Something went wrong answering that.' }
   }
