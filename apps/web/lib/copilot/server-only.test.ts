@@ -45,7 +45,19 @@ const SKIPPED = new Set(['node_modules', '.next', '.turbo', 'dist', 'build', 'co
 const EXTENSIONS = ['.ts', '.tsx']
 
 const ADAPTER = path.join(WEB_ROOT, 'lib/copilot/adapter.ts')
+/**
+ * The one module that imports the SDK at runtime and reads the key (V1b).
+ *
+ * Until V1 the adapter was both. The Niche Scan made it two callers, and the
+ * choice was to relax "exactly one" into a list or to give the invariant
+ * somewhere to live. It lives here.
+ */
+const CHOKEPOINT = path.join(WEB_ROOT, 'lib/agents/anthropic-client.ts')
 const SDK_SPECIFIER = '@anthropic-ai/sdk'
+
+function isSdk(specifier: string): boolean {
+  return specifier === SDK_SPECIFIER || specifier.startsWith(`${SDK_SPECIFIER}/`)
+}
 
 function walk(directory: string): readonly string[] {
   return readdirSync(directory).flatMap((entry) => {
@@ -65,6 +77,43 @@ function specifiersIn(source: string): readonly string[] {
     const specifier = match[1]
     if (specifier) found.push(specifier)
   }
+  return found
+}
+
+/**
+ * Only the specifiers that survive compilation.
+ *
+ * **`import type X from 'y'` emits nothing.** TypeScript erases it, so it
+ * cannot put a byte of `y` into a bundle — which makes it the safe way for the
+ * adapter to keep using the SDK's shapes (`TextBlockParam`, `Usage`) while the
+ * chokepoint owns every runtime value. Counting it as an import would force a
+ * choice between a wrong test and a worse design.
+ *
+ * `specifiersIn` above cannot tell the two apart, because both contain
+ * `from '...'`. This looks at what sits between the `import` keyword and the
+ * `from`: a leading `type` means the whole statement is erased. An inline
+ * `import { type A, B }` is **not** erased — `B` is real — and correctly does
+ * not match, because `type` is not the first token.
+ *
+ * Comments are stripped first, so a sentence discussing an import is not one.
+ */
+function valueSpecifiersIn(source: string): readonly string[] {
+  const clean = stripComments(source)
+  const found: string[] = []
+
+  for (const match of clean.matchAll(/\b(?:import|export)\b([\s\S]*?)from\s*['"]([^'"]+)['"]/g)) {
+    const clause = match[1] ?? ''
+    const specifier = match[2]
+    if (!specifier) continue
+    if (/^\s*type\b/.test(clause)) continue
+    found.push(specifier)
+  }
+
+  // A dynamic `import('x')` is always a runtime import, whatever it is used for.
+  for (const match of clean.matchAll(/\bimport\s*\(\s*['"]([^'"]+)['"]/g)) {
+    if (match[1]) found.push(match[1])
+  }
+
   return found
 }
 
@@ -96,11 +145,14 @@ interface Module {
   readonly isClient: boolean
   readonly imports: readonly string[]
   readonly specifiers: readonly string[]
+  /** The subset that is not erased at compile time. */
+  readonly valueSpecifiers: readonly string[]
 }
 
 const MODULES: readonly Module[] = ALL_FILES.map((file) => {
   const source = readFileSync(file, 'utf8')
   const specifiers = specifiersIn(source)
+  const valueSpecifiers = valueSpecifiersIn(source)
 
   return {
     file,
@@ -111,6 +163,7 @@ const MODULES: readonly Module[] = ALL_FILES.map((file) => {
       .map((specifier) => resolve(file, specifier))
       .filter((resolved): resolved is string => resolved !== null),
     specifiers,
+    valueSpecifiers,
   }
 })
 
@@ -175,16 +228,44 @@ describe('the adapter is server-side only', () => {
     expect(offenders, `client modules that reach the adapter: ${offenders.join(', ')}`).toEqual([])
   })
 
-  test('is the only file in the app that imports the SDK', () => {
-    const importers = MODULES.filter((module) =>
-      module.specifiers.some(
-        (specifier) => specifier === SDK_SPECIFIER || specifier.startsWith(`${SDK_SPECIFIER}/`),
-      ),
+  test('no module marked “use client” can reach the chokepoint either', () => {
+    // The adapter is no longer where the key is. Checking only the adapter
+    // would leave the module that actually holds the SDK unguarded, which is
+    // the whole thing this file exists to prevent.
+    const offenders = MODULES.filter(
+      (module) => module.isClient && reachableFrom(module.file).has(CHOKEPOINT),
     ).map((module) => relative(module.file))
 
-    // Exactly one, named. "At most one" would pass if the adapter stopped
-    // importing it and something else started.
-    expect(importers).toEqual([relative(ADAPTER)])
+    expect(offenders, `client modules that reach the chokepoint: ${offenders.join(', ')}`).toEqual(
+      [],
+    )
+  })
+
+  test('one module imports the SDK at runtime, and it is the chokepoint', () => {
+    const importers = MODULES.filter((module) => module.valueSpecifiers.some(isSdk)).map((module) =>
+      relative(module.file),
+    )
+
+    // Exactly one, named. "At most one" would pass if the chokepoint stopped
+    // importing it and something else started — and a named list of two would
+    // be the version that quietly becomes five.
+    expect(importers).toEqual([relative(CHOKEPOINT)])
+  })
+
+  test('the adapter still uses the SDK, as types only', () => {
+    // Guards the test above against passing for the wrong reason. If
+    // `valueSpecifiersIn` were broken enough to return nothing, "one runtime
+    // importer" would read as a clean result — so assert that the adapter
+    // *does* reference the SDK, and that the reference is the erased kind.
+    const adapter = BY_FILE.get(ADAPTER)
+    expect(adapter, 'the adapter itself was not found').toBeDefined()
+    expect(adapter?.specifiers.some(isSdk), 'the adapter no longer mentions the SDK at all').toBe(
+      true,
+    )
+    expect(
+      adapter?.valueSpecifiers.some(isSdk),
+      'the adapter imports the SDK as a value again — it must be `import type`',
+    ).toBe(false)
   })
 
   test('reads the API key in one place and nowhere else', () => {
@@ -200,10 +281,11 @@ describe('the adapter is server-side only', () => {
       return /\benv\.ANTHROPIC_API_KEY\b/.test(source)
     }).map((module) => relative(module.file))
 
-    // Exactly one, named. The adapter decides the mode from it and hands the
-    // decision to everything else as a `CopilotMode`, so no other module —
-    // route handler, test or component — ever needs to look.
-    expect(readers).toEqual(['lib/copilot/adapter.ts'])
+    // Exactly one, named. The chokepoint answers `hasAnthropicKey()` and
+    // hands the decision on — `copilotMode` turns it into a `CopilotMode`, a
+    // scan into canned or live — so no other module, route handler, test or
+    // component ever needs to look at the variable.
+    expect(readers).toEqual([relative(CHOKEPOINT)])
   })
 
   test('every co-pilot route handler runs on Node, not the edge', () => {

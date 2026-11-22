@@ -6,7 +6,90 @@
 
 ---
 
-## Handoff — 22 November 2026, later (four PRs open, in a required order; B2 closes when #11 merges, then B3)
+## Handoff — 22 November 2026, evening (B2 closed, the value sprint started, and the migration gate earned its keep)
+
+**Everything below this heading supersedes the handoff beneath it.**
+
+### What merged today
+
+| # | What | Merged as |
+|---|---|---|
+| **10** | CI runs the browser suite; Playwright gets its own `distDir` (D111) | `6499918` |
+| **11** | **B2.4** — the Ledger and the alert bar read real rows | `469e53f` |
+| **3** | **D113** the value sprint (§2.5, V1–V7) and **D114** merge authority | `0318859` |
+| **12** | **V1** data: `niche_reports`, `agent_runs`, the `trends` url (D115) | `c155d5c` |
+
+**B2 is complete** (B2.1–B2.5). **B3, B6 and B7 are deferred** behind V1–V7 per D113.
+
+### The migration gate caught a real divergence, and this is the record
+
+Vlad merged #12 **before** dispatching Migrate production, which is the exact
+sequence D104's gate exists for. What happened, verified from the runs rather
+than from memory:
+
+| Time (UTC) | Event |
+|---|---|
+| 15:39:44 | #12 merged → `main` at `c155d5c` → **Production schema check #10, attempt 1: FAILED** — tree had 14 migrations, production had 13 |
+| 16:33:53 | **Migrate production #6** (`45044539982`) dispatched on `c155d5c` → success |
+| after | **Production schema check #10, attempt 2: success** — the run records 2 attempts |
+
+**Only the #12 migration was applied, confirmed from run #6's own log** (asked
+for by Vlad, and checked rather than assumed):
+
+- Target line: `project mirrorline-production · production`
+- Dry run: `Would push these migrations:` followed by **one** bullet,
+  `20261122160000_niche_scan.sql`
+- Apply: `Applying migration 20261122160000_niche_scan.sql...` — a single
+  line, then `Finished supabase db push.`
+- `Confirm local and remote agree` printed **14 rows with Local and Remote
+  identical on every one**, ending at `20261122160000`. No divergent row.
+
+**The lesson is the gate's, not a mistake's.** D104 removed unattended
+production migrations precisely so that a merge arriving before a dispatch
+fails loudly instead of leaving new code in front of an old schema. It failed
+loudly, the dispatch fixed it, and the re-run proved it. That is the system
+working — worth recording as evidence that it does, because a gate nobody has
+ever seen fire is indistinguishable from a gate that cannot.
+
+### Where V1 is
+
+**#12 is in and production has the schema.** `niche_reports` (one row per
+scan, failed scans included), `agent_runs` (the log *and* the meter — the row
+`spend.ts` asked for in its own comments), and `trends` with the url plus the
+seven other fields `12 §1` names. 117 db tests against a real instance.
+
+**Next: V1b**, in two PRs, neither carrying a migration:
+
+1. **The SDK chokepoint and a persisted ledger.** `server-only.test.ts`
+   asserts the co-pilot adapter is the **only** file importing
+   `@anthropic-ai/sdk` and the **only** one reading `ANTHROPIC_API_KEY`, both
+   as "exactly one, named". §2.5's line about "one module per agent" is wrong
+   and is corrected: a second importer would mean two places a key can leak
+   and two to audit. One shared `lib/agents/` chokepoint instead, with the
+   test naming it — not relaxed to "at most two", which is the version that
+   becomes five.
+2. **The scan agent and its route**, canned mode first.
+
+### Still open for Vlad
+
+1. **The V1 source question (D113)** stands, and Vlad has said twice to keep
+   web search. Recorded here so the widening is not silently inherited: `04`
+   and `12 §1` give the Niche Scan a closed allow-list — "Allowed, and nothing
+   else" — and web search is outside it. Links and descriptions only, a
+   `source_note` per row, no media, no scraping, no bulk collection; the
+   sources sit behind one adapter so narrowing is a swap.
+2. **The video generator choice** (V5) — not made, by instruction.
+
+### A smaller thing worth fixing
+
+Running the e2e suite locally rewrites the **tracked** file
+`apps/web/next-env.d.ts`, because `NEXT_DIST_DIR=.next-e2e` makes Next
+regenerate its `reference path`. Harmless but it dirties the tree and could be
+committed by accident. Not fixed today.
+
+---
+
+## Handoff — 22 November 2026, earlier (four PRs open, in a required order; B2 closes when #11 merges, then B3)
 
 **Nothing is merged by me. Three PRs wait on you, and the order matters.**
 
