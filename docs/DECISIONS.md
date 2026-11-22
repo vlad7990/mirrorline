@@ -7820,3 +7820,78 @@ A design change is allowed when the design assumes a capability we do not have,
 it is named in a decision, and the owner approves it. It is not allowed as
 "while I was in there". Two of those three are mechanical; the third is why this
 entry exists.
+
+## 2026-11-21 · D110 · The Accounts board gets an empty state, because B2.3 made "empty" a state a real client reaches
+
+**Vlad's decision**, scoped by him before any of it was built: a small
+follow-up PR rather than a widening of PR #8, which was already open and whose
+migration had already been applied.
+
+### What was wrong
+
+Until B2.3 this board read `ACCOUNT_METRICS` from the fixtures, so it was never
+empty — there were always three connected accounts and a fourth to connect.
+B2.3 pointed it at the workspace's own rows, and **a workspace is created with
+none**. `AccountsBoard` had a read-failure state and no zero-length one, so the
+screen rendered a page header over nothing at all: no sentence, no explanation,
+no way onward.
+
+Every real client starts there. It was the first thing they would have seen.
+
+**It was found by accident, and that is the part worth keeping.** Regenerating
+the `app-settings` references for D109 also changed `app-accounts--*`, and the
+new image was blank. The reference was reverted — a blank reference is worse
+than a stale one — and the blankness reported rather than quietly fixed, which
+is how it became a scoped decision instead of an unrequested commit inside
+somebody else's pull request.
+
+### Why a link, and why not the Settings card
+
+The card says one line and offers one link:
+
+```
+No accounts connected yet.
+Connect one in Settings → Connected accounts
+```
+
+**A link rather than a button**, because the destination is another screen
+rather than an action. Connecting is a write with a consent record attached
+(D107, D109) and it lives in Settings; putting a handle field here would put
+that one write in two places, and the next person to change the rules would
+have to find both.
+
+**Not the four placeholder rows Settings invents.** D109 gives Settings a row
+per supported platform so there is somewhere to connect *from*. The same thing
+here would be a different claim: this screen reports measurements per connected
+account, so four rows saying "nothing measured" for four accounts nobody has
+would be inventing the accounts rather than describing their absence. The same
+reasoning as 15 §8 and non-negotiable 7, one level up — the screen refuses a
+zero, so it must also refuse a row.
+
+**An absence, not a zero.** The sentence says what is missing and claims
+nothing about results.
+
+### The sharp edge, which is tested
+
+`AccountsBoard` still defaults its `accounts` prop to `ACCOUNT_METRICS`, and
+Results relies on that default. So on this screen "render nothing" and "render
+the demo workspace" are one mistake apart — and the mistake would look like a
+populated dashboard rather than an error, which is the kind nobody reports.
+`accounts-persist.spec.ts` asserts the demo handle and the three sample hold
+values — 51.4, 46.8, 42.1 — stay off an empty workspace's screen.
+
+Written test-first; it failed on the missing sentence before the component
+changed.
+
+### Before and after, and a reference that was lying
+
+The "before" committed with this change is **not** the image that was in the
+repo. The committed `app-accounts--*` predated B2.3 and showed the demo
+workspace's three accounts with those same sample figures rendered as a
+client's own results — a reference asserting something the screen could no
+longer do, and that non-negotiable 7 forbids.
+
+So it is replaced in two commits rather than one, and the diff reads honestly:
+first the blank board as it actually was, then the empty state.
+
+No migration, no schema change, no new dependency.
