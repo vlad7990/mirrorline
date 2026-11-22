@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 import { GoalProgress } from '@/components/kpi/goal-progress'
-import { SAMPLE_GOAL, SAMPLE_KPIS } from '@/components/kpi/sample-dashboard'
+import { SAMPLE_GOAL, SAMPLE_KPIS, type LedgerWeek } from '@/components/kpi/sample-dashboard'
 import { BestTimesCard, HookRankingCard } from '@/components/results/insights-cards'
 import { ResultsNav } from '@/components/results/results-nav'
 import { TopPostsCard } from '@/components/results/top-posts-card'
@@ -15,7 +15,9 @@ import { InsightBoard } from '@/components/studio/insight-board'
 import { KpiGrid } from '@/components/studio/kpi-grid'
 import { LedgerBoard } from '@/components/studio/ledger-board'
 import { ONBOARDING } from '@/lib/routes'
+import { type KpiAlert } from '@/lib/studio/insights'
 import { type ResultsTabSlug, parseResultsTab, resultsTab } from '@/lib/studio/results-tabs'
+import { readLedgerWeeks, readRaisedAlerts } from '@/lib/workspace/read-results'
 import { readGoalCascade } from '@/lib/workspace/read-goal-cascade'
 
 /**
@@ -45,6 +47,25 @@ export default async function ResultsPage({
   const slug = parseResultsTab(params.tab)
   const tab = resultsTab(slug)
 
+  /**
+   * Read for the two tabs that have real rows behind them (B2.4), and only
+   * those: the Ledger and the Overview's alert bar.
+   *
+   * Fetched here rather than inside the boards because both are client
+   * components with a sample-data default — which is exactly the D110 trap,
+   * one screen along. Passing a value explicitly is what stops a real client's
+   * Results screen rendering the demo workspace's ledger.
+   *
+   * The other five tabs still render fixtures. They read `metric_snapshots`,
+   * which stays empty until B6 ingests, so converting them now would mean
+   * choosing between sample figures and a screen of nothing — and that choice
+   * belongs with the data that makes it answerable.
+   */
+  const [ledger, alerts] = await Promise.all([
+    slug === 'ledger' ? readLedgerWeeks() : Promise.resolve(null),
+    slug === 'overview' ? readRaisedAlerts() : Promise.resolve(null),
+  ])
+
   return (
     <div className="flex min-w-0 flex-col gap-[22px]">
       <PageHeader
@@ -55,7 +76,7 @@ export default async function ResultsPage({
 
       <ResultsNav current={slug} />
 
-      <Panel slug={slug} />
+      <Panel slug={slug} ledger={ledger} alerts={alerts} />
     </div>
   )
 }
@@ -93,7 +114,16 @@ async function GoalsTab() {
   return <GoalsBoard cascade={cascade} />
 }
 
-function Panel({ slug }: { slug: ResultsTabSlug }) {
+function Panel({
+  slug,
+  ledger,
+  alerts,
+}: {
+  slug: ResultsTabSlug
+  /** Null when the read failed, or when this tab did not ask for it. */
+  ledger: readonly LedgerWeek[] | null
+  alerts: readonly KpiAlert[] | null
+}) {
   switch (slug) {
     case 'funnel':
       return <FunnelBoard />
@@ -119,15 +149,34 @@ function Panel({ slug }: { slug: ResultsTabSlug }) {
       return <GoalsTab />
 
     case 'ledger':
-      return <LedgerBoard />
+      return ledger === null ? <CouldNotRead what="your ledger" /> : <LedgerBoard rows={ledger} />
 
     case 'insights':
       return <InsightBoard />
 
     case 'overview':
     default:
-      return <Overview />
+      return <Overview alerts={alerts} />
   }
+}
+
+/**
+ * The read failed, which is a different thing from there being nothing.
+ *
+ * Says so rather than rendering an empty board: "no weeks yet" would be a
+ * claim about the client's account made on the strength of our own error.
+ * The same split `readSocialAccounts` draws between null and `[]`.
+ */
+function CouldNotRead({ what }: { what: string }) {
+  return (
+    <Card className="flex flex-col gap-2">
+      <span className="text-subtitle font-semibold">We could not read {what}</span>
+      <p className="m-0 text-caption text-text-muted">
+        Nothing is lost — this is a read, and your results are unchanged. Reload the page, and tell
+        us if it keeps happening.
+      </p>
+    </Card>
+  )
 }
 
 /**
@@ -138,10 +187,13 @@ function Panel({ slug }: { slug: ResultsTabSlug }) {
  * the reader to do something, and a dashboard that buries its one action
  * under four rows of green numbers has chosen to look good over to be useful.
  */
-function Overview() {
+function Overview({ alerts }: { alerts: readonly KpiAlert[] | null }) {
   return (
     <div className="flex min-w-0 flex-col gap-5">
-      <AlertsBoard />
+      {/* `null` is a failed read and `[]` is a quiet week; both render no bar,
+          because an alert bar is for something that needs doing and neither
+          case is. The board returns null for an empty list already. */}
+      <AlertsBoard alerts={alerts ?? []} />
       {/* Directly under the page's h1, so the bar's own heading is an h2. */}
       <GoalProgress {...SAMPLE_GOAL} headingLevel={2} />
       {/* 17 §2: the numbers tick on arrival. The seven tabs are seven routes,

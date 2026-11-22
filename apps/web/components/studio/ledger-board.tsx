@@ -74,16 +74,28 @@ export function LedgerBoard({ rows = SAMPLE_LEDGER }: { readonly rows?: readonly
             Sent every Monday. It ends at leads and bookings rather than at views.
           </p>
         </div>
-        <LedgerExport rows={[...rows]} />
+        {/* Nothing to export from an empty ledger, and a button that
+            downloads a file with one header row is worse than no button. */}
+        {rows.length > 0 ? <LedgerExport rows={[...rows]} /> : null}
       </div>
 
-      <StatTable
-        caption="Weekly results ledger: posts, views, sends, saves, follows, leads and bookings"
-        captionHidden
-        columns={COLUMNS}
-        rows={rows}
-        rowKey={(row) => row.week}
-      />
+      {rows.length === 0 ? (
+        /* A workspace with no weeks yet (B2.4). Deliberately not a table of
+           zeroes: every column here is a tally of something we did, so a row
+           of noughts would say we published and nothing came of it, where the
+           truth is that no week has been written. */
+        <p className="m-0 text-body text-text-muted">
+          No weeks yet. The first ledger arrives the Monday after we publish for you.
+        </p>
+      ) : (
+        <StatTable
+          caption="Weekly results ledger: posts, views, sends, saves, follows, leads and bookings"
+          captionHidden
+          columns={COLUMNS}
+          rows={rows}
+          rowKey={(row) => row.week}
+        />
+      )}
 
       <p className="m-0 border-t border-border pt-3 text-caption text-text-muted">
         There is no sales column because nothing is sold through a tracked link on this account. We

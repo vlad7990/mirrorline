@@ -9,6 +9,7 @@ import { GoalProgress } from '@/components/kpi/goal-progress'
 import { SAMPLE_GOAL, SAMPLE_HEADLINE_KPIS } from '@/components/kpi/sample-dashboard'
 import { AlertsBoard } from '@/components/studio/alerts-board'
 import { KpiGrid } from '@/components/studio/kpi-grid'
+import { readRaisedAlerts } from '@/lib/workspace/read-results'
 
 /**
  * S2 · Home, the command centre.
@@ -35,7 +36,21 @@ import { KpiGrid } from '@/components/studio/kpi-grid'
 
 export const metadata: Metadata = { title: 'Home' }
 
-export default function HomePage() {
+export default async function HomePage() {
+  /**
+   * This workspace's open alerts (B2.4), not the fixtures'.
+   *
+   * `AlertsBoard` defaults to `RAISED_ALERTS` — the demo workspace's
+   * disconnected Instagram — so a real client landing here was told an account
+   * they may never have connected had signed us out. The one place in the
+   * studio where sample data was not merely decorative but **actionable**: it
+   * asked them to go and fix something that was not broken.
+   *
+   * `null` (the read failed) and `[]` (a quiet week) both render nothing. An
+   * alert bar exists to say something needs doing, and neither case does.
+   */
+  const alerts = await readRaisedAlerts()
+
   return (
     // DESIGN.md: studio surfaces tighten up relative to marketing. 24px rather
     // than 28px between the big blocks, still on the 8px grid.
@@ -51,7 +66,7 @@ export default function HomePage() {
         }
       />
 
-      <AlertsBoard />
+      <AlertsBoard alerts={alerts ?? []} />
 
       <Card as="section" aria-labelledby="home-goal" className="flex flex-col gap-6">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
