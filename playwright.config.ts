@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
+import { HAS_STUDIO_SESSION } from './e2e/helpers/routes';
 import { STUDIO_STORAGE_STATE } from './e2e/helpers/test-accounts';
 
 const BASE_URL = 'http://localhost:3000';
@@ -29,6 +30,66 @@ const MOBILE_VIEWPORT = { width: 390, height: 844 };
  * rebuilding between runs is the wrong trade. Nothing in CI should set it.
  */
 const USE_DEV_SERVER = process.env.E2E_DEV === '1';
+
+/**
+ * The suite's own build directory, so it can never collide with a manual one.
+ *
+ * D111: Playwright's `webServer` runs `next build` itself, so a developer
+ * running `pnpm build` at the same time had two builds writing `.next`. That
+ * does not fail loudly — it leaves a half-written minified chunk whose export
+ * is `undefined` at the call site, which surfaces as
+ * `TypeError: (0 , x.CH) is not a function` and reads exactly like a product
+ * bug. Worse, `.next` is gitignored, so the artifacts survive a `git checkout`
+ * and the failure "reproduces on `main`" too. One false bug report came out of
+ * believing that comparison.
+ *
+ * Separate directories make the collision impossible rather than discouraged.
+ */
+const E2E_DIST_DIR = '.next-e2e';
+
+/**
+ * The specs that cannot run without a session, listed once.
+ *
+ * `helpers/routes.ts` already narrows the shared route table when there are no
+ * Supabase keys, which covers the four specs that iterate it. These are the
+ * rest: they sign in, seed rows, or drive a studio screen directly, and
+ * without keys every one of them fails for the same uninteresting reason.
+ *
+ * **Excluded here rather than skipped in thirteen files.** A `test.skip` per
+ * spec would put the same guard in thirteen places and leave the next spec to
+ * remember it; one list in the config is the thing a reader can check against
+ * reality. It applies **only when the keys are absent** — with them, every
+ * spec runs exactly as before.
+ */
+const SESSION_DEPENDENT_SPECS = [
+  '**/accounts-persist.spec.ts',
+  '**/auth-callback.spec.ts',
+  '**/calendar-persist.spec.ts',
+  '**/calendar-reschedule.spec.ts',
+  '**/copilot-api.spec.ts',
+  '**/copilot-studio.spec.ts',
+  '**/demo-path.spec.ts',
+  '**/engine.spec.ts',
+  '**/goals-persist.spec.ts',
+  '**/motion.spec.ts',
+  '**/navigation-race.spec.ts',
+  '**/onboarding-submit.spec.ts',
+  '**/resources-and-auth.spec.ts',
+  '**/settings-connect.spec.ts',
+  '**/sign-up-ui.spec.ts',
+  '**/theme.spec.ts',
+  '**/workspace-data.spec.ts',
+  '**/workspace-delete.spec.ts',
+];
+
+/**
+ * Whether this run can reach the studio, decided the same way
+ * `helpers/routes.ts` decides it: by whether the Supabase keys resolve.
+ *
+ * Imported rather than re-derived, so the config and the route table can never
+ * disagree about which half of the suite is runnable.
+ */
+const testIgnore = HAS_STUDIO_SESSION ? undefined : SESSION_DEPENDENT_SPECS;
 
 /** A build plus a start, so the timeout has to cover compiling the app. */
 const WEB_SERVER_TIMEOUT_MS = USE_DEV_SERVER ? 120_000 : 300_000;
@@ -71,6 +132,7 @@ export default defineConfig({
     {
       name: 'chromium',
       dependencies: ['setup'],
+      testIgnore,
       use: {
         ...devices['Desktop Chrome'],
         viewport: DESKTOP_VIEWPORT,
@@ -94,6 +156,7 @@ export default defineConfig({
     {
       name: 'mobile',
       dependencies: ['setup'],
+      testIgnore,
       use: {
         ...devices['Desktop Chrome'],
         viewport: MOBILE_VIEWPORT,
@@ -131,7 +194,7 @@ export default defineConfig({
      * Verifying the live path is a deliberate act with the key put back, not
      * something the default suite should do by accident.
      */
-    env: { ANTHROPIC_API_KEY: '' },
+    env: { ANTHROPIC_API_KEY: '', NEXT_DIST_DIR: E2E_DIST_DIR },
     url: BASE_URL,
     // Only the dev loop reuses whatever is already on the port. Reusing a
     // server the suite did not start is how a run silently changes what it is

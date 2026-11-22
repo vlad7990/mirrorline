@@ -131,6 +131,15 @@ docs/                Specs, plan, designs, decisions, progress
 - **Work in milestones** (see `KICKOFF_PROMPT.md`). After each one: `pnpm lint && pnpm typecheck && pnpm test && pnpm build` must pass, then commit with a clear message, then update `docs/PROGRESS.md`.
 - **Force-pushing** (D92). Never force-push `main`, and never force-push a branch with an open pull request somebody else is reviewing. On your own feature branch, after a rebase, `--force-with-lease` is allowed — and **never plain `--force`**, which overwrites whatever arrived while you were not looking. Still never rewrite history that is not yours, and never delete files you did not create.
 - **When blocked** (missing key, failing service): stub it behind an adapter with mock data, note it in `docs/PROGRESS.md` under "Needs Vlad", and move on.
+- **Evidence, when something fails** (D111). The end-to-end suite builds into
+  `.next-e2e`, so a manual `pnpm build` can no longer collide with a running
+  suite — but the lesson generalises past that one collision: **a branch switch
+  isolates only what git tracks.** `.next`, `node_modules`, `.playwright` and
+  the shared preview database all survive a `git checkout`, so "it reproduces
+  on `main`" proves nothing until the shared state has been rebuilt or cleared.
+  Rebuild from clean before calling a failure pre-existing, and treat "I have
+  been running builds in this directory" as a confound to remove rather than
+  background noise.
 - **Pull requests:** keep each under ~400 lines where practical.
 - **Verify every screen:**
   1. Take a Playwright screenshot at 1440px and at 390px.

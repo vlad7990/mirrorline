@@ -11,6 +11,27 @@ const nextConfig: NextConfig = {
   // Workspace packages ship raw TS/TSX, so Next must compile them itself.
   transpilePackages: ['@mirrorline/ui', '@mirrorline/mock'],
   outputFileTracingRoot: repoRoot,
+  /**
+   * Where the build lands. `.next` unless `NEXT_DIST_DIR` says otherwise, and
+   * the end-to-end suite says otherwise (D111).
+   *
+   * **This exists because two builds once shared one directory.** Playwright's
+   * `webServer` runs `next build && next start` itself, so a developer running
+   * `pnpm build` while the suite is running had two `next build` processes
+   * writing the same files. The result is not a crash: it is a half-written
+   * minified chunk whose export is `undefined` at the call site, reported as
+   * `TypeError: (0 , x.CH) is not a function` with a symbol name that matches
+   * nothing in the source. It reads exactly like a product bug.
+   *
+   * It is also **invisible to `git checkout`**, because `.next` is gitignored.
+   * That is what made it expensive: the obvious check — reproduce it on
+   * `main` — reuses the same corrupted artifacts and "confirms" the fault is
+   * pre-existing. A false bug report came out of that.
+   *
+   * So the suite builds somewhere else, and the collision stops being possible
+   * rather than being discouraged by a comment nobody reads mid-debug.
+   */
+  distDir: process.env.NEXT_DIST_DIR ?? '.next',
   // The reference screenshots in docs/screens-built/ are taken against the dev
   // server, and Next's floating dev-tools badge sits over the UI in every one
   // of them — over the sidebar usage meter at 1440px and over a section

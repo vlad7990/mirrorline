@@ -8,7 +8,28 @@
 
 import type { Page } from '@playwright/test'
 
-import { readStoredCookies } from './test-accounts'
+import { readStoredCookies, supabaseConfig } from './test-accounts'
+
+/**
+ * Can this run reach the studio at all?
+ *
+ * `/app/*` needs a session, a session needs an account, and an account needs
+ * the Supabase keys. Without them `auth.setup.ts` writes an empty storage
+ * state and skips, so every studio route answers with a redirect to
+ * `/sign-in` — and the shared specs below would report fifty-odd failures that
+ * all say the same thing in the least useful way: the wrong `<h1>`, a sideways
+ * scroll on a page that is not the one named, an axe sweep of the sign-in form
+ * filed under "Settings and billing".
+ *
+ * So with no keys the table narrows to what a signed-out visitor can actually
+ * see. **With keys it is unchanged** — every local run, and any CI run holding
+ * secrets — which is what keeps the screenshot sweep complete, since that only
+ * ever runs with them.
+ */
+export const HAS_STUDIO_SESSION = supabaseConfig() !== null
+
+/** The areas a signed-out run can still assert against. */
+const PUBLIC_AREAS: readonly RouteArea[] = ['marketing', 'auth']
 
 export type RouteArea = 'marketing' | 'auth' | 'studio' | 'onboarding'
 
@@ -74,7 +95,7 @@ export async function prepareSessionFor(page: Page, route: { area: RouteArea }):
   }
 }
 
-export const ROUTES: readonly RouteEntry[] = [
+const ALL_ROUTES: readonly RouteEntry[] = [
   {
     path: '/',
     slug: 'index',
@@ -421,6 +442,14 @@ export const ROUTES: readonly RouteEntry[] = [
     h1: 'Settings and billing',
   },
 ]
+
+/**
+ * What the shared specs iterate: everything, or only what a signed-out visitor
+ * can see. See `HAS_STUDIO_SESSION` for why the second case exists.
+ */
+export const ROUTES: readonly RouteEntry[] = HAS_STUDIO_SESSION
+  ? ALL_ROUTES
+  : ALL_ROUTES.filter((route) => PUBLIC_AREAS.includes(route.area))
 
 /**
  * Onboarding steps 2 and 3 live on the same route as step 1, behind `?step=`.

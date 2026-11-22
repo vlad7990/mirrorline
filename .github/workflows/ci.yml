@@ -48,6 +48,74 @@ jobs:
       - name: Migration safety
         run: pnpm migration-safety
 
+  # Browser-level checks, which nothing above was doing (D111).
+  #
+  # `verify` builds the app but never opens it, so anything that breaks only in
+  # a browser — a redirect, an axe violation, a route that renders nothing, a
+  # server route that throws only in a production bundle — reached main
+  # unchallenged and was found on somebody's laptop. This job is that gap.
+  #
+  # **Keyless on purpose.** playwright.config.ts forces ANTHROPIC_API_KEY empty
+  # so the co-pilot answers in sample mode: no paid call (CLAUDE.md #11), and
+  # assertions that do not depend on what a model said today. The production
+  # build is the point rather than an accident — it is the artefact Vercel
+  # serves, and `next dev` does not share its bundling.
+  #
+  # **No Supabase credentials, deliberately.** The suite creates and deletes
+  # real accounts and workspaces, so pointing it at a project from CI is a
+  # decision with consequences and pointing it at production would be a
+  # destructive one. Without keys `auth.setup.ts` writes an empty storage state
+  # and skips, `helpers/routes.ts` narrows the route table to what a signed-out
+  # visitor can see, and the session-dependent specs are excluded by name in the
+  # config. What remains is ~214 real tests across the marketing site, the
+  # co-pilot, routing, accessibility and responsive behaviour.
+  #
+  # Not sharded. The whole job is about four minutes — roughly two and a half to
+  # build, ninety seconds to run — so a matrix would add a build per shard to
+  # save nothing.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Chromium only: every project in playwright.config.ts uses
+      # `devices['Desktop Chrome']`, so the other browsers would be downloaded
+      # and never launched.
+      - name: Install Playwright's browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      # `chromium` and `mobile` only. The `screenshots` project regenerates the
+      # reference PNGs in docs/screens-built/ and takes twelve minutes to do it;
+      # those are a deliberate, reviewed commit rather than something CI should
+      # be producing. `setup` still runs, as their declared dependency.
+      - name: End-to-end tests
+        run: pnpm test:e2e --project=chromium --project=mobile
+        env:
+          E2E_ALLOW_NO_SUPABASE: '1'
+
+      # Only on failure, and only what explains one: Playwright writes a trace
+      # and a screenshot per failed test and nothing per passing one, so a green
+      # run uploads nothing.
+      - name: Upload failure artefacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failures
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
   # Engine v0. Its own job: a different language, a different toolchain, and
   # nothing in it depends on the web build passing first.
   pipeline:

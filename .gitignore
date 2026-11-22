@@ -7,6 +7,9 @@ __pycache__/
 .env.local
 .env*
 .next/
+# The end-to-end suite's own build output (D111). Separate from .next so a
+# manual `pnpm build` and a running suite cannot write the same files.
+.next-e2e/
 .playwright/
 .pytest_cache/
 .turbo/
