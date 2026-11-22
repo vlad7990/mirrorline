@@ -55,10 +55,10 @@ function ListCard({ title, items }: { title: string; items: readonly string[] })
   return (
     <Card className="p-5">
       <Eyebrow>{title}</Eyebrow>
-      <ul className="mt-3 space-y-2 text-sm text-ink-700 dark:text-ink-300">
+      <ul className="mt-3 space-y-2 text-body text-text">
         {items.map((item) => (
           <li className="flex gap-2" key={item}>
-            <span aria-hidden="true" className="select-none text-gold-600">
+            <span aria-hidden="true" className="select-none text-accent">
               ·
             </span>
             <span>{item}</span>
@@ -80,22 +80,22 @@ function ExampleRow({ example }: { example: TrendExample }) {
   const ratio = example.viewsPerFollower
 
   return (
-    <li className="border-t border-ink-100 py-4 first:border-t-0 first:pt-0 dark:border-ink-800">
+    <li className="border-t border-border py-4 first:border-t-0 first:pt-0">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-sm font-medium text-ink-900 dark:text-ink-100">
+        <span className="text-body font-medium text-text">
           {example.formatName}
         </span>
-        <span className="text-xs uppercase tracking-wide text-ink-500">{example.platform}</span>
+        <span className="text-meta uppercase tracking-wide text-text-muted">{example.platform}</span>
         {example.accountSizeBucket ? (
-          <span className="text-xs text-ink-500">
+          <span className="text-meta text-text-muted">
             {BUCKET_LABELS[example.accountSizeBucket] ?? example.accountSizeBucket}
           </span>
         ) : null}
       </div>
 
-      <p className="mt-1 text-sm text-ink-700 dark:text-ink-300">{example.whyItWorks}</p>
+      <p className="mt-1 text-body text-text">{example.whyItWorks}</p>
 
-      <dl className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-ink-600 dark:text-ink-400">
+      <dl className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-meta text-text-muted">
         {/*
           Views per follower leads, and raw views are deliberately absent:
           12 §1 ranks on the ratio, and putting the big number first is how a
@@ -119,9 +119,13 @@ function ExampleRow({ example }: { example: TrendExample }) {
         </div>
       </dl>
 
-      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-meta">
         <a
-          className="inline-flex items-center gap-1 font-medium text-gold-700 underline decoration-gold-300 underline-offset-2 hover:decoration-gold-600 dark:text-gold-400"
+          // `text-primary` in light and `text-accent` in dark, which is the
+          // pairing the rest of the app uses for an inline link. The gold
+          // alone is a `serious` contrast failure on a light surface — axe
+          // caught it, which is the whole reason D75 made `moderate` blocking.
+          className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-4 dark:text-accent"
           href={example.url}
           rel="noopener noreferrer"
           target="_blank"
@@ -130,7 +134,7 @@ function ExampleRow({ example }: { example: TrendExample }) {
           <ExternalLink aria-hidden="true" className="size-3" />
         </a>
         {/* The audit record, on the screen rather than only in the table. */}
-        <span className="text-ink-500">Source: {example.sourceNote}</span>
+        <span className="text-text-muted">Source: {example.sourceNote}</span>
       </div>
     </li>
   )
@@ -143,21 +147,21 @@ export function NicheReportPanel({ findings, isSample, niche, scannedAt }: Niche
     <section aria-labelledby="niche-report-heading" className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <h2
-          className="text-lg font-medium text-ink-900 dark:text-ink-100"
+          className="font-heading text-title text-text"
           id="niche-report-heading"
         >
           {niche ? `What is working in ${niche}` : 'What is working in this niche'}
         </h2>
         {isSample ? <SampleDataLabel /> : null}
         {scannedAt ? (
-          <span className="text-xs text-ink-500">
+          <span className="text-meta text-text-muted">
             Scanned {new Date(scannedAt).toLocaleDateString('en-GB')}
           </span>
         ) : null}
       </div>
 
       {isSample ? (
-        <p className="max-w-prose text-sm text-ink-600 dark:text-ink-400">{SAMPLE_REPORT_NOTE}</p>
+        <p className="max-w-prose text-body text-text-muted">{SAMPLE_REPORT_NOTE}</p>
       ) : null}
 
       {findings.topFormats.length > 0 ? (
@@ -165,20 +169,20 @@ export function NicheReportPanel({ findings, isSample, niche, scannedAt }: Niche
           {findings.topFormats.map((format) => (
             <Card className="p-5" key={format.name}>
               <div className="flex items-baseline justify-between gap-2">
-                <h3 className="text-sm font-medium text-ink-900 dark:text-ink-100">
+                <h3 className="text-body font-medium text-text">
                   {format.name}
                 </h3>
                 {/*
                   A fit of 0 means the scan did not score it, not that it is a
                   bad fit — so it reads as unscored rather than as a zero.
                 */}
-                <span className="shrink-0 text-xs text-ink-500">
+                <span className="shrink-0 text-meta text-text-muted">
                   {format.fit === 0 ? 'Not scored' : `Fit ${format.fit}`}
                 </span>
               </div>
-              <p className="mt-2 text-sm text-ink-700 dark:text-ink-300">{format.whyItWorks}</p>
+              <p className="mt-2 text-body text-text">{format.whyItWorks}</p>
               {format.beats.length > 0 ? (
-                <ol className="mt-3 space-y-1 text-xs text-ink-600 dark:text-ink-400">
+                <ol className="mt-3 space-y-1 text-meta text-text-muted">
                   {format.beats.map((beat, index) => (
                     <li key={beat}>
                       {index + 1}. {beat}
@@ -200,7 +204,7 @@ export function NicheReportPanel({ findings, isSample, niche, scannedAt }: Niche
       {findings.lengths.length > 0 ? (
         <Card className="p-5">
           <Eyebrow>Lengths</Eyebrow>
-          <ul className="mt-3 space-y-2 text-sm text-ink-700 dark:text-ink-300">
+          <ul className="mt-3 space-y-2 text-body text-text">
             {findings.lengths.map((length) => (
               <li key={length.seconds}>
                 <span className="font-medium">{length.seconds}s</span> — {length.note}
@@ -213,7 +217,7 @@ export function NicheReportPanel({ findings, isSample, niche, scannedAt }: Niche
       {examples.length > 0 ? (
         <Card className="p-5">
           <Eyebrow>Examples, ranked by views per follower</Eyebrow>
-          <p className="mt-2 max-w-prose text-xs text-ink-500">
+          <p className="mt-2 max-w-prose text-meta text-text-muted">
             Links to public posts. We keep the link and the description of the format, never the
             video or the audio.
           </p>
@@ -226,7 +230,7 @@ export function NicheReportPanel({ findings, isSample, niche, scannedAt }: Niche
       ) : null}
 
       {findings.sourcesUsed.length > 0 ? (
-        <p className="text-xs text-ink-500">Sources: {findings.sourcesUsed.join('; ')}</p>
+        <p className="text-meta text-text-muted">Sources: {findings.sourcesUsed.join('; ')}</p>
       ) : null}
     </section>
   )

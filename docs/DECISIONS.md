@@ -8231,3 +8231,75 @@ media-column check ran before any `trends` or `agent_runs` row existed, and
 the guard I had written for exactly that case said "had no row to read columns
 from" instead of passing over an empty set. A silent pass there would have
 been a test that proved nothing for two of the three tables.
+
+## 2026-11-22 · D116 · The CI browser suite skips nineteen specs, and two real defects were sitting behind them
+
+**Found while doing V1's trend cards.** Not a decision about what to build —
+a decision about what our green tick currently means.
+
+### What happened
+
+Converting `/app/trends` off `@mirrorline/mock` meant running
+`demo-path.spec.ts` with keys for the first time in a while. It failed
+immediately, on a step I had not touched. Checked against clean `main` before
+blaming anything: **the same failure, same line, with none of my files
+present.** Then, once that was fixed, it failed again further along — on
+another step I had not touched.
+
+Both had been broken for days and CI was green throughout.
+
+### Why CI could not see them
+
+D111 added the `e2e` job, which is **keyless on purpose**: it holds no
+Supabase secrets, so `playwright.config.ts` excludes
+`SESSION_DEPENDENT_SPECS` — **nineteen specs**, every one of which drives the
+studio. A run reports roughly **214 passed and 241 skipped**, and the skipped
+half is the product.
+
+So the keyless job proves the marketing site renders and the app builds. It
+does not prove the studio works, and it has never claimed to — but a green
+tick reads as if it does.
+
+### The two defects
+
+1. **`demo-path` still asserted the demo workspace's alerts.** B2.4 (#11) made
+   the alert bar read the workspace's own rows, which was its entire point —
+   "Instagram signed us out" on the front page of a client who never connected
+   Instagram does not merely misinform, it asks them to fix something that was
+   not broken. The spec kept asserting the fixtures and went red the moment
+   #11 merged. **Nobody saw it.**
+
+2. **The calendar's batch bar claimed an approval that had not happened.** With
+   nothing scheduled it read: *"Tomorrow is approved. The Publisher will post
+   0 videos on ."* — work approved that does not exist, a zero presented as a
+   result, and an unfinished sentence, because with no posts there is no day
+   to name. That is a **user-facing bug on a studio screen**, not a stale
+   test, and it is the same family as B2.4's phantom alert and D110's missing
+   empty state.
+
+The second is the one that matters. A stale assertion costs an afternoon; a
+calendar telling a client their empty week is approved is the kind of thing
+the Pilot is meant to prevent.
+
+### What changes
+
+**Both are fixed here**, and `demo-path` now asserts the honest shape for a
+fresh account: no alerts region, no formats, nothing scheduled.
+
+**The gap itself is Vlad's to close, because it needs secrets.** The fix is a
+second CI job holding `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` as repository
+secrets, running the same suite with the studio half enabled. It is on the
+"stop and ask" list, so it is proposed rather than done.
+
+Until it exists, the rule is: **a change that touches a studio screen gets the
+keyed suite run locally before the PR**, and the PR says so. A green CI tick
+is not evidence about the studio.
+
+### The pattern, which is D111 again
+
+D111's lesson was "the check fooled me" — a comparison that looked like
+evidence and was not. This is the same shape one level up: the check is real,
+it runs, it passes, and it is silent about the half of the product that
+matters. **A suite that skips nineteen specs is indistinguishable from a suite
+that covers them, right up until you look at the skip count.**

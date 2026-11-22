@@ -491,7 +491,28 @@ function BatchBar({
       Tomorrow is approved. The Publisher will post {ready} videos on {dayLabel}.
     </>
   )
-  if (pendingCount > 0 && pendingCount === readyCount) {
+  if (readyCount === 0 && pendingCount === 0) {
+    /*
+     * Nothing scheduled is not an approval.
+     *
+     * The default above used to catch this, because "nothing pending" and
+     * "everything approved" are the same condition until you ask how many
+     * there are. A workspace with an empty week read: *"Tomorrow is approved.
+     * The Publisher will post 0 videos on ."* — a confident claim about work
+     * that does not exist, a count of zero presented as a result, and an
+     * empty `dayLabel` leaving the sentence unfinished, because there are no
+     * posts to take a day name from.
+     *
+     * Found by `demo-path.spec.ts` once it ran again (V1). It had been
+     * skipped in CI since `SESSION_DEPENDENT_SPECS` was introduced, which is
+     * why a malformed sentence sat on the calendar unnoticed.
+     *
+     * Same rule as the Ledger's "No weeks yet" and the alert bar in B2.4: an
+     * absence is a state of its own, and saying "0" about it is a measurement
+     * we never took.
+     */
+    message = <>Nothing is scheduled for tomorrow yet.</>
+  } else if (pendingCount > 0 && pendingCount === readyCount) {
     message = (
       <>
         Tomorrow: {ready} posts ready. All {pending} need your eye.

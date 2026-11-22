@@ -14,6 +14,8 @@
  *   three it got is explicit rather than inferred from an empty array.
  */
 
+import type { Trend } from '@mirrorline/mock'
+
 import { createSupabaseServerClient } from '@/lib/supabase/server-client'
 
 import {
@@ -23,9 +25,20 @@ import {
   type NicheReportFindings,
   type TrendExample,
 } from '../niche-scan/report'
+import { toTrendCards, type TrendRow } from './trend-rows'
 
-/** How many examples the panel shows. The rest stay in the row table. */
-const EXAMPLE_LIMIT = 12
+/**
+ * How many `trends` rows one read pulls.
+ *
+ * The same rows feed both halves of the screen — the report's examples and
+ * the format cards below it — so they are fetched once and shaped twice. Two
+ * queries over the same rows is how the two halves start disagreeing about
+ * what the scan found.
+ *
+ * 30 matches `parseReport`'s own cap on examples, so a scan cannot produce
+ * rows this read would silently hide.
+ */
+const TREND_LIMIT = 30
 
 export interface StoredNicheReport {
   readonly id: string
@@ -89,6 +102,15 @@ const STATUSES = ['running', 'complete', 'failed'] as const
  */
 export interface NicheReportResult {
   readonly report: StoredNicheReport | null
+  /**
+   * The format cards below the report, from the same rows.
+   *
+   * Empty when there has been no scan — **never a fixture**. `/app/trends`
+   * drew `@mirrorline/mock`'s eight trends to every workspace until V1, and
+   * putting a labelled sample report above unlabelled invented cards made the
+   * cards read as real. D110, one screen along.
+   */
+  readonly cards: readonly Trend[]
 }
 
 export async function readLatestNicheReport(): Promise<NicheReportResult | null> {
@@ -108,34 +130,38 @@ export async function readLatestNicheReport(): Promise<NicheReportResult | null>
   }
 
   const row = (reportResult.data ?? [])[0] as ReportRow | undefined
-  if (!row) return { report: null }
+  if (!row) return { report: null, cards: [] }
 
-  const examplesResult = await supabase
+  const trendsResult = await supabase
     .from('trends')
     .select(
-      'url, platform, format, hook_type, length_seconds, views, views_per_follower, account_size_bucket, posted_at, why_it_works, source_note',
+      'id, url, platform, format, from_niche, growth_percent, fit, beats, hook_type, length_seconds, views, views_per_follower, account_size_bucket, posted_at, why_it_works, source_note',
     )
     .eq('report_id', row.id)
-    .limit(EXAMPLE_LIMIT)
+    .limit(TREND_LIMIT)
 
-  if (examplesResult.error) {
-    console.error('[niche-scan] could not read the examples', examplesResult.error.message)
+  if (trendsResult.error) {
+    console.error('[niche-scan] could not read the examples', trendsResult.error.message)
     return null
   }
+
+  const trendRows = (trendsResult.data ?? []) as readonly Record<string, unknown>[]
 
   // Reused rather than reimplemented: the same parser the agent writes
   // through, so a row that would not have been accepted is not displayed
   // either. `format` is the column name; the parser calls it `formatName`.
-  const examples = (examplesResult.data ?? [])
-    .map((entry) => {
-      const stored = entry as Record<string, unknown>
-      return parseExample({ ...stored, formatName: stored.format }).example
-    })
+  const examples = trendRows
+    .map((stored) => parseExample({ ...stored, formatName: stored.format }).example)
     .filter((entry): entry is TrendExample => entry !== null)
+
+  // The cards, from the same rows. `row.niche` is what was scanned, which is
+  // the workspace's own niche — the comparison the "My niche" filter needs.
+  const cards = toTrendCards(trendRows as unknown as readonly TrendRow[], row.niche)
 
   const status = STATUSES.find((entry) => entry === row.status) ?? 'failed'
 
   return {
+    cards,
     report: {
       id: row.id,
       niche: row.niche,
