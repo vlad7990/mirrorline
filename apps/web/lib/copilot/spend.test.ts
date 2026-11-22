@@ -16,6 +16,7 @@ import { beforeEach, describe, expect, test } from 'vitest'
 import {
   DEFAULT_MONTHLY_CAP_USD,
   MAX_REQUEST_USD,
+  WEB_SEARCH_USD_PER_SEARCH,
   cacheHealth,
   cacheReadShare,
   checkSpend,
@@ -223,5 +224,89 @@ describe('the cache-read share, which is the only symptom of a broken prefix', (
 
     expect(cacheReadShare(ledger)).toBeCloseTo(6_900 / 7_000, 5)
     expect(cacheHealth(ledger)).toMatch(/9\d% of input tokens came from the cache/)
+  })
+})
+
+/**
+ * Searches are billed separately from tokens, so a token-only projection
+ * makes the cap soft (V1, §2.5).
+ *
+ * The failure these guard against is the quiet kind: the scan runs, the cap
+ * reports room, and the invoice is larger than the ceiling — with no error
+ * anywhere. So each test below is written as "the token-only answer and the
+ * real answer differ", not merely "the number is right".
+ */
+describe('web searches cost money, and the projection knows it', () => {
+  const NO_TOKENS = {
+    inputTokens: 0,
+    outputTokens: 0,
+    cacheReadTokens: 0,
+    cacheCreationTokens: 0,
+  }
+
+  test('ten searches cost ten times the per-search rate', () => {
+    expect(usageUsd(SITE_MODEL, NO_TOKENS, 10)).toBeCloseTo(10 * WEB_SEARCH_USD_PER_SEARCH, 10)
+  })
+
+  test('searches are additive to the token cost, not folded into it', () => {
+    const tokens = { ...NO_TOKENS, inputTokens: 1_000_000 }
+
+    const withoutSearches = usageUsd(SITE_MODEL, tokens)
+    const withSearches = usageUsd(SITE_MODEL, tokens, 5)
+
+    expect(withSearches - withoutSearches).toBeCloseTo(5 * WEB_SEARCH_USD_PER_SEARCH, 10)
+  })
+
+  test('the projection charges for the search ceiling, not for zero', () => {
+    const tokensOnly = projectRequestUsd('claude-sonnet-5', 1_000, 1_000)
+    const withTen = projectRequestUsd('claude-sonnet-5', 1_000, 1_000, 10)
+
+    // The whole point: these must not be equal. If a later refactor drops the
+    // parameter, this is the assertion that notices.
+    expect(withTen).toBeGreaterThan(tokensOnly)
+    expect(withTen - tokensOnly).toBeCloseTo(10 * WEB_SEARCH_USD_PER_SEARCH, 10)
+  })
+
+  test('a search-heavy run is refused when searches alone cross the ceiling', () => {
+    // Tokens kept tiny so the refusal can only come from the searches.
+    const decision = checkSpend('demo', 'claude-sonnet-5', 10, 10, NOVEMBER, {}, {
+      maxSearches: 200,
+      maxRequestUsd: 0.5,
+    })
+
+    expect(decision.allowed).toBe(false)
+    if (!decision.allowed) {
+      expect(decision.reason).toContain('per-request ceiling')
+    }
+
+    // And the same request with no searches is allowed, which is what proves
+    // the searches are what stopped it.
+    const withoutSearches = checkSpend('demo', 'claude-sonnet-5', 10, 10, NOVEMBER, {})
+    expect(withoutSearches.allowed).toBe(true)
+  })
+
+  test('an agent may raise its own per-request ceiling without raising the co-pilot’s', () => {
+    // A scan legitimately costs more than one question. The honest way to
+    // allow that is at the call site; raising MAX_REQUEST_USD would raise it
+    // for the co-pilot too.
+    // $0.15 input + $0.12 output + $0.40 of searches = $0.67, which clears the
+    // co-pilot's $0.50 and not the scan's $2.
+    const asCopilot = checkSpend('demo', 'claude-sonnet-5', 50_000, 8_000, NOVEMBER, {}, {
+      maxSearches: 40,
+    })
+    const asScan = checkSpend('demo', 'claude-sonnet-5', 50_000, 8_000, NOVEMBER, {}, {
+      maxSearches: 40,
+      maxRequestUsd: 2,
+    })
+
+    expect(asCopilot.allowed).toBe(false)
+    expect(asScan.allowed).toBe(true)
+    expect(MAX_REQUEST_USD).toBe(0.5)
+  })
+
+  test('recorded usage includes the searches that actually ran', () => {
+    const ledger = recordUsage('demo', 'claude-sonnet-5', NO_TOKENS, NOVEMBER, 4)
+
+    expect(ledger.usd).toBeCloseTo(4 * WEB_SEARCH_USD_PER_SEARCH, 10)
   })
 })

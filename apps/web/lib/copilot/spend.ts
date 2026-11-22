@@ -73,6 +73,24 @@ const CACHE_READ_MULTIPLIER = 0.1
 const CACHE_WRITE_MULTIPLIER = 1.25
 
 /**
+ * What one web search costs, billed **separately from tokens**.
+ *
+ * $10 per 1,000 searches at the published rate. It is its own line on the
+ * invoice, not part of `input_tokens`, which is precisely why it needs to be
+ * here: a projection that knew only about tokens would under-count every scan
+ * and the "hard cap" would be soft by however many searches a run did.
+ *
+ * That failure has no error attached to it — the scan works, the cap says
+ * there is room, and the bill is larger than the ceiling. The same shape as
+ * the cache-read problem this module already watches for, so it gets the same
+ * treatment: counted, projected, and recorded.
+ *
+ * Added for V1's Niche Scan (§2.5), which is the first agent that searches.
+ * Every existing caller passes no searches and is charged exactly as before.
+ */
+export const WEB_SEARCH_USD_PER_SEARCH = 0.01
+
+/**
  * The cap, per workspace, per calendar month, in US dollars.
  *
  * Deliberately small. The Agents screen's own wording is "spend this month $43
@@ -127,8 +145,17 @@ function priceWith(rate: ModelRate, usage: Usage): number {
   return input + output + cacheRead + cacheWrite
 }
 
-/** What a usage reading costs, in dollars. */
-export function usageUsd(model: string, usage: Usage): number {
+/**
+ * What a usage reading costs, in dollars.
+ *
+ * `searches` is additive and defaults to none, so every pre-V1 caller is
+ * priced exactly as it was.
+ */
+export function usageUsd(model: string, usage: Usage, searches = 0): number {
+  return tokenUsd(model, usage) + searches * WEB_SEARCH_USD_PER_SEARCH
+}
+
+function tokenUsd(model: string, usage: Usage): number {
   const rate = MODEL_RATES[model]
   if (!rate) {
     // An unknown model is priced at the most expensive tier we have rather
@@ -156,13 +183,23 @@ export function projectRequestUsd(
   model: string,
   promptTokens: number,
   maxOutputTokens: number,
+  maxSearches = 0,
 ): number {
-  return usageUsd(model, {
-    inputTokens: promptTokens,
-    outputTokens: maxOutputTokens,
-    cacheReadTokens: 0,
-    cacheCreationTokens: 0,
-  })
+  return usageUsd(
+    model,
+    {
+      inputTokens: promptTokens,
+      outputTokens: maxOutputTokens,
+      cacheReadTokens: 0,
+      cacheCreationTokens: 0,
+    },
+    // The **ceiling** on searches, not a guess at how many will run, for the
+    // same reason the output side projects from `max_tokens`: it is the number
+    // the model is actually allowed to reach. A scan that is permitted ten
+    // searches must be projected at ten, or the cap only holds for the scans
+    // that happened to search less than expected.
+    maxSearches,
+  )
 }
 
 export interface MonthLedger {
@@ -218,6 +255,7 @@ export function recordUsage(
   model: string,
   usage: Usage,
   now: Date,
+  searches = 0,
 ): MonthLedger {
   const previous = readLedger(workspaceId, now)
   const next: MonthLedger = {
@@ -229,7 +267,7 @@ export function recordUsage(
       cacheReadTokens: previous.usage.cacheReadTokens + usage.cacheReadTokens,
       cacheCreationTokens: previous.usage.cacheCreationTokens + usage.cacheCreationTokens,
     },
-    usd: previous.usd + usageUsd(model, usage),
+    usd: previous.usd + usageUsd(model, usage, searches),
     calls: previous.calls + 1,
   }
 
@@ -249,6 +287,26 @@ export type SpendDecision =
  * the studio shows when the cap is reached, and a surface that invented its
  * own would drift from the spec one copy edit at a time.
  */
+export interface SpendLimits {
+  /**
+   * The most searches this request may run. Projected at the ceiling, never
+   * at an expected value — see `projectRequestUsd`.
+   */
+  readonly maxSearches?: number
+  /**
+   * A per-request ceiling other than `MAX_REQUEST_USD`.
+   *
+   * The co-pilot's $0.50 is sized for a question. A Niche Scan is a research
+   * run with searches and a long structured answer, so it legitimately costs
+   * more than one question does — and the honest way to allow that is a named
+   * ceiling at the call site rather than raising the global one for
+   * everybody, which would also raise it for the co-pilot.
+   */
+  readonly maxRequestUsd?: number
+  /** Overrides `COPILOT_MONTHLY_CAP_USD` for an agent with its own budget. */
+  readonly monthlyCapUsd?: number
+}
+
 export function checkSpend(
   workspaceId: string,
   model: string,
@@ -256,16 +314,19 @@ export function checkSpend(
   maxOutputTokens: number,
   now: Date,
   env: EnvLike = process.env,
+  limits: SpendLimits = {},
 ): SpendDecision {
-  const projectedUsd = projectRequestUsd(model, promptTokens, maxOutputTokens)
-  const cap = monthlyCapUsd(env)
+  const maxSearches = limits.maxSearches ?? 0
+  const projectedUsd = projectRequestUsd(model, promptTokens, maxOutputTokens, maxSearches)
+  const perRequestCeiling = limits.maxRequestUsd ?? MAX_REQUEST_USD
+  const cap = limits.monthlyCapUsd ?? monthlyCapUsd(env)
   const ledger = readLedger(workspaceId, now)
   const remainingUsd = cap - ledger.usd
 
-  if (projectedUsd > MAX_REQUEST_USD) {
+  if (projectedUsd > perRequestCeiling) {
     return {
       allowed: false,
-      reason: `one request projected at $${projectedUsd.toFixed(4)}, over the $${MAX_REQUEST_USD} per-request ceiling`,
+      reason: `one request projected at $${projectedUsd.toFixed(4)}, over the $${perRequestCeiling} per-request ceiling`,
       message: 'That question is too large to answer in one go. Try asking it in smaller parts.',
     }
   }
