@@ -8,25 +8,60 @@
 
 ## Handoff — 21 November 2026, night (PR #8 is finished: the round-trip is proved, the references are D109's, and the migration count was wrong)
 
-**Branch** `backend/b2-3-accounts`, **rebased onto `main` at `a33c892`** · **PR
-#8 open, not merged.** The three things the B2.3 handoff listed as not done are
-done. Nothing is left on this PR but your dispatch.
+**Branch** `backend/b2-3-accounts`, **rebased onto `main` at `a33c892`**, head
+`d963b4a` · **PR #8 open.** The three things the B2.3 handoff listed as not
+done are done, and **the migration is already applied to production.** Nothing
+is left on this PR but the merge.
 
-**Rebased mid-session, because PR #7 merged while this was being finished.** The
-only conflicts were `DECISIONS.md` and `PROGRESS.md`, both append-only files;
-no code conflicted. Two consequences worth knowing before you dispatch:
+### 0. The migration is applied — production is on 13
 
-- **`--remote` and `setup-cli@v3` are already proven.** *Corrected by Vlad — I
-  had written that this dispatch would be the first to exercise them, and that
-  was wrong.* **Migrate production run `44934926852`** was dispatched on `main`
-  at `a33c892` once PR #7 merged, and went green through every real step:
-  `supabase/setup-cli@v3`, Link, "What production has now", Dry run, Apply and
-  "Confirm local and remote agree" — 12 in the tree, nothing to apply. D106 is
-  therefore exercised end to end, and a failure at the link or list step is no
-  longer the thing to watch for. This dispatch is the first to *apply*
-  something on that toolchain, not the first to use it.
-- **The count is unchanged.** PR #7 carried no migrations, so `main` is still
-  on 12 and this is still 13 after merge.
+**Migrate production run `44966789186`**, dispatched on
+`ref: backend/b2-3-accounts`, green. Exactly one migration, named at both the
+dry run and the apply:
+
+```
+Would push these migrations:
+ • 20261121160000_social_account_connection_state.sql
+
+Confirmed by --yes: Apply 1 migration on project mirrorline-production
+Applying migration 20261121160000_social_account_connection_state.sql...
+```
+
+Before it, the list showed twelve matched rows and `20261121160000` present
+locally with a blank remote. After it, thirteen rows with Local == Remote on
+every one. Nothing else was applied and nothing was skipped.
+
+**It ran on `e4bc80c`, the pre-rebase commit**, because the dispatch went out
+before the force-push landed. That is safe, and it was checked rather than
+assumed: `git diff e4bc80c d963b4a -- supabase/` is empty, and the `supabase/`
+tree hash is `47e7bb84…` on both sides — byte-identical, not merely
+same-named. The SQL production ran is the SQL this branch carries; the rebase
+moved only `DECISIONS.md` and `PROGRESS.md`.
+
+**The run is labelled `main` / `a33c892` in the runs list, and that is D106's
+lying field, not a mis-dispatch.** The checkout step is the truth and reads
+`ref: backend/b2-3-accounts`. Anyone auditing this later should read the step,
+not the label.
+
+**Until the merge, production is on 13 and `main` on 12.** That is the D104
+order working as intended rather than drift: `migration-drift.mjs` fails on
+versions the tree has and the remote lacks, while a remote-only version is
+"reported, not failed" (its own header says so). A *Production schema check*
+on `main` before the merge should report the extra and stay green.
+
+### 0b. The rebase, and a correction
+
+**Rebased mid-session, because PR #7 merged while this was being finished.**
+Only `DECISIONS.md` and `PROGRESS.md` conflicted, both append-only; no code
+did. D106 now sits in numeric order ahead of D107–D109.
+
+**`--remote` and `setup-cli@v3` were already proven before this dispatch.**
+*Corrected by Vlad — I had written that this would be the first run to
+exercise them, and that was wrong.* Run `44934926852` on `main` at `a33c892`
+had already gone green through setup-cli v3, Link, the list step, Dry run,
+Apply and the agreement check, with 12 in the tree and nothing to apply. So
+run #5 was the first to *apply* on that toolchain, not the first to use it,
+and the link and list steps were never the risk I billed them as.
 
 ### 1. The Settings connect round-trip now has an e2e
 
@@ -79,9 +114,9 @@ PR description is corrected and now says where the number came from.
 
 ### 5. Still needs you
 
-1. **Dispatch *Migrate production* with `ref: backend/b2-3-accounts`**, confirm
-   the dry run lists exactly the one migration, then merge PR #8. *Production
-   schema check* should then report **`all 13 migration(s)`**, not 14.
+1. **Merge PR #8.** The dispatch is done (§0), so this is the only step left on
+   it. *Production schema check* should then report **`all 13 migration(s)`**,
+   not 14 — and from the merge onwards `main` and production agree again.
 2. **`E2E_SIGNUP_EMAIL`** — still unset; one UI sign-up test skips.
 3. **PR #3** (`docs/plan-v2`), still blocked on **D-b, where the renderer runs**.
 
