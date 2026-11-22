@@ -6,6 +6,94 @@
 
 ---
 
+## Handoff — 22 November 2026, later (four PRs open, in a required order; B2 closes when #11 merges, then B3)
+
+**Nothing is merged by me. Three PRs wait on you, and the order matters.**
+
+### 1. The open PRs, and the order they must go in
+
+| # | Branch | What | Migration | State |
+|---|---|---|---|---|
+| **10** | `ci/e2e-job-and-build-isolation` | CI runs the browser suite; Playwright gets its own `distDir` (D111) | none | green |
+| **11** | `backend/b2-4-results` | **B2.4** — the Ledger and the alert bar read real rows | none | checks running |
+| **3** | `docs/plan-v2` | BACKEND_PHASE v2, now including **B8** (D112) | none | plan only |
+
+**#10 before #11, and this is not a preference.** #10 adds
+`SESSION_DEPENDENT_SPECS` to `playwright.config.ts` — the list of specs a
+keyless CI run skips. #11 adds `e2e/results-persist.spec.ts`, which needs a
+session and is **not** on that list, because the list does not exist on `main`
+yet.
+
+So, after #10 merges:
+
+1. `git checkout backend/b2-4-results && git rebase origin/main`
+2. add `'**/results-persist.spec.ts'` to `SESSION_DEPENDENT_SPECS`
+3. re-run the gates, push, merge #11
+
+Merge #11 first and the keyless CI job fails on its own new spec, which is a
+confusing way to learn this.
+
+**#3 is independent** and can go whenever. It is 20 decisions behind `main`, so
+expect a mechanical conflict at the end of `DECISIONS.md` — resolve by order,
+never by renumbering.
+
+### 2. The CI job is green, and slower than the target
+
+**7m34s**, against the ~5 minute goal. I first reported "about four minutes";
+that was measured on this laptop and did not survive a runner, which is roughly
+twice as slow. The breakdown: 44s setup, 32s browser download, **6m14s** in the
+test step, whose bulk is `next build` from cold.
+
+**Caching was tried and reverted** (Vlad's call). Uncached 7m34s; with caches
+**8m25s** and **9m1s** — slower, because both runs were cold and still paid the
+cost of saving. Two runs were enough; a third might have come out ahead, but
+"might, on the third attempt" does not justify thirty lines of YAML whose only
+job is speed.
+
+**If it needs to come down**, the lever is a build-once job uploading
+`.next-e2e` as an artifact with shards that only `next start`. Sharding alone
+does nothing: every shard runs its own `webServer`, so N shards pay N cold
+builds to divide ninety seconds of tests.
+
+### 3. B2 is complete once #11 merges
+
+| Step | State |
+|---|---|
+| B2.1 goals and KPIs | done |
+| B2.2 calendar moves | done |
+| B2.3 accounts | done |
+| **B2.4 Results, Ledger, alerts** | **PR #11** |
+| B2.5 the export | already shipped with B1's deletion work |
+
+B2.4 needed **no migration**: the policies and grants were already right from
+B1 and D96. Converted: the Ledger tab and the alert bar on Home and Overview.
+**Not** converted, and said so in the page: Funnel, Content, Accounts, Goals
+and Insights still read fixtures, because they read `metric_snapshots`, which
+stays empty until B6 ingests. Converting them now would mean choosing between
+sample figures and a blank screen, and that choice belongs with the data that
+makes it answerable.
+
+The find worth keeping: `AlertsBoard` defaulted to the demo workspace's
+"Instagram signed us out" bar on `/app/home`. The one sample-data leak that did
+not merely misinform — it asked a real client to go and fix an account they may
+never have connected.
+
+### 4. Next: B3, Stripe in test mode
+
+`BACKEND_PHASE.md` §3. Products and prices are mine to create (D77),
+entitlements are part of it, and cancellation is in scope because the site
+already promises it (D80). **Test mode only**, non-negotiable 11.
+
+### 5. Still needs you
+
+1. **Merge #10, then rebase and merge #11** as above. Neither carries a
+   migration, so there is no *Migrate production* dispatch for either.
+2. **#3** whenever, with the `DECISIONS.md` conflict resolved by order.
+3. **`E2E_SIGNUP_EMAIL`** — still unset; one UI sign-up test skips.
+4. **A decision on CI timing**, if seven and a half minutes is not acceptable.
+
+---
+
 ## Handoff — 22 November 2026 (a bug I reported on `main` was not there; the fix is mechanical, and CI gets the suite)
 
 **Read this before trusting the co-pilot note in PR #9's history.** I reported
