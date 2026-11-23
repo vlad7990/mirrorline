@@ -23,7 +23,7 @@
  * false no matter what the database stored.
  */
 
-import { Card, Eyebrow } from '@mirrorline/ui'
+import { Card, Eyebrow, ProgressBar, StoryboardFrames } from '@mirrorline/ui'
 import { ExternalLink } from 'lucide-react'
 
 // The one way the "Sample data" label gets drawn, per its own header: "so it
@@ -31,8 +31,16 @@ import { ExternalLink } from 'lucide-react'
 // same rule is how non-negotiable 7 starts being enforced inconsistently.
 import { SampleDataLabel } from '@/components/marketing/primitives'
 import { PrintButton } from '@/components/studio/print-button'
+import { storyboardFromBeats } from '@/components/trends/trend-beats'
 import { SAMPLE_REPORT_NOTE } from '@/lib/niche-scan/canned'
-import { rankExamples, type NicheReportFindings, type TrendExample } from '@/lib/niche-scan/report'
+import {
+  FIT_MAX,
+  rankExamples,
+  type FormatFinding,
+  type NicheReportFindings,
+  type ReportSource,
+  type TrendExample,
+} from '@/lib/niche-scan/report'
 
 const BUCKET_LABELS: Record<string, string> = {
   under_1k: 'under 1k followers',
@@ -66,6 +74,127 @@ function ListCard({ title, items }: { title: string; items: readonly string[] })
           </li>
         ))}
       </ul>
+    </Card>
+  )
+}
+
+/**
+ * One format: the recipe, its fit, and the beats that get remade.
+ *
+ * **This is the only format view on the screen now (P0.4).** There used to be
+ * two: this grid, and a second board of `TrendCard`s below the report built
+ * from the same rows — with its own filter bar, its own fit bar and its own
+ * storyboard. A reader counted six formats at the top and three at the bottom
+ * and had no way to know they were the same research. The board's two good
+ * parts, the storyboard and the fit bar, moved up here; the rest went.
+ *
+ * The storyboard carries the beat *names* and the list under it carries the
+ * beats in full — see `frameLabel`. Four sentences in four 9:16 frames is
+ * what the duplicate board was doing, and it overflowed every one of them.
+ */
+function FormatCard({ format }: { format: FormatFinding }) {
+  const isScored = format.fit > 0
+  const fitLabel = `Fit for this account: ${format.fit} out of ${FIT_MAX}`
+
+  return (
+    <Card className="flex flex-col gap-3 p-5">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="text-body font-medium text-text">{format.name}</h3>
+        {/*
+          A fit of 0 means the scan did not score it, not that it scored badly
+          — so it reads as unscored rather than as a zero. The scale is printed
+          beside the number, because "Fit 9" alone was read against a 100-point
+          bar for a week and looked like a terrible match.
+        */}
+        <span className="shrink-0 text-meta text-text-muted">
+          {isScored ? (
+            <>
+              Fit <span className="machine text-text">{format.fit}</span>/{FIT_MAX}
+            </>
+          ) : (
+            'Not scored'
+          )}
+        </span>
+      </div>
+
+      {isScored ? (
+        <ProgressBar
+          value={format.fit}
+          max={FIT_MAX}
+          label={fitLabel}
+          valueText={`${format.fit} out of ${FIT_MAX}`}
+        />
+      ) : null}
+
+      <p className="m-0 text-body text-text">{format.whyItWorks}</p>
+
+      {format.beats.length > 0 ? (
+        <>
+          <StoryboardFrames
+            beats={storyboardFromBeats(format.beats)}
+            label={`Beats of ${format.name}`}
+          />
+          <ol className="m-0 list-none space-y-1 p-0 text-meta text-text-muted">
+            {format.beats.map((beat, index) => (
+              <li key={beat}>
+                {index + 1}. {beat}
+              </li>
+            ))}
+          </ol>
+        </>
+      ) : null}
+    </Card>
+  )
+}
+
+/**
+ * The sources, numbered, named and tagged (P0.5).
+ *
+ * This was `sourcesUsed.join('; ')` — four wrapped lines of raw `https://…`
+ * under the word "Sources". It satisfied `12 §1` as a database record and
+ * failed it as a document: nobody can audit a list they cannot read.
+ *
+ * The **post / guide** tag is the part that is not presentation. A post is
+ * evidence that a format is working in this niche; a guide is an article
+ * about the niche, which is industry guidance and nothing more (`15
+ * §honesty rules`). Printing them as one undifferentiated list quietly
+ * promotes the second to the first.
+ */
+const SOURCE_KIND_LABELS: Record<ReportSource['kind'], string> = {
+  post: 'post',
+  guide: 'guide',
+}
+
+function SourceList({ sources }: { sources: readonly ReportSource[] }) {
+  return (
+    <Card className="p-5">
+      <Eyebrow>Sources</Eyebrow>
+      <p className="mt-2 max-w-prose text-meta text-text-muted">
+        Every page this scan read. A <strong className="font-medium">post</strong> is a public post
+        we read a format off; a <strong className="font-medium">guide</strong> is an article about
+        the niche — industry guidance, not evidence that a format is working.
+      </p>
+      <ol className="mt-3 space-y-2 text-meta text-text-muted">
+        {sources.map((source, index) => (
+          <li className="flex gap-2" key={source.url}>
+            <span className="machine shrink-0 text-text-muted">{index + 1}.</span>
+            <span className="min-w-0">
+              <a
+                className="font-medium text-primary underline underline-offset-4 dark:text-accent"
+                href={source.url}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                {source.title}
+              </a>{' '}
+              <span className="text-text-muted">{source.domain}</span>{' '}
+              <span className="rounded-full bg-neutral-soft px-2 py-0.5 text-caption text-on-neutral-soft">
+                {SOURCE_KIND_LABELS[source.kind]}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ol>
     </Card>
   )
 }
@@ -186,32 +315,9 @@ export function NicheReportPanel({ findings, isSample, niche, scannedAt }: Niche
       ) : null}
 
       {findings.topFormats.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {findings.topFormats.map((format) => (
-            <Card className="p-5" key={format.name}>
-              <div className="flex items-baseline justify-between gap-2">
-                <h3 className="text-body font-medium text-text">
-                  {format.name}
-                </h3>
-                {/*
-                  A fit of 0 means the scan did not score it, not that it is a
-                  bad fit — so it reads as unscored rather than as a zero.
-                */}
-                <span className="shrink-0 text-meta text-text-muted">
-                  {format.fit === 0 ? 'Not scored' : `Fit ${format.fit}`}
-                </span>
-              </div>
-              <p className="mt-2 text-body text-text">{format.whyItWorks}</p>
-              {format.beats.length > 0 ? (
-                <ol className="mt-3 space-y-1 text-meta text-text-muted">
-                  {format.beats.map((beat, index) => (
-                    <li key={beat}>
-                      {index + 1}. {beat}
-                    </li>
-                  ))}
-                </ol>
-              ) : null}
-            </Card>
+            <FormatCard format={format} key={format.name} />
           ))}
         </div>
       ) : null}
@@ -262,9 +368,7 @@ export function NicheReportPanel({ findings, isSample, niche, scannedAt }: Niche
         </Card>
       ) : null}
 
-      {findings.sourcesUsed.length > 0 ? (
-        <p className="text-meta text-text-muted">Sources: {findings.sourcesUsed.join('; ')}</p>
-      ) : null}
+      {findings.sourcesUsed.length > 0 ? <SourceList sources={findings.sourcesUsed} /> : null}
     </section>
   )
 }

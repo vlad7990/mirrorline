@@ -51,3 +51,6 @@ test-results/
 # No file here is legitimately named this way, so the pattern is safe. The real
 # fix is moving the repo somewhere iCloud does not reach.
 * 2.*
+
+# Throwaway screenshot specs (see D111 and the handoff convention).
+e2e/*.tmp.spec.ts

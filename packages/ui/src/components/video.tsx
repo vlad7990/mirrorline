@@ -430,13 +430,26 @@ export function StoryboardFrames({
         // also does the honest thing visually: an empty frame on the viewer
         // reads as a slot waiting for footage, where an empty frame on the
         // page read as a broken image.
-        'm-0 grid list-none grid-cols-4 gap-1.5 rounded-lg bg-viewer p-2 text-on-viewer',
+        'm-0 grid list-none gap-1.5 rounded-lg bg-viewer p-2 text-on-viewer',
         className,
       )}
+      /*
+       * One column per beat, not four.
+       *
+       * The grid was fixed at four, so a three-beat recipe drew three frames
+       * and a column of empty near-black beside them — which reads as a frame
+       * that failed to render rather than as a recipe with three beats.
+       * Inline because the count is data: Tailwind generates classes at build
+       * time and cannot have a class for a number it has not seen.
+       */
+      style={{ gridTemplateColumns: `repeat(${Math.max(beats.length, 1)}, minmax(0, 1fr))` }}
       {...props}
     >
       {beats.map((beat, index) => (
-        <li key={`${beat.label}-${index}`} className="flex flex-col gap-1">
+        // `min-w-0`: a grid item's default `min-width: auto` is its content's
+        // minimum, so one long unbroken word widens the column and pushes the
+        // frames out of the card instead of wrapping inside it.
+        <li key={`${beat.label}-${index}`} className="flex min-w-0 flex-col gap-1">
           <span
             aria-hidden="true"
             className="flex aspect-[9/16] items-end rounded-sm border border-on-viewer/20 bg-on-viewer/5 p-1"
@@ -448,8 +461,20 @@ export function StoryboardFrames({
               )}
             />
           </span>
-          {/* The beat name is the studio describing a format. Sans. */}
-          <span className="text-caption font-normal leading-tight text-on-viewer/70">
+          {/*
+            The beat name is the studio describing a format. Sans.
+
+            Two lines, hard-bounded. A frame label is a position marker — the
+            full beat is printed below the storyboard — and the first live
+            report proved what happens without a bound: four whole sentences
+            in four 9:16 columns, each overrunning its frame into the next.
+            `title` keeps the untruncated text reachable on hover, and
+            `print:line-clamp-none` lets paper print what a frame could not.
+          */}
+          <span
+            className="line-clamp-2 text-caption font-normal leading-tight text-on-viewer/70 [overflow-wrap:anywhere] print:line-clamp-none"
+            title={beat.label}
+          >
             {beat.label}
           </span>
         </li>

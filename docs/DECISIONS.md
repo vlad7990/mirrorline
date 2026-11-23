@@ -8641,3 +8641,93 @@ The **"Sample data" label is inside the print region** for the mirror-image
 reason. This is the artefact most likely to be sent to somebody, which is
 exactly when non-negotiable 7 matters most; a PDF of sample research with the
 label cropped off would be the worst available version of this feature.
+
+---
+
+## D121 — the Niche Scan says only what it measured, and shows each format once
+
+**23 November 2026.** Vlad read the first live report (`d39-niche-scan-live.png`)
+the way a prospect would and found five things. They are not five bugs; they
+are one bug — **the screen was written before the data existed** — wearing five
+hats. P0, because the next person to see this screen is somebody outside.
+
+### 1. The header claimed a measurement we never take
+
+"Formats rising in your niche and the ones beside it. Growth over 7 days", and
+underneath it a filter called *Last 7 days*, above cards whose growth figure
+read **"Not measured yet"** on every single one. We run no growth measurement
+at all: the scan reads public posts and published guides and writes down what
+it finds. `15 §honesty rules` is explicit that a figure we did not measure is
+not a figure we may imply, and the implication here was load-bearing — "rising"
+is the whole promise of a trend product.
+
+The header now reads **"Formats working in your niche, from public posts and
+guides found this week."** When there is a real growth series, it can say so.
+
+The eyebrow said **"updated 10:05 am"**, hard-coded, above live research. The
+report carries the scan's own timestamp; the eyebrow names the agent and stops.
+
+### 2. The fit bar was drawn against the wrong scale
+
+The scan scored its three recommended formats **9, 8 and 7**. The field was
+documented 0–100, so the bar drew 9% of itself and the label read "Fit 9". In
+words: *these are the three best formats for this account*. In pixels: *these
+are terrible matches*. A reader believes the pixels.
+
+Both halves were individually defensible, which is why this survived review.
+The fix is to **standardise on the scale the model reaches for unprompted**
+rather than to keep correcting it: 0–10 in the schema (`minimum`/`maximum`),
+in the prompt, in the parser and beside every number on screen — "Fit 9/10".
+`normaliseFit` divides anything above 10, so the rows written on the old scale
+and the sample report still rank correctly instead of flattening to a clamp.
+
+### 3. Beats overflowed the storyboard frames
+
+A beat is an instruction — *"Hook: show the problem (lunging, barking, pulling)
+in the first second"* — and four of them were rendered inside four 9:16 frames
+about 80px wide. Each overran into the next.
+
+The fix is not a smaller font. A storyboard frame is a **position marker**, so
+it takes the beat's name (`frameLabel`: the part before the colon, else as many
+whole words as fit) and the instruction is printed in full underneath, where
+there is a line for it. `StoryboardFrames` clamps to two lines, breaks anywhere,
+carries a `title`, and unclamps for print. It also stopped drawing a fixed four
+columns: a three-beat recipe drew three frames and a column of empty near-black,
+which reads as a frame that failed to render.
+
+### 4. One format view, not two
+
+The formats were on screen **twice**: the report's grid, and a second board of
+`TrendCard`s built from the same rows underneath it, behind a filter bar. Six
+at the top, three at the bottom, no way to tell it was one piece of research.
+
+The board's two good parts — the storyboard and the fit bar — moved into the
+report card. The rest went: `trend-card.tsx`, `trend-filter-bar.tsx`,
+`trend-filters.ts`, `trend-rows.ts` and the `cards` half of
+`readLatestNicheReport`. **The filters went with it**, and that is a deliberate
+removal rather than a casualty: they filtered three formats by platform and by
+a time window we do not measure.
+
+The kept view is the one inside `data-print-region`, so everything a prospect
+reads is everything the PDF contains.
+
+### 5. Sources were a URL dump
+
+`sourcesUsed` was a list of bare urls printed semicolon-joined — four wrapped
+lines of `https://…` under the word "Sources". That satisfies `12 §1` as a
+database record and fails it as a document: an audit nobody can read is not an
+audit. Sources are now **objects** — title, url, derived domain, and a kind —
+rendered as a numbered list.
+
+**`kind` is the part that is not presentation.** A `post` is a public post we
+read a format off; a `guide` is an article *about* the niche. The first is
+evidence that a format is working and the second is industry guidance, and
+printing them as one undifferentiated list quietly promotes the second to the
+first. A bare url from an older report becomes a `guide`, never a post: the
+honest reading of "a link we kept but cannot describe" is the weaker claim.
+
+### What this amends
+
+D118's report screen and D120's print region, on the content rather than the
+mechanism. Nothing about the legal position moves: links and descriptions only,
+a source note per row, no media (D115, non-negotiables 1 and 2).

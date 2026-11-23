@@ -47,21 +47,21 @@ export const SAMPLE_REPORT: NicheReportFindings = {
       whyItWorks:
         'Names a belief the viewer already holds in the first second, so the correction is the reason to stay.',
       beats: ['State the myth', 'Say plainly that it is wrong', 'Give the fact', 'One-line CTA'],
-      fit: 86,
+      fit: 9,
     },
     {
       name: 'What this should cost',
       whyItWorks:
         'A price in the hook answers the question people are too polite to ask, and the answer is the whole video.',
       beats: ['Name the job', 'Give the range', 'Explain the spread', 'What changes it'],
-      fit: 78,
+      fit: 8,
     },
     {
       name: 'Three mistakes',
       whyItWorks:
         'A numbered promise sets the length expectation, so viewers who stay for one stay for all three.',
       beats: ['Promise the count', 'Mistake and fix, three times', 'Close on the easiest one'],
-      fit: 71,
+      fit: 7,
     },
   ],
   topHooks: [
@@ -127,5 +127,16 @@ export const SAMPLE_REPORT: NicheReportFindings = {
       sourceNote: 'Sample data — not a real source',
     },
   ],
-  sourcesUsed: ['Sample data — no sources were consulted'],
+  // Shaped like a real source list — a title, a domain and a kind — so the
+  // screen built against it does not break on the real thing. The domain is
+  // `example.com` for the same reason the examples are: a canned source
+  // naming a real publication would be a claim nobody checked.
+  sourcesUsed: [
+    {
+      title: 'Sample data — no sources were consulted',
+      url: 'https://example.com/sample-source',
+      domain: 'example.com',
+      kind: 'guide',
+    },
+  ],
 }

@@ -159,7 +159,15 @@ const REPORT_SCHEMA = {
           name: { type: 'string' },
           whyItWorks: { type: 'string' },
           beats: { type: 'array', items: { type: 'string' } },
-          fit: { type: 'integer' },
+          /*
+           * 0–10, bounded here rather than only asked for in words.
+           *
+           * The first live scan answered 9, 8 and 7 against a field documented
+           * as 0–100 and a bar drawn against 100 — three strong fits rendered
+           * as three near-empty bars. The scale a model reaches for unprompted
+           * is the one to standardise on, so the schema states it.
+           */
+          fit: { type: 'integer', minimum: 0, maximum: 10 },
         },
       },
     },
@@ -175,7 +183,26 @@ const REPORT_SCHEMA = {
       },
     },
     postingPatterns: { type: 'array', items: { type: 'string' } },
-    sourcesUsed: { type: 'array', items: { type: 'string' } },
+    /*
+     * A source is a page, so it is described as one: what it was called, where
+     * it lives, and whether it is a post we read a format off or a guide
+     * somebody wrote about the niche. A list of bare urls printed as a
+     * semicolon-joined wall is not an audit record, which is what `12 §1`
+     * asks this field to be.
+     */
+    sourcesUsed: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['title', 'url', 'kind'],
+        properties: {
+          title: { type: 'string' },
+          url: { type: 'string' },
+          kind: { type: 'string', enum: ['post', 'guide'] },
+        },
+      },
+    },
     examples: {
       type: 'array',
       items: {
@@ -213,6 +240,8 @@ Hard rules. These are not style preferences:
 3. Every example must carry a source_note naming where you looked, so an audit can check it later.
 4. Rank by views per follower over roughly the last 30 days, never by raw views. A 4,000-follower account getting 40,000 views is a better model than a two-million-follower account coasting — ranking by raw views recommends the coaster.
 5. If you are unsure of a number, omit the field. Do not estimate. A missing value is honest; an invented one is not.
+6. Score fit from 0 to 10, where 10 is "this client could shoot this tomorrow". Never use a 0-100 scale.
+7. Sources are pages, not bare links. Give each one its page title, its url, and whether it is a "post" (a public post or video you read a format off) or a "guide" (an article or agency write-up ABOUT the niche). A guide is industry guidance, not evidence that a format is working, and the two must never be presented as the same thing.
 
 Return formats as recipes: a name, why it works in one sentence, and the beats in order (hook, setup, payoff, call to action). Those beats are what gets remade with a new script and the client's own footage.`
 

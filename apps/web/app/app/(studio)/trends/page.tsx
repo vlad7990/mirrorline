@@ -1,31 +1,16 @@
-import { AlertBar, Button, EmptyState, PageHeader } from '@mirrorline/ui'
+import { AlertBar, EmptyState, PageHeader } from '@mirrorline/ui'
 import { Info } from 'lucide-react'
 import type { Metadata } from 'next'
-import Link from 'next/link'
 
 import { runNicheScanAction } from '@/app/app/(studio)/trends/actions'
 import { NicheReportPanel } from '@/components/trends/niche-report-panel'
 import { RunScanForm } from '@/components/trends/run-scan-form'
 import { ScanProgress } from '@/components/trends/scan-progress'
-import { TrendCard } from '@/components/trends/trend-card'
-import { TrendFilterBar } from '@/components/trends/trend-filter-bar'
 import { readLatestScanJob } from '@/lib/jobs/read-scan-job'
 import { isJobPending } from '@/lib/jobs/types'
 import { SAMPLE_REPORT } from '@/lib/niche-scan/canned'
 import { getOwnedWorkspace } from '@/lib/workspace/current-workspace'
 import { readLatestNicheReport } from '@/lib/workspace/read-niche-report'
-import {
-  NICHE_PARAM,
-  PLATFORM_PARAM,
-  WINDOW_PARAM,
-  WINDOW_SENTENCES,
-  filterTrends,
-  firstParam,
-  parseNicheFilter,
-  parsePlatformFilter,
-  parseTimeWindow,
-  type TrendFilterState,
-} from '@/components/trends/trend-filters'
 
 /**
  * S4 · Niche Scan.
@@ -36,44 +21,29 @@ import {
  * it Trends invited the comparison with every tool that shows you what is
  * popular, which is the comparison P2 and P5 exist to refuse.
  *
- * Each card now carries the Niche Scan's two benchmarks: **views per
- * follower**, which makes formats comparable across accounts of different
- * sizes, and the **fit score** against this brand.
+ * ## One format view, and copy that matches what we measure (P0, D121)
  *
- * The filters live in the query string, so the server renders the exact set
- * of cards the URL asks for and the client only writes the next URL.
+ * The screen rendered the formats **twice**: the report's own grid, and a
+ * board of `TrendCard`s built from the same rows underneath it, behind a
+ * filter bar. A reader counted six formats at the top and three at the bottom
+ * and had no way of knowing it was one piece of research. The board's two
+ * good parts — the storyboard and the fit bar — moved into the report card,
+ * and the rest went, filters included: a control that filters three formats
+ * by platform and by a time window we do not measure is furniture.
  *
- * Every card is a format recipe drawn as empty frames. CLAUDE.md
- * non-negotiables 1 and 2: we never hold anyone else's footage, and a remake
- * copies the format only.
+ * The header claimed "Formats rising in your niche … Growth over 7 days"
+ * above cards every one of which read "Not measured yet". We run no
+ * growth measurement at all — the scan reads public posts and published
+ * guides — so the copy now says that instead. `15 §honesty rules`.
+ *
+ * Every format is a recipe drawn as empty frames. CLAUDE.md non-negotiables 1
+ * and 2: we never hold anyone else's footage, and a remake copies the format
+ * only.
  */
 
 export const metadata: Metadata = { title: 'Niche Scan' }
 
-/**
- * SC 4.1.3: changing a filter used to swap the whole grid in silence. This one
- * line is the result count, visible rather than `sr-only` — a sighted person
- * has the same question, and a live region nobody can see is a region nobody
- * can check.
- */
-function matchCountLine(count: number): string {
-  if (count === 0) return 'No formats match these filters'
-  return count === 1 ? '1 format matches these filters' : `${count} formats match these filters`
-}
-
-interface TrendsPageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>
-}
-
-export default async function TrendsPage({ searchParams }: TrendsPageProps) {
-  const params = await searchParams
-
-  const filters: TrendFilterState = {
-    niche: parseNicheFilter(firstParam(params[NICHE_PARAM])),
-    platform: parsePlatformFilter(firstParam(params[PLATFORM_PARAM])),
-    window: parseTimeWindow(firstParam(params[WINDOW_PARAM])),
-  }
-
+export default async function TrendsPage() {
   // Null means the read failed, which the panel's three-state branch below
   // renders as our problem rather than as an empty niche.
   const reportResult = await readLatestNicheReport()
@@ -97,19 +67,15 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
   const scanJob = jobRead?.job ?? null
   const isScanPending = scanJob !== null && isJobPending(scanJob)
 
-  // This workspace's own formats, or none. **Never a fixture** — until V1
-  // this screen drew `@mirrorline/mock`'s eight trends to everybody, and the
-  // labelled report landing above them made the invented cards read as real.
-  const allCards = reportResult?.cards ?? []
-  const visible = filterTrends(allCards, filters)
-
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        eyebrow="Create · Trend Scout agent · updated 10:05 am"
+        // "updated 10:05 am" was a hard-coded string in a header above live
+        // research. The scan's own timestamp is printed on the report, where
+        // it is true; the eyebrow names the agent and stops there.
+        eyebrow="Create · Trend Scout agent"
         title="Niche Scan"
-        description={`Formats rising in your niche and the ones beside it. ${WINDOW_SENTENCES[filters.window]}`}
-        action={<TrendFilterBar filters={filters} />}
+        description="Formats working in your niche, from public posts and guides found this week."
       />
 
       {/* CLAUDE.md non-negotiables 1 and 2, said plainly and up front. */}
@@ -182,45 +148,18 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
       )}
 
       {/*
-        Two empty states, and they say different things.
-
-        "No scan yet" is about *us* — nothing has run. "No formats match
-        these filters" is about the filters, and only makes sense once there
-        are formats to filter. Showing the second to a workspace that has
-        never been scanned would blame the client's filter choice for our
-        not having done the work.
+        One empty state, and it is about *us*: nothing has run yet. It sits
+        below the sample report rather than instead of it, so a new workspace
+        sees what a report looks like and is told plainly that this one is not
+        theirs. The old "No formats match these filters" went with the
+        filters — it blamed a filter choice for work we had not done.
       */}
-      {allCards.length > 0 ? (
-        <p role="status" className="m-0 text-meta text-text-muted">
-          {matchCountLine(visible.length)}
-        </p>
-      ) : null}
-
-      {allCards.length === 0 ? (
+      {reportResult !== null && !reportResult.hasScanned ? (
         <EmptyState
           title="No scan yet"
-          description="When the Trend Scout runs, the formats it finds in your niche appear here as recipes you can remake — each one a set of beats, never anyone else's footage."
+          description="When the Trend Scout runs, the formats it finds in your niche replace the sample above — each one a set of beats, never anyone else's footage."
         />
-      ) : visible.length === 0 ? (
-        <EmptyState
-          title="No formats match these filters"
-          description="The Trend Scout only keeps formats it can describe as beats. Widen the niche or pick another platform."
-          action={
-            <Button asChild variant="secondary">
-              <Link href="/app/trends">Show all formats</Link>
-            </Button>
-          }
-        />
-      ) : (
-        <ul className="m-0 grid list-none grid-cols-1 gap-5 p-0 sm:grid-cols-2 xl:grid-cols-4">
-          {visible.map((trend) => (
-            // No remake studio for a real scanned format until V2 writes the
-            // script and the compliance verdict. The card says so rather than
-            // offering a link that would 404.
-            <TrendCard canRemake={false} key={trend.id} trend={trend} />
-          ))}
-        </ul>
-      )}
+      ) : null}
     </div>
   )
 }

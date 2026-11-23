@@ -14,26 +14,20 @@
  *   three it got is explicit rather than inferred from an empty array.
  */
 
-import type { Trend } from '@mirrorline/mock'
-
 import { createSupabaseServerClient } from '@/lib/supabase/server-client'
 
 import {
+  normaliseFit,
   parseExample,
+  parseSources,
   type FormatFinding,
   type LengthFinding,
   type NicheReportFindings,
   type TrendExample,
 } from '../niche-scan/report'
-import { toTrendCards, type TrendRow } from './trend-rows'
 
 /**
  * How many `trends` rows one read pulls.
- *
- * The same rows feed both halves of the screen — the report's examples and
- * the format cards below it — so they are fetched once and shaped twice. Two
- * queries over the same rows is how the two halves start disagreeing about
- * what the scan found.
  *
  * 30 matches `parseReport`'s own cap on examples, so a scan cannot produce
  * rows this read would silently hide.
@@ -50,15 +44,24 @@ export interface StoredNicheReport {
   readonly findings: NicheReportFindings
 }
 
-/** jsonb comes back as `unknown`; each column is parsed, never cast. */
+/**
+ * jsonb comes back as `unknown`; each column is parsed, never cast.
+ *
+ * The fit is re-normalised on the way out, not only on the way in: rows
+ * written before the scale was fixed hold 0–100 values, and the screen draws
+ * whatever this returns. A read that trusted the stored number would keep
+ * showing the old reports' bars at a tenth of their length forever.
+ */
 function asFormatList(value: unknown): readonly FormatFinding[] {
   if (!Array.isArray(value)) return []
-  return value.filter(
-    (entry): entry is FormatFinding =>
-      typeof entry === 'object' &&
-      entry !== null &&
-      typeof (entry as FormatFinding).name === 'string',
-  )
+  return value
+    .filter(
+      (entry): entry is FormatFinding =>
+        typeof entry === 'object' &&
+        entry !== null &&
+        typeof (entry as FormatFinding).name === 'string',
+    )
+    .map((entry) => ({ ...entry, fit: normaliseFit(entry.fit) }))
 }
 
 function asStringList(value: unknown): readonly string[] {
@@ -103,14 +106,14 @@ const STATUSES = ['running', 'complete', 'failed'] as const
 export interface NicheReportResult {
   readonly report: StoredNicheReport | null
   /**
-   * The format cards below the report, from the same rows.
+   * Whether this workspace has ever been scanned.
    *
-   * Empty when there has been no scan — **never a fixture**. `/app/trends`
-   * drew `@mirrorline/mock`'s eight trends to every workspace until V1, and
-   * putting a labelled sample report above unlabelled invented cards made the
-   * cards read as real. D110, one screen along.
+   * Carried separately from `report` because the screen's empty state is about
+   * *us* — nothing has run — and the sample report renders in its place. The
+   * caller must not have to infer "no scan yet" from an empty array, which is
+   * the inference D110 is a monument to.
    */
-  readonly cards: readonly Trend[]
+  readonly hasScanned: boolean
 }
 
 export async function readLatestNicheReport(): Promise<NicheReportResult | null> {
@@ -130,7 +133,7 @@ export async function readLatestNicheReport(): Promise<NicheReportResult | null>
   }
 
   const row = (reportResult.data ?? [])[0] as ReportRow | undefined
-  if (!row) return { report: null, cards: [] }
+  if (!row) return { report: null, hasScanned: false }
 
   const trendsResult = await supabase
     .from('trends')
@@ -154,14 +157,10 @@ export async function readLatestNicheReport(): Promise<NicheReportResult | null>
     .map((stored) => parseExample({ ...stored, formatName: stored.format }).example)
     .filter((entry): entry is TrendExample => entry !== null)
 
-  // The cards, from the same rows. `row.niche` is what was scanned, which is
-  // the workspace's own niche — the comparison the "My niche" filter needs.
-  const cards = toTrendCards(trendRows as unknown as readonly TrendRow[], row.niche)
-
   const status = STATUSES.find((entry) => entry === row.status) ?? 'failed'
 
   return {
-    cards,
+    hasScanned: true,
     report: {
       id: row.id,
       niche: row.niche,
@@ -175,7 +174,10 @@ export async function readLatestNicheReport(): Promise<NicheReportResult | null>
         topics: asStringList(row.topics),
         lengths: asLengthList(row.lengths),
         postingPatterns: asStringList(row.posting_patterns),
-        sourcesUsed: asStringList(row.sources_used),
+        // The same parser the agent writes through, so a stored source that
+        // would not be accepted today is not printed today either — including
+        // the bare-url rows written before sources had a shape.
+        sourcesUsed: parseSources(row.sources_used),
         examples,
       },
     },
