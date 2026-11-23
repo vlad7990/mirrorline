@@ -26,6 +26,8 @@
  *    whether or not we ever fetched it.
  */
 
+import { parseVideoIdeas, type VideoIdea } from '../scripts/video-idea'
+
 /** A format the scan found working, with how we would make it the client's. */
 export interface FormatFinding {
   readonly name: string
@@ -33,6 +35,49 @@ export interface FormatFinding {
   readonly beats: readonly string[]
   /** 0–10, this client's fit. `12 §1`'s `fit_score`. See `FIT_MAX`. */
   readonly fit: number
+  /**
+   * One line saying *why* this fit, naming something from the client's own
+   * profile (V1 P1.7).
+   *
+   * A bare "Fit 9" is a number with no argument behind it, and a client
+   * reading their own report cannot tell a considered 9 from a generous one.
+   * "Fit 9: matches her reactive-dog service and her positive-only method" is
+   * checkable — including when it is wrong, which is the part that matters.
+   */
+  readonly fitReason: string | null
+}
+
+/**
+ * Where a finding came from, and it is a claim about evidence (V1 P1.9).
+ *
+ * - `posts` — read off public posts the scan actually found.
+ * - `guidance` — from a published guide or an agency write-up about the niche.
+ *   Industry guidance. Not evidence that anything is working for anyone.
+ * - `unstated` — the scan did not say. Shown as guidance, never as evidence:
+ *   between two readings of silence, the product takes the weaker one.
+ *
+ * `15 §honesty rules` is the whole reason this is a field rather than a tone
+ * of voice. The first live report mixed both kinds in one bulleted list, where
+ * "post three to five times a week" (somebody's blog) sat beside a hook read
+ * off thirty real videos, in the same type, with nothing to tell them apart.
+ */
+export const CLAIM_BASES = ['posts', 'guidance', 'unstated'] as const
+
+export type ClaimBasis = (typeof CLAIM_BASES)[number]
+
+/** A hook, a topic or a posting pattern, with where it came from. */
+export interface Claim {
+  readonly text: string
+  readonly basis: ClaimBasis
+  /**
+   * Set when the topic splits the niche (V1 P1.8).
+   *
+   * Every niche has arguments in it — board-and-train, raw feeding, whether
+   * sun cream causes anything. A format built on one takes a side in public,
+   * on the client's own account, and that is a business decision rather than a
+   * content one. The scan may raise them; it may not slip them in unlabelled.
+   */
+  readonly brandRisk: string | null
 }
 
 /**
@@ -96,9 +141,20 @@ export interface ReportSource {
   readonly kind: SourceKind
 }
 
+/**
+ * A length that works, as a range (V1 P1.9).
+ *
+ * It was a single integer, and the first live report printed "8s", "21s",
+ * "34s", "58s" — four precise numbers nobody measured to the second. The
+ * finding is real and the precision was not: what a scan can see is that
+ * myth-busting videos in this niche run about twenty to thirty-five seconds.
+ * A range says the same thing without the invented decimal place.
+ */
 export interface LengthFinding {
-  readonly seconds: number
+  readonly secondsMin: number
+  readonly secondsMax: number
   readonly note: string
+  readonly basis: ClaimBasis
 }
 
 export const ACCOUNT_SIZE_BUCKETS = [
@@ -136,12 +192,20 @@ export interface TrendExample {
 
 export interface NicheReportFindings {
   readonly topFormats: readonly FormatFinding[]
-  readonly topHooks: readonly string[]
-  readonly topics: readonly string[]
+  readonly topHooks: readonly Claim[]
+  readonly topics: readonly Claim[]
   readonly lengths: readonly LengthFinding[]
-  readonly postingPatterns: readonly string[]
+  readonly postingPatterns: readonly Claim[]
   readonly examples: readonly TrendExample[]
   readonly sourcesUsed: readonly ReportSource[]
+  /**
+   * Three video ideas written from the formats above (V2).
+   *
+   * On the report because they are the end of it: the research is only useful
+   * if it ends in something to shoot on Monday. Empty when the script agent
+   * refused every draft, which is a real outcome — see `first-videos.ts`.
+   */
+  readonly firstVideos: readonly VideoIdea[]
 }
 
 /**
@@ -201,7 +265,43 @@ function parseFormat(value: unknown): FormatFinding | null {
     // views per follower anyway; the fit is the scan's opinion, and an absent
     // opinion should not read as a confident middling one.
     fit: normaliseFit(row.fit),
+    fitReason: str(row.fitReason ?? row.fit_reason, 240),
   }
+}
+
+/**
+ * One claim, from whichever shape it arrives in.
+ *
+ * A bare string is accepted because that is what every hook, topic and posting
+ * pattern written before P1 is stored as. It becomes `unstated` rather than
+ * `posts`: an old row whose provenance nobody recorded is not evidence, and
+ * promoting it to evidence on read would be the parser inventing the thing
+ * this field exists to stop.
+ */
+export function parseClaim(value: unknown): Claim | null {
+  if (typeof value === 'string') {
+    const text = str(value)
+    return text ? { text, basis: 'unstated', brandRisk: null } : null
+  }
+
+  if (typeof value !== 'object' || value === null) return null
+  const row = value as Record<string, unknown>
+
+  const text = str(row.text ?? row.name)
+  if (!text) return null
+
+  const basisRaw = str(row.basis, 20)?.toLowerCase()
+  const basis = CLAIM_BASES.find((entry) => entry === basisRaw) ?? 'unstated'
+
+  return { text, basis, brandRisk: str(row.brandRisk ?? row.brand_risk, 200) }
+}
+
+export function parseClaims(value: unknown, max: number): readonly Claim[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map(parseClaim)
+    .filter((claim): claim is Claim => claim !== null)
+    .slice(0, max)
 }
 
 /** `blog.hootsuite.com/short-video` → `blog.hootsuite.com`. */
@@ -253,15 +353,44 @@ export function parseSource(value: unknown): ReportSource | null {
   }
 }
 
+/**
+ * A length range, from a range or from the single number we used to store.
+ *
+ * An old row holding `seconds: 21` becomes 21–21 rather than being dropped:
+ * the finding was real, only its precision was invented, and the screen prints
+ * a single number when the two ends agree. A range given backwards is put the
+ * right way round rather than refused — that is a typo, not a disagreement.
+ */
 function parseLength(value: unknown): LengthFinding | null {
   if (typeof value !== 'object' || value === null) return null
   const row = value as Record<string, unknown>
 
-  const seconds = num(row.seconds)
   const note = str(row.note, 200)
-  if (seconds === null || seconds <= 0 || !note) return null
+  if (!note) return null
 
-  return { seconds: Math.round(seconds), note }
+  const single = num(row.seconds)
+  const low = num(row.secondsMin ?? row.seconds_min) ?? single
+  const high = num(row.secondsMax ?? row.seconds_max) ?? single
+  if (low === null || high === null || low <= 0 || high <= 0) return null
+
+  const basisRaw = str(row.basis, 20)?.toLowerCase()
+  const basis = CLAIM_BASES.find((entry) => entry === basisRaw) ?? 'unstated'
+
+  return {
+    secondsMin: Math.round(Math.min(low, high)),
+    secondsMax: Math.round(Math.max(low, high)),
+    note,
+    basis,
+  }
+}
+
+/** Every length that can be drawn, capped at 6. Shared with the read path. */
+export function parseLengths(value: unknown): readonly LengthFinding[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map(parseLength)
+    .filter((entry): entry is LengthFinding => entry !== null)
+    .slice(0, 6)
 }
 
 export interface ParsedExample {
@@ -372,12 +501,16 @@ export function parseReport(value: unknown): ParsedReport | null {
     droppedExamples,
     findings: {
       topFormats,
-      topHooks: strList(root.topHooks ?? root.top_hooks, 10),
-      topics: strList(root.topics, 12),
+      topHooks: parseClaims(root.topHooks ?? root.top_hooks, 10),
+      topics: parseClaims(root.topics, 12),
       lengths,
-      postingPatterns: strList(root.postingPatterns ?? root.posting_patterns, 8),
+      postingPatterns: parseClaims(root.postingPatterns ?? root.posting_patterns, 8),
       examples,
       sourcesUsed: parseSources(root.sourcesUsed ?? root.sources_used),
+      // The scan never writes these: the script agent does, after the report
+      // exists and from what is in it. Parsed here so a stored report round-
+      // trips through the same function that validated it.
+      firstVideos: parseVideoIdeas(root.firstVideos ?? root.first_videos),
     },
   }
 }

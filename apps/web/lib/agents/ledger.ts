@@ -42,7 +42,15 @@ import {
 } from '../copilot/spend'
 
 /** The agent names written to `agent_runs.agent`. Text in the schema, fixed here. */
-export type AgentName = 'trend_scout' | 'copilot'
+/**
+ * Who spent it. One of `04`'s seven, or the co-pilot.
+ *
+ * `remake_producer` joins on the day V2 ships: the script and hook agent is
+ * the Remake Producer by `04 §Agents`, and its runs have to appear beside the
+ * scan's on the Agents screen — or the month's spend stops being the sum of
+ * its own log.
+ */
+export type AgentName = 'trend_scout' | 'remake_producer' | 'copilot'
 
 export interface AgentRunRecord {
   readonly workspaceId: string

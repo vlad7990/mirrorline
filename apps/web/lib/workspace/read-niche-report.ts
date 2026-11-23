@@ -18,13 +18,16 @@ import { createSupabaseServerClient } from '@/lib/supabase/server-client'
 
 import {
   normaliseFit,
+  parseClaims,
   parseExample,
+  parseLengths,
   parseSources,
   type FormatFinding,
   type LengthFinding,
   type NicheReportFindings,
   type TrendExample,
 } from '../niche-scan/report'
+import { parseVideoIdeas } from '../scripts/video-idea'
 
 /**
  * How many `trends` rows one read pulls.
@@ -61,22 +64,23 @@ function asFormatList(value: unknown): readonly FormatFinding[] {
         entry !== null &&
         typeof (entry as FormatFinding).name === 'string',
     )
-    .map((entry) => ({ ...entry, fit: normaliseFit(entry.fit) }))
+    // `fitReason` is `?? null` rather than assumed: every row written before
+    // P1 has no such field, and `undefined` reaching a `string | null` prop is
+    // the kind of difference TypeScript cannot see through a jsonb column.
+    .map((entry) => ({ ...entry, fit: normaliseFit(entry.fit), fitReason: entry.fitReason ?? null }))
 }
 
-function asStringList(value: unknown): readonly string[] {
-  if (!Array.isArray(value)) return []
-  return value.filter((entry): entry is string => typeof entry === 'string')
-}
-
+/**
+ * Lengths, through the writer's own parser.
+ *
+ * Hand-rolled filters were how `top_hooks` and `lengths` were read until P1,
+ * and they could not survive a shape change: a row written as
+ * `{ seconds: 21 }` before lengths became ranges would simply have vanished
+ * from the screen. `parseReport` already turns both shapes into the current
+ * one, so the read borrows it rather than keeping a second opinion.
+ */
 function asLengthList(value: unknown): readonly LengthFinding[] {
-  if (!Array.isArray(value)) return []
-  return value.filter(
-    (entry): entry is LengthFinding =>
-      typeof entry === 'object' &&
-      entry !== null &&
-      typeof (entry as LengthFinding).seconds === 'number',
-  )
+  return parseLengths(value)
 }
 
 interface ReportRow {
@@ -92,6 +96,7 @@ interface ReportRow {
   readonly lengths: unknown
   readonly posting_patterns: unknown
   readonly sources_used: unknown
+  readonly first_videos: unknown
 }
 
 const STATUSES = ['running', 'complete', 'failed'] as const
@@ -122,7 +127,7 @@ export async function readLatestNicheReport(): Promise<NicheReportResult | null>
   const reportResult = await supabase
     .from('niche_reports')
     .select(
-      'id, niche, status, created_at, completed_at, error, top_formats, top_hooks, topics, lengths, posting_patterns, sources_used',
+      'id, niche, status, created_at, completed_at, error, top_formats, top_hooks, topics, lengths, posting_patterns, sources_used, first_videos',
     )
     .order('created_at', { ascending: false })
     .limit(1)
@@ -170,10 +175,14 @@ export async function readLatestNicheReport(): Promise<NicheReportResult | null>
       error: row.error,
       findings: {
         topFormats: asFormatList(row.top_formats),
-        topHooks: asStringList(row.top_hooks),
-        topics: asStringList(row.topics),
+        // Hooks, topics and patterns go through the writer's own parser,
+        // which is what carries the rows written as bare strings before a
+        // claim had a source (P1.9). They become `unstated`, never `posts`.
+        topHooks: parseClaims(row.top_hooks, 10),
+        topics: parseClaims(row.topics, 12),
         lengths: asLengthList(row.lengths),
-        postingPatterns: asStringList(row.posting_patterns),
+        postingPatterns: parseClaims(row.posting_patterns, 8),
+        firstVideos: parseVideoIdeas(row.first_videos),
         // The same parser the agent writes through, so a stored source that
         // would not be accepted today is not printed today either — including
         // the bare-url rows written before sources had a shape.

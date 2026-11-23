@@ -44,6 +44,10 @@ const ROOTS = ['../../components', '../../app', '..']
  * sentence saying why.
  */
 const NOT_A_POSTING_CLAIM: Readonly<Record<string, string>> = {
+  'trends/client-profile-form.tsx':
+    'Asks for the client\'s own YouTube handle, so the scan knows where their work is. A field labelled with a platform promises nothing about posting to it — and this one is explicitly not a connection: `social_accounts` is where a connected account lives.',
+  'niche-scan/scan.ts':
+    'The Trend Scout\'s prompt names YouTube Shorts as a place to *read* formats from, and asks for examples spread across the three. A source we research is the opposite direction to a destination we publish to.',
   'upload/upload-data.ts':
     'Where a long video can come *from*. That is the opposite direction to publishing.',
   'marketing/hero-upload.tsx':
