@@ -31,8 +31,69 @@ export interface FormatFinding {
   readonly name: string
   readonly whyItWorks: string
   readonly beats: readonly string[]
-  /** 0–100, this client's fit. `12 §1`'s `fit_score`. */
+  /** 0–10, this client's fit. `12 §1`'s `fit_score`. See `FIT_MAX`. */
   readonly fit: number
+}
+
+/**
+ * The fit scale, named once because a score only means something beside it.
+ *
+ * **It was 0–100 and the model answered on 0–10 anyway.** The first live scan
+ * came back with fits of 9, 8 and 7 — the scale a person reaches for when
+ * asked how well something fits — and the screen drew each of them as a bar
+ * that was 9% full beside the words "Fit 9". Both halves were defensible and
+ * together they said the opposite of the finding: the three formats we were
+ * recommending looked like the three worst matches available.
+ *
+ * So the scale is 0–10 everywhere now, stated in the schema, in the prompt and
+ * beside every number on screen. `normaliseFit` carries the old rows across.
+ */
+export const FIT_MAX = 10
+
+/**
+ * A fit score on the 0–10 scale, whichever scale it arrived on.
+ *
+ * A value above 10 can only be a 0–100 answer — the schema forbids one now, but
+ * rows written before it did are in the database and the sample report was
+ * written on that scale too. Divided rather than clamped: clamping would turn
+ * every stored 86 into a flat 10 and lose the ranking between formats.
+ */
+export function normaliseFit(value: unknown): number {
+  const parsed = num(value)
+  if (parsed === null || parsed <= 0) return 0
+  const onScale = parsed > FIT_MAX ? parsed / 10 : parsed
+  return Math.round(clamp(onScale, 0, FIT_MAX))
+}
+
+/** How full the fit bar is drawn. 9 out of 10 is 90% of a bar, not 9%. */
+export function fitPercent(fit: number): number {
+  return (clamp(fit, 0, FIT_MAX) / FIT_MAX) * 100
+}
+
+/**
+ * Where a finding came from, as the report prints it (V1 P0.5).
+ *
+ * `sources_used` was a list of bare urls and the screen printed them joined by
+ * semicolons: four wrapped lines of `https://…` with nothing saying what any
+ * of them was. A reader cannot audit that, which is the entire job `12 §1`
+ * gives this field.
+ *
+ * `kind` is the distinction that matters most and it is **not cosmetic**: a
+ * public post is evidence that a format is working, and an agency's blog post
+ * about short video is somebody's opinion. `15 §honesty rules` forbids
+ * dressing the second up as the first, so the two are labelled apart wherever
+ * they appear.
+ */
+export const SOURCE_KINDS = ['post', 'guide'] as const
+
+export type SourceKind = (typeof SOURCE_KINDS)[number]
+
+export interface ReportSource {
+  readonly title: string
+  readonly url: string
+  /** `instagram.com`, `blog.hootsuite.com`. Derived, never asked for. */
+  readonly domain: string
+  readonly kind: SourceKind
 }
 
 export interface LengthFinding {
@@ -80,7 +141,7 @@ export interface NicheReportFindings {
   readonly lengths: readonly LengthFinding[]
   readonly postingPatterns: readonly string[]
   readonly examples: readonly TrendExample[]
-  readonly sourcesUsed: readonly string[]
+  readonly sourcesUsed: readonly ReportSource[]
 }
 
 /**
@@ -132,8 +193,6 @@ function parseFormat(value: unknown): FormatFinding | null {
   const whyItWorks = str(row.whyItWorks ?? row.why_it_works)
   if (!name || !whyItWorks) return null
 
-  const fit = num(row.fit)
-
   return {
     name,
     whyItWorks,
@@ -141,7 +200,56 @@ function parseFormat(value: unknown): FormatFinding | null {
     // A missing fit score becomes 0 rather than a guess. `12 §1` ranks by
     // views per follower anyway; the fit is the scan's opinion, and an absent
     // opinion should not read as a confident middling one.
-    fit: fit === null ? 0 : Math.round(clamp(fit, 0, 100)),
+    fit: normaliseFit(row.fit),
+  }
+}
+
+/** `blog.hootsuite.com/short-video` → `blog.hootsuite.com`. */
+export function domainOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./i, '')
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * One source row, or `null`.
+ *
+ * The url is held to the same bar as an example's: https, and not a media
+ * file. A "source" we would refuse to store as an example is not a source we
+ * should print either — same rule, same reason (non-negotiable 1).
+ *
+ * A plain string is still accepted, because that is what every row written
+ * before this shape existed contains. It becomes a source titled by its own
+ * domain and tagged `guide`: the honest reading of "a link we kept but cannot
+ * describe" is the weaker of the two claims, never the stronger one.
+ */
+export function parseSource(value: unknown): ReportSource | null {
+  if (typeof value === 'string') {
+    const url = value.trim()
+    if (!isStorableSourceUrl(url)) return null
+    const domain = domainOf(url)
+    return { title: domain || url, url, domain, kind: 'guide' }
+  }
+
+  if (typeof value !== 'object' || value === null) return null
+  const row = value as Record<string, unknown>
+
+  const url = str(row.url, 600)
+  if (!url || !isStorableSourceUrl(url)) return null
+
+  const domain = domainOf(url)
+  const kindRaw = str(row.kind, 20)?.toLowerCase()
+  const kind = SOURCE_KINDS.find((entry) => entry === kindRaw) ?? 'guide'
+
+  return {
+    // A missing title is the domain rather than "Untitled": the domain is a
+    // fact about the link, and a placeholder is a blank where a fact belongs.
+    title: str(row.title, 200) ?? domain ?? url,
+    url,
+    domain,
+    kind,
   }
 }
 
@@ -269,9 +377,27 @@ export function parseReport(value: unknown): ParsedReport | null {
       lengths,
       postingPatterns: strList(root.postingPatterns ?? root.posting_patterns, 8),
       examples,
-      sourcesUsed: strList(root.sourcesUsed ?? root.sources_used, 12),
+      sourcesUsed: parseSources(root.sourcesUsed ?? root.sources_used),
     },
   }
+}
+
+/** Every source that can be shown, deduplicated by url, capped at 12. */
+export function parseSources(value: unknown): readonly ReportSource[] {
+  if (!Array.isArray(value)) return []
+
+  const seen = new Set<string>()
+  const sources: ReportSource[] = []
+
+  for (const entry of value) {
+    const source = parseSource(entry)
+    if (!source || seen.has(source.url)) continue
+    seen.add(source.url)
+    sources.push(source)
+    if (sources.length === 12) break
+  }
+
+  return sources
 }
 
 /**

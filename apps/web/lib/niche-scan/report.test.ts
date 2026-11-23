@@ -15,9 +15,13 @@ import { describe, expect, test } from 'vitest'
 
 import { SAMPLE_REPORT } from './canned'
 import {
+  FIT_MAX,
+  fitPercent,
   isStorableSourceUrl,
+  normaliseFit,
   parseExample,
   parseReport,
+  parseSources,
   rankExamples,
   type TrendExample,
 } from './report'
@@ -179,9 +183,10 @@ describe('a report is a report, or it is nothing', () => {
 
     expect(parsed?.findings.examples).toHaveLength(1)
     expect(parsed?.droppedExamples).toHaveLength(1)
-    // 150 is not a fit score. Clamped rather than rejected — the format is
-    // still a finding, and the number is the model's opinion of it.
-    expect(parsed?.findings.topFormats[0]?.fit).toBe(100)
+    // 150 is not a fit score on any scale. Read as the 0–100 shape it most
+    // resembles, then clamped — the format is still a finding, and the number
+    // is the model's opinion of it rather than a reason to drop the row.
+    expect(parsed?.findings.topFormats[0]?.fit).toBe(FIT_MAX)
     expect(parsed?.findings.topHooks).toEqual([])
   })
 
@@ -228,5 +233,106 @@ describe('ranking is views per follower, never raw views', () => {
     rankExamples(input)
 
     expect(input[0]?.url).toBe('https://example.com/a')
+  })
+})
+
+/**
+ * The bug a prospect saw first (P0.2).
+ *
+ * The first live scan scored its three recommended formats 9, 8 and 7 — and
+ * every one of them drew a bar that was all but empty, because the bar was
+ * drawn against 100. The screen said "these are the three best formats for
+ * you" in words and "these are terrible matches" in pixels, and the pixels
+ * are what a reader believes.
+ */
+describe('a fit score means something beside its scale', () => {
+  test('a 9 fills nine tenths of the bar, not a ninetieth', () => {
+    expect(normaliseFit(9)).toBe(9)
+    expect(fitPercent(normaliseFit(9))).toBe(90)
+  })
+
+  test('a 0–100 score written before the scale was fixed still reads right', () => {
+    // The sample report and every row the first live scan wrote are on this
+    // scale. 86 is a strong fit, and it has to stay one.
+    expect(normaliseFit(86)).toBe(9)
+    expect(fitPercent(normaliseFit(86))).toBe(90)
+  })
+
+  test('an impossible score is clamped, never rejected', () => {
+    expect(normaliseFit(150)).toBe(FIT_MAX)
+    expect(fitPercent(FIT_MAX)).toBe(100)
+  })
+
+  test('an absent score is 0 and draws nothing', () => {
+    expect(normaliseFit(undefined)).toBe(0)
+    expect(normaliseFit('a strong fit')).toBe(0)
+    expect(normaliseFit(-4)).toBe(0)
+    expect(fitPercent(0)).toBe(0)
+  })
+
+  test('a parsed format carries the normalised score', () => {
+    const parsed = parseReport({
+      topFormats: [{ name: 'Myth vs fact', whyItWorks: 'It works.', fit: 78 }],
+    })
+
+    expect(parsed?.findings.topFormats[0]?.fit).toBe(8)
+  })
+})
+
+/**
+ * Sources are an audit record, so they have to be readable as one (P0.5).
+ *
+ * `12 §1` makes `sources_used` the run-level half of the audit trail. It was
+ * a list of bare urls printed semicolon-joined, which is a record only in the
+ * sense that the bytes were kept.
+ */
+describe('a source is a page, with a name and a kind', () => {
+  test('keeps the title, derives the domain and keeps the kind', () => {
+    const sources = parseSources([
+      {
+        title: 'Top ads by industry',
+        url: 'https://www.tiktok.com/business/creativecenter/top-ads',
+        kind: 'post',
+      },
+    ])
+
+    expect(sources).toEqual([
+      {
+        title: 'Top ads by industry',
+        url: 'https://www.tiktok.com/business/creativecenter/top-ads',
+        domain: 'tiktok.com',
+        kind: 'post',
+      },
+    ])
+  })
+
+  test('a bare url from an older report becomes a guide, never evidence', () => {
+    // The weaker of the two claims. A link we kept but cannot describe is not
+    // a post we read a format off, and must not be shown as one.
+    const sources = parseSources(['https://blog.example.com/short-video-guide'])
+
+    expect(sources[0]?.kind).toBe('guide')
+    expect(sources[0]?.domain).toBe('blog.example.com')
+    expect(sources[0]?.title).toBe('blog.example.com')
+  })
+
+  test('an unknown kind is read as guidance rather than as evidence', () => {
+    const sources = parseSources([
+      { title: 'Something', url: 'https://example.com/a', kind: 'research' },
+    ])
+
+    expect(sources[0]?.kind).toBe('guide')
+  })
+
+  test('refuses a media file and a non-link, and deduplicates', () => {
+    const sources = parseSources([
+      { title: 'A clip', url: 'https://cdn.example.com/a.mp4', kind: 'post' },
+      { title: 'Not a link', url: 'tiktok.com/@a', kind: 'post' },
+      { title: 'A post', url: 'https://example.com/a', kind: 'post' },
+      { title: 'The same post, twice', url: 'https://example.com/a', kind: 'post' },
+    ])
+
+    expect(sources).toHaveLength(1)
+    expect(sources[0]?.url).toBe('https://example.com/a')
   })
 })

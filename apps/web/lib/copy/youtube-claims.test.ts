@@ -44,9 +44,6 @@ const ROOTS = ['../../components', '../../app', '..']
  * sentence saying why.
  */
 const NOT_A_POSTING_CLAIM: Readonly<Record<string, string>> = {
-  'trends/trend-filters.ts':
-    'A platform filter on the Niche Scan. It names the platform and claims nothing about publishing.',
-  'trends/trend-filter-bar.tsx': 'Renders that filter, and carries no claim of its own either.',
   'upload/upload-data.ts':
     'Where a long video can come *from*. That is the opposite direction to publishing.',
   'marketing/hero-upload.tsx':
@@ -58,7 +55,7 @@ const NOT_A_POSTING_CLAIM: Readonly<Record<string, string>> = {
   'workspace/week-schedule.test.ts': 'Tests that label map, and has to quote it to do so.',
   'copy/youtube-claims.test.ts': 'This file, which names the claim in order to search for it.',
   'niche-scan/report.test.ts':
-    'Quotes "YouTube Data API search" because that is one of the Niche Scan\'s allowed sources (12 §1), and uses the word "post" because the thing it validates is a link to one. A source we read a format *from* is the opposite direction to a destination we publish *to* — the same reason trend-filters.ts is here.',
+    'Quotes "YouTube Data API search" because that is one of the Niche Scan\'s allowed sources (12 §1), and uses the word "post" because the thing it validates is a link to one. A source we read a format *from* is the opposite direction to a destination we publish *to*.',
   'copy/platform-limits.test.ts': 'Tests the caveat, so it quotes both halves on purpose.',
   'app/(marketing)/pricing/page.tsx':
     'Names YouTube only in its own doc comment. The rendered page carries the caveat through <LongFormAddon />, and the test below checks that rather than taking it on trust.',

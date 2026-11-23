@@ -51,6 +51,48 @@ export interface StoryboardBeatLabel {
   readonly label: string
 }
 
+/** Longer than this inside a 9:16 frame is a paragraph, not a label. */
+const MAX_FRAME_LABEL = 18
+
+/**
+ * The frame's label: the name of the beat, never the beat itself.
+ *
+ * A scanned beat is a whole instruction — *"Hook: show the problem (lunging,
+ * barking, pulling) in the first second"* — and four of those inside four
+ * 9:16 frames is how the first live report rendered: text overflowing its
+ * frame and colliding with the next one. The fix is not a smaller font. A
+ * storyboard frame is a position marker, so it takes the position's name and
+ * the instruction is printed in full underneath, where there is a line for it.
+ *
+ * "Hook: show the problem…" → "Hook". A beat with no such prefix keeps as many
+ * whole words as fit, and a short beat is already a label.
+ */
+export function frameLabel(beat: string): string {
+  const trimmed = beat.trim()
+
+  const colon = trimmed.indexOf(':')
+  if (colon > 0 && colon <= MAX_FRAME_LABEL) return sentenceCase(trimmed.slice(0, colon))
+
+  if (trimmed.length <= MAX_FRAME_LABEL) return sentenceCase(trimmed)
+
+  // Whole words only: a label cut mid-word reads as a rendering bug.
+  const kept: string[] = []
+  for (const word of trimmed.split(/\s+/)) {
+    if ([...kept, word].join(' ').length > MAX_FRAME_LABEL) break
+    kept.push(word)
+  }
+
+  const head = kept.length > 0 ? kept.join(' ') : trimmed.slice(0, MAX_FRAME_LABEL)
+  return sentenceCase(`${head}…`)
+}
+
+/** The frames a format's beats are drawn as, labelled by position. */
+export function storyboardFromBeats(beats: readonly string[]): readonly StoryboardBeatLabel[] {
+  return storyboardBeats(
+    beats.map((label, index) => ({ order: index + 1, label: frameLabel(label) })),
+  )
+}
+
 /**
  * The frames for one trend card. The storyboard stays a single row of four,
  * so a longer recipe keeps its opening beats and its ending; the full set of
