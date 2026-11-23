@@ -103,9 +103,40 @@ test('the scan form arrives filled in with this workspace’s own niche', async 
   await context.close()
 })
 
-test('a scan run without a key saves the sample, and says that it is a sample', async ({
-  browser,
-}) => {
+/**
+ * ============================================================================
+ * This test used to assert a finished scan. It cannot any more, and that is
+ * the feature rather than a gap (D119)
+ * ============================================================================
+ *
+ * Until the queue landed, pressing the button ran the whole scan inside the
+ * server action, so a keyless run saved the sample before the request returned
+ * and this spec could assert "Saved a sample report" and the empty state
+ * disappearing.
+ *
+ * The action now writes a job and returns in milliseconds, because a real scan
+ * takes four to six minutes against a 300-second function ceiling (D118).
+ * **No worker runs in CI**, so nothing drains the queue here — which means the
+ * honest thing to assert is what the press actually does: a job exists, and
+ * the screen says so.
+ *
+ * Rewriting rather than deleting keeps the two guarantees that matter at this
+ * boundary — the button reaches the server, and the client is told what is
+ * happening — and stops the suite asserting a contract the product no longer
+ * offers.
+ *
+ * **What moved rather than vanished:**
+ *
+ * - *A sample report is labelled* (non-negotiable 7) is asserted by
+ *   `demo-path.spec.ts`, which walks the Niche Scan screen and requires
+ *   "Sample data" to be visible on it.
+ * - *A keyless scan saves the sample and says so* is the worker's half. It was
+ *   proved end to end against the preview database when the worker was built
+ *   (D119): claim → run → report written → job `complete`. Covering it in CI
+ *   needs a worker running beside the suite, which is a follow-up noted in
+ *   `docs/PROGRESS.md` rather than something to fake here.
+ */
+test('pressing Run a scan queues the work and the screen says so', async ({ browser }) => {
   const config = supabaseConfig()
   test.skip(config === null, 'No Supabase keys in apps/web/.env.local')
   if (config === null) return
@@ -119,22 +150,38 @@ test('a scan run without a key saves the sample, and says that it is a sample', 
   // than an empty page.
   await expect(page.getByText('No scan yet')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Run a scan' }).click()
+  const runButton = page.getByRole('button', { name: 'Run a scan' })
+  await expect(runButton).toBeEnabled()
+  await runButton.click()
 
-  // The action's own answer. It takes the sample path because the server has no
-  // key, and it says so in those words rather than reporting plain success.
-  await expect(
-    page.getByText('Saved a sample report. Add an API key to run real research.'),
-  ).toBeVisible({ timeout: 60_000 })
+  /*
+   * The press is answered in milliseconds now, so the thing to wait for is the
+   * progress panel rather than a report. `role="status"` because this is the
+   * screen telling the reader something changed without moving their focus.
+   */
+  await expect(page.getByRole('status').filter({ hasText: 'Scanning your niche' })).toBeVisible({
+    timeout: 30_000,
+  })
 
-  // **The assertion this file exists for.** A report landed, and it is labelled.
-  // Unlabelled sample research attributed to the client's own niche is the
-  // outcome non-negotiable 7 forbids.
-  await expect(page.getByText('Sample data').first()).toBeVisible()
+  // The duration is quoted up front. A spinner with no number starts reading
+  // as a hang at about twenty seconds, and this wait is minutes long.
+  await expect(page.getByText(/Usually about 5 minutes/)).toBeVisible()
 
-  // And the empty state is gone, which is how we know a row was actually
-  // written rather than the message being the only thing that changed.
-  await expect(page.getByText('No scan yet')).toHaveCount(0)
+  /*
+   * **The assertion with money behind it.** While a scan is pending the button
+   * is locked, because a second press is a second Sonnet call with ~28 web
+   * searches for a report already being written. The database refuses the
+   * duplicate too (`jobs_one_pending_per_kind`), so this is the first of two
+   * defences rather than the only one.
+   */
+  await expect(page.getByRole('button', { name: 'Scanning…' })).toBeDisabled()
+
+  /*
+   * And the empty state is **still** there, which is correct: no worker has
+   * run, so no report exists. A screen claiming otherwise a second after the
+   * press would be the lie this whole change exists to avoid.
+   */
+  await expect(page.getByText('No scan yet')).toBeVisible()
 
   await context.close()
 })
