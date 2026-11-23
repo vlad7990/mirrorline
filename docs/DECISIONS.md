@@ -8949,3 +8949,125 @@ Worth saying plainly: **this was caught by looking at the row, not by a test.**
 The run before it was lost to an unrelated cause (an e2e sweep deleting the
 workspace mid-scan), and had that not happened the placeholder would have been
 the screenshot.
+
+## D124 — CI stops paying twice for the same answer
+
+**23 November 2026.** GitHub Actions ran out of included minutes and Vlad set a
+$30/month budget. Three changes to `.github/workflows/ci.yml`, in descending
+order of what they save.
+
+### What the bill actually was
+
+Measured off the jobs API rather than estimated — `gh api
+.../runs/<id>/timing` returns zeros on this repo, so every figure below is the
+sum of each job's duration **rounded up to the minute**, which is how Actions
+bills.
+
+Five days, 19–23 November, `ci.yml` alone: **1,329 billable minutes.**
+
+| | runs | minutes | mean |
+|---|---|---|---|
+| `pull_request` | 40 | 588 | 14.7 |
+| `push` to `main` | 19 | 285 | 15.0 (21–23 lately) |
+| `push` to feature branches | 40 | 456 | — |
+
+That third row is already gone: it is what the `branches: [main]` filter at the
+top of the file fixed, and it is in the table to show the shape of the problem
+rather than because it is still being paid. **Live spend is the first two rows,
+~873 minutes over five days — about 5,200 a month.**
+
+Where it goes, per run: `e2e` 12–14 minutes, `pipeline` 4–7, `verify` 2–3. The
+browser suite is roughly 70% of every bill we pay.
+
+### 1 · One run per branch, and the newest one wins
+
+Every push to a branch with an open pull request started a fresh run and left
+the superseded one going to the end. Four of the last forty pull-request runs
+were overtaken mid-flight, at **81 billable minutes** for results nobody could
+read — the commit they described no longer existed.
+
+`concurrency` with `cancel-in-progress`, keyed on the pull request number.
+
+**`main` is excluded on purpose.** A merge's run is the record that the merged
+result is sound; two merges in quick succession would see the first record
+cancelled by the second, and "we never checked that commit" is not a saving.
+Those queue.
+
+### 2 · A documentation commit does not need a browser
+
+**20 of the 62 commits on `main` in the window changed nothing but `docs/**`
+and `*.md`.** Each one cost a full ~20 minutes on the pull request and ~20
+again on the merge: 422 browser tests and a Python suite, run against bytes no
+interpreter will ever read.
+
+A `changes` job answers one question — is there anything executable here — and
+`verify`'s build step, the whole of `e2e` and the whole of `pipeline` sit
+behind it.
+
+**Three things about how it is wired, each of which was a way to get this
+wrong:**
+
+- **The required checks still run and still report.** `verify`, `e2e` and
+  `pipeline` are named in the `main` ruleset. A job-level `if` would leave them
+  `skipped`, which is not a pass — auto-merge would wait for a verdict that is
+  never coming. The jobs run; their expensive *steps* are what the gate turns
+  off, and a documentation run reports three green checks in about four
+  minutes.
+- **The polarity is `!= 'false'`, never `== 'true'`.** The heavy work runs
+  unless the gate *explicitly* said documentation-only, so an output that is
+  empty — step died, API refused, somebody renamed it — spends the money we
+  spend today. The other polarity turns the same accident into three green
+  checks over code that was never built or tested, and that is D116 wearing a
+  new hat: if absence is cheap and quiet, we have rebuilt the hole we closed.
+  For the same reason the gate's script cannot exit non-zero.
+- **Lint, typecheck, the unit tests, the licence gate and migration safety run
+  on every commit regardless.** They cost 25 seconds together. A cheap check
+  that always runs cannot turn out to be the one that was skipped on the day it
+  mattered — and it is also the answer to "what if a test reads a doc": one
+  day one will.
+
+`docs` means `docs/**` or any `*.md`, anchored, and nothing else.
+`.github/workflows/` is code, so a change to this file proves itself. Checked
+before writing it: **nothing in the build or the unit tests reads anything
+under `docs/`.** The only code that touches the tree writes into it — the
+screenshot specs — plus `scripts/mascot-assets.mjs`, which is run by hand.
+Fourteen classifier cases were run locally, including the two that look like
+traps: `documentation/x.ts` and `docsite/app.ts` are both code.
+
+### 3 · Playwright's browser is not cached, and that is the measurement
+
+The instruction was to cache pnpm and the Playwright browsers if they were not
+already cached. **pnpm already is**, by `setup-node`'s `cache: pnpm`, and it
+works: installing the whole workspace takes **four seconds**.
+
+The browser download takes **nineteen**. Restoring ~150 MB from the Actions
+cache costs most of that by itself, the cache cannot hold the apt half of
+`--with-deps`, so a hit would still have to run `playwright install-deps` — and
+it would add a cache entry to maintain and invalidate on every Playwright bump.
+So it is not cached, and the nineteen seconds is written down next to the step
+so the next person does not re-derive it. **The 672 seconds underneath it is
+where the money is**, and no cache touches that.
+
+### Expected after, and the honest uncertainty
+
+- Code pull request: 19 → **20** minutes. The gate job is seconds of work
+  billed at one minute, and it is a real cost on every code run.
+- Documentation-only: 19 → **~4**.
+- An overtaken push: ~19 → **~1**.
+
+Against the five-day window, had this existed: ~420 of ~873 live minutes, call
+it **half the bill**. That is a projection from measured per-job timings, not a
+measurement — the measurement arrives on the next few pull requests, and the
+docs-only figure is the one to check first, because it is the one with a gate
+that could silently be classifying everything as code.
+
+### What was left on the table, and why
+
+**A merge to `main` re-runs what the pull request already proved.** `main`'s
+19 pushes cost 285 minutes, and `pull_request` already tests the merge
+commit — base plus head — so the two runs usually check identical trees. It is
+the largest remaining line item and it is deliberately untouched: the header of
+`ci.yml` argues for keeping `main` covered, "usually identical" is not
+"identical" when the base has moved since the check ran, and reversing a logged
+decision to save money belongs in its own change with Vlad's eye on it. Worth
+revisiting if the budget is still tight once the two above have been measured.
