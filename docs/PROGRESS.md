@@ -70,6 +70,48 @@ The settings that produced the screenshot are the settings in the code.
   (`pnpm test:live`), which asserts every example is a link with a source note
   and that a successful run is never logged at $0.
 
+### Blocking #17 — `demo-path` is not using the fresh account it thinks it is
+
+CI `e2e` is red on #17, and **it is not the Niche Scan**. `demo-path.spec.ts:344`
+asserts the calendar batch bar is empty and gets `"Tomorrow: 3 posts ready."`
+423 passed, 1 failed, on both attempts — so `retries: 1` hid nothing, which is
+the first evidence that tonight's retry policy behaves.
+
+What I checked, in order, and what it ruled out:
+
+1. **Not a mock fallback.** `calendar-view.tsx` imports only a *type* from
+   `@mirrorline/mock`. Those are real rows.
+2. **Not concurrency.** Two CI runs did race on the shared preview database
+   (D76) — the push and the PR each fired the workflow — so that looked like
+   the answer. I re-ran the job alone and **it failed again**. Hypothesis dead.
+3. **It is the shared session.** `demo-path.spec.ts` takes the bare `page`
+   fixture: no `newContext`, no `createConfirmedUser`, no `storageState`
+   override. Every project in `playwright.config.ts` defaults to
+   `STUDIO_STORAGE_STATE`, so this walk runs on the **shared studio account**.
+   Its own comment — *"this walk is about a fresh account"* — is wrong about
+   the test it is attached to. `calendar-persist.spec.ts` seeds scheduled posts
+   into that same workspace.
+
+**My change did not cause it, but probably exposed it.** Adding
+`e2e/niche-scan-run.spec.ts` changes the file count and therefore how Playwright
+schedules workers, which changes whether the seeding spec lands before this one.
+An order-dependent assertion passes until the order moves.
+
+**I did not merge #17.** Merging a red PR on the grounds that the failure looks
+unrelated is exactly what the flaky reporter was built to stop.
+
+Two candidate fixes, for whoever picks this up — the choice is a real one and
+wants a minute's thought rather than the first thing that goes green:
+
+- Give `demo-path` its own confirmed account, as `goals-persist.spec.ts` does.
+  Truest to the comment, and the walk becomes order-independent. Costs a
+  sign-up and an onboarding pass in the slowest spec in the suite.
+- Make the assertion state-tolerant. Cheaper, and wrong: "the bar says
+  something sensible" is not the bug that was being guarded, which was a bar
+  claiming *0 videos approved* for an empty week.
+
+The first one is almost certainly right.
+
 ### Needs you
 
 1. **The background job for the scan** — the one thing blocking a usable button
