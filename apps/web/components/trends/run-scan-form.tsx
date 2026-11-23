@@ -91,8 +91,22 @@ export function RunScanForm({ defaultNiche, action, isScanRunning = false }: Run
 
   const inputId = 'niche-to-scan'
   const messageId = `${inputId}-message`
-  const hasMessage = state.status !== 'idle' && state.message !== ''
   const isError = state.status === 'failed'
+
+  /*
+   * Only a failure is announced here, and the screenshot is why.
+   *
+   * On a successful enqueue this line read "Scanning Independent dog
+   * trainers." directly above a banner reading "Scanning your niche… usually
+   * about 5 minutes" — the same news twice, in two voices, which is the
+   * duplication this component's header says it is avoiding. The banner is
+   * the better of the two: it carries the duration, it survives a reload, and
+   * it is driven by the job rather than by this form's memory of a submit.
+   *
+   * A failure has no such second home. `ScanProgress` renders a *job*, and a
+   * job that was never written has nothing to render.
+   */
+  const hasMessage = isError && state.message !== ''
 
   // Either reason locks the control, and they overlap: the submit is in flight
   // for a moment, then the job is pending for minutes.
