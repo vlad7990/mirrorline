@@ -64,7 +64,15 @@ const COLUMNS: readonly StatColumn<LedgerWeek>[] = [
 
 export function LedgerBoard({ rows = SAMPLE_LEDGER }: { readonly rows?: readonly LedgerWeek[] }) {
   return (
-    <Card as="section" aria-labelledby="ledger-heading" className="flex min-w-0 flex-col gap-4">
+    <Card
+      as="section"
+      aria-labelledby="ledger-heading"
+      className="flex min-w-0 flex-col gap-4"
+      // What "Print or save as PDF" actually puts on the page (D120). Without
+      // it, the button this card has carried since 13 November printed the
+      // whole studio — sidebar, nav and co-pilot — around the document.
+      data-print-region
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h2 id="ledger-heading" className="m-0 font-heading text-title text-text">

@@ -30,6 +30,7 @@ import { ExternalLink } from 'lucide-react'
 // reads the same everywhere and is easy to audit". A second badge for the
 // same rule is how non-negotiable 7 starts being enforced inconsistently.
 import { SampleDataLabel } from '@/components/marketing/primitives'
+import { PrintButton } from '@/components/studio/print-button'
 import { SAMPLE_REPORT_NOTE } from '@/lib/niche-scan/canned'
 import { rankExamples, type NicheReportFindings, type TrendExample } from '@/lib/niche-scan/report'
 
@@ -144,7 +145,23 @@ export function NicheReportPanel({ findings, isSample, niche, scannedAt }: Niche
   const examples = rankExamples(findings.examples)
 
   return (
-    <section aria-labelledby="niche-report-heading" className="space-y-6">
+    <section
+      aria-labelledby="niche-report-heading"
+      className="space-y-6"
+      /*
+       * What "Print or save as PDF" puts on the page (V1, D120). BACKEND_PHASE
+       * §V1 asks for this report to be "viewable in the studio, downloadable
+       * as PDF, and usable by us for prospects" — and the last of those three
+       * is why the region stops here rather than at the page: a prospect
+       * should receive the research, not our sidebar and a filter bar.
+       *
+       * The "Sample data" label is **inside** it, deliberately. This is the
+       * artefact most likely to be sent to somebody, which is exactly when
+       * non-negotiable 7 matters most; a PDF of sample research with the
+       * label cropped off would be the worst version of this feature.
+       */
+      data-print-region
+    >
       <div className="flex flex-wrap items-center gap-3">
         <h2
           className="font-heading text-title text-text"
@@ -158,6 +175,10 @@ export function NicheReportPanel({ findings, isSample, niche, scannedAt }: Niche
             Scanned {new Date(scannedAt).toLocaleDateString('en-GB')}
           </span>
         ) : null}
+        {/* Pushed to the end of the row so the heading keeps the left edge. */}
+        <span className="ms-auto">
+          <PrintButton />
+        </span>
       </div>
 
       {isSample ? (
