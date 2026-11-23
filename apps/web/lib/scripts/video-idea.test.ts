@@ -15,10 +15,8 @@ import { describe, expect, test } from 'vitest'
 
 import {
   factIsGrounded,
-  normaliseSentence,
   parseVideoIdea,
   screenIdeas,
-  sentencesOf,
   sharedSentence,
   type VideoIdea,
 } from './video-idea'
@@ -92,13 +90,11 @@ describe('a script shares the structure and not the sentences', () => {
     expect(sharedSentence(idea, SOURCE)).toBeNull()
   })
 
-  test('sentences shorter than five words are not compared at all', () => {
-    expect(sentencesOf('Too short. Also short.')).toEqual([])
-  })
-
-  test('normalising is case, punctuation and whitespace, nothing cleverer', () => {
-    expect(normaliseSentence('  The MYTH — on screen!  ')).toBe('the myth on screen')
-  })
+  // The two tests that used to sit here — "sentences shorter than five words
+  // are not compared at all" and "normalising is case, punctuation and
+  // whitespace, nothing cleverer" — moved with the functions they described,
+  // to `../originality/similarity.test.ts` (D126). They are the measuring
+  // stick's behaviour rather than this gate's, and V3 needs the same stick.
 })
 
 describe('a script with no business fact is rejected rather than shipped', () => {

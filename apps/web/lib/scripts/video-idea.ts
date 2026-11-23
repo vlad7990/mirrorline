@@ -22,7 +22,20 @@
  * theatre: "The myth is on screen before the first word." and "the myth is on
  * screen before the first word" are the same sentence, and a strict comparison
  * calls them different.
+ *
+ * ## Where the comparison itself lives now (V3, D126)
+ *
+ * This file used to carry its own `normaliseSentence` and `sentencesOf`. V3's
+ * gate needs the same notion of "the same sentence", and two normalisers would
+ * be two answers to one question — so they moved to
+ * `../originality/similarity`, which this file imports. The rules below are
+ * unchanged; only the measuring stick is shared.
  */
+
+import {
+  comparableSentences,
+  normaliseForComparison,
+} from '../originality/similarity'
 
 /** Four beats, in order. The recipe's shape, with the client's content. */
 export interface VideoBeat {
@@ -118,29 +131,10 @@ export function parseVideoIdeas(value: unknown): readonly VideoIdea[] {
     .slice(0, 6)
 }
 
-/** Lower case, no punctuation, single spaces. The comparison unit. */
-export function normaliseSentence(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-/** Sentences worth comparing: a four-word fragment is not evidence of copying. */
-const MIN_SENTENCE_WORDS = 5
-
-export function sentencesOf(text: string): readonly string[] {
-  return text
-    .split(/[.!?\n]+/)
-    .map(normaliseSentence)
-    .filter((sentence) => sentence.split(' ').length >= MIN_SENTENCE_WORDS)
-}
-
 /** Every sentence of an idea, in one list: title, hook, beats, footage. */
 export function ideaSentences(idea: VideoIdea): readonly string[] {
   return [idea.title, idea.hook, ...idea.beats.map((beat) => beat.text), ...idea.footage].flatMap(
-    sentencesOf,
+    comparableSentences,
   )
 }
 
@@ -153,7 +147,7 @@ export function ideaSentences(idea: VideoIdea): readonly string[] {
  * directions.
  */
 export function sharedSentence(idea: VideoIdea, sourceTexts: readonly string[]): string | null {
-  const source = new Set(sourceTexts.flatMap(sentencesOf))
+  const source = new Set(sourceTexts.flatMap((text) => [...comparableSentences(text)]))
   if (source.size === 0) return null
 
   return ideaSentences(idea).find((sentence) => source.has(sentence)) ?? null
@@ -170,11 +164,11 @@ export function sharedSentence(idea: VideoIdea, sourceTexts: readonly string[]):
  * exactly the plausible, unverifiable sentence a client would be quoted on.
  */
 export function factIsGrounded(fact: string, facts: readonly string[]): boolean {
-  const claimed = normaliseSentence(fact)
+  const claimed = normaliseForComparison(fact)
   if (!claimed) return false
 
   return facts.some((known) => {
-    const normalised = normaliseSentence(known)
+    const normalised = normaliseForComparison(known)
     if (normalised.length < 3) return false
     return claimed.includes(normalised) || normalised.includes(claimed)
   })
