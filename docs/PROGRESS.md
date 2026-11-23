@@ -7,7 +7,14 @@ how you work, what you sell, what you never recommend — press **Run a scan**,
 and get back research that argues every score against *your* account and ends
 with three videos you could film this week.
 
-![The report, with its first three videos](progress/d40-niche-scan-v2.png)
+**The screenshot is not here yet, and the reason is the news.** Four live runs
+went into trying to take it (D123 and its addendum): a schema keyword the API
+refuses, a 16k ceiling the richer report outgrew, a workspace the e2e teardown
+deleted *while the scan was running*, and — on the run that finished cleanly in
+297 seconds — **a report of placeholders that the parser accepted**. That last
+one is now impossible: a report with no examples under its formats is no report
+at all. The next run is the one to photograph, and it needs nothing but the
+worker and five minutes.
 
 Three pull requests, in the order they were read as a prospect would read
 them: the honesty pass, the brand pass, and the client pass.
