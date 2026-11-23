@@ -60,7 +60,10 @@ const CONTENT: AudiencePageContent = {
     {
       question: 'Is this just reposting my own stuff?',
       answer:
-        'No, and the distinction matters more than it used to. A cut is a different post with its own hook, length and framing, not the same video uploaded again — and platforms stopped recommending accounts that mostly recycle. Everything passes the Originality Gate against your own last 60 posts as well as against any source.',
+        // The last sentence used to read "against your own last 60 posts as
+        // well as against any source", which claimed a comparison we cannot
+        // make — we hold none of your post history yet (D126).
+        'No, and the distinction matters more than it used to. A cut is a different post with its own hook, length and framing, not the same video uploaded again — and platforms stopped recommending accounts that mostly recycle. Everything passes the Originality Gate against the research it was built from, which is what stops a remake carrying somebody else’s wording. Checking it against your own back catalogue as well needs your post history, so that starts when you connect your accounts.',
     },
     {
       question: 'What if someone reposts my videos?',

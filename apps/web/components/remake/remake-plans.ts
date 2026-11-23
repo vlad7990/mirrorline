@@ -13,6 +13,7 @@
 import { sourceVideo } from '@mirrorline/mock'
 
 import { OWNER_FIRST_NAME } from '@/components/trends/trend-beats'
+import type { OriginalityOutcome } from '@/lib/originality/gate'
 
 /* -------------------------------------------------------------------------- */
 /* Shapes                                                                      */
@@ -296,7 +297,10 @@ export const COMPLIANCE_CHECKS: readonly { label: string; ok: boolean }[] = [
  * gate that can be waved past is a formality, and a formality is exactly what
  * the predecessor project had.
  */
-export type OriginalityOutcome = 'passed' | 'rewritten' | 'blocked'
+// Re-exported rather than declared (V3, D126). The gate owns the three names
+// now, and two identical unions in two files is one of them drifting later.
+// Imported as well as re-exported because `OriginalityResult` below uses it.
+export type { OriginalityOutcome }
 
 export interface OriginalityResult {
   /** How close the draft came to the source format's wording, as a percent. */
@@ -313,7 +317,13 @@ export interface OriginalityResult {
 export const ORIGINALITY_RESULT: OriginalityResult = {
   similarity: 12,
   limit: 30,
-  comparedAgainst: 'the beat structure of the source format, and your own last 90 posts',
+  // Was "the beat structure of the source format, and your own last 90 posts",
+  // and it was wrong twice (D126). The gate deliberately does **not** compare
+  // beat structure — structure is what a remake is for, so scoring it would
+  // mark a draft down for doing its job — and we hold none of the client's own
+  // posts yet. The sample label makes the numbers fictional; it does not make
+  // a false description of the mechanism true.
+  comparedAgainst: 'the research the script was built from, line by line',
   outcome: 'rewritten',
   rewriteNote:
     'The first draft came back at 34%: two lines reused the source’s phrasing almost word for word. The gate sent it back and the Remake Producer rewrote both. This is the second draft.',

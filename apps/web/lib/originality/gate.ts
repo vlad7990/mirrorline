@@ -267,6 +267,71 @@ export function judgeOriginality({
   }
 }
 
+/** The three outcomes, as a runtime list, so the parser cannot drift from the type. */
+const OUTCOMES: readonly OriginalityOutcome[] = ['passed', 'rewritten', 'blocked']
+
+function stringList(value: unknown, max: number): readonly string[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((entry): entry is string => typeof entry === 'string' && entry.trim() !== '')
+    .map((entry) => entry.trim().slice(0, 400))
+    .slice(0, max)
+}
+
+function wholeNumber(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.round(value)
+    : fallback
+}
+
+/**
+ * Read a verdict back off a stored row, or `null`.
+ *
+ * `niche_reports.first_videos` is `jsonb`, so this is a system boundary and
+ * the input is untrusted: a row written by an older build, a hand-edited
+ * value, anything. Two rules make the failure modes safe:
+ *
+ * **An unreadable verdict is `null`, never a pass.** `null` means "not
+ * checked" and the studio says so. Returning a synthesised `passed` for
+ * malformed input would turn a storage bug into an approval.
+ *
+ * **The outcome must be one of the three.** Anything else — `'ok'`,
+ * `'approved'`, an empty string, a number — is not a verdict this gate
+ * produced, and is rejected rather than coerced towards the nearest match.
+ */
+export function parseVerdict(value: unknown): OriginalityVerdict | null {
+  if (typeof value !== 'object' || value === null) return null
+  const row = value as Record<string, unknown>
+
+  const outcome = OUTCOMES.find((candidate) => candidate === row.outcome)
+  if (!outcome) return null
+
+  const phrase =
+    typeof row.longestPhrase === 'object' && row.longestPhrase !== null
+      ? (row.longestPhrase as Record<string, unknown>)
+      : {}
+
+  return {
+    outcome,
+    similarity: wholeNumber(row.similarity, 0),
+    limit: wholeNumber(row.limit, SIMILARITY_LIMIT),
+    longestPhrase: {
+      words: wholeNumber(phrase.words, 0),
+      phrase: typeof phrase.phrase === 'string' ? phrase.phrase.slice(0, 400) : '',
+    },
+    phraseWordLimit: wholeNumber(row.phraseWordLimit, PHRASE_WORD_LIMIT),
+    copiedSentences: stringList(row.copiedSentences, 20),
+    reasons: stringList(row.reasons, 20),
+    attempt: wholeNumber(row.attempt, 1),
+    // Derived, never trusted from the row: a stored `isTerminal: false` beside
+    // `outcome: 'blocked'` would be a way back into the rewrite loop that
+    // `04 §3` closes.
+    isTerminal: outcome !== 'rewritten',
+    comparedAgainst: stringList(row.comparedAgainst, 10),
+    notComparedAgainst: stringList(row.notComparedAgainst, 10),
+  }
+}
+
 /**
  * Is this verdict allowed to be approved? The only question a caller should
  * ask, and the one a server action asks before it writes anything.

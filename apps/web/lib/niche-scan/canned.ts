@@ -23,6 +23,9 @@
  * a finding.
  */
 
+import { type ComparisonCorpus, judgeOriginality } from '../originality/gate'
+import { ideaDraft } from '../scripts/video-idea'
+
 import type { NicheReportFindings } from './report'
 
 /** Shown wherever a canned report is rendered. Non-negotiable 7. */
@@ -39,8 +42,12 @@ export const SAMPLE_REPORT_NOTE =
  * then break on the real thing. The content is generic on purpose: the
  * product is industry-agnostic (CLAUDE.md), so the sample must not read as
  * advice for one trade.
+ *
+ * Split from the `SAMPLE_REPORT` export below for one reason: so the sample
+ * can carry a **real** Originality Gate verdict rather than a hand-written
+ * one. Each idea's `originality` is `null` here and is filled in by the gate.
  */
-export const SAMPLE_REPORT: NicheReportFindings = {
+const SAMPLE_FINDINGS: NicheReportFindings = {
   topFormats: [
     {
       name: 'Myth vs fact',
@@ -198,6 +205,8 @@ export const SAMPLE_REPORT: NicheReportFindings = {
         'One shot of the thing you are describing',
       ],
       fact: 'Sample business — the fact would come from your profile',
+      // Filled in by the real gate in `SAMPLE_REPORT` below.
+      originality: null,
     },
     {
       title: 'What this actually costs',
@@ -211,6 +220,8 @@ export const SAMPLE_REPORT: NicheReportFindings = {
       ],
       footage: ['A job in progress', 'The finished result, same angle'],
       fact: 'Sample business — the fact would come from your profile',
+      // Filled in by the real gate in `SAMPLE_REPORT` below.
+      originality: null,
     },
     {
       title: 'Three things that go wrong first',
@@ -224,6 +235,59 @@ export const SAMPLE_REPORT: NicheReportFindings = {
       ],
       footage: ['Each mistake, on camera, ten seconds apiece'],
       fact: 'Sample business — the fact would come from your profile',
+      // Filled in by the real gate in `SAMPLE_REPORT` below.
+      originality: null,
     },
   ],
+}
+
+/**
+ * The sample's three ideas, judged by the **real** gate (V3, D126).
+ *
+ * Not a hand-written verdict, for two reasons.
+ *
+ * **The sample is the screen most people see.** It is the one in the handoff
+ * screenshots and the one most likely to reach a prospect, so the number on it
+ * has to be a measurement rather than a decoration. A pleasing figure typed
+ * into a fixture is exactly the kind of thing non-negotiable 7 exists to stop,
+ * "Sample data" label or not.
+ *
+ * **It makes the sample prove the gate.** The ideas are compared against this
+ * same sample's own research, so if somebody later edits a sample idea to echo
+ * a sample example, the gate says so and `report.test.ts` fails. A fixture
+ * that could not fail would tell us nothing.
+ *
+ * `judgeOriginality` is pure and deterministic, so this runs once at module
+ * load and cannot vary between renders.
+ */
+const SAMPLE_CORPORA: readonly ComparisonCorpus[] = [
+  {
+    label: 'the research in your niche report',
+    texts: [
+      ...SAMPLE_FINDINGS.topFormats.flatMap((format) => [
+        format.whyItWorks,
+        ...format.beats,
+      ]),
+      ...SAMPLE_FINDINGS.examples.flatMap((example) => [
+        example.whyItWorks,
+        example.hookType,
+      ]),
+    ],
+  },
+  // Empty, and the verdict will say so. We do not hold the client's own posts
+  // (B6), and a sample that implied we did would be advertising a check that
+  // does not run. See `first-videos.ts` → `comparisonCorpora`.
+  { label: 'your own last 90 posts', texts: [] },
+]
+
+export const SAMPLE_REPORT: NicheReportFindings = {
+  ...SAMPLE_FINDINGS,
+  firstVideos: SAMPLE_FINDINGS.firstVideos.map((idea) => ({
+    ...idea,
+    originality: judgeOriginality({
+      draft: ideaDraft(idea),
+      corpora: SAMPLE_CORPORA,
+      attempt: 1,
+    }),
+  })),
 }

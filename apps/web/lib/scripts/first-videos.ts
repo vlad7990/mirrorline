@@ -40,6 +40,7 @@ import { APIConnectionError, APIError, RateLimitError } from '../agents/anthropi
 import { checkAgentSpend, recordRun } from '../agents/ledger'
 import { NO_USAGE, type EnvLike, type Usage } from '../copilot/spend'
 import type { FormatFinding, TrendExample } from '../niche-scan/report'
+import type { ComparisonCorpus } from '../originality/gate'
 import { profileBrief, profileFacts, type ClientProfile } from '../workspace/client-profile'
 import { parseVideoIdeas, screenIdeas, type VideoIdea } from './video-idea'
 
@@ -62,6 +63,23 @@ export const SCRIPT_MAX_REQUEST_USD = 0.5
 
 /** How many formats to write from. Three ideas, three formats, no repeats. */
 const FORMATS_USED = 3
+
+/**
+ * How many of the client's own posts the gate compares against (V3, D126).
+ *
+ * **90, and the spec disagreed with itself.** `04 §Originality Gate` and
+ * `BACKEND_PHASE §V3` both say the client's "own last 90 posts"; `12 §5` says
+ * "the client's last 60 posts". `04` wins — CLAUDE.md keeps specs 01–08
+ * authoritative on "the agents' mechanics", and the plan agrees with it — so
+ * 90 it is, and the three places on the marketing site that said 60 are
+ * corrected in this change.
+ *
+ * It is a label rather than a limit today, because the corpus is empty: see
+ * `comparisonCorpora`. It is a named constant so that the day the posts exist,
+ * the number the gate uses and the number the client is shown cannot drift
+ * apart.
+ */
+const OWN_POSTS_COMPARED = 90
 
 /** More than three are asked for, because the gate rejects some. */
 const IDEAS_REQUESTED = 4
@@ -177,6 +195,44 @@ function sourceTexts(
   return [
     ...formats.flatMap((format) => [format.whyItWorks, ...format.beats]),
     ...examples.flatMap((example) => [example.whyItWorks, example.hookType]),
+  ]
+}
+
+/**
+ * The two things `04 §Originality Gate` says a draft is compared against, and
+ * an honest account of which of them we can actually do (V3, D126).
+ *
+ * > "The draft is compared against the beat structure of the source format and
+ * > against the client's own last 90 posts. The second comparison matters as
+ * > much as the first: a client repeating themselves is a client whose reach
+ * > falls, and the platforms treat it the same way."
+ *
+ * The first is real: the research we kept. **The second is empty, and the
+ * verdict says so out loud rather than leaving it out.** There is no table, no
+ * column and no ingestion holding the client's own posts — `metric_snapshots`
+ * stores numbers and has no text column at all, and nothing writes to it yet
+ * (B6).  So the corpus is declared, found empty, and reported in the verdict's
+ * `notComparedAgainst`, which the studio prints.
+ *
+ * That is deliberately uncomfortable. The alternative — quietly passing one
+ * corpus while the screen says "compared against your own last 90 posts" — is
+ * a claim about a check we did not run, which is what non-negotiable 7 is for.
+ * It becomes real when B6 ingests captions, and this function is the only
+ * place that then changes.
+ */
+function comparisonCorpora(
+  formats: readonly FormatFinding[],
+  examples: readonly TrendExample[],
+): readonly ComparisonCorpus[] {
+  return [
+    {
+      label: 'the research in your niche report',
+      texts: sourceTexts(formats, examples),
+    },
+    {
+      label: `your own last ${OWN_POSTS_COMPARED} posts`,
+      texts: [],
+    },
   ]
 }
 
@@ -304,7 +360,7 @@ export async function writeFirstVideos(request: FirstVideosRequest): Promise<Fir
 
   const screened = screenIdeas({
     ideas: drafted,
-    sourceTexts: sourceTexts(usable, examples),
+    corpora: comparisonCorpora(usable, examples),
     facts,
   })
 
