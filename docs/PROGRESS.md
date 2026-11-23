@@ -34,6 +34,99 @@ irreversible. Note it was branched off `main` rather than off the background-job
 branch, so `docs/DECISIONS.md` will conflict trivially between #18 and #19 —
 both append at the end of the file. Whichever merges second rebases and keeps
 both entries.
+---
+
+## Demo note — 23 November 2026, early hours (the scan is a button now, and #17's red CI was the clock)
+
+**What you can do now:** press **Run a scan** and get your screen back. It
+returns immediately, the page says *"Scanning your niche… usually about 5
+minutes"*, and when the report lands the page updates on its own — you can
+leave and come back.
+
+![The Niche Scan screen with a scan in progress](progress/d119-scan-queued.png)
+
+Last night's note ended with this as the one thing blocking a usable button:
+six minutes of work against Vercel's five-minute ceiling, dying in a
+client-side exception after 237 seconds. **The research did not change.**
+`runNicheScan` is the same function with the same prompt, parser and spend cap
+— it now runs in a process allowed to take as long as it takes. I did not turn
+the scan down to fit the limit; I removed the limit.
+
+### The worker was chosen by B5, not by the scan
+
+A bigger timeout might have carried a six-minute scan. It cannot carry B5: a
+Vercel function is capped at **250 MB uncompressed** and the Python + ffmpeg
+render stack is bigger than that before any model weights. So the question
+became "we need a process we own — what else should it do", and the answer was
+both jobs. `jobs.kind` already names `render-cuts`; when B5 lands it shells out
+to `uv run` exactly as the pipeline is driven today, and the worker's shape
+does not change. **~$5–20 a month** on Railway or Fly. (The alternatives,
+priced: a Vercel-native queue at ~$0 that cannot run B5 at all; Trigger.dev or
+Inngest at ~$20 that would still need this container underneath it.)
+
+This is also the "real queue in week 3" that `lib/engine/jobs.ts` predicted in
+its own header, back when it was a directory on one laptop.
+
+### Proved against the real database, not a mock
+
+- The worker claimed a queued job, ran the scan, wrote the report back.
+- A **second insert for the same workspace was refused** (`23505`) — a
+  double-pressed button cannot buy two scans.
+- Two **concurrent claims** returned the job to exactly one worker. That is why
+  claiming is a database function: a select-then-update has a window, and for
+  this queue the window is a Sonnet call with 28 web searches.
+
+### Two judgements to push back on if you disagree
+
+- **A failed scan stays failed.** There is no auto-retry, because deciding what
+  is worth retrying (a dropped connection) versus what must never be (a rate
+  limit hammered instantly; a spend refusal whose answer will not change) is a
+  decision with a bill on it. `max_attempts` only bounds crash recovery.
+- **ffmpeg is deliberately not in the container image.** Note 4 below is the
+  rule — it is a GPL build, fine as a separate binary, and shipping it *inside*
+  an image needs a licence review first. Nothing needs it until `render-cuts`
+  has a handler, so it waits for that review rather than slipping in tonight.
+
+### #17 is merged, and the red CI was never what we thought
+
+`demo-path.spec.ts` asserted an empty calendar while running on the **shared**
+studio session — whose calendar `auth.setup.ts` deliberately fills for the
+seven days of the current UTC week. So the assertion could only pass when
+*tomorrow* fell outside that week: **Sunday UTC, and no other day.** The green
+runs were Sunday; the run that went red had crossed midnight into Monday.
+
+It was not the concurrency (correctly ruled out by a lone re-run) and not
+worker ordering (my next guess, in last night's note — wrong). I proved it
+rather than argued it: a throwaway spec read the bar on the shared session on
+Monday and got *"Tomorrow: 4 posts ready."* The walk has its own account now.
+**424 passed, 0 failed, nothing on the flaky reporter** — a clean merge, not a
+retry-only one.
+
+Also in that PR: CI ran the whole workflow **twice per commit** on any branch
+with a pull request open, because `on: push:` had no branch filter — two keyed
+e2e jobs seeding and sweeping the one shared preview database. Now `main` only.
+The suite dropped from 12–15 minutes to **9.7**.
+
+### Needs you
+
+1. **Dispatch *Migrate production* against `feat/v1-scan-background-job`**,
+   then PR #18 can merge. Two migrations; both already applied to preview. I
+   have not enabled auto-merge on it (non-negotiable 11).
+2. **The worker needs somewhere to live.** I will set up Railway on your word,
+   or tell me if you would rather Fly. It needs `SUPABASE_URL`,
+   `SUPABASE_SERVICE_ROLE_KEY` and `ANTHROPIC_API_KEY`. **Until it is running,
+   a scan queues and nothing drains it** — the button is honest but the report
+   never arrives in preview.
+3. The V1 source question and the video generator choice, both unchanged.
+
+Two small things found on the way, neither urgent: the preview database has
+**~150 leftover test accounts** (the teardown's two-hour rule spares other
+runs', so orphans from killed CI runs pile up), and running the e2e suite
+**dirties a tracked file** — D111's split dist dir makes Next rewrite
+`apps/web/next-env.d.ts` to point at `.next-e2e`. Do not commit that one; a
+normal `pnpm build` puts it back.
+
+Full reasoning in `docs/DECISIONS.md` **D119**.
 
 ---
 

@@ -1,7 +1,23 @@
 'use server'
 
 /**
- * Running a Niche Scan, from the studio (V1, §2.5).
+ * Starting a Niche Scan, from the studio (V1 §2.5, D119).
+ *
+ * ============================================================================
+ * This starts a scan. It does not run one.
+ * ============================================================================
+ *
+ * It used to `await runNicheScan(...)` and hand back the finished outcome,
+ * which worked on a laptop and could not work anywhere we deploy: the first
+ * live scan took six minutes against a 300-second function ceiling, and driven
+ * through the real UI it ended in a client-side exception after 237 seconds
+ * (D118).
+ *
+ * So the action writes a job and returns in milliseconds. A worker claims it
+ * and does the minutes, and the screen polls until the report lands. The
+ * research itself is unchanged — `runNicheScan` is the same function, called
+ * from a process allowed to take as long as it takes. Nothing was turned down
+ * to fit a limit.
  *
  * ============================================================================
  * The workspace is never taken from the form
@@ -13,7 +29,7 @@
  * and that is text to research, not an identifier.
  *
  * ============================================================================
- * The cap lives below this, not here
+ * The cap still lives below this, and now it answers later
  * ============================================================================
  *
  * This action does no spend arithmetic. `runNicheScan` counts the real tokens,
@@ -21,14 +37,16 @@
  * second, looser check here would create two answers to "may this run" and the
  * looser one would eventually win.
  *
- * What this does own is the *shape* of the answer the screen gets: a scan the
- * cap refused is not an error, and must not render as one. The three outcomes
- * stay distinct all the way to the UI.
+ * **What changed is when the client hears about a refusal.** The cap is
+ * checked in the worker now, so it cannot be the answer to the button press.
+ * It arrives as the job's outcome instead, and the screen renders it as
+ * information rather than as an error — the distinction `18 §6` asks for
+ * survives the move, it just travels through `jobs.result` to get there.
  */
 
 import { revalidatePath } from 'next/cache'
 
-import { runNicheScan } from '@/lib/niche-scan/scan'
+import { enqueueJob } from '@/lib/jobs/enqueue'
 import { getOwnedWorkspace } from '@/lib/workspace/current-workspace'
 
 import type { ScanActionResult } from './scan-form-state'
@@ -63,19 +81,31 @@ export async function runNicheScanAction(
     return { status: 'failed', message: 'Tell us the niche to research.' }
   }
 
-  const outcome = await runNicheScan({ workspaceId: workspace.id, niche })
+  const outcome = await enqueueJob({
+    workspaceId: workspace.id,
+    kind: 'niche-scan',
+    payload: { niche },
+  })
 
-  if (outcome.status === 'complete') {
-    // The screen reads the latest report, so it has to be re-rendered rather
-    // than served from the route cache.
-    revalidatePath('/app/trends')
-    return {
-      status: 'complete',
-      message: outcome.isSample
-        ? 'Saved a sample report. Add an API key to run real research.'
-        : `Scanned ${niche}.`,
-    }
+  if (outcome.status === 'failed') {
+    return { status: 'failed', message: outcome.message }
   }
 
-  return { status: outcome.status, message: outcome.message }
+  /*
+   * Re-render, because the screen's own progress state is a server read.
+   *
+   * `page.tsx` calls `readLatestScanJob()`, so the "Scanning…" panel only
+   * appears once the route is re-rendered with the row this action just wrote.
+   * Without this the button would return, the client would see nothing
+   * different, and the honest conclusion would be that the press did nothing.
+   */
+  revalidatePath('/app/trends')
+
+  if (outcome.status === 'already-pending') {
+    // Not an error, and not a second job. Somebody pressed twice, or has two
+    // tabs open — the right answer is to point at the scan already running.
+    return { status: 'queued', message: 'A scan is already running for this workspace.' }
+  }
+
+  return { status: 'queued', message: `Scanning ${niche}.` }
 }

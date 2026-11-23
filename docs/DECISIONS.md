@@ -8517,6 +8517,78 @@ return, poll for the report — which is a sprint item rather than tonight's wor
 Flagged in the handoff; `effort: 'high'` and twelve searches stay until somebody
 decides otherwise, because the output at those settings is good.
 
+## 2026-11-23 · D119 · The scan becomes a job, and the worker is chosen by B5 rather than by the scan
+
+D118 ended with the scan working on a laptop and unable to work anywhere we
+deploy: six minutes against Vercel's 300-second function ceiling, dying in a
+client-side exception after 237 seconds when driven through the real UI. This
+is that fix, and the shape of it was decided by the *next* piece of work rather
+than by this one.
+
+**The scan alone did not settle the architecture.** A raised timeout might have
+carried it. What cannot be carried is B5: a Vercel function is capped at
+**250 MB uncompressed**, and the Python + ffmpeg render stack exceeds that
+before any model weights. There is no timeout that makes it deployable. So the
+question stopped being "how do we run a six-minute scan" and became "we need a
+process we own — what else should it do", and the answer is both jobs. The
+alternatives were priced and rejected: Vercel Queues plus Fluid Compute (~$0,
+cannot run B5 at all), and a hosted orchestrator like Trigger.dev or Inngest
+($0→~$20/mo, which is this plus a vendor, because it would still need a
+container for ffmpeg). One worker container on Railway or Fly, ~$5–20/mo.
+
+**What the scan itself did decide** is that nothing about the research changes.
+`runNicheScan` is called by the worker, unmodified — same prompt, same parser,
+same spend cap. D118 refused to turn the research down to fit a limit; this
+removes the limit instead.
+
+### Three judgements inside it
+
+1. **`failed` is terminal; there is no automatic requeue.** The obvious reading
+   of `max_attempts: 3` is a retry policy, and it is not one. Deciding what is
+   worth retrying — a dropped connection, yes; a rate limit hammered
+   immediately, no; a spend refusal whose answer will not change, never — is a
+   decision with a bill attached and it has not been made. `attempts` bounds
+   **crash recovery**: a worker that dies leaves the row `running` with a lease
+   that expires, `claim_job` reclaims it, and the bound stops a job that
+   reliably kills its worker from being reclaimed forever. `jobs.test.ts` pins
+   this, because the plausible-looking version of `isJobPending` leaves the
+   studio showing "Scanning…" for a job nothing will ever claim.
+
+2. **A spend refusal is a `complete` job, not a failed one.** `18 §6` wants a
+   working cap *seen* working. Folding a refusal into `failed` would retry it
+   three times against an answer that cannot change, and paint a ceiling doing
+   its job red. It travels as `jobs.result = {outcome: 'refused'}` rather than
+   as a fourth status value, because `result` is the column the migration
+   created for "what the job produced" and a status is for how it ended.
+
+3. **ffmpeg is deliberately absent from the container image.** The handoff's
+   note 4 already wrote the rule — ffmpeg here is a GPL build, fine as a
+   separate binary under rule 10's Postiz carve-out, and *"if the engine is
+   ever shipped inside a container image with ffmpeg in it, that needs a
+   licence review first"*. `render-cuts` has no handler, so nothing needs it
+   yet. Baking it in now would cross that line for an unused capability and
+   bury the decision in a Dockerfile.
+
+### What was proved rather than reasoned
+
+Against the preview database: the worker claimed a queued job, ran the scan and
+wrote the report back; a second insert for the same workspace was refused with
+`23505`, so a double-pressed button cannot buy two scans; and two concurrent
+`claim_job` calls returned the job to exactly one of them. The last is why
+claiming is a database function at all — a select-then-update has a window, and
+for this queue that window is a Sonnet call with 28 web searches.
+
+### Debt, stated rather than hidden
+
+The worker imports `apps/web/lib` directly, so there is one implementation of a
+scan — and so its tsconfig has to alias `server-only`, a Next bundler alias no
+other resolver can see. The tidy version is a `packages/agents` both sides
+depend on; that refactor touches the chokepoint test, the import-graph walker
+and every agent module, and bundling it with the queue would have made both
+unreviewable. `apps/web/lib/engine/jobs.ts` predicted this queue in its own
+header — *"when this moves to a real queue in week 3"* — and its filesystem
+store is what `render-cuts` eventually replaces.
+
 ## 2026-11-23 · D120 · The report prints as a document, and a PDF library would have been the expensive answer
 
 V1's definition of done asks for the niche report to be "viewable in the

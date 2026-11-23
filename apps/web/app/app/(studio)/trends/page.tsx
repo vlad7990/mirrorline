@@ -6,8 +6,11 @@ import Link from 'next/link'
 import { runNicheScanAction } from '@/app/app/(studio)/trends/actions'
 import { NicheReportPanel } from '@/components/trends/niche-report-panel'
 import { RunScanForm } from '@/components/trends/run-scan-form'
+import { ScanProgress } from '@/components/trends/scan-progress'
 import { TrendCard } from '@/components/trends/trend-card'
 import { TrendFilterBar } from '@/components/trends/trend-filter-bar'
+import { readLatestScanJob } from '@/lib/jobs/read-scan-job'
+import { isJobPending } from '@/lib/jobs/types'
 import { SAMPLE_REPORT } from '@/lib/niche-scan/canned'
 import { getOwnedWorkspace } from '@/lib/workspace/current-workspace'
 import { readLatestNicheReport } from '@/lib/workspace/read-niche-report'
@@ -81,6 +84,19 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
   // through the browser.
   const workspace = await getOwnedWorkspace()
 
+  /*
+   * Is a scan running? (D119)
+   *
+   * Null is "we could not tell", which is **not** "nothing is running" — and
+   * the difference is the one that costs money. Treating a failed read as an
+   * idle workspace re-enables the button, and the next press buys a second
+   * six-minute scan for a report already on its way. So the uncertainty is
+   * passed down intact and `ScanProgress` says so on the screen.
+   */
+  const jobRead = await readLatestScanJob()
+  const scanJob = jobRead?.job ?? null
+  const isScanPending = scanJob !== null && isJobPending(scanJob)
+
   // This workspace's own formats, or none. **Never a fixture** — until V1
   // this screen drew `@mirrorline/mock`'s eight trends to everybody, and the
   // labelled report landing above them made the invented cards read as real.
@@ -122,7 +138,21 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
       <RunScanForm
         action={runNicheScanAction}
         defaultNiche={reportResult?.report?.niche ?? workspace?.niche ?? ''}
+        /*
+         * Disabled while one is running, and the reason is the bill rather
+         * than tidiness. The form's own `isPending` only covers the
+         * milliseconds the enqueue takes; the scan itself runs for minutes
+         * afterwards, in another process, and for all of them this button
+         * would otherwise look ready to be pressed again.
+         */
+        isScanRunning={isScanPending}
       />
+
+      {/*
+        V1 · what the scan is doing, between the trigger and its result —
+        which is where a reader looks after pressing the button (D119).
+      */}
+      <ScanProgress job={scanJob} readFailed={jobRead === null} />
 
       {/*
         V1 · the niche report. Above the recipe cards, because the report is

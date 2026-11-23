@@ -1,3 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
+  # Named rather than `services/*`, because `services/pipeline` is Python and
+  # has no package.json — a glob would match it and pnpm would be the thing
+  # explaining that, one confusing warning at a time.
+  - "services/worker"
