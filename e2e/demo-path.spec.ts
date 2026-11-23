@@ -10,10 +10,18 @@
  * this file, not in the data.
  */
 
-import { expect, test, type Page } from '@playwright/test'
+import { type Browser, expect, test, type Page } from '@playwright/test'
 
 import { onlyProject } from './helpers/project-gate'
 import { REMAKE_TREND_ID } from './helpers/routes'
+import {
+  createConfirmedUser,
+  newRunId,
+  type SupabaseTestConfig,
+  supabaseConfig,
+  testEmail,
+  testPassword,
+} from './helpers/test-accounts'
 
 onlyProject('chromium', 'The demo is walked once, at the 1440x900 sales viewport.')
 
@@ -21,6 +29,61 @@ onlyProject('chromium', 'The demo is walked once, at the 1440x900 sales viewport
 const WALK_TIMEOUT_MS = 180_000
 
 const RIGHTS_LABEL = 'I own or have the rights to everything I upload.'
+
+/**
+ * A signed-in page on a workspace of this walk's own.
+ *
+ * ============================================================================
+ * Why this is not the shared session, and why it was red six days in seven
+ * ============================================================================
+ *
+ * This file's comments said "this walk is about a fresh account" while the
+ * test took the bare `page` fixture — and every project in
+ * `playwright.config.ts` defaults to `STUDIO_STORAGE_STATE`, so the walk ran
+ * on the **shared studio account**. That account is not fresh:
+ * `auth.setup.ts` seeds `scheduled_posts` into it, four posts a day for the
+ * seven days of the current UTC week, because six other specs need a calendar
+ * with something in it.
+ *
+ * So the batch-bar step below — "Nothing is scheduled for tomorrow yet." —
+ * could only pass when *tomorrow* fell outside that seeded week, which is
+ * true on exactly one day: **Sunday UTC**, where tomorrow is the Monday of a
+ * week nothing has seeded. On the other six it read "Tomorrow: 3 posts
+ * ready." and this spec was red.
+ *
+ * That is what happened to #17. The run that first went red had crossed
+ * midnight UTC into Monday; the green runs earlier the same day were Sunday
+ * UTC. It reproduced on a re-run alone on the database, which correctly
+ * killed the concurrency theory (D76) — and it was never worker ordering
+ * either, which was the next guess. **It was the clock**, and waiting an hour
+ * would have turned any theory green.
+ *
+ * Its own account removes the variable rather than tolerating it: a workspace
+ * nothing else writes to has an empty calendar on every day of the week.
+ *
+ * The cost is one admin-API account creation and one sign-in through the form,
+ * in the slowest spec in the suite. Worth it — the alternative was relaxing
+ * the assertion, and the bug it guards is a bar claiming *0 videos approved*
+ * for a week with nothing in it (step 9).
+ */
+async function signedInPage(browser: Browser, config: SupabaseTestConfig) {
+  const runId = newRunId()
+  const email = testEmail(runId, 'demo')
+  const password = testPassword(runId)
+
+  await createConfirmedUser(config, email, password, `E2E ${runId}`)
+
+  const context = await browser.newContext({ storageState: { cookies: [], origins: [] } })
+  const page = await context.newPage()
+
+  await page.goto('/sign-in')
+  await page.getByLabel('Email', { exact: true }).fill(email)
+  await page.getByLabel('Password', { exact: true }).fill(password)
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await page.waitForURL(/\/app\//, { timeout: 30_000 })
+
+  return { page, context }
+}
 
 /** The studio sidebar nav. Scoping to it keeps link names unambiguous. */
 function studioNav(page: Page) {
@@ -47,8 +110,14 @@ function heading(page: Page, name: string | RegExp) {
   return page.getByRole('heading', { level: 1, name })
 }
 
-test('the whole demo path holds up', async ({ page }) => {
+test('the whole demo path holds up', async ({ browser }) => {
   test.setTimeout(WALK_TIMEOUT_MS)
+
+  const config = supabaseConfig()
+  test.skip(config === null, 'No Supabase keys in apps/web/.env.local')
+  if (config === null) return
+
+  const { page, context } = await signedInPage(browser, config)
 
   /* --- 1. Already signed in --------------------------------------------- */
 
@@ -57,9 +126,9 @@ test('the whole demo path holds up', async ({ page }) => {
    * because the form checked nothing and walked into the studio. B1 made it
    * real, and two things follow:
    *
-   * - **`/sign-up` now redirects a signed-in visitor away.** The `setup`
-   *   project signs in and saves the session every project reuses, so arriving
-   *   here lands in the studio rather than on the form.
+   * - **`/sign-up` now redirects a signed-in visitor away.** `signedInPage`
+   *   above has just signed this walk's own account in, so arriving here lands
+   *   in the studio rather than on the form.
    * - **Signing up for real cannot be part of this journey.** It sends a
    *   confirmation mail through a rate-limited sender (D79, D84), so repeating
    *   it every run would fail on the sender rather than on anything we wrote.
@@ -184,8 +253,12 @@ test('the whole demo path holds up', async ({ page }) => {
    * The spec kept asserting the fixtures and went red the moment #11 merged.
    * Nobody noticed because `demo-path.spec.ts` is in
    * `SESSION_DEPENDENT_SPECS`, and the keyless CI job skips it — so the one
-   * check that walks the whole product has not run in CI since the list was
-   * introduced. Noted in `docs/PROGRESS.md`; the fix is a keyed e2e job.
+   * check that walks the whole product did not run in CI between the list
+   * being introduced and the keyed job arriving (D117).
+   *
+   * `readRaisedAlerts()` is the one read on Home; everything else on the
+   * screen is still `SAMPLE_*`, which is why the steps below assert the
+   * sample's own figures and are unaffected by this walk owning its account.
    *
    * `AlertsBoard` renders `null` for an empty list, so "absent" is the honest
    * assertion rather than an empty region. The alert *content* is covered by
@@ -340,6 +413,11 @@ test('the whole demo path holds up', async ({ page }) => {
    * The approval flow itself is not dropped: `calendar-persist.spec.ts` seeds
    * posts and drives approve-all against them, which is where that assertion
    * belongs anyway — it needs rows, and this walk is about a fresh account.
+   *
+   * **And it now genuinely is one.** This step is the reason `signedInPage`
+   * exists: on the shared session it was asserting an empty calendar against
+   * a workspace `auth.setup.ts` deliberately fills, and passed only on
+   * Sundays UTC. The header above has the full account.
    */
   await expect(batchBar).toContainText('Nothing is scheduled for tomorrow yet.')
   await expect(batchBar).not.toContainText('approved')
@@ -424,4 +502,6 @@ test('the whole demo path holds up', async ({ page }) => {
       "Compliance can't be turned off. Every video passes it before it can be scheduled.",
     ),
   ).toBeVisible()
+
+  await context.close()
 })
