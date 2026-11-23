@@ -1,5 +1,42 @@
 # Progress — morning handoff
 
+## Demo note — 23 November 2026 (the report is a document you can send)
+
+**What you can do now:** open a niche report, press **Print or save as PDF**,
+and get the research on its own — no sidebar, no filter bar, no buttons. Every
+example carries its link, printed out in full.
+
+![The report as it prints](progress/d120-report-print.png)
+
+That last detail is the one that matters rather than the one that looks nice.
+Every example is a **link out** — we keep the pointer and never the work — and
+`12 §1` wants a source note per row so an audit of our sources is answerable
+from the data. A PDF that dropped the addresses would keep the claim and lose
+the evidence, which is the exact mistake D115 fixed in the schema. The
+**"Sample data" label prints too**: this is the artefact most likely to be sent
+to a prospect, which is when that label matters most.
+
+**No PDF library, and not to save bytes.** jsPDF or `@react-pdf/renderer` would
+lay the report out a second time with a second engine, and the printed copy
+would drift from the screen the first time somebody edited one and not the
+other. The browser's own typesetter agrees with the screen by construction.
+Twenty lines of CSS, zero new dependencies.
+
+**It also fixed a button that had been wrong for ten days.** The Results ledger
+has had "Print or save as PDF" since 13 November, and there were **no print
+rules in the repo at all** — so it printed the whole studio with the ledger
+somewhere inside. It produced *a* PDF, which is why nobody noticed. The new
+test asserts the chrome is *absent* rather than that the document is present,
+because that is the half that fails silently.
+
+**PR #19**, auto-merge armed — no migration, no dependency, nothing
+irreversible. Note it was branched off `main` rather than off the background-job
+branch, so `docs/DECISIONS.md` will conflict trivially between #18 and #19 —
+both append at the end of the file. Whichever merges second rebases and keeps
+both entries.
+
+---
+
 ## Demo note — 22 November 2026, night (you can run a real Niche Scan from the studio, and the first one found two bugs no test could)
 
 **What you can do now:** open `/app/trends`, see your own niche already in the

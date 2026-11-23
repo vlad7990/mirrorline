@@ -8516,3 +8516,56 @@ smaller number. The real fix is to make a scan a background job — start it,
 return, poll for the report — which is a sprint item rather than tonight's work.
 Flagged in the handoff; `effort: 'high'` and twelve searches stay until somebody
 decides otherwise, because the output at those settings is good.
+
+## 2026-11-23 · D120 · The report prints as a document, and a PDF library would have been the expensive answer
+
+V1's definition of done asks for the niche report to be "viewable in the
+studio, downloadable as PDF, and usable by us for prospects". The third clause
+decides the design: what a prospect receives should be the research, not a
+screenshot of our application with the research inside it.
+
+**No PDF library, and the reason is drift rather than bundle size.** jsPDF,
+pdfkit and `@react-pdf/renderer` each mean the report is laid out twice, by
+two engines — and the printed copy starts disagreeing with the screen the
+first time somebody edits one of them and not the other. The browser already
+holds a typesetter that agrees with the screen by construction, and
+`window.print()` already offers "Save as PDF" on every platform we support.
+The library costs a dependency, a licence review and a permanent second source
+of truth; the `@media print` block costs twenty lines. This is the same
+calculation that kept ClipsAI and Rive out.
+
+**The pattern was already here.** `LedgerExport` has shipped a "Print or save
+as PDF" button since 13 November with exactly this wording — chosen then
+because "Download PDF" promises a file appearing in a downloads folder, and
+saving as PDF is one choice in a dialog whose other choice is printing. Kept,
+not improved.
+
+### What this found: the button had been wrong for ten days
+
+There were **no `@media print` rules anywhere in the repository**. So the
+ledger's button produced a PDF of the entire studio — sidebar, nav, co-pilot,
+filter bar — with the document somewhere in the middle. It did produce *a*
+PDF, which is exactly why ten days passed without anybody noticing.
+
+That is the shape of the bug worth designing the test around, so
+`e2e/print.spec.ts` asserts **the chrome is gone** rather than that the report
+is present. It also has to be an end-to-end test: the whole feature is a
+stylesheet, there is no function to call, and the behaviour only exists once a
+browser has matched the media query and resolved `visibility` down the tree.
+`emulateMedia({ media: 'print' })` is the real check and it costs half a
+second.
+
+### The one print rule that is not cosmetic
+
+Every example in the report is a **link out** — we hold the pointer and never
+the work (D115, non-negotiable 1) — and `12 §1` requires a `source_note` per
+row so that an audit of our sources is answerable from the data rather than
+from memory. A printed copy that dropped the hrefs would **keep the claim and
+lose the evidence**, which is precisely the failure D115 corrected when it put
+`url` back in the schema. So `a[href]::after` prints the address, and a test
+asserts it.
+
+The **"Sample data" label is inside the print region** for the mirror-image
+reason. This is the artefact most likely to be sent to somebody, which is
+exactly when non-negotiable 7 matters most; a PDF of sample research with the
+label cropped off would be the worst available version of this feature.
