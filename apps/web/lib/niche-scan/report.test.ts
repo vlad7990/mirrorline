@@ -170,6 +170,18 @@ describe('a report is a report, or it is nothing', () => {
     expect(parseReport({ topHooks: ['a hook'], topics: ['a topic'] })).toBeNull()
   })
 
+  test('refuses a report with formats and no evidence under them', () => {
+    // The `placeholder` run (D123): 297 seconds, 22 searches, and one format
+    // named "placeholder" with no examples. Every field was a well-formed
+    // string, so the old rule kept it and the job reported success.
+    expect(
+      parseReport({
+        topFormats: [{ name: 'placeholder', whyItWorks: 'placeholder', fit: 0 }],
+        examples: [],
+      }),
+    ).toBeNull()
+  })
+
   test('returns null for something that is not an object at all', () => {
     expect(parseReport('a report, honestly')).toBeNull()
     expect(parseReport(null)).toBeNull()
@@ -191,8 +203,11 @@ describe('a report is a report, or it is nothing', () => {
   })
 
   test('a missing fit score reads as 0, not as a confident middle', () => {
+    // `examples` is present because a report without one is no report at all
+    // — see the `placeholder` run in D123.
     const parsed = parseReport({
       topFormats: [{ name: 'Three mistakes', whyItWorks: 'The count sets expectations.' }],
+      examples: [GOOD],
     })
 
     expect(parsed?.findings.topFormats[0]?.fit).toBe(0)
@@ -273,6 +288,7 @@ describe('a fit score means something beside its scale', () => {
   test('a parsed format carries the normalised score', () => {
     const parsed = parseReport({
       topFormats: [{ name: 'Myth vs fact', whyItWorks: 'It works.', fit: 78 }],
+      examples: [GOOD],
     })
 
     expect(parsed?.findings.topFormats[0]?.fit).toBe(8)

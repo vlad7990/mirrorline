@@ -8928,3 +8928,24 @@ its reason is in the log.
    the profile makes it non-empty, the server re-renders, and a prop-driven
    `<details open>` closed over the confirmation message. The initial value is
    the server's answer; every toggle after that belongs to the reader.
+
+### D123 addendum — a report of placeholders passed the parser
+
+A fourth live run, 297 seconds and 22 searches, returned **one format named
+`placeholder`** with `whyItWorks: "placeholder"`, no hooks and no examples.
+Every field was a well-formed string, so `parseReport` kept it, the job
+reported success, and the client would have opened a report saying we
+researched their niche and found a placeholder.
+
+The rule was "no formats **and** no examples is not a report". It is now **"no
+examples is not a report"**. Examples are what makes the thing evidence rather
+than opinion — `12 §1` wants a link and a source note per row — and a set of
+formats with nothing underneath them is the shape of a model answering the
+schema instead of the question. The failure path already says the right thing
+("the model returned nothing that parsed as a report") and leaves the previous
+report standing.
+
+Worth saying plainly: **this was caught by looking at the row, not by a test.**
+The run before it was lost to an unrelated cause (an e2e sweep deleting the
+workspace mid-scan), and had that not happened the placeholder would have been
+the screenshot.

@@ -98,6 +98,37 @@ both append at the end of the file. Whichever merges second rebases and keeps
 both entries.
 ---
 
+### Needs you
+
+1. **GitHub Actions is blocked on billing.** PR #22's three checks did not run
+   at all: *"The job was not started because recent account payments have
+   failed or your spending limit needs to be increased."* #20 and #21 merged
+   green an hour earlier, so this is new. Nothing merges until it is cleared
+   in **Billing & plans**; re-run the checks on #22 afterwards.
+2. **Dispatch *Migrate production* against `feat/v2-first-videos`**, then merge
+   PR #22 yourself. It carries `client_profiles`, `save_client_profile` and
+   `niche_reports.first_videos` — a migration, which is one of the five things
+   non-negotiable 11 keeps for you. Applied to preview already.
+3. **The worker still needs a home.** Unchanged from yesterday: `SUPABASE_URL`,
+   `SUPABASE_SERVICE_ROLE_KEY` and `ANTHROPIC_API_KEY`. Everything today was
+   proved by running it on this laptop against the preview database.
+4. **What a scan costs now, measured.** 443 seconds, **25 searches**, and a
+   complete report at 28k output tokens. The declared search ceiling is 12 and
+   the real count is twice that — the projection doubles it so the cap errs
+   towards refusing, but if that ratio is wrong in either direction the number
+   to change is `SCAN_SEARCH_PROJECTION`.
+5. **The V1 source question and the video generator choice**, both unchanged.
+
+### One thing I would do differently
+
+The live-scan evidence cost three runs. The first died on a schema keyword the
+API refuses, the second on a 16k ceiling the richer report outgrew, and the
+third — which produced a complete report — was written to a workspace the e2e
+teardown had deleted while it ran, because the demo account matched the `e2e+`
+pattern the sweep looks for. **A demo that takes eight minutes and spends real
+money should not borrow a test account.** The fourth run uses a durable one.
+
+
 ## Demo note — 23 November 2026, early hours (the scan is a button now, and #17's red CI was the clock)
 
 **What you can do now:** press **Run a scan** and get your screen back. It

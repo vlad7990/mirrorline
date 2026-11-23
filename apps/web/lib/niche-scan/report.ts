@@ -495,7 +495,24 @@ export function parseReport(value: unknown): ParsedReport | null {
     .map((entry) => entry.dropped)
     .filter((entry): entry is string => entry !== null)
 
-  if (topFormats.length === 0 && examples.length === 0) return null
+  /*
+   * **No examples, no report.** Not "an empty report" — no report at all.
+   *
+   * The rule used to be `no formats AND no examples`, and a live run walked
+   * straight through it: 297 seconds, 22 searches, and then a single format
+   * named `placeholder` with `whyItWorks: "placeholder"`, no hooks and no
+   * examples. Every field was a well-formed string, so the parser kept it, the
+   * job reported success, and the client would have opened a report that had
+   * researched their niche and found a placeholder.
+   *
+   * Examples are what makes a report evidence rather than opinion (`12 §1`:
+   * links, a source note per row). A set of formats with nothing underneath
+   * them is the shape of a model answering the schema instead of the question,
+   * and the honest outcome is the failure path — which already says "the model
+   * returned nothing that parsed as a report" and leaves the previous report
+   * standing.
+   */
+  if (examples.length === 0) return null
 
   return {
     droppedExamples,
