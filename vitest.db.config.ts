@@ -24,6 +24,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./apps/web', import.meta.url)),
+      // Next resolves `server-only` through its own bundler alias, so it is
+      // unresolvable to Vitest. See `vitest.server-only-stub.ts`.
+      'server-only': fileURLToPath(new URL('./vitest.server-only-stub.ts', import.meta.url)),
     },
   },
   test: {

@@ -8371,3 +8371,148 @@ second opinion about it.
 The job's `timeout-minutes` went 20 → 30. Not a fix for anything — the two
 observed runs took 12m38s and 15m31s, so 20 left under five minutes of
 head-room, and a retry now adds a second attempt.
+
+## 2026-11-22 · D118 · The first live scan: four API truths, one honesty bug it exposed, and a latency ceiling that decides the architecture
+
+The Niche Scan agent shipped in V1b.2 having never called the model. This is
+the record of the first real call, which worked — and of the five things that
+were wrong, four of which no hermetic test could have found.
+
+**The niche was "independent dog trainers", and the choice was deliberate.** A
+scan of a nonsense subject returns nothing and proves nothing: the parser drops
+every example for want of a link and the test passes on an empty report. It
+also has to be a niche a reader can *judge*, because the question the first live
+call answers is "is the output any good", and no assertion answers that. The
+result is judgeable and correct: five formats, and the topics include the
+balanced-versus-positive-reinforcement debate, which is genuinely the central
+argument in that trade. Recorded because picking a real niche cost nothing and
+a fake one would have hidden all five findings below.
+
+### 1. `server-only` is a bundler alias, not a package
+
+`import 'server-only'` resolves during `next build` and through nothing else —
+`require.resolve` fails and the pnpm store has no copy. `scan.ts`, `ledger.ts`
+and `service-client.ts` all use it, and the first test to import any of them
+died on `Cannot find package 'server-only'`. Aliased to
+`vitest.server-only-stub.ts` in all three Vitest configs rather than installing
+the real package for a resolver's benefit. A stub loses nothing: the real
+module's job is to throw when pulled into a client bundle, and under Vitest
+there is no client bundle to detect. The guarantee stays with
+`server-only.test.ts`, which walks the import graph, and with the Next build.
+
+### 2. A non-streaming scan does not time out — it hangs
+
+The first live call never returned. The SDK's default timeout is ten minutes but
+it scales *up*, as far as an hour, for a non-streaming request with a large
+`max_tokens`, and then retries. So the failure mode is not an error: it is a
+request still open long after the answer stopped being wanted, nothing written,
+and no way to tell a slow research run from a dead socket.
+
+Streaming is the fix, and **the reason is worth keeping** because it is not what
+the parameter name suggests: on a stream the timeout governs the *connection*,
+not the generation. A real scan then ran **362 seconds** against a five-minute
+timeout and was never cut off, because bytes kept arriving. That is correct
+behaviour — a six-minute research run should finish — so the number is a guard
+against a silent socket, not a deadline for the model. `finalMessage()` returns
+the same `Message` the non-streaming call would have, so nothing downstream
+changed.
+
+### 3. Retries multiply an expensive call, so the scan has none
+
+`maxRetries` defaults to 2 and a timeout counts as retryable, which quietly made
+the five-minute bound a fifteen-minute one — and each attempt is a *fresh
+research run*: the searches run again, the tokens are spent again, and the
+caller sees one request. That is non-negotiable 11's failure mode exactly, money
+leaving without anybody choosing to spend it. `maxRetries: 0` for the scan; the
+co-pilot keeps the default, because a cheap question is worth retrying
+automatically and a multi-search research run is worth *reporting* instead.
+
+`pause_turn` is handled for the same reason: the server-side search loop stops
+at ten iterations, which a run allowed twelve searches can reach. The
+continuation is to re-send with the assistant turn appended and **no new user
+message**, bounded at two resumes, with usage summed across legs so a resumed
+run is not under-reported.
+
+### 4. PostgREST does not error on a column that does not exist
+
+The live test read `agent_runs` as `searches` and `cost_usd`. The columns are
+`web_searches` and `usd`. PostgREST simply omits what it does not have, a `?? 0`
+fallback filled the gap, and the log printed a confident
+
+```
+[scan] run: ok · claude-sonnet-5 · in 231 out 22266 · 0 search(es) · $0
+```
+
+for a run that had just done 28 searches. For several minutes that looked like a
+broken spend cap — the worst bug on the board, since a cap that logs $0 guards
+nothing. It was the reader that was wrong, not the ledger. The lesson is the
+shape, not the typo: **a misspelt column in a PostgREST select is indistinguishable
+from a null value**, so a reader with a default is a reader that invents data.
+The live test now asserts a successful run logged more than $0 and more than
+zero searches, so the same mistake fails instead of printing.
+
+### 5. The real bug: `?? 0` turned "not measured" into "no views"
+
+This one was in the product, and only live data could find it.
+
+`trend-rows.ts` read `viewsPerFollower: toNumber(row.views_per_follower) ?? 0`,
+and `trend-card.tsx` formatted it straight: `{value.toFixed(1)}×`. Every example
+the live scan returned had **no** views-per-follower figure, so every card on
+the screen would have read:
+
+> **0.0×** views per follower in this niche
+
+That is not a gap. It is a measurement, and the worst available one, about a
+format we are recommending — the number says the format earns no views at all.
+And the model was right to omit it: rule 5 of the scan's own system prompt says
+*"If you are unsure of a number, omit the field. A missing value is honest; an
+invented one is not."* It obeyed, and the read path converted its honesty into a
+lie.
+
+Nothing caught it because **every fixture in this repo carries a figure.** 1100
+unit tests passed with the bug in place; the mock data, the canned sample and the
+marketing copy all have numbers. `growthLabel` had the identical rule written
+down and implemented correctly a few lines away — "an unmeasured value is never
+a zero" — which is what makes this an oversight rather than a disagreement.
+
+Fixed at the type: `Trend.viewsPerFollower` is `number | null`, matching the
+nullable column and `report.ts`, which already said so. The card renders "Views
+per follower not published for these posts" when it is absent, and TypeScript
+found the one place that needed the branch. A regression test sits beside the
+growth one and checks all three cases — null, absent key, and a *measured* zero,
+because the fix must not turn a real 0 into "unmeasured" and tell the same lie
+backwards.
+
+This is the second instance of the misleading-figure class after day 1's demo
+note. Both were a default standing in for a missing measurement.
+
+### 6. The guard worked, and was not relaxed
+
+Wiring the form made `server-only.test.ts` fail: a `'use client'` module now
+reached the SDK chokepoint, because the form imported its server action and the
+walker follows static imports at any depth.
+
+Next's `'use server'` boundary means the key could never actually reach the
+bundle — the client gets a reference, not the module. So the tempting fix is to
+teach the walker about the boundary. **Rejected.** A guard with an exception
+carved into it stops being a signal you can read at a glance, and this is the
+same assertion that was deliberately kept "exactly one, named" rather than
+relaxed to "at most two". The page is a server component and may import what it
+likes, so it imports the action and passes it to the form as a prop. The import
+graph stays provably clean and the test stays strict. The prop carries a comment
+saying so, because the obvious tidy-up is to turn it back into an import.
+
+### 7. The latency ceiling, which is a decision for Vlad
+
+**A scan takes about six minutes** (362s, 28 searches, ~22k output tokens). A
+synchronous server action on Vercel is capped at 300 seconds. Those two numbers
+do not fit, which means the scan works locally and on a long-running server and
+**cannot work as a server action in preview or production as built.**
+
+Nothing was tuned down to hide this. Dropping `effort` to `medium` and halving
+the search budget would probably fit inside five minutes, but it would buy that
+by researching less, and it would still be a six-minute page wait wearing a
+smaller number. The real fix is to make a scan a background job — start it,
+return, poll for the report — which is a sprint item rather than tonight's work.
+Flagged in the handoff; `effort: 'high'` and twelve searches stay until somebody
+decides otherwise, because the output at those settings is good.

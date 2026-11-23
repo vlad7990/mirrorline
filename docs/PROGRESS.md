@@ -1,5 +1,129 @@
 # Progress — morning handoff
 
+## Demo note — 22 November 2026, night (you can run a real Niche Scan from the studio, and the first one found two bugs no test could)
+
+**What you can do now:** open `/app/trends`, see your own niche already in the
+box, press **Run a scan**, and the Trend Scout researches the open web and
+writes a report into your workspace. Tonight it did that for *independent dog
+trainers* — six formats with their beats, the hooks and topics behind them, the
+lengths that hold attention, and three example posts with links.
+
+![The Niche Scan screen showing a real report for independent dog trainers](progress/d39-niche-scan-live.png)
+
+Everything in that screenshot came back from `claude-sonnet-5` in one call:
+**28 web searches, about 22,000 output tokens, six minutes.** Nothing on it is
+sample data, and the "Sample data" label is absent because it has not earned
+it.
+
+**Judge the output rather than taking my word for it.** The topics include the
+balanced-versus-positive-reinforcement argument, which is genuinely the central
+fight in dog training, and "Myth-Busting / Myth-Correction" and the named-dog
+transformation are real, recognisable formats in that trade. That is the test
+that matters, and it is why I scanned a real niche instead of "test niche".
+
+### The two bugs, both of which only live data could find
+
+**1. "0.0× views per follower."** Every example came back with no
+views-per-follower figure, because the scan's own prompt tells the model to omit
+a number it cannot verify rather than estimate one. It obeyed. The read path
+then turned that honesty into `?? 0`, and every card would have said the format
+earns **zero** views per follower — a precise-looking number saying the opposite
+of the truth, about a format we are recommending. 1,100 unit tests passed with
+that in place, because every fixture in the repo has a figure. Now the card says
+"Views per follower not published for these posts", the examples say "Not
+measured yet", and the heading above them stops claiming a ranking when there is
+nothing to rank by. This is the second one of these after day 1's note; both
+were a default standing in for a missing measurement.
+
+**2. The scan is too slow to be a button.** Six minutes, and a second run took
+four. A Vercel server action is capped at five, so **this works locally and will
+not work in preview or production as built** — and when I drove it through the
+real UI the page ended in a client-side exception after 237 seconds of waiting.
+I proved that is the duration and not the feature: the same form with the fast
+keyless path passes, and live-shaped rows render cleanly when seeded. The fix is
+to make a scan a background job — start it, return, poll for the report. That is
+the next piece of work and I have not started it.
+
+I did **not** quietly turn the research down to make it fit. Dropping effort and
+halving the searches would probably squeeze under five minutes, but it buys that
+by researching less and it is still a six-minute wait wearing a smaller number.
+The settings that produced the screenshot are the settings in the code.
+
+### Also tonight
+
+- **PR #16 merged.** The nav-marker e2e failure was hydration, not animation:
+  `--indicator-offset` is set in a `useLayoutEffect` and `page.goto` returns
+  before React hydrates, so the test read an empty string. Reproduced on demand
+  under 20× CPU throttling, then fixed by waiting for the measurement instead of
+  asserting once. CI now retries once — and `e2e/reporters/flaky.ts` names
+  anything that passed only on a retry, in the log and in GitHub's run summary,
+  because a retry nobody reports is a flake-hiding machine.
+- **`main` never ran that test.** Its e2e job is keyless, so `motion.spec.ts` is
+  excluded. #16 was the first run in the repo's history to execute it.
+- **A security guard did its job.** Wiring the form made a `'use client'` module
+  reach the SDK chokepoint through its server action. I passed the action down
+  from the server page instead of teaching the test about the `'use server'`
+  boundary — the graph stays provably clean and the assertion stays strict.
+- **New coverage:** `e2e/niche-scan-run.spec.ts` presses the button in CI and
+  checks the keyless run saves the sample *and says so*;
+  `apps/web/lib/niche-scan/scan.live.test.ts` is the opt-in real-money run
+  (`pnpm test:live`), which asserts every example is a link with a source note
+  and that a successful run is never logged at $0.
+
+### Blocking #17 — `demo-path` is not using the fresh account it thinks it is
+
+CI `e2e` is red on #17, and **it is not the Niche Scan**. `demo-path.spec.ts:344`
+asserts the calendar batch bar is empty and gets `"Tomorrow: 3 posts ready."`
+423 passed, 1 failed, on both attempts — so `retries: 1` hid nothing, which is
+the first evidence that tonight's retry policy behaves.
+
+What I checked, in order, and what it ruled out:
+
+1. **Not a mock fallback.** `calendar-view.tsx` imports only a *type* from
+   `@mirrorline/mock`. Those are real rows.
+2. **Not concurrency.** Two CI runs did race on the shared preview database
+   (D76) — the push and the PR each fired the workflow — so that looked like
+   the answer. I re-ran the job alone and **it failed again**. Hypothesis dead.
+3. **It is the shared session.** `demo-path.spec.ts` takes the bare `page`
+   fixture: no `newContext`, no `createConfirmedUser`, no `storageState`
+   override. Every project in `playwright.config.ts` defaults to
+   `STUDIO_STORAGE_STATE`, so this walk runs on the **shared studio account**.
+   Its own comment — *"this walk is about a fresh account"* — is wrong about
+   the test it is attached to. `calendar-persist.spec.ts` seeds scheduled posts
+   into that same workspace.
+
+**My change did not cause it, but probably exposed it.** Adding
+`e2e/niche-scan-run.spec.ts` changes the file count and therefore how Playwright
+schedules workers, which changes whether the seeding spec lands before this one.
+An order-dependent assertion passes until the order moves.
+
+**I did not merge #17.** Merging a red PR on the grounds that the failure looks
+unrelated is exactly what the flaky reporter was built to stop.
+
+Two candidate fixes, for whoever picks this up — the choice is a real one and
+wants a minute's thought rather than the first thing that goes green:
+
+- Give `demo-path` its own confirmed account, as `goals-persist.spec.ts` does.
+  Truest to the comment, and the walk becomes order-independent. Costs a
+  sign-up and an onboarding pass in the slowest spec in the suite.
+- Make the assertion state-tolerant. Cheaper, and wrong: "the bar says
+  something sensible" is not the bug that was being guarded, which was a bar
+  claiming *0 videos approved* for an empty week.
+
+The first one is almost certainly right.
+
+### Needs you
+
+1. **The background job for the scan** — the one thing blocking a usable button
+   in production. Say the word and it is the next thing I build.
+2. The V1 source question and the video generator choice, both unchanged.
+
+Full detail, including the four API truths the first call taught us, is in
+`docs/DECISIONS.md` **D118**.
+
+---
+
+
 **Run:** overnight of 9–10 November 2026. Unattended, auto mode.
 **Repo:** https://github.com/vlad7990/mirrorline (private)
 **Branch:** `main`

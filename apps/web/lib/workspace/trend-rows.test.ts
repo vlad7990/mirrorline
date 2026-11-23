@@ -83,6 +83,26 @@ describe('an unmeasured growth figure says so', () => {
     // honest string rather than in front of it.
     expect(card?.growthPercent).toBe(0)
   })
+
+  /**
+   * The same rule as the sentence above, for the figure that had it wrong.
+   *
+   * `views_per_follower` was read through a `?? 0`, and the card formats the
+   * number directly — so an unmeasured example rendered as **"0.0× views per
+   * follower"**. Not a gap: a measurement, and the worst available one, about a
+   * format we were recommending.
+   *
+   * Nothing caught it because every fixture in this repo carries a figure. The
+   * first live scan carried none on any example — the prompt tells the model to
+   * omit what it cannot verify, and it obeyed. This test is that run, kept.
+   */
+  test('an unmeasured views-per-follower stays null, and never becomes 0', () => {
+    expect(toTrendCard({ ...ROW, views_per_follower: null }, null)?.viewsPerFollower).toBeNull()
+
+    // And a measured zero stays zero: the fix must not turn a real 0 into
+    // "unmeasured", which would be the same lie pointing the other way.
+    expect(toTrendCard({ ...ROW, views_per_follower: 0 }, null)?.viewsPerFollower).toBe(0)
+  })
 })
 
 describe('the storyboard, in either shape an agent writes', () => {

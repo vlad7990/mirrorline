@@ -67,10 +67,25 @@ export function TrendCard({ trend, canRemake = false }: TrendCardProps) {
           account with 500,000 followers is not working, and a raw view count
           cannot say so — which is why this sits beside the fit score rather
           than a view total. */}
-      <p className="m-0 text-meta text-text-muted">
-        <span className="machine text-text">{trend.viewsPerFollower.toFixed(1)}×</span> views per
-        follower in this niche
-      </p>
+      {/*
+        **It is sometimes absent, and that has to look absent.** The scan is
+        told to omit a figure it cannot verify rather than estimate one, and the
+        first live run omitted every single one. This line used to read the
+        value through a `?? 0`, so those cards said "0.0× views per follower" —
+        a precise-looking number stating the opposite of the truth, about a
+        format we were recommending. 15 §honesty rules and non-negotiable 7: an
+        unmeasured figure says that it is unmeasured.
+      */}
+      {trend.viewsPerFollower === null ? (
+        <p className="m-0 text-meta text-text-muted">
+          Views per follower not published for these posts
+        </p>
+      ) : (
+        <p className="m-0 text-meta text-text-muted">
+          <span className="machine text-text">{trend.viewsPerFollower.toFixed(1)}×</span> views per
+          follower in this niche
+        </p>
+      )}
 
       <div className="mt-auto flex items-center gap-3 pt-1">
         <span className="shrink-0 font-body text-meta text-text-muted">{fitLabel}</span>

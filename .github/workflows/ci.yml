@@ -1,7 +1,22 @@
 name: CI
 
+# Once per change, not twice.
+#
+# `push:` with no filter fired on every branch, so a branch with an open pull
+# request ran the whole workflow twice for one commit — and both copies of the
+# keyed `e2e` job create and delete accounts in the **one shared preview
+# database** (D76). That is where the concurrency theory for #17's failure came
+# from: two suites seeding and sweeping the same project genuinely do race, so
+# it was a reasonable suspect, and it cost time to rule out as the cause of
+# something else.
+#
+# `main` is still covered: a merge is a push to it, which is the run that says
+# the merged result is sound. Everything else is covered by `pull_request`,
+# which is how work lands here (CLAUDE.md #11). The one thing given up is CI on
+# a branch with no pull request open yet — open a draft and it runs.
 on:
   push:
+    branches: [main]
   pull_request:
 
 # No deploy job and no secrets: previews are promoted manually (CLAUDE.md #11).
