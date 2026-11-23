@@ -16,6 +16,22 @@ import { WorkspaceSwitcher } from './workspace-switcher'
  *
  * The theme switch sits just above the usage meter. DESIGN.md asks for a full
  * dark mode, and the sidebar is the only shell surface on every studio page.
+ *
+ * ## Ink, like the site's own chrome (D122)
+ *
+ * `band-ink` remaps the semantic tokens — background, surface, border, text —
+ * to the ink set, which is how the public site paints a dark section without
+ * any component knowing it exists. Reusing it is the whole point of the
+ * restyle: a client walks from a gold-and-ink marketing page into a studio
+ * whose frame is the same material, and `Card`, `Button` and the nav need no
+ * studio-specific variants to come along.
+ *
+ * `chrome-ink` is the one pair `band-ink` does not cover — the nav's selected
+ * state, which is `accent-soft` and would otherwise stay a cream pill from the
+ * light theme.
+ *
+ * The content area is untouched and stays light by default. An instrument is
+ * read for hours: the frame can be dark, the work cannot.
  */
 
 const LOGO_SIZE = 26
@@ -29,12 +45,13 @@ export function Sidebar({ className }: { className?: string }) {
     <aside
       aria-label="Workspace"
       className={[
-        'flex h-full w-sidebar flex-col gap-3.5 border-r border-border bg-surface px-4 py-6',
+        'band-ink chrome-ink flex h-full w-sidebar flex-col gap-3.5 border-r border-border bg-background px-4 py-6',
         className ?? '',
       ].join(' ')}
     >
       <Link href="/app/home" className="inline-flex rounded-md px-2 pb-1">
-        <LogoWordmark size={LOGO_SIZE} />
+        {/* The site's treatment, exactly: gold loop, light word (D25). */}
+        <LogoWordmark size={LOGO_SIZE} markClassName="text-gold-bright" />
       </Link>
 
       <WorkspaceSwitcher />

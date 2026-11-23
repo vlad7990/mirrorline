@@ -40,8 +40,21 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        /** One per section. DESIGN.md: white text only on primary or ink. */
-        primary: 'bg-primary text-on-primary hover:bg-primary-hover',
+        /**
+         * One per section — and since D122 it is the **site's** primary: the
+         * gold gradient pill with an ink label.
+         *
+         * The studio and the site used to carry two different primary actions,
+         * which was D25's "site first" half doing its job and nothing more. A
+         * client now walks from a gold-and-ink page into a studio whose main
+         * button is the same button. `primary` and `gold` therefore resolve to
+         * the same thing; `gold` is kept as the name the marketing kit already
+         * uses, not as a second design.
+         *
+         * The ink label is the accessible choice as well as the designed one:
+         * white on this gold is 2.4:1, ink is 10.6:1.
+         */
+        primary: 'rounded-full bg-gold-gradient text-ink-900 hover:brightness-[1.06]',
         /** White with a border-strong outline and dark text. */
         secondary: 'border border-border-strong bg-surface text-text hover:bg-surface-subtle',
         /**
@@ -56,10 +69,12 @@ const buttonVariants = cva(
          * The public site's primary action (D25). Gold gradient, ink label,
          * fully rounded — the handoff's pill.
          *
-         * Not for the studio: the site and the instrument do not share a
-         * primary, and DESIGN.md still forbids gradients there. The ink label
-         * is the accessible choice as well as the designed one — white on
-         * this gold is 2.4:1, ink is 10.6:1.
+         * **Identical to `primary` since D122**, which is the point: the
+         * comment here used to read "not for the studio … DESIGN.md still
+         * forbids gradients there", and that was the state of the restyle
+         * rather than a rule about the product. Vlad's decision brings the
+         * site's primary into the app. Kept as a name because 20 marketing
+         * call sites say `gold` and renaming them would be churn.
          */
         gold: 'rounded-full bg-gold-gradient text-ink-900 hover:brightness-[1.06]',
       },

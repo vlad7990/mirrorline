@@ -8731,3 +8731,94 @@ honest reading of "a link we kept but cannot describe" is the weaker claim.
 D118's report screen and D120's print region, on the content rather than the
 mechanism. Nothing about the legal position moves: links and descriptions only,
 a source note per row, no media (D115, non-negotiables 1 and 2).
+
+---
+
+## D122 — the studio is dressed in the site's clothes (amends D25 and D26)
+
+**23 November 2026.** D25 adopted the gold-and-ink handoff and said plainly it
+was doing the public site first. This is the second half: the studio and the
+client-facing PDF now speak in the same visual language, and the seam between
+"the site that sold it" and "the thing you logged into" closes.
+
+**It is a restyle, not a re-layout.** Same screens, same routes, same flows,
+same components. Nothing moved; things changed colour, shape and face.
+
+### What the studio borrows
+
+1. **Ink chrome.** The sidebar, the mobile bar and the mobile drawer carry
+   `band-ink`, the same token remapping the marketing site uses to paint a
+   dark section. That is the whole reason the restyle is small: `Card`,
+   `Button` and the nav resolve `bg-surface`, `text-text` and `border-border`
+   to the ink set without knowing the studio exists. `chrome-ink` adds the one
+   pair `band-ink` does not cover — the nav's selected state, which is
+   `accent-soft`, a cream wash chosen for a white sidebar.
+2. **The wordmark, exactly as the site draws it**: gold loop, light word.
+3. **The gold pill as the primary button.** `variant="primary"` now renders
+   what `variant="gold"` renders. The two were a real difference with no
+   reason behind it: the site asked you to act in gold and the app asked you
+   to act in dark bronze. The ink label is also the accessible choice — white
+   on this gold is 2.4:1, ink is 10.6:1.
+4. **One eyebrow.** `.eyebrow` was 0.06em in muted grey while the site's
+   `.site-eyebrow` was 0.12em in gold. Same element, two registers. Now one.
+5. **Geist Serif on the page title**, and only there. One rule,
+   `.studio-shell main#main h1`, which reaches exactly one element per screen.
+   Everything else stays Geist Sans; every number, cost and log stays Geist
+   Mono. Weight 400, because Geist Serif ships Regular only and a synthesised
+   bold at 32px is a visible smear.
+
+**The content area stays light by default, and Light/Dark/System still works.**
+An instrument is read for hours: the frame can be dark, the work cannot.
+
+### The PDF gets a cover
+
+The niche report is the artefact we hand to a prospect, and it began mid-
+sentence on a grid of format cards. Page one is now ink with the wordmark, the
+client's name, the niche, the scan date, **"Prepared by Mirrorline"**, and the
+note that an AI wrote it — on the page a reader meets first rather than in a
+footnote on page four. Body headings follow the cover into the serif.
+
+It is `hidden print:block` inside the existing print region rather than a
+second route, so it cannot drift from the screen the way a separately-rendered
+export would. Two deliberate costs: `print-color-adjust: exact`, because an ink
+cover that printed as a blank page with a logo on it would be worse than none;
+and the storyboards are `data-print-hide`, because four filled near-black
+frames per format is toner spent on an abstraction whose text is printed in
+full directly underneath.
+
+### Colour now has one home, enforced
+
+`apps/web/lib/design/no-raw-colour.test.ts` fails if a hex or an `rgb()`-style
+literal appears anywhere under `app/app`, `components/studio` or
+`components/shell`. It found three on its first run — all inside Tailwind
+arbitrary-value brackets (`shadow-[0_24px_60px_-24px_…]`) in the co-pilot,
+which is exactly where nobody looks for colour. They are `--shadow-float`,
+`--shadow-panel` and `--shadow-sheet` now.
+
+The restyle is only durable if the next screen is built from tokens too. A
+stray `#1a1f27` is not a bug the day it is written; it is a bug three months
+later when the ink goes half a step warmer in one place.
+
+### The mistake worth keeping on the record
+
+The first version of the eyebrow change was `.band-ink .eyebrow { bright gold }`.
+It reads as equivalent to what shipped and is not: **the marketing layout wraps
+every page in `band-ink`**, so a `band-snow` section nested inside it still
+matched the ink rule and painted bright gold on near-white — 1.9:1, which axe
+flagged `serious` on all thirteen public pages. The fix is the pattern D40
+already established for `--rail-fill`: pin the value **per band as a custom
+property** and let the element resolve the nearest ancestor that set it. A
+descendant selector cannot express "the band I am actually standing in".
+
+### Proof
+
+`docs/progress/d41-brand/` — before and after, Home, Niche Scan, Calendar and
+Settings, at 1440 and 390, light and dark, plus page one of the PDF and the
+PDF itself. 91 axe checks green in both themes, 445 e2e tests passing.
+
+### What this costs, said plainly
+
+DESIGN.md still says "avoid gradients" for the studio and still describes the
+eyebrow as muted. Those lines are now wrong, and that is this decision's doing:
+Vlad's instruction is the authority here (CLAUDE.md source-of-truth 1), and the
+design files are the thing to update next rather than the thing to argue with.

@@ -31,7 +31,10 @@ import { ScheduleMovesProvider } from '@/lib/studio/schedule-moves-context'
 export default function StudioLayout({ children }: { children: React.ReactNode }) {
   return (
     <ScheduleMovesProvider>
-      <div className="min-h-dvh lg:pl-sidebar">
+      {/* `studio-shell` is the hook the page-title serif hangs off (D122). It
+          scopes one rule in globals.css to this route group, so the display
+          face reaches the studio's h1 and nothing else in the app. */}
+      <div className="studio-shell min-h-dvh lg:pl-sidebar">
         {/* The wrapper owns the responsive display, so the sidebar's own
             `flex` and a `hidden` utility never fight over one element. */}
         <div className="fixed inset-y-0 left-0 z-20 hidden lg:block">

@@ -39,9 +39,12 @@ export function MobileNav() {
   }, [isOpen])
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-surface px-[18px] py-2.5 lg:hidden">
+    // Ink, for the same reason the sidebar is (D122): below 1024px this bar
+    // *is* the studio's chrome, and a light bar over a restyled app would be
+    // the one surface that did not follow.
+    <header className="band-ink chrome-ink sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-background px-[18px] py-2.5 lg:hidden">
       <Link href="/app/home" className="inline-flex rounded-md">
-        <LogoWordmark size={LOGO_SIZE} />
+        <LogoWordmark size={LOGO_SIZE} markClassName="text-gold-bright" />
       </Link>
 
       <button
@@ -70,11 +73,11 @@ export function MobileNav() {
         // keyframe in theme.css, and theme.css is not this app's to edit. It
         // opens instantly, which is also the right call for a menu a person
         // taps many times a day.
-        className="fixed top-0 bottom-0 left-0 m-0 h-full max-h-none w-[17.5rem] max-w-[86vw] overflow-y-auto border-r border-border bg-surface p-0 text-text backdrop:bg-ink/40"
+        className="band-ink chrome-ink fixed top-0 bottom-0 left-0 m-0 h-full max-h-none w-[17.5rem] max-w-[86vw] overflow-y-auto border-r border-border bg-background p-0 text-text backdrop:bg-ink/40"
       >
         <div className="flex min-h-full flex-col gap-3.5 px-4 py-5">
           <div className="flex items-center justify-between gap-3">
-            <LogoWordmark size={LOGO_SIZE} />
+            <LogoWordmark size={LOGO_SIZE} markClassName="text-gold-bright" />
             <button
               type="button"
               onClick={close}

@@ -35,7 +35,8 @@ export const geistSans = localFont({
 })
 
 /**
- * The display face, public site only (D25).
+ * The display face: the public site (D25), and one element per studio screen
+ * since D122 — the page title.
  *
  * Preloaded, because it sets the one element the landing page opens on: the
  * `h1` is `.text-site-hero`, which is `var(--font-serif)`. Measured rather

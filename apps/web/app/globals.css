@@ -784,6 +784,30 @@
 }
 
 /* ---------------------------------------------------------------------------
+   The studio's page title, in the display face (D122).
+
+   The restyle's one typographic move, and it is deliberately one. Geist Serif
+   is the site's display voice (D25); carrying it into the studio is what makes
+   the two halves read as one product — but only at the top of a screen.
+   Everything else stays Geist Sans and every number stays Geist Mono. A serif
+   in a table of costs reads as decoration, and the "two voices" rule in
+   theme.css is about meaning rather than taste.
+
+   Scoped to `.studio-shell main#main h1`, so it reaches exactly one element
+   per screen: the `PageHeader` title. The id in the selector also settles the
+   cascade against Tailwind's `font-heading` utility without an `!important`.
+
+   Weight 400, because Geist Serif ships Regular only — the headline token asks
+   for 700 and the browser would synthesise it, which at 32px is a visible
+   smear. The optical weight comes back as slightly tighter tracking.
+   --------------------------------------------------------------------------- */
+.studio-shell main#main h1 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: -0.018em;
+}
+
+/* ---------------------------------------------------------------------------
    Printing a niche report (V1, D120).
 
    BACKEND_PHASE §V1 asks for the report to be "viewable in the studio,
@@ -866,5 +890,112 @@
   [data-print-region] h2,
   [data-print-region] h3 {
     break-after: avoid;
+  }
+
+  /* -------------------------------------------------------------------------
+     The cover (D122).
+
+     The report is the artefact we hand to a prospect, and until now it began
+     mid-sentence with a grid of format cards. Page one now says who it is for,
+     what it covers, when it was scanned, who prepared it, and that an AI wrote
+     it — the last of those on the page a reader meets first rather than in a
+     footnote on page four.
+
+     **`print-color-adjust: exact` is a deliberate cost.** Browsers drop
+     backgrounds when printing, for good reasons about toner, and an ink cover
+     that printed as black-on-white would be a blank page with a logo on it.
+     This is the one block in the document that overrides that; everything
+     after it is ink on paper.
+
+     The negative margins bleed the ink to the paper's edge against the 16mm
+     `@page` margin, and `break-after: page` keeps the research off the cover.
+     ------------------------------------------------------------------------- */
+  [data-print-region] .report-cover {
+    margin: -16mm -16mm 0;
+    padding: 28mm 16mm;
+    min-height: 200mm;
+    background: var(--color-ink-900);
+    color: var(--color-on-ink-900);
+    break-after: page;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  [data-print-region] .report-cover-eyebrow {
+    margin: 26mm 0 0;
+    font-family: var(--font-sans);
+    font-size: 11pt;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-gold-bright);
+  }
+
+  /* The display face, as on the site. Page one is the one place in a studio
+     document where the brand gets to speak before the data does. */
+  [data-print-region] .report-cover-title {
+    margin: 4mm 0 0;
+    max-width: 24ch;
+    font-family: var(--font-serif);
+    font-size: 30pt;
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--color-on-ink-900);
+  }
+
+  [data-print-region] .report-cover-meta {
+    margin: 22mm 0 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6mm 10mm;
+    max-width: 120mm;
+    font-size: 10pt;
+  }
+
+  [data-print-region] .report-cover-meta dt {
+    font-size: 8.5pt;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-on-ink-faint);
+  }
+
+  [data-print-region] .report-cover-meta dd {
+    margin: 1mm 0 0;
+    font-weight: 600;
+    color: var(--color-on-ink-900);
+  }
+
+  [data-print-region] .report-cover-sample {
+    margin: 12mm 0 0;
+    display: inline-block;
+    border: 1px solid var(--color-gold);
+    border-radius: 999px;
+    padding: 2mm 5mm;
+    font-size: 9.5pt;
+    font-weight: 600;
+    color: var(--color-gold-bright);
+  }
+
+  [data-print-region] .report-cover-note {
+    margin: 14mm 0 0;
+    max-width: 110mm;
+    font-size: 9pt;
+    line-height: 1.5;
+    color: var(--color-on-ink-muted);
+  }
+
+  /* The cover's own links print no address: there are none, and the
+     `a[href]::after` rule above would otherwise reach the wordmark. */
+  [data-print-region] .report-cover a[href^='http']::after {
+    content: '';
+  }
+
+  /* Serif headings through the body too, matching the cover and the site.
+     Only the headings: the findings stay sans and every number stays mono. */
+  [data-print-region] h2,
+  [data-print-region] h3 {
+    font-family: var(--font-serif);
+    font-weight: 400;
   }
 }

@@ -140,6 +140,10 @@ export default async function TrendsPage() {
         />
       ) : (
         <NicheReportPanel
+          // The cover names the client (D122). Read here rather than in the
+          // panel: the page already holds the workspace, and a component that
+          // fetches its own identity is a component that cannot be previewed.
+          clientName={workspace?.name}
           findings={reportResult.report?.findings ?? SAMPLE_REPORT}
           isSample={reportResult.report === null}
           niche={reportResult.report?.niche}

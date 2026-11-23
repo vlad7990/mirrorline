@@ -64,8 +64,13 @@
 
      From docs/design/handoff-v4 (D25). Deliberately a separate namespace
      rather than a second theme: the site alternates ink and snow bands as art
-     direction, section by section, and is not light/dark switchable. The
-     studio keeps the coral glass-box palette above until the app restyle.
+     direction, section by section, and is not light/dark switchable.
+
+     **The studio now borrows from here (D122)** — `band-ink` paints its
+     sidebar and mobile bar, the gold gradient is its primary button, and
+     `--font-serif` sets its page titles. That is the "app second" half of
+     D25 landing, and it is a *borrowing*: the studio's own light and dark
+     themes above are unchanged, and the content area still renders in them.
 
      Two values differ from the handoff, because the handoff's fail WCAG AA
      and `contrast.test.ts` would reject them. Each was solved by walking the
@@ -132,9 +137,11 @@
    * Vlad kept Geist, and Geist Serif ships inside the `geist` package we
    * already depend on — same family, same licence, no new font to load.
    *
-   * It is a third voice, not a replacement: the studio stays entirely sans,
-   * because a serif in an instrument reads as decoration. This is for the
-   * marketing display headlines and the gold accent phrase only.
+   * It is a third voice, not a replacement. Marketing display headlines, the
+   * gold accent phrase — and, since D122, the **page title of a studio
+   * screen** and the niche report's printed headings. Nothing else in the
+   * studio: a serif on a row of costs reads as decoration, which is why the
+   * rule is one element per screen rather than "headings".
    *
    * No italic. Neither Geist Serif nor the `next/font` Sans export carries a
    * true one, and a synthesised oblique at 100px is visibly sheared. The
@@ -266,12 +273,33 @@
      (see `.band-ink`); this is the fallback for a rail outside any band. */
   --rail-fill: var(--color-gold);
 
+  /* The eyebrow's gold, pinned per band like `--rail-fill` and for the same
+     reason. This is the fallback for an eyebrow outside any band: the studio,
+     in its light theme. `.dark` raises it below. */
+  --eyebrow-color: var(--color-gold-text);
+
   /* Entering is ease-out by default, at dropdown speed. */
   --default-transition-timing-function: var(--ease-out);
   --default-transition-duration: var(--duration-dropdown);
 
   /* The one shadow DESIGN.md allows: the active segment of a segmented control */
   --shadow-segment: 0 1px 2px rgb(0 0 0 / 0.08);
+
+  /*
+   * Overlay depth, named here rather than written at the call site (D122).
+   *
+   * DESIGN.md's "flat by default" rule is about the page: depth comes from 1px
+   * borders and the contrast between surface and background. An overlay is the
+   * exception the rule implies — the co-pilot floats *above* the page and has
+   * to say so — and these three were arbitrary `rgba()` literals inside
+   * `shadow-[…]` classes in `components/studio/copilot`, which is exactly the
+   * kind of value the no-raw-colour test now refuses in app code.
+   *
+   * Same numbers as before: launcher, aside, bottom sheet.
+   */
+  --shadow-float: 0 10px 30px -12px rgb(0 0 0 / 0.65);
+  --shadow-panel: 0 24px 60px -24px rgb(0 0 0 / 0.8);
+  --shadow-sheet: 0 -24px 60px -24px rgb(0 0 0 / 0.8);
 }
 
 /* Dark theme. The same cool axis read from the other end. Two asymmetries:
@@ -290,6 +318,9 @@
        White on #8a6a14 is 5.06:1; on its hover #7a5c0f, 6.24:1. */
     --color-primary: #8a6a14;
     --color-primary-hover: #7a5c0f;
+    /* The small-text gold is sized for a light surface and disappears on this
+       one, so the dark theme takes the bright value (D122). */
+    --eyebrow-color: var(--color-gold-bright);
     --color-accent: #f5b83d;
     --color-accent-soft: #2e2512;
     --color-on-accent-soft: #f5d98f;
@@ -433,12 +464,34 @@
   }
 
   /* Small uppercase section eyebrow. DESIGN.md "Typography — Case". */
+  /*
+   * The eyebrow, now in the kit's shape (D122).
+   *
+   * It was 0.06em tracking in muted grey while the public site's
+   * `.site-eyebrow` was 0.12em in gold — two typographic registers for the
+   * same element, which is the kind of difference nobody can name and
+   * everybody can see. One shape now.
+   *
+   * Gold is the **small-text** gold (`--color-gold-text`, #886611), not the
+   * display one: an eyebrow is 12px, where the bar is 4.5:1 and the display
+   * gold does not clear it. On ink, where that value disappears, the bright
+   * gold takes over.
+   *
+   * **Through a variable, not a descendant selector**, and that is the whole
+   * lesson of the first attempt. `.band-ink .eyebrow { bright }` looks
+   * equivalent and is not: the marketing layout wraps every page in
+   * `band-ink`, so a `band-snow` section *nested inside it* still matched the
+   * ink rule and painted bright gold on near-white — 1.9:1, and axe flagged it
+   * `serious` on all thirteen public pages. A variable resolves to the nearest
+   * ancestor that set it, which is the band the element is actually standing
+   * in. `--rail-fill` is pinned per band for exactly this reason (D40).
+   */
   .eyebrow {
     font-size: var(--text-caption);
     font-weight: 600;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--color-text-muted);
+    color: var(--eyebrow-color, var(--color-gold-text));
   }
 
   /* ---------------------------------------------------------------------
@@ -1877,6 +1930,24 @@
     --color-on-neutral-soft: #c5cbd5;
   }
 
+  /*
+   * The studio's chrome, on ink (D122).
+   *
+   * `band-ink` remaps the neutrals and the status colours, which is everything
+   * a marketing section needs. The studio shell needs one pair more: the nav's
+   * selected state is `accent-soft`, a cream wash chosen for a white sidebar,
+   * and on ink it reads as a lit bar rather than as a selection.
+   *
+   * Composed rather than folded into `.band-ink`, because the public site must
+   * not inherit it — and written as token references, never as new values, so
+   * every colour still has exactly one definition.
+   */
+  .chrome-ink {
+    --color-accent-soft: var(--color-ink-line);
+    --color-on-accent-soft: var(--color-gold-bright);
+    --eyebrow-color: var(--color-gold-bright);
+  }
+
   .band-snow,
   .band-white {
     --color-success: #128a5e;
@@ -1909,6 +1980,7 @@
     --color-text: var(--color-on-ink-900);
     --color-text-muted: var(--color-on-ink-muted);
     --rail-fill: var(--color-gold-bright);
+    --eyebrow-color: var(--color-gold-bright);
   }
 
   .band-ink-alt {
@@ -1920,6 +1992,7 @@
     --color-text: var(--color-on-ink-900);
     --color-text-muted: var(--color-on-ink-muted);
     --rail-fill: var(--color-gold-bright);
+    --eyebrow-color: var(--color-gold-bright);
   }
 
   .band-snow {
@@ -1931,6 +2004,7 @@
     --color-text: var(--color-on-snow);
     --color-text-muted: var(--color-on-snow-muted);
     --rail-fill: var(--color-gold-deep);
+    --eyebrow-color: var(--color-gold-text);
   }
 
   .band-white {
@@ -1942,6 +2016,7 @@
     --color-text: var(--color-on-snow);
     --color-text-muted: var(--color-on-snow-muted);
     --rail-fill: var(--color-gold-deep);
+    --eyebrow-color: var(--color-gold-text);
   }
 
   /* ---------------------------------------------------------------------
