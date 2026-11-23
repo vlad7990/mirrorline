@@ -34,6 +34,15 @@ import { createSupabaseServerClient } from '@/lib/supabase/server-client'
 export interface OwnedWorkspace {
   readonly id: string
   readonly name: string
+  /**
+   * What the client said their niche is, at onboarding.
+   *
+   * Read so the Niche Scan form can be pre-filled with it (V1): the common scan
+   * is "my own niche", and an empty box asks the client to retype something we
+   * already stored. Nullable because the column is — a workspace created by the
+   * magic-link path has not answered that question yet.
+   */
+  readonly niche: string | null
 }
 
 /**
@@ -70,11 +79,15 @@ export async function getOwnedWorkspace(): Promise<OwnedWorkspace | null> {
 
   const workspace = await supabase
     .from('workspaces')
-    .select('id, name')
+    .select('id, name, niche')
     .eq('id', workspaceId)
     .maybeSingle()
 
   if (workspace.error !== null || workspace.data === null) return null
 
-  return { id: workspace.data.id, name: workspace.data.name }
+  return {
+    id: workspace.data.id,
+    name: workspace.data.name,
+    niche: workspace.data.niche ?? null,
+  }
 }

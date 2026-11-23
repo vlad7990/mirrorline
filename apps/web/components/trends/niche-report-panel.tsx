@@ -216,7 +216,19 @@ export function NicheReportPanel({ findings, isSample, niche, scannedAt }: Niche
 
       {examples.length > 0 ? (
         <Card className="p-5">
-          <Eyebrow>Examples, ranked by views per follower</Eyebrow>
+          {/*
+            The heading only claims a ranking when there is something to rank
+            by. The first live scan returned no views-per-follower figure on any
+            example — the prompt tells the model to omit what it cannot verify —
+            and "Examples, ranked by views per follower" then sat above a list
+            where every row read "Not measured yet": a true sentence about the
+            method and a false one about this report.
+          */}
+          <Eyebrow>
+            {examples.some((example) => example.viewsPerFollower !== null)
+              ? 'Examples, ranked by views per follower'
+              : 'Examples the scan found'}
+          </Eyebrow>
           <p className="mt-2 max-w-prose text-meta text-text-muted">
             Links to public posts. We keep the link and the description of the format, never the
             video or the audio.

@@ -11,6 +11,11 @@ export default defineConfig({
       // only reach across apps/web by relative path, which quietly splits the
       // codebase into "modules a test may import" and the rest.
       '@': fileURLToPath(new URL('./apps/web', import.meta.url)),
+      // `import 'server-only'` resolves through Next's bundler alias and
+      // through nothing else — it is not an installed package. Aliased here so
+      // the next test to import `ledger.ts` or `service-client.ts` does not
+      // have to rediscover that. See `vitest.server-only-stub.ts`.
+      'server-only': fileURLToPath(new URL('./vitest.server-only-stub.ts', import.meta.url)),
     },
   },
   test: {

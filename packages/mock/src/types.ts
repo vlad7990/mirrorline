@@ -131,8 +131,17 @@ export interface Trend {
    * The benchmark that makes a format comparable across accounts of different
    * sizes: a format averaging 50,000 views on an account with 500,000
    * followers is not working, and a raw view count cannot say so.
+   *
+   * **Nullable, because the real scan often cannot measure it.** The Niche
+   * Scan's own prompt tells the model to omit a figure it is unsure of rather
+   * than estimate one, and the first live run came back with the figure absent
+   * on every example — honest, and exactly the behaviour we asked for. Typing
+   * this as a plain `number` meant the read path filled the gap with `0`, and a
+   * card then stated "0.0× views per follower" — which is not a missing value,
+   * it is the claim that the format gets no views at all. `null` is the only
+   * value that says "not measured", so it has to be representable.
    */
-  readonly viewsPerFollower: number
+  readonly viewsPerFollower: number | null
   readonly beats: readonly TrendBeat[]
   readonly whyItWorks: string
   readonly platform: Platform

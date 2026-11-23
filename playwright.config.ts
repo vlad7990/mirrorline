@@ -73,6 +73,7 @@ const SESSION_DEPENDENT_SPECS = [
   '**/goals-persist.spec.ts',
   '**/motion.spec.ts',
   '**/navigation-race.spec.ts',
+  '**/niche-scan-run.spec.ts',
   '**/onboarding-submit.spec.ts',
   '**/resources-and-auth.spec.ts',
   '**/results-persist.spec.ts',

@@ -31,15 +31,25 @@ import { revalidatePath } from 'next/cache'
 import { runNicheScan } from '@/lib/niche-scan/scan'
 import { getOwnedWorkspace } from '@/lib/workspace/current-workspace'
 
+import type { ScanActionResult } from './scan-form-state'
+
 /** Long enough for a real niche, short enough that it cannot carry a prompt. */
 const MAX_NICHE_LENGTH = 120
 
-export interface ScanActionResult {
-  readonly status: 'complete' | 'refused' | 'failed'
-  readonly message: string
-}
+export type { ScanActionResult }
 
-export async function runNicheScanAction(formData: FormData): Promise<ScanActionResult> {
+/**
+ * `_previous` is `useActionState`'s first argument, and is deliberately unused.
+ *
+ * The outcome depends only on this submission. A scan the cap refused a minute
+ * ago says nothing about whether this one may run — `runNicheScan` re-reads the
+ * month's spend every time — so carrying the old state forward would be caching
+ * a decision that is meant to be re-made.
+ */
+export async function runNicheScanAction(
+  _previous: ScanActionResult,
+  formData: FormData,
+): Promise<ScanActionResult> {
   const workspace = await getOwnedWorkspace()
   if (!workspace) {
     // An ordinary answer, not a failure: somebody who arrived by magic link

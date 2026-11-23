@@ -85,6 +85,58 @@ export const SCAN_MAX_SEARCHES = 12
 export const SCAN_MAX_REQUEST_USD = 2
 
 /**
+ * The HTTP timeout for one leg — and it is **not** a bound on generation time.
+ *
+ * Measured, after getting this wrong once. The first live scan was
+ * non-streaming and simply never came back: the SDK's default timeout is ten
+ * minutes but it scales *up*, as far as an hour, for a large `max_tokens`, and
+ * then retries. No error, no response, nothing written, and no way to tell a
+ * slow research run from a wedged socket.
+ *
+ * Streaming fixed that, and the reason is the thing to understand here: on a
+ * stream this timeout governs the **connection**, not the whole generation. A
+ * real scan then ran for **362 seconds** against this five-minute value and was
+ * never cut off, because bytes kept arriving. That is the intended behaviour —
+ * a six-minute research run should finish — so the number is a guard against a
+ * silent socket, not a deadline for the model.
+ *
+ * Which means the real ceiling lives elsewhere: a synchronous server action on
+ * Vercel is capped at 300 seconds, and a 362-second scan does not fit inside
+ * it. Noted in the handoff; the fix is a background job, not a bigger number.
+ */
+export const SCAN_REQUEST_TIMEOUT_MS = 5 * 60 * 1000
+
+/**
+ * How many times a paused turn may be resumed.
+ *
+ * `web_search` runs inside a server-side loop that stops at ten iterations and
+ * returns `stop_reason: 'pause_turn'` — a real outcome for a run allowed twelve
+ * searches, not an error. Resuming is the documented continuation: re-send the
+ * conversation with the assistant turn appended and the server picks up where
+ * it stopped, with **no extra user message** (one would read as a new
+ * instruction rather than a resumption).
+ *
+ * Bounded, because the failure mode of an unbounded resume loop is a bill.
+ */
+export const SCAN_MAX_CONTINUATIONS = 2
+
+/**
+ * No retries on a scan. **This one is about money, not latency.**
+ *
+ * The SDK retries twice by default, and it counts a timeout as retryable — so
+ * the five-minute bound above was quietly a fifteen-minute one, and each of
+ * those attempts is a *fresh research run*: the searches run again, the tokens
+ * are spent again, and the caller sees one request. That is the shape of
+ * non-negotiable 11's failure mode, where money goes out without anybody
+ * choosing to spend it.
+ *
+ * A cheap question is worth retrying automatically. A multi-search research run
+ * that costs real money is worth reporting instead, so somebody decides whether
+ * to pay for a second one. The co-pilot keeps the SDK default; this does not.
+ */
+export const SCAN_MAX_RETRIES = 0
+
+/**
  * The shape the model must return.
  *
  * Structured output rather than "please reply with JSON": a regex over model
@@ -195,6 +247,130 @@ function usageFrom(usage: Anthropic.Usage | null | undefined): Usage {
  */
 function searchesFrom(content: readonly Anthropic.ContentBlock[]): number {
   return content.filter((block) => block.type === 'server_tool_use').length
+}
+
+/**
+ * Summed across continuation legs, so the ledger records the whole run.
+ *
+ * A paused-and-resumed scan is two or three HTTP responses and one piece of
+ * work. Recording only the last leg's usage would under-report every resumed
+ * run — and under-reporting is the direction that quietly raises the cap.
+ */
+function addUsage(first: Usage, second: Usage): Usage {
+  return {
+    inputTokens: first.inputTokens + second.inputTokens,
+    outputTokens: first.outputTokens + second.outputTokens,
+    cacheReadTokens: first.cacheReadTokens + second.cacheReadTokens,
+    cacheCreationTokens: first.cacheCreationTokens + second.cacheCreationTokens,
+  }
+}
+
+/**
+ * The tools the scan may use, in one place.
+ *
+ * Built by a function rather than written twice because `countTokens` has to be
+ * given the *same* list the call uses — a projection made against a different
+ * tool list is a projection of a different request, and the cap would be
+ * guarding something we never sent.
+ */
+function scanTools() {
+  return [
+    {
+      type: 'web_search_20260209' as const,
+      name: 'web_search' as const,
+      max_uses: SCAN_MAX_SEARCHES,
+    },
+  ]
+}
+
+interface CompletedCall {
+  readonly response: Anthropic.Message
+  readonly usage: Usage
+  readonly searches: number
+}
+
+/**
+ * Make the call, streaming, resuming a paused turn up to the cap.
+ *
+ * ## Streaming, and why it is not a preference
+ *
+ * The first live scan never came back. A research run at `high` effort with up
+ * to twelve searches and 16k of output takes minutes, and a *non-streaming*
+ * request of that size does not get the SDK's ten-minute default timeout — the
+ * client scales it up to as much as an hour for a large `max_tokens`, then
+ * retries twice. So the failure mode is not an error: it is a request that sits
+ * open long past any point the answer was still wanted, with nothing written
+ * and no way to distinguish a slow run from a dead socket.
+ *
+ * Streaming is the documented fix for exactly this, because bytes arrive
+ * throughout rather than all at the end. `finalMessage()` then assembles the
+ * same `Message` the non-streaming call would have returned, so nothing
+ * downstream changes — `stop_reason`, `content` and `usage` are all read the
+ * same way.
+ *
+ * The explicit per-leg timeout is the second half: streaming stops the request
+ * from *looking* idle, and the timeout stops it from running forever anyway.
+ *
+ * ## Resuming a paused turn
+ *
+ * `pause_turn` means the server-side search loop hit its iteration limit, not
+ * that anything failed. The continuation is to re-send the conversation with
+ * the assistant turn appended — and deliberately **no new user message**, which
+ * the API would read as a fresh instruction instead of "carry on".
+ */
+async function callTheModel(
+  client: Anthropic,
+  firstTurn: Anthropic.MessageParam,
+): Promise<CompletedCall> {
+  const conversation: Anthropic.MessageParam[] = [firstTurn]
+  let usage = NO_USAGE
+  let searches = 0
+
+  for (let leg = 0; ; leg += 1) {
+    const stream = client.messages.stream(
+      {
+        model: SCAN_MODEL,
+        max_tokens: SCAN_MAX_TOKENS,
+        // Depth lives here. `budget_tokens` is a 400 on this model, and
+        // temperature/top_p/top_k are rejected too — tone is a prompt concern.
+        output_config: {
+          effort: SCAN_EFFORT,
+          format: { type: 'json_schema', schema: REPORT_SCHEMA },
+        },
+        // The rules are fixed and the niche varies, so the system block is the
+        // cacheable prefix.
+        system: [{ type: 'text', text: SCAN_SYSTEM, cache_control: { type: 'ephemeral' } }],
+        // `web_search_20260209` filters results dynamically on its own. The
+        // code-execution tool is deliberately NOT declared alongside it: a
+        // second execution environment confuses the model.
+        tools: scanTools(),
+        messages: conversation,
+      },
+      { timeout: SCAN_REQUEST_TIMEOUT_MS, maxRetries: SCAN_MAX_RETRIES },
+    )
+
+    const startedAt = Date.now()
+    const response = await stream.finalMessage()
+    const legSeconds = Math.round((Date.now() - startedAt) / 1000)
+
+    usage = addUsage(usage, usageFrom(response.usage))
+    searches += searchesFrom(response.content)
+
+    // Logged, not merely measured. How long a scan took is the operational
+    // question this agent raises — the request is minutes long, which is the
+    // fact that decides whether it can stay a synchronous action at all — and
+    // nothing in `agent_runs` records duration.
+    console.info(
+      `[niche-scan] leg ${leg + 1}: ${legSeconds}s · ${searchesFrom(response.content)} search(es) · ` +
+        `stop_reason ${response.stop_reason ?? 'none'}`,
+    )
+
+    const canResume = response.stop_reason === 'pause_turn' && leg < SCAN_MAX_CONTINUATIONS
+    if (!canResume) return { response, usage, searches }
+
+    // No new user turn: the assistant's own content is the resumption.
+    conversation.push({ role: 'assistant', content: response.content })
+  }
 }
 
 /** The JSON the model returned, from whichever block carries it. */
@@ -352,10 +528,10 @@ export async function runNicheScan(request: ScanRequest): Promise<ScanOutcome> {
   }
 
   const client = anthropicClient(env)
-  const messages: Anthropic.MessageParam[] = [{ role: 'user', content: userPrompt(trimmedNiche) }]
-  const tools = [
-    { type: 'web_search_20260209' as const, name: 'web_search' as const, max_uses: SCAN_MAX_SEARCHES },
-  ]
+  const firstTurn: Anthropic.MessageParam = {
+    role: 'user',
+    content: userPrompt(trimmedNiche),
+  }
 
   // ======================================================================
   // Count, check, then call — in that order
@@ -365,8 +541,8 @@ export async function runNicheScan(request: ScanRequest): Promise<ScanOutcome> {
     const counted = await client.messages.countTokens({
       model: SCAN_MODEL,
       system: SCAN_SYSTEM,
-      messages,
-      tools,
+      messages: [firstTurn],
+      tools: scanTools(),
     })
     promptTokens = counted.input_tokens
   } catch (error) {
@@ -409,26 +585,9 @@ export async function runNicheScan(request: ScanRequest): Promise<ScanOutcome> {
     return { status: 'refused', message: decision.message }
   }
 
-  let response: Anthropic.Message
+  let call: CompletedCall
   try {
-    response = await client.messages.create({
-      model: SCAN_MODEL,
-      max_tokens: SCAN_MAX_TOKENS,
-      // Depth lives here. `budget_tokens` is a 400 on this model, and
-      // temperature/top_p/top_k are rejected too — tone is a prompt concern.
-      output_config: {
-        effort: SCAN_EFFORT,
-        format: { type: 'json_schema', schema: REPORT_SCHEMA },
-      },
-      // The rules are fixed and the niche varies, so the system block is the
-      // cacheable prefix.
-      system: [{ type: 'text', text: SCAN_SYSTEM, cache_control: { type: 'ephemeral' } }],
-      // `web_search_20260209` filters results dynamically on its own. The
-      // code-execution tool is deliberately NOT declared alongside it: a
-      // second execution environment confuses the model.
-      tools,
-      messages,
-    })
+    call = await callTheModel(client, firstTurn)
   } catch (error) {
     const message = describe(error)
     await recordRun(supabase, {
@@ -443,8 +602,24 @@ export async function runNicheScan(request: ScanRequest): Promise<ScanOutcome> {
     return { status: 'failed', message }
   }
 
-  const usage = usageFrom(response.usage)
-  const searches = searchesFrom(response.content)
+  const { response, usage, searches } = call
+
+  // A turn still paused after the last allowed continuation has no report in
+  // it — the model was mid-research when the loop ran out. Recorded as its own
+  // reason rather than folded into "nothing that parsed", because the fix is a
+  // different one: raise the cap, or narrow the brief.
+  if (response.stop_reason === 'pause_turn') {
+    await recordRun(supabase, {
+      workspaceId,
+      agent: 'trend_scout',
+      model: SCAN_MODEL,
+      status: 'failed',
+      usage,
+      searches,
+      reason: `still searching after ${SCAN_MAX_CONTINUATIONS} continuation(s)`,
+    })
+    return { status: 'failed', message: 'The scan ran out of research time. Try a narrower niche.' }
+  }
 
   // `stop_reason` before `content`: a refusal is an HTTP 200 with nothing to
   // read (18 §7), so indexing the content first would throw on the one path

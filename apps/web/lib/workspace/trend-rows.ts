@@ -122,7 +122,12 @@ export function toTrendCard(row: TrendRow, workspaceNiche: string | null): Trend
     growthPercent: growthPercent ?? 0,
     growthLabel: growthLabel(growthPercent),
     fit: Math.round(toNumber(row.fit) ?? 0),
-    viewsPerFollower: toNumber(row.views_per_follower) ?? 0,
+    // No `?? 0`. The column is nullable because the scan is told to omit a
+    // figure it cannot verify, and zero is not a way of writing "unknown" — it
+    // is the claim that this format earns no views per follower, which is both
+    // false and the most damning thing a card could say about a format we are
+    // recommending. The card renders the absence instead.
+    viewsPerFollower: toNumber(row.views_per_follower),
     beats: toBeats(row.beats),
     whyItWorks: row.why_it_works?.trim() ?? '',
     platform,

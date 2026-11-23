@@ -3,10 +3,13 @@ import { Info } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+import { runNicheScanAction } from '@/app/app/(studio)/trends/actions'
 import { NicheReportPanel } from '@/components/trends/niche-report-panel'
+import { RunScanForm } from '@/components/trends/run-scan-form'
 import { TrendCard } from '@/components/trends/trend-card'
 import { TrendFilterBar } from '@/components/trends/trend-filter-bar'
 import { SAMPLE_REPORT } from '@/lib/niche-scan/canned'
+import { getOwnedWorkspace } from '@/lib/workspace/current-workspace'
 import { readLatestNicheReport } from '@/lib/workspace/read-niche-report'
 import {
   NICHE_PARAM,
@@ -72,6 +75,12 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
   // renders as our problem rather than as an empty niche.
   const reportResult = await readLatestNicheReport()
 
+  // Only for the form's default value. The *action* takes the workspace from
+  // `getOwnedWorkspace()` itself rather than trusting anything rendered here —
+  // a scan spends money, so the id it spends against is never a round trip
+  // through the browser.
+  const workspace = await getOwnedWorkspace()
+
   // This workspace's own formats, or none. **Never a fixture** — until V1
   // this screen drew `@mirrorline/mock`'s eight trends to everybody, and the
   // labelled report landing above them made the invented cards read as real.
@@ -103,6 +112,16 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
           </>
         }
         description="Each card is a recipe of beats, not someone else's video. Every remake gets a new script, your footage and a compliance check."
+      />
+
+      {/*
+        V1 · the trigger, above the thing it produces. The scan is the only
+        reason any of the rest of this screen has content, and until now the
+        only way to start one was to call the action from code.
+      */}
+      <RunScanForm
+        action={runNicheScanAction}
+        defaultNiche={reportResult?.report?.niche ?? workspace?.niche ?? ''}
       />
 
       {/*
