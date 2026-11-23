@@ -48,6 +48,7 @@ export const SAMPLE_REPORT: NicheReportFindings = {
         'Names a belief the viewer already holds in the first second, so the correction is the reason to stay.',
       beats: ['State the myth', 'Say plainly that it is wrong', 'Give the fact', 'One-line CTA'],
       fit: 9,
+      fitReason: 'Fit 9: the sample account answers the same question every week, which is the myth.',
     },
     {
       name: 'What this should cost',
@@ -55,6 +56,7 @@ export const SAMPLE_REPORT: NicheReportFindings = {
         'A price in the hook answers the question people are too polite to ask, and the answer is the whole video.',
       beats: ['Name the job', 'Give the range', 'Explain the spread', 'What changes it'],
       fit: 8,
+      fitReason: 'Fit 8: the sample account publishes its prices, so the hook costs it nothing.',
     },
     {
       name: 'Three mistakes',
@@ -62,29 +64,62 @@ export const SAMPLE_REPORT: NicheReportFindings = {
         'A numbered promise sets the length expectation, so viewers who stay for one stay for all three.',
       beats: ['Promise the count', 'Mistake and fix, three times', 'Close on the easiest one'],
       fit: 7,
+      fitReason: 'Fit 7: needs three mistakes worth naming, and the sample account has two.',
     },
   ],
+  // Every claim carries where it came from, and the sample shows both kinds
+  // on purpose: a screen built only against `posts` would never render the
+  // "industry guidance" tag until a real scan produced one.
   topHooks: [
-    'Stop doing X if you want Y',
-    'Nobody tells you this about …',
-    'This should cost about $N — here is why yours was more',
-    'I was wrong about …',
+    { text: 'Stop doing X if you want Y', basis: 'posts', brandRisk: null },
+    { text: 'Nobody tells you this about …', basis: 'posts', brandRisk: null },
+    {
+      text: 'This should cost about $N — here is why yours was more',
+      basis: 'posts',
+      brandRisk: null,
+    },
+    { text: 'I was wrong about …', basis: 'guidance', brandRisk: null },
   ],
   topics: [
-    'What a first-time customer gets wrong',
-    'Pricing, explained without a quote',
-    'The question we answer every week',
-    'Before and after, with the work shown',
+    { text: 'What a first-time customer gets wrong', basis: 'posts', brandRisk: null },
+    { text: 'Pricing, explained without a quote', basis: 'posts', brandRisk: null },
+    { text: 'The question we answer every week', basis: 'guidance', brandRisk: null },
+    {
+      text: 'The argument this trade keeps having',
+      basis: 'posts',
+      // The sample carries one of these too, because the tag is the part of
+      // the screen most likely to be built wrong and never seen.
+      brandRisk: 'Taking a side here wins one half of the niche and loses the other.',
+    },
   ],
   lengths: [
-    { seconds: 18, note: 'Hook-led single point. The most reliable length in this niche.' },
-    { seconds: 32, note: 'Enough for three beats without losing the back half.' },
-    { seconds: 55, note: 'Works only when the payoff is visual.' },
+    {
+      secondsMin: 15,
+      secondsMax: 22,
+      note: 'Hook-led single point. The most reliable length in this niche.',
+      basis: 'posts',
+    },
+    {
+      secondsMin: 28,
+      secondsMax: 38,
+      note: 'Enough for three beats without losing the back half.',
+      basis: 'posts',
+    },
+    {
+      secondsMin: 45,
+      secondsMax: 60,
+      note: 'Works only when the payoff is visual.',
+      basis: 'guidance',
+    },
   ],
   postingPatterns: [
-    'One to two a day, every weekday',
-    'Strongest window is late afternoon, local time',
-    'Series beat one-offs: the same format three times a week outperforms three formats once',
+    { text: 'One to two a day, every weekday', basis: 'guidance', brandRisk: null },
+    { text: 'Strongest window is late afternoon, local time', basis: 'guidance', brandRisk: null },
+    {
+      text: 'Series beat one-offs: the same format three times a week outperforms three formats once',
+      basis: 'posts',
+      brandRisk: null,
+    },
   ],
   examples: [
     {
@@ -137,6 +172,58 @@ export const SAMPLE_REPORT: NicheReportFindings = {
       url: 'https://example.com/sample-source',
       domain: 'example.com',
       kind: 'guide',
+    },
+  ],
+  /*
+   * The sample ends where a real report ends (V2): three things to film.
+   *
+   * Written against the generic sample business rather than a trade, for the
+   * same reason the formats are — and each one carries a `fact`, because a
+   * sample that skipped the field the gate checks would let the screen be
+   * built against a shape the real thing cannot have.
+   */
+  firstVideos: [
+    {
+      title: 'The thing people ask before they book',
+      formatName: 'Myth vs fact',
+      hook: 'Everyone asks me this before they book, and the answer surprises them.',
+      beats: [
+        { label: 'Hook', text: 'Say the question out loud, in their words.' },
+        { label: 'Setup', text: 'Explain why people believe the opposite.' },
+        { label: 'Payoff', text: 'Give the real answer, with one example from this week.' },
+        { label: 'Call to action', text: 'Tell them where to ask the follow-up.' },
+      ],
+      footage: [
+        'You talking to camera, somewhere quiet, phone at eye level',
+        'One shot of the thing you are describing',
+      ],
+      fact: 'Sample business — the fact would come from your profile',
+    },
+    {
+      title: 'What this actually costs',
+      formatName: 'What this should cost',
+      hook: 'Here is what this costs, and what changes the number.',
+      beats: [
+        { label: 'Hook', text: 'Open on the price range, said plainly.' },
+        { label: 'Setup', text: 'Name the two things that move it.' },
+        { label: 'Payoff', text: 'Show a real job at each end of the range.' },
+        { label: 'Call to action', text: 'Say how someone finds out which one they are.' },
+      ],
+      footage: ['A job in progress', 'The finished result, same angle'],
+      fact: 'Sample business — the fact would come from your profile',
+    },
+    {
+      title: 'Three things that go wrong first',
+      formatName: 'Three mistakes',
+      hook: 'Three things go wrong first, and the third is the expensive one.',
+      beats: [
+        { label: 'Hook', text: 'Promise the count in the first sentence.' },
+        { label: 'Setup', text: 'Give the first two quickly, with the fix for each.' },
+        { label: 'Payoff', text: 'Spend the back half on the one that costs money.' },
+        { label: 'Call to action', text: 'Point at the easiest one to fix today.' },
+      ],
+      footage: ['Each mistake, on camera, ten seconds apiece'],
+      fact: 'Sample business — the fact would come from your profile',
     },
   ],
 }

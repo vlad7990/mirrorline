@@ -1,5 +1,74 @@
 # Progress — morning handoff
 
+## Demo note — 23 November 2026 (the scan knows who it is for, and ends in three things to film)
+
+**What you can do now:** tell the studio about your business — where you work,
+how you work, what you sell, what you never recommend — press **Run a scan**,
+and get back research that argues every score against *your* account and ends
+with three videos you could film this week.
+
+**The screenshot is not here yet, and the reason is the news.** Four live runs
+went into trying to take it (D123 and its addendum): a schema keyword the API
+refuses, a 16k ceiling the richer report outgrew, a workspace the e2e teardown
+deleted *while the scan was running*, and — on the run that finished cleanly in
+297 seconds — **a report of placeholders that the parser accepted**. That last
+one is now impossible: a report with no examples under its formats is no report
+at all. The next run is the one to photograph, and it needs nothing but the
+worker and five minutes.
+
+Three pull requests, in the order they were read as a prospect would read
+them: the honesty pass, the brand pass, and the client pass.
+
+### 1 · The scan says only what it measured (D121, PR #20, merged)
+
+Five findings from the first live report, which were really one bug wearing
+five hats: **the screen was written before the data existed.**
+
+- The header claimed "Formats rising … Growth over 7 days" above cards that
+  each read "Not measured yet". We run no growth measurement at all. It now
+  says what we do: *"Formats working in your niche, from public posts and
+  guides found this week."* The hard-coded "updated 10:05 am" went with it.
+- **The fit bar was drawn against the wrong scale.** The model scored its three
+  recommended formats 9, 8 and 7; the bar drew against 100. In words: the three
+  best formats for this account. In pixels: three terrible matches. A reader
+  believes the pixels. 0–10 is the scale everywhere now, stated beside every
+  number, and the old 0–100 rows are divided rather than clamped so stored
+  reports keep their ranking.
+- Beats overflowed the storyboard frames. A frame takes the beat's *name* now;
+  the instruction is printed in full underneath, where there is a line for it.
+- **The formats rendered twice** — the report grid and a duplicate board behind
+  a filter bar. One view now. The filters went deliberately: they filtered
+  three formats by a time window we do not measure.
+- Sources were a semicolon-joined URL dump. Numbered list now, with a page
+  title, a domain, and a **post / guide** tag — because a post is evidence and
+  a guide is somebody's opinion, and printing them alike promotes the second.
+
+### 2 · The app wears the site's clothes (D122, PR #21, merged)
+
+The "app second" half of D25. A restyle, not a re-layout: same screens, same
+routes, same flows.
+
+Ink sidebar and mobile bar through the same `band-ink` remapping the public
+site paints its dark sections with — which is why the change is small: `Card`,
+`Button` and the nav follow without knowing the studio exists. The site's
+wordmark, the gold pill as the primary action, one eyebrow treatment, and
+Geist Serif on the page title of each screen and nowhere else.
+
+**The PDF gets a cover**: ink, wordmark, your name, the niche, the date,
+"Prepared by Mirrorline", and the note that an AI wrote it — on the page a
+reader meets first rather than in a footnote on page four.
+
+Before and after, four screens, two widths, both themes, plus page one of the
+PDF: `docs/progress/d41-brand/`.
+
+One mistake worth reading in D122: the first eyebrow implementation used
+`.band-ink .eyebrow`, and the marketing layout wraps **every** page in
+`band-ink` — so a nested snow section painted bright gold on near-white, 1.9:1,
+on all thirteen public pages. Fixed the way D40 fixed `--rail-fill`: pin the
+value per band as a custom property.
+
+### 3 · The scan is about you now (D123, PR #22)
+
 ## Demo note — 23 November 2026 (the report is a document you can send)
 
 **What you can do now:** open a niche report, press **Print or save as PDF**,
@@ -35,6 +104,37 @@ branch, so `docs/DECISIONS.md` will conflict trivially between #18 and #19 —
 both append at the end of the file. Whichever merges second rebases and keeps
 both entries.
 ---
+
+### Needs you
+
+1. **GitHub Actions is blocked on billing.** PR #22's three checks did not run
+   at all: *"The job was not started because recent account payments have
+   failed or your spending limit needs to be increased."* #20 and #21 merged
+   green an hour earlier, so this is new. Nothing merges until it is cleared
+   in **Billing & plans**; re-run the checks on #22 afterwards.
+2. **Dispatch *Migrate production* against `feat/v2-first-videos`**, then merge
+   PR #22 yourself. It carries `client_profiles`, `save_client_profile` and
+   `niche_reports.first_videos` — a migration, which is one of the five things
+   non-negotiable 11 keeps for you. Applied to preview already.
+3. **The worker still needs a home.** Unchanged from yesterday: `SUPABASE_URL`,
+   `SUPABASE_SERVICE_ROLE_KEY` and `ANTHROPIC_API_KEY`. Everything today was
+   proved by running it on this laptop against the preview database.
+4. **What a scan costs now, measured.** 443 seconds, **25 searches**, and a
+   complete report at 28k output tokens. The declared search ceiling is 12 and
+   the real count is twice that — the projection doubles it so the cap errs
+   towards refusing, but if that ratio is wrong in either direction the number
+   to change is `SCAN_SEARCH_PROJECTION`.
+5. **The V1 source question and the video generator choice**, both unchanged.
+
+### One thing I would do differently
+
+The live-scan evidence cost three runs. The first died on a schema keyword the
+API refuses, the second on a 16k ceiling the richer report outgrew, and the
+third — which produced a complete report — was written to a workspace the e2e
+teardown had deleted while it ran, because the demo account matched the `e2e+`
+pattern the sweep looks for. **A demo that takes eight minutes and spends real
+money should not borrow a test account.** The fourth run uses a durable one.
+
 
 ## Demo note — 23 November 2026, early hours (the scan is a button now, and #17's red CI was the clock)
 

@@ -2,14 +2,17 @@ import { AlertBar, EmptyState, PageHeader } from '@mirrorline/ui'
 import { Info } from 'lucide-react'
 import type { Metadata } from 'next'
 
-import { runNicheScanAction } from '@/app/app/(studio)/trends/actions'
+import { runNicheScanAction, saveClientProfileAction } from '@/app/app/(studio)/trends/actions'
+import { ClientProfileForm } from '@/components/trends/client-profile-form'
 import { NicheReportPanel } from '@/components/trends/niche-report-panel'
 import { RunScanForm } from '@/components/trends/run-scan-form'
 import { ScanProgress } from '@/components/trends/scan-progress'
 import { readLatestScanJob } from '@/lib/jobs/read-scan-job'
 import { isJobPending } from '@/lib/jobs/types'
 import { SAMPLE_REPORT } from '@/lib/niche-scan/canned'
+import { isProfileEmpty } from '@/lib/workspace/client-profile'
 import { getOwnedWorkspace } from '@/lib/workspace/current-workspace'
+import { readClientProfile } from '@/lib/workspace/read-client-profile'
 import { readLatestNicheReport } from '@/lib/workspace/read-niche-report'
 
 /**
@@ -54,6 +57,11 @@ export default async function TrendsPage() {
   // through the browser.
   const workspace = await getOwnedWorkspace()
 
+  // The client's own facts, as the signed-in user. Empty is an ordinary
+  // answer: the form asks for them and the report says what it cost not to
+  // have them.
+  const profile = await readClientProfile()
+
   /*
    * Is a scan running? (D119)
    *
@@ -94,6 +102,22 @@ export default async function TrendsPage() {
           </>
         }
         description="Each card is a recipe of beats, not someone else's video. Every remake gets a new script, your footage and a compliance check."
+      />
+
+      {/*
+        V2 · the brief, above the button that spends it.
+
+        The profile is what makes a scan about this business rather than about
+        the niche in general: the fit scores are argued from it, and "Your
+        first 3 videos" is written from it — and cannot be written at all
+        without it, because every draft would fail the fact check. So it sits
+        directly above the control it changes rather than two screens away in
+        Settings.
+      */}
+      <ClientProfileForm
+        action={saveClientProfileAction}
+        isEmpty={isProfileEmpty(profile)}
+        profile={profile}
       />
 
       {/*

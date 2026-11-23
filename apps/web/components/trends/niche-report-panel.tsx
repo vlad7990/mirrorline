@@ -36,11 +36,14 @@ import { SAMPLE_REPORT_LABEL, SAMPLE_REPORT_NOTE } from '@/lib/niche-scan/canned
 import {
   FIT_MAX,
   rankExamples,
+  type Claim,
+  type ClaimBasis,
   type FormatFinding,
   type NicheReportFindings,
   type ReportSource,
   type TrendExample,
 } from '@/lib/niche-scan/report'
+import type { VideoIdea } from '@/lib/scripts/video-idea'
 
 const BUCKET_LABELS: Record<string, string> = {
   under_1k: 'under 1k followers',
@@ -160,22 +163,72 @@ function ReportCover({
   )
 }
 
-function ListCard({ title, items }: { title: string; items: readonly string[] }) {
+/**
+ * "Industry guidance", said once per claim that needs it (P1.9).
+ *
+ * Only on `guidance` and `unstated`. A `posts` claim says nothing extra,
+ * because the whole section is about what the scan read off real posts and a
+ * tag on every line is a tag nobody reads. The two that are *not* evidence are
+ * the ones a reader has to be able to tell apart.
+ */
+function GuidanceTag({ basis }: { basis: ClaimBasis }) {
+  if (basis === 'posts') return null
+
+  return (
+    <span className="ms-2 whitespace-nowrap rounded-full bg-neutral-soft px-2 py-0.5 text-caption text-on-neutral-soft">
+      industry guidance
+    </span>
+  )
+}
+
+/**
+ * A section of claims, with one honesty line at the foot instead of a badge on
+ * every row (P1.10).
+ *
+ * The first live report put "Not measured yet" on every card in every section.
+ * It was true each time and unreadable in aggregate — a screen that repeats a
+ * caveat twenty times has trained the reader to skip it by the fourth. One
+ * line per section says the same thing once, where it still gets read.
+ */
+function ListCard({ title, items }: { title: string; items: readonly Claim[] }) {
   if (items.length === 0) return null
+
+  const hasGuidance = items.some((item) => item.basis !== 'posts')
 
   return (
     <Card className="p-5">
       <Eyebrow>{title}</Eyebrow>
       <ul className="mt-3 space-y-2 text-body text-text">
         {items.map((item) => (
-          <li className="flex gap-2" key={item}>
+          <li className="flex gap-2" key={item.text}>
             <span aria-hidden="true" className="select-none text-accent">
               ·
             </span>
-            <span>{item}</span>
+            <span>
+              {item.text}
+              <GuidanceTag basis={item.basis} />
+              {/*
+                A topic that splits the niche is a business decision (P1.8).
+                It is shown, because the client may well want it — and it is
+                shown as optional, because publishing it takes a side on their
+                account rather than on ours.
+              */}
+              {item.brandRisk ? (
+                <span className="mt-1 block text-meta text-text-muted">
+                  <span className="font-medium text-text">Optional · brand risk: </span>
+                  {item.brandRisk}
+                </span>
+              ) : null}
+            </span>
           </li>
         ))}
       </ul>
+      {hasGuidance ? (
+        <p className="mt-3 text-meta text-text-muted">
+          Lines tagged <span className="font-medium">industry guidance</span> come from published
+          articles about this niche, not from posts we measured.
+        </p>
+      ) : null}
     </Card>
   )
 }
@@ -226,6 +279,15 @@ function FormatCard({ format }: { format: FormatFinding }) {
           label={fitLabel}
           valueText={`${format.fit} out of ${FIT_MAX}`}
         />
+      ) : null}
+
+      {/*
+        The sentence behind the number (P1.7). A bare "Fit 9" is an opinion
+        with no argument attached; this one names something from the client's
+        own profile, which also makes it checkable when it is wrong.
+      */}
+      {format.fitReason ? (
+        <p className="m-0 text-meta text-text-muted">{format.fitReason}</p>
       ) : null}
 
       <p className="m-0 text-body text-text">{format.whyItWorks}</p>
@@ -339,13 +401,19 @@ function ExampleRow({ example }: { example: TrendExample }) {
           Views per follower leads, and raw views are deliberately absent:
           12 §1 ranks on the ratio, and putting the big number first is how a
           coasting account starts looking like a model worth copying.
+
+          **Absent means absent (P1.10).** This line used to read "Not measured
+          yet" on every row of every example — true each time, and by the
+          fourth repetition a thing readers skip. The caveat now sits once, at
+          the foot of the section; a row with no ratio simply does not claim
+          one.
         */}
-        <div>
-          <dt className="inline">Views per follower: </dt>
-          <dd className="inline font-medium">
-            {ratio === null ? 'Not measured yet' : ratio.toFixed(1)}
-          </dd>
-        </div>
+        {ratio === null ? null : (
+          <div>
+            <dt className="inline">Views per follower: </dt>
+            <dd className="inline font-medium">{ratio.toFixed(1)}</dd>
+          </div>
+        )}
         {example.lengthSeconds === null ? null : (
           <div>
             <dt className="inline">Length: </dt>
@@ -376,6 +444,88 @@ function ExampleRow({ example }: { example: TrendExample }) {
         <span className="text-text-muted">Source: {example.sourceNote}</span>
       </div>
     </li>
+  )
+}
+
+/**
+ * "Your first 3 videos" — where the research stops being research (V2).
+ *
+ * `BACKEND_PHASE §V2`'s first visible output, and the section that answers the
+ * question a client actually has. Everything above it describes a niche; this
+ * is three things to film this week, built on the formats above, in their
+ * voice, each standing on one fact from their own profile.
+ *
+ * **Nothing here is a draft of someone else's video.** The scripts share the
+ * formats' beat structure and no sentence with any source — checked in code by
+ * `screenIdeas`, not promised in a prompt — and an idea that failed either
+ * check is absent rather than flagged. `§V3`: no warn-and-continue.
+ */
+function FirstVideos({ ideas, niche }: { ideas: readonly VideoIdea[]; niche?: string }) {
+  if (ideas.length === 0) return null
+
+  return (
+    <Card className="p-5">
+      <Eyebrow>Your first {ideas.length === 1 ? 'video' : `${ideas.length} videos`}</Eyebrow>
+      <h3 className="mt-2 font-heading text-title text-text">
+        {niche ? `Three to film this week in ${niche}` : 'Three to film this week'}
+      </h3>
+      <p className="mt-2 max-w-prose text-meta text-text-muted">
+        Built from the formats above, in your words, each one standing on something true about your
+        business. New script, your footage — we never remake anyone else’s video.
+      </p>
+
+      <ol className="mt-4 space-y-5">
+        {ideas.map((idea, index) => (
+          <li className="border-t border-border pt-5 first:border-t-0 first:pt-0" key={idea.title}>
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="machine text-meta text-text-muted">{index + 1}</span>
+              <h4 className="text-body font-medium text-text">{idea.title}</h4>
+              <span className="text-meta text-text-muted">from “{idea.formatName}”</span>
+            </div>
+
+            {/* The hook is the video. It gets the line it deserves. */}
+            <p className="mt-2 max-w-prose text-body text-text">
+              <span className="font-medium">Hook: </span>“{idea.hook}”
+            </p>
+
+            <ol className="mt-3 space-y-1 text-meta text-text-muted">
+              {idea.beats.map((beat) => (
+                <li key={beat.label}>
+                  <span className="font-medium text-text">{beat.label}: </span>
+                  {beat.text}
+                </li>
+              ))}
+            </ol>
+
+            {idea.footage.length > 0 ? (
+              <div className="mt-3">
+                <p className="m-0 text-meta font-medium text-text">What to film</p>
+                <ul className="mt-1 space-y-1 text-meta text-text-muted">
+                  {idea.footage.map((shot) => (
+                    <li className="flex gap-2" key={shot}>
+                      <span aria-hidden="true" className="select-none text-accent">
+                        ·
+                      </span>
+                      <span>{shot}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {/*
+              The fact is printed, not merely required. §V2 asks every script
+              to carry one; showing which one makes it checkable by the person
+              who would be quoted on it.
+            */}
+            <p className="mt-3 text-meta text-text-muted">
+              <span className="font-medium text-text">Your fact: </span>
+              {idea.fact}
+            </p>
+          </li>
+        ))}
+      </ol>
+    </Card>
   )
 }
 
@@ -455,11 +605,29 @@ export function NicheReportPanel({
           <Eyebrow>Lengths</Eyebrow>
           <ul className="mt-3 space-y-2 text-body text-text">
             {findings.lengths.map((length) => (
-              <li key={length.seconds}>
-                <span className="font-medium">{length.seconds}s</span> — {length.note}
+              <li key={`${length.secondsMin}-${length.secondsMax}-${length.note}`}>
+                {/*
+                  A range, because nobody measured "21 seconds" (P1.9). When
+                  the two ends agree it prints as one number — an old row
+                  carrying a single value says what it said, without being
+                  dressed up as a range it never was.
+                */}
+                <span className="machine font-medium">
+                  {length.secondsMin === length.secondsMax
+                    ? `${length.secondsMin}s`
+                    : `${length.secondsMin}–${length.secondsMax}s`}
+                </span>{' '}
+                — {length.note}
+                <GuidanceTag basis={length.basis} />
               </li>
             ))}
           </ul>
+          {findings.lengths.some((length) => length.basis !== 'posts') ? (
+            <p className="mt-3 text-meta text-text-muted">
+              Lines tagged <span className="font-medium">industry guidance</span> come from
+              published articles about this niche, not from posts we measured.
+            </p>
+          ) : null}
         </Card>
       ) : null}
 
@@ -487,10 +655,25 @@ export function NicheReportPanel({
               <ExampleRow example={example} key={example.url} />
             ))}
           </ul>
+          {/*
+            One line for the whole section (P1.10), replacing the "Not measured
+            yet" that used to sit on every row. Counts are shown where the page
+            published them and omitted where it did not — which is the rule,
+            said once, where it is still read.
+          */}
+          {examples.some((example) => example.viewsPerFollower === null) ? (
+            <p className="mt-4 max-w-prose text-meta text-text-muted">
+              Figures are shown only where the page published them. Where a platform does not show
+              a view or follower count in search results, the row carries no number rather than an
+              estimate.
+            </p>
+          ) : null}
         </Card>
       ) : null}
 
       {findings.sourcesUsed.length > 0 ? <SourceList sources={findings.sourcesUsed} /> : null}
+
+      <FirstVideos ideas={findings.firstVideos} niche={niche} />
     </section>
   )
 }

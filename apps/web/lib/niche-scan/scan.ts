@@ -47,6 +47,10 @@ import {
 import { checkAgentSpend, recordRun } from '../agents/ledger'
 import { createAgentServiceClient } from '../agents/service-client'
 import { NO_USAGE, type EnvLike, type Usage } from '../copilot/spend'
+import { readClientProfileForAgent } from '../agents/read-client-profile'
+import { writeFirstVideos } from '../scripts/first-videos'
+import type { VideoIdea } from '../scripts/video-idea'
+import { profileBrief, type ClientProfile } from '../workspace/client-profile'
 import { SAMPLE_REPORT } from './canned'
 import { parseReport, rankExamples, type NicheReportFindings } from './report'
 
@@ -59,8 +63,16 @@ export const SCAN_MODEL = 'claude-sonnet-5'
  * Adaptive thinking is on by default on Sonnet 5 and shares this budget with
  * the answer, so a cap sized for the JSON alone truncates mid-object — and a
  * truncated report parses to `null`, which reads as "the scan found nothing".
+ *
+ * **Raised from 16k by the first P1 run, which hit it.** 360 seconds of
+ * research, 24 searches, `stop_reason: max_tokens`, and a report nobody ever
+ * saw. The P1 pass made every answer bigger in four places at once — a
+ * `fitReason` per format, a `basis` per hook, topic and pattern, a `brandRisk`
+ * line where one applies, and three examples per format instead of one — and
+ * the brief still asked for twelve examples on top of that. Both halves moved:
+ * the ceiling up to 28k, and the ask down to nine (see `userPrompt`).
  */
-export const SCAN_MAX_TOKENS = 16_000
+export const SCAN_MAX_TOKENS = 28_000
 
 /** A research run, not a question. `low` under-reads the niche. */
 export const SCAN_EFFORT = 'high' as const
@@ -73,6 +85,23 @@ export const SCAN_EFFORT = 'high' as const
  * holds for the runs that happened to search less.
  */
 export const SCAN_MAX_SEARCHES = 12
+
+/**
+ * What the cap is *projected* against, and it is not the same number.
+ *
+ * A live run declared `max_uses: 12` and came back having made **24**
+ * searches, counted off its own `server_tool_use` blocks. Whether the server
+ * loop applies the limit per leg or the blocks count something subtler, the
+ * fact on the invoice is 24 — and a projection of 12 would have let a run
+ * through at half its real search cost.
+ *
+ * So the projection doubles the declared ceiling. It is the safe direction:
+ * the cap refuses sooner than it needs to rather than later than it should,
+ * and `recordRun` still writes the count that actually happened. The comment
+ * above is unchanged in spirit — a cap built on the optimistic number only
+ * holds for the runs that happened to search less.
+ */
+export const SCAN_SEARCH_PROJECTION = SCAN_MAX_SEARCHES * 2
 
 /**
  * This agent's own per-request ceiling.
@@ -144,6 +173,26 @@ export const SCAN_MAX_RETRIES = 0
  * never ship. `parseReport` still validates every field — the schema
  * constrains the shape, not the truthfulness.
  */
+/**
+ * A hook, a topic or a posting pattern, with where it came from.
+ *
+ * Written once and referenced by value in three places rather than by
+ * `$ref`/`$defs`: the structured-output schema is sent to the API, and an
+ * inlined object is the shape every provider accepts without question. Three
+ * identical references to one constant are no more duplication than a `$ref`,
+ * and they cannot be rejected at the wire.
+ */
+const CLAIM_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['text', 'basis'],
+  properties: {
+    text: { type: 'string' },
+    basis: { type: 'string', enum: ['posts', 'guidance'] },
+    brandRisk: { type: 'string' },
+  },
+} as const
+
 const REPORT_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -154,35 +203,67 @@ const REPORT_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['name', 'whyItWorks', 'beats', 'fit'],
+        required: ['name', 'whyItWorks', 'beats', 'fit', 'fitReason'],
         properties: {
+          /*
+           * The sentence behind the number (P1.7).
+           *
+           * Required, not optional, and that is the point: a model asked for a
+           * score alone produces one for anything, and a model asked to say
+           * why — naming something from this client's profile — cannot score a
+           * format it has no argument for.
+           */
+          fitReason: { type: 'string' },
           name: { type: 'string' },
           whyItWorks: { type: 'string' },
           beats: { type: 'array', items: { type: 'string' } },
           /*
-           * 0–10, bounded here rather than only asked for in words.
+           * 0–10. Asked for in the prompt (rule 6) and enforced by
+           * `normaliseFit`, **not** bounded here — structured output refuses
+           * `minimum`/`maximum` on an integer:
            *
-           * The first live scan answered 9, 8 and 7 against a field documented
-           * as 0–100 and a bar drawn against 100 — three strong fits rendered
-           * as three near-empty bars. The scale a model reaches for unprompted
-           * is the one to standardise on, so the schema states it.
+           *     400 invalid_request_error — output_config.format.schema:
+           *     For 'integer' type, properties maximum, minimum are not supported
+           *
+           * Found by a live run, which is the only place it can be found: the
+           * schema is valid JSON Schema and the API's subset is narrower. The
+           * cost of getting it wrong is a scan that fails outright, so the
+           * parser carries the real guarantee either way.
            */
-          fit: { type: 'integer', minimum: 0, maximum: 10 },
+          fit: { type: 'integer' },
         },
       },
     },
-    topHooks: { type: 'array', items: { type: 'string' } },
-    topics: { type: 'array', items: { type: 'string' } },
+    /*
+     * Hooks, topics and patterns are claims, and a claim carries its source
+     * (P1.9). `posts` means read off public posts; `guidance` means an article
+     * about the niche, which is industry guidance and not evidence that
+     * anything is working for anyone. The first live report put both in one
+     * bulleted list in the same type.
+     *
+     * `brandRisk` is the second half (P1.8): a topic that splits the niche is
+     * a business decision, not a content one, and it may be raised but never
+     * slipped in unlabelled.
+     */
+    topHooks: { type: 'array', items: CLAIM_SCHEMA },
+    topics: { type: 'array', items: CLAIM_SCHEMA },
     lengths: {
       type: 'array',
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['seconds', 'note'],
-        properties: { seconds: { type: 'integer' }, note: { type: 'string' } },
+        required: ['secondsMin', 'secondsMax', 'note', 'basis'],
+        properties: {
+          // A range, because nobody measured "21 seconds" (P1.9). What a scan
+          // can see is that these videos run about twenty to thirty-five.
+          secondsMin: { type: 'integer' },
+          secondsMax: { type: 'integer' },
+          note: { type: 'string' },
+          basis: { type: 'string', enum: ['posts', 'guidance'] },
+        },
       },
     },
-    postingPatterns: { type: 'array', items: { type: 'string' } },
+    postingPatterns: { type: 'array', items: CLAIM_SCHEMA },
     /*
      * A source is a page, so it is described as one: what it was called, where
      * it lives, and whether it is a post we read a format off or a guide
@@ -239,9 +320,14 @@ Hard rules. These are not style preferences:
 2. Never quote more than a few words of anyone's script, caption or voiceover. Describe the structure instead: the beats, the hook type, the length.
 3. Every example must carry a source_note naming where you looked, so an audit can check it later.
 4. Rank by views per follower over roughly the last 30 days, never by raw views. A 4,000-follower account getting 40,000 views is a better model than a two-million-follower account coasting — ranking by raw views recommends the coaster.
-5. If you are unsure of a number, omit the field. Do not estimate. A missing value is honest; an invented one is not.
-6. Score fit from 0 to 10, where 10 is "this client could shoot this tomorrow". Never use a 0-100 scale.
+5. If you are unsure of a number, omit the field. Do not estimate. A missing value is honest; an invented one is not. Give a view count or a follower ratio ONLY when the page you read actually showed it.
+6. Score fit from 0 to 10, where 10 is "this client could shoot this tomorrow". Never use a 0-100 scale. Every score needs a fitReason: one line naming something from THIS client's profile — their service, their method, their area — that makes the format fit or not. If you cannot name one, the fit is not high.
 7. Sources are pages, not bare links. Give each one its page title, its url, and whether it is a "post" (a public post or video you read a format off) or a "guide" (an article or agency write-up ABOUT the niche). A guide is industry guidance, not evidence that a format is working, and the two must never be presented as the same thing.
+8. Every hook, topic and posting pattern carries a basis: "posts" if you read it off real posts, "guidance" if it comes from an article about the niche. Mark it honestly. Most published advice is "guidance".
+9. The client's METHOD is a boundary, not a preference. Never suggest a format, technique or topic that contradicts it, and never suggest anything on their "never recommend" list. If a format in this niche only works with a method they do not use, say so in its fitReason and score it low.
+10. Topics that divide this niche — where practitioners publicly disagree — get a brandRisk line saying what taking a side would cost. Raise them; never slip them in as neutral.
+11. Aim for at least 3 real post examples for each top format, spread across TikTok, Instagram and YouTube Shorts where they exist. Prefer three real examples over six plausible ones.
+12. Lengths are ranges, never single numbers: what you can see is that these videos run about 20 to 35 seconds, not that they run 21.
 
 Return formats as recipes: a name, why it works in one sentence, and the beats in order (hook, setup, payoff, call to action). Those beats are what gets remade with a new script and the client's own footage.`
 
@@ -416,12 +502,31 @@ function jsonFrom(content: readonly Anthropic.ContentBlock[]): unknown {
   return null
 }
 
-function userPrompt(niche: string): string {
-  return `Research what is working right now on short vertical video in this niche: ${niche}
+/**
+ * The research brief, with the client in it (P1.6).
+ *
+ * The profile is in the **user** turn and not the system block, which keeps
+ * the cacheable prefix fixed — the rules are the same for every client and the
+ * client is the thing that varies. It is also why the scan can be scored
+ * against *this* account rather than against the niche in general: a fit score
+ * with no client in the prompt is a popularity score wearing its clothes.
+ */
+function userPrompt(niche: string, profile: ClientProfile): string {
+  const brief = profileBrief(profile)
 
+  const about = brief
+    ? `\nThe client you are researching for:\n${brief}\n`
+    : // Said out loud rather than left blank: a model given no client silently
+      // invents a generic one, and the fit scores then describe nobody.
+      '\nYou have no profile for this client beyond the niche. Score fit cautiously and say in each fitReason what you would need to know.\n'
+
+  return `Research what is working right now on short vertical video in this niche: ${niche}
+${about}
 Find 3 to 6 formats that are growing, the hooks and topics behind them, the lengths that hold attention, and how often the accounts doing well post.
 
-Then give me up to 12 examples you actually found, each with a link to the post, what format it is, why it works, and where you looked. Rank them by views per follower.`
+Then give me up to 9 examples you actually found, each with a link to the post, what format it is, why it works, and where you looked. Rank them by views per follower. Aim for 3 examples for each of your top 3 formats, across TikTok, Instagram and YouTube Shorts.
+
+Keep every description to one sentence. A report that runs out of room before the end is worth nothing.`
 }
 
 /** `18 §7`: typed classes, most specific first, never a match on message text. */
@@ -442,6 +547,8 @@ interface WriteReportInput {
   readonly findings: NicheReportFindings
   readonly model: string | null
   readonly now: Date
+  /** Written in the same insert as the research they came from (V2). */
+  readonly firstVideos?: readonly VideoIdea[]
 }
 
 type AgentClient = ReturnType<typeof createAgentServiceClient>
@@ -469,6 +576,7 @@ async function writeReport(supabase: AgentClient, input: WriteReportInput): Prom
       lengths: findings.lengths,
       posting_patterns: findings.postingPatterns,
       sources_used: findings.sourcesUsed,
+      first_videos: input.firstVideos ?? [],
       completed_at: now.toISOString(),
     })
     .select('id')
@@ -549,6 +657,10 @@ export async function runNicheScan(request: ScanRequest): Promise<ScanOutcome> {
       workspaceId,
       niche: trimmedNiche,
       findings: SAMPLE_REPORT,
+      // The sample's own three, so a keyless run stores a *complete* report.
+      // Without this the stored sample ends where the research ends, and the
+      // screen a reviewer sees in preview is missing the section V2 adds.
+      firstVideos: SAMPLE_REPORT.firstVideos,
       model: null,
       now,
     })
@@ -557,9 +669,15 @@ export async function runNicheScan(request: ScanRequest): Promise<ScanOutcome> {
   }
 
   const client = anthropicClient(env)
+
+  // The client's own facts, before the research starts. Read with the service
+  // key because this runs in the worker, where there is no session — the
+  // workspace id came from the job row, not from a browser.
+  const profile = await readClientProfileForAgent(supabase, workspaceId)
+
   const firstTurn: Anthropic.MessageParam = {
     role: 'user',
-    content: userPrompt(trimmedNiche),
+    content: userPrompt(trimmedNiche, profile),
   }
 
   // ======================================================================
@@ -596,7 +714,7 @@ export async function runNicheScan(request: ScanRequest): Promise<ScanOutcome> {
     SCAN_MAX_TOKENS,
     now,
     env,
-    { maxSearches: SCAN_MAX_SEARCHES, maxRequestUsd: SCAN_MAX_REQUEST_USD },
+    { maxSearches: SCAN_SEARCH_PROJECTION, maxRequestUsd: SCAN_MAX_REQUEST_USD },
   )
 
   if (!decision.allowed) {
@@ -692,10 +810,37 @@ export async function runNicheScan(request: ScanRequest): Promise<ScanOutcome> {
     )
   }
 
+  /*
+   * The research is done; now turn it into something to film (V2).
+   *
+   * **After the report is parsed and before it is written**, so the three
+   * ideas land in the same row as the research they came from. A second write
+   * would leave a window where the report exists without its last section, and
+   * the screen would poll into it.
+   *
+   * It cannot fail the scan. `writeFirstVideos` swallows its own errors and
+   * returns nothing, because a scan that found real formats must not be
+   * reported as failed because its closing section could not be written.
+   */
+  const firstVideos = await writeFirstVideos({
+    workspaceId,
+    niche: trimmedNiche,
+    profile,
+    formats: parsed.findings.topFormats,
+    examples: parsed.findings.examples,
+    client,
+    supabase,
+    env,
+    now,
+  })
+
+  if (firstVideos.note) console.info(`[niche-scan] first videos: ${firstVideos.note}`)
+
   const reportId = await writeReport(supabase, {
     workspaceId,
     niche: trimmedNiche,
     findings: parsed.findings,
+    firstVideos: firstVideos.ideas,
     model: SCAN_MODEL,
     now,
   })

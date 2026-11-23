@@ -8822,3 +8822,130 @@ DESIGN.md still says "avoid gradients" for the studio and still describes the
 eyebrow as muted. Those lines are now wrong, and that is this decision's doing:
 Vlad's instruction is the authority here (CLAUDE.md source-of-truth 1), and the
 design files are the thing to update next rather than the thing to argue with.
+
+---
+
+## D123 — the scan knows who it is for, and ends in three things to film
+
+**23 November 2026.** Two halves of the same decision: the Niche Scan's P1
+pass, which makes the research about *this* client, and V2's first visible
+output, which turns that research into something to shoot on Monday.
+
+They are one decision because they are one piece of data. `BACKEND_PHASE §V2`
+asks the script agent to write "from the client's Voice and Facts profile with
+at least one real business fact per script"; the P1 brief asks the Trend Scout
+to score fit against the same facts. **A scan that knows the client runs
+reactive-dog sessions in Miami, beside a script agent that does not, would
+recommend formats it cannot then write.** So the profile is built once, for
+both, and `client_profiles` is the table.
+
+### The profile is free text, and that is a schema decision
+
+CLAUDE.md: we do not build industry pages. A column called `training_method`
+with a check constraint listing `positive_reinforcement | balanced` would make
+this a dog-training product with a database to match, and the second client —
+a dentist, a plumber, a photographer — would need a migration before they
+could be described at all.
+
+So `method` is the client's own sentence and `avoid` is the list it rules out.
+Between them they say "I only use positive reinforcement" and "I never
+recommend prong collars" without the schema knowing what a prong collar is.
+
+**`avoid` is the field with teeth.** A format that contradicts the client's
+method is not a mediocre suggestion — it is one they would have to refuse
+publicly, in their own niche, on their own account. Both agents get it as a
+prohibition rather than a preference.
+
+### What the P1 pass changed in the research
+
+- **Every fit score carries its reason**, and `fitReason` is *required* in the
+  schema. A model asked for a score alone produces one for anything; a model
+  asked to name something from this client's profile cannot score a format it
+  has no argument for.
+- **A claim carries where it came from.** `posts` is read off real posts;
+  `guidance` is an article *about* the niche. The first live report put both
+  in one bulleted list, same type, nothing to tell them apart — so "post three
+  to five times a week" (somebody's blog) sat beside a hook read off thirty
+  real videos. `15 §honesty rules`. An old row with no basis becomes
+  `unstated`, which renders as guidance: between two readings of silence, the
+  product takes the weaker one.
+- **Divisive topics are labelled "optional · brand risk"** with a line saying
+  what taking a side would cost. Every niche has arguments in it; publishing
+  one is a business decision, not a content one.
+- **Lengths are ranges.** "8s, 21s, 34s, 58s" was four numbers nobody measured
+  to the second. What a scan can see is that these videos run about twenty to
+  thirty-five seconds.
+- **One honesty line per section** instead of a badge on every row. "Not
+  measured yet" appeared on every card of every section; it was true each time
+  and by the fourth repetition it was furniture.
+
+### V2 — "Your first 3 videos"
+
+Three ideas, each built on one of the top formats: a hook line, four beats,
+the footage to film, and the business fact it stands on. It runs **inside the
+scan job**, after the report is parsed and before it is written, so the ideas
+land in the same row as the research they came from — a second write would
+leave a window where the report exists without its last section and the screen
+would poll into it.
+
+**The two rules are code, not prompt.** `§V2`'s "Done when" is a script that
+shares the recipe's beat structure and no sentence with the source, carrying
+at least one real business fact. The model is told both; `screenIdeas`
+enforces both. A prompt is a request and a check is a rule, and `§V3` forbids
+warn-and-continue: an idea failing either test is absent from the report and
+its reason is in the log.
+
+- **Sentence-level, normalised.** The pattern is the beats — "hook, setup,
+  payoff, call to action" is nobody's property — and the expression is the
+  sentences. Case, punctuation and whitespace are normalised, because real
+  copying is not byte-identical. Fragments under five words are ignored: "in
+  the first second" appears in half the research in any niche, and a check
+  that fired on four words would reject every honest draft.
+- **The fact must be in the profile**, matched either way round so "her
+  reactive-dog intensive, $450 for four sessions" counts against a profile
+  holding "Reactive dog intensive". What it refuses is "she has trained over
+  500 dogs" — the plausible, unverifiable sentence a client would then be
+  quoted on.
+- **No profile, no call.** Every draft would fail the fact check, so the agent
+  is not invoked and the screen asks for the profile instead. A run that spends
+  money to produce nothing is worse than one that explains itself.
+
+### Three things this cost to learn, all from live runs
+
+1. **`workspaces` has no `owner_id`.** Ownership is a row in `memberships`,
+   which every definer function since `workspace_bootstrap` has read. The first
+   draft of `save_client_profile` invented the column — and because a
+   `security definer` body is only planned when it runs, **the migration
+   applied cleanly and the save failed in the studio**. Preview was repaired
+   and re-pushed; production has never seen the broken version.
+2. **Structured output refuses `minimum`/`maximum` on an integer.** `400
+   invalid_request_error — For 'integer' type, properties maximum, minimum are
+   not supported`. The schema was valid JSON Schema and the API's subset is
+   narrower, so the bound moved into the prompt and `normaliseFit` keeps the
+   guarantee. Two scans died before this was visible; it cannot be found
+   without a live run.
+3. **`open={isEmpty}` slammed the panel shut on the person using it.** Saving
+   the profile makes it non-empty, the server re-renders, and a prop-driven
+   `<details open>` closed over the confirmation message. The initial value is
+   the server's answer; every toggle after that belongs to the reader.
+
+### D123 addendum — a report of placeholders passed the parser
+
+A fourth live run, 297 seconds and 22 searches, returned **one format named
+`placeholder`** with `whyItWorks: "placeholder"`, no hooks and no examples.
+Every field was a well-formed string, so `parseReport` kept it, the job
+reported success, and the client would have opened a report saying we
+researched their niche and found a placeholder.
+
+The rule was "no formats **and** no examples is not a report". It is now **"no
+examples is not a report"**. Examples are what makes the thing evidence rather
+than opinion — `12 §1` wants a link and a source note per row — and a set of
+formats with nothing underneath them is the shape of a model answering the
+schema instead of the question. The failure path already says the right thing
+("the model returned nothing that parsed as a report") and leaves the previous
+report standing.
+
+Worth saying plainly: **this was caught by looking at the row, not by a test.**
+The run before it was lost to an unrelated cause (an e2e sweep deleting the
+workspace mid-scan), and had that not happened the placeholder would have been
+the screenshot.
