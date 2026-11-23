@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // No `dom`: this is a Node process. The base config includes the DOM
+    // libraries because every other project here renders, and inheriting them
+    // would let a `document` reference typecheck in a thing that has none.
+    "lib": ["ES2022"],
+    "types": ["node"],
+    // `import 'server-only'` is a Next bundler alias rather than a package, so
+    // it resolves nowhere outside a Next build. `src/server-only.ts` explains
+    // why a no-op loses nothing. `tsx` honours these paths at runtime, which is
+    // what makes the worker able to import the app's agents at all.
+    "paths": {
+      "server-only": ["./src/server-only.ts"]
+    }
+  },
+  // Only this package's own sources are seeded. `tsc` still follows the
+  // imports into `apps/web/lib`, which is the point — if the scan's types stop
+  // matching what the worker does with them, this is where it is caught.
+  "include": ["src/**/*.ts"]
+}

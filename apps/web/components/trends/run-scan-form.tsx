@@ -16,24 +16,28 @@ import {
  * from it; only the control that needs `useActionState` is a client, which is
  * the same split `TargetForm` makes on Goals.
  *
- * ## The wait is real, and the form says so
+ * ## This form starts a scan; it no longer waits for one (D119)
  *
- * This is not a save. A scan is a research run: the agent counts its tokens,
- * checks the month's spend, searches the open web up to twelve times and writes
- * a structured report. It takes **minutes**, not the moment a form usually
- * takes.
+ * It used to submit and sit there for the whole research run, which worked on
+ * a laptop and could not work anywhere we deploy — six minutes against a
+ * 300-second function ceiling, ending in a client-side exception after 237
+ * seconds (D118). The action writes a job and returns now, so the submit is
+ * fast and the **waiting has moved to `ScanProgress`**, which is where the
+ * minutes are honestly reported and polled for.
  *
- * So the button says what it is doing while it does it, and the caption says
- * roughly how long *before* anybody presses it. A progress bar would be a
- * fiction — one server action has no intermediate state to report from — and a
- * spinner with no number starts reading as a hang after about twenty seconds.
+ * That split is why this component gained `isScanRunning`. `useActionState`'s
+ * own pending flag covers the milliseconds of the enqueue and nothing more; it
+ * cannot know a worker is busy. Without the prop the button would re-enable
+ * itself the instant the job was written and invite a second press — which,
+ * for a control that spends money, is the expensive kind of wrong.
  *
- * ## Three outcomes, and only one of them is red
+ * ## The outcomes live in two places now, deliberately
  *
- * `refused` is the spend cap declining, and it renders as information. Styling
- * it as an error would teach the reader that a working control is broken, and
- * `18 §6` wants the cap visible precisely so that it can be trusted. Only
- * `failed` is our fault, and only `failed` gets the error treatment.
+ * This form reports only what the *press* did: it started, or it could not be
+ * started. The scan's own ending — including the spend cap's refusal, which is
+ * information and never an error (`18 §6`) — belongs to the job and is
+ * rendered by `ScanProgress`. Reporting it here too would mean two components
+ * narrating one event, free to disagree.
  */
 
 export interface RunScanFormProps {
@@ -67,15 +71,32 @@ export interface RunScanFormProps {
    * Do not replace this prop with an import.
    */
   readonly action: (previous: ScanActionResult, formData: FormData) => Promise<ScanActionResult>
+  /**
+   * A worker is already scanning for this workspace, read from `jobs` on the
+   * server (D119).
+   *
+   * Separate from `useActionState`'s pending flag because they answer different
+   * questions: that one is "is the form mid-submit" (milliseconds), this one is
+   * "is a scan in flight" (minutes). The button needs the second, and only the
+   * server can know it — the scan is running in another process.
+   *
+   * Defaults to `false` so the form is usable in isolation, which is what
+   * `scan-form.test.tsx` renders.
+   */
+  readonly isScanRunning?: boolean
 }
 
-export function RunScanForm({ defaultNiche, action }: RunScanFormProps) {
-  const [state, formAction, isScanning] = React.useActionState(action, IDLE_SCAN_STATE)
+export function RunScanForm({ defaultNiche, action, isScanRunning = false }: RunScanFormProps) {
+  const [state, formAction, isSubmitting] = React.useActionState(action, IDLE_SCAN_STATE)
 
   const inputId = 'niche-to-scan'
   const messageId = `${inputId}-message`
   const hasMessage = state.status !== 'idle' && state.message !== ''
   const isError = state.status === 'failed'
+
+  // Either reason locks the control, and they overlap: the submit is in flight
+  // for a moment, then the job is pending for minutes.
+  const isBusy = isSubmitting || isScanRunning
 
   return (
     <form
@@ -93,14 +114,19 @@ export function RunScanForm({ defaultNiche, action }: RunScanFormProps) {
             maxLength={120}
             defaultValue={defaultNiche}
             placeholder="e.g. independent dog trainers"
-            disabled={isScanning}
+            disabled={isBusy}
             aria-invalid={isError || undefined}
             aria-describedby={hasMessage ? messageId : undefined}
             className="w-full"
           />
         </div>
-        <Button type="submit" disabled={isScanning}>
-          {isScanning ? 'Researching…' : 'Run a scan'}
+        <Button type="submit" disabled={isBusy}>
+          {/*
+            "Scanning…" rather than "Researching…", matching the words
+            `ScanProgress` uses directly below. Two labels for one activity
+            reads as two activities.
+          */}
+          {isBusy ? 'Scanning…' : 'Run a scan'}
         </Button>
       </div>
 
@@ -109,8 +135,8 @@ export function RunScanForm({ defaultNiche, action }: RunScanFormProps) {
         is how long to leave it alone.
       */}
       <p className="m-0 text-caption text-text-muted">
-        The Trend Scout searches the open web and writes up what it finds. It takes a few minutes,
-        and this page updates when the report lands.
+        The Trend Scout searches the open web and writes up what it finds. It takes about five
+        minutes, and this page updates on its own when the report lands.
       </p>
 
       {hasMessage ? (
