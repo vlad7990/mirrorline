@@ -330,10 +330,14 @@ export function StudioCopilotPanel({
           isWide
             ? // The aside: beside the content, roughly the width the
               // calendar's post panel already uses.
-              'fixed right-6 top-24 max-h-[calc(100dvh-8rem)] w-[21.25rem] rounded-2xl shadow-[0_24px_60px_-24px_rgba(0,0,0,0.8)]'
+              // `--shadow-panel` / `--shadow-sheet`: the depth is a token now.
+              // A colour literal in app code is what D122's gate refuses, and
+              // these two were inside arbitrary-value brackets where nobody
+              // was looking for colour at all.
+              'fixed right-6 top-24 max-h-[calc(100dvh-8rem)] w-[21.25rem] rounded-2xl shadow-panel'
             : // The dialog: a bottom sheet on a phone, which is where a thumb
               // is.
-              'fixed inset-x-0 bottom-0 max-h-[85dvh] rounded-t-2xl shadow-[0_-24px_60px_-24px_rgba(0,0,0,0.8)]',
+              'fixed inset-x-0 bottom-0 max-h-[85dvh] rounded-t-2xl shadow-sheet',
         )}
       >
         <header className="flex items-start justify-between gap-3 border-b border-ink-line px-5 py-4">

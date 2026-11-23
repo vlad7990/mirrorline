@@ -23,7 +23,7 @@
  * false no matter what the database stored.
  */
 
-import { Card, Eyebrow, ProgressBar, StoryboardFrames } from '@mirrorline/ui'
+import { Card, Eyebrow, LogoWordmark, ProgressBar, StoryboardFrames } from '@mirrorline/ui'
 import { ExternalLink } from 'lucide-react'
 
 // The one way the "Sample data" label gets drawn, per its own header: "so it
@@ -32,7 +32,7 @@ import { ExternalLink } from 'lucide-react'
 import { SampleDataLabel } from '@/components/marketing/primitives'
 import { PrintButton } from '@/components/studio/print-button'
 import { storyboardFromBeats } from '@/components/trends/trend-beats'
-import { SAMPLE_REPORT_NOTE } from '@/lib/niche-scan/canned'
+import { SAMPLE_REPORT_LABEL, SAMPLE_REPORT_NOTE } from '@/lib/niche-scan/canned'
 import {
   FIT_MAX,
   rankExamples,
@@ -56,6 +56,108 @@ interface NicheReportPanelProps {
   readonly isSample: boolean
   readonly niche?: string
   readonly scannedAt?: string | null
+  /** The workspace's own name, for the cover. Absent is not an error. */
+  readonly clientName?: string | null
+}
+
+/** Printed on the cover and in the body. One sentence, non-negotiable 4's spirit. */
+const AI_NOTE =
+  'Researched and written by Mirrorline’s Trend Scout agent (an AI), from public posts and published guides. Every example is a link to its source: we keep the link and the description of the format, never the video or the audio.'
+
+/**
+ * The first page of the PDF, and nothing on screen (D122).
+ *
+ * BACKEND_PHASE §V1 wants this report "usable by us for prospects", so the
+ * artefact needs a front: who it is for, what it covers, when it was made, and
+ * who made it. Ink with the gold wordmark, because it is the same document the
+ * marketing site promises.
+ *
+ * **`hidden print:block`, not a second route.** The cover exists only on
+ * paper, so it cannot drift from the report the way a separately-rendered
+ * export would — it is the same component, the same data, one media query.
+ *
+ * The AI note is on the cover deliberately. This is the page a prospect reads
+ * first, and "an AI wrote this" belongs there rather than in a footnote on
+ * page four.
+ */
+function ReportCover({
+  niche,
+  clientName,
+  scannedAt,
+  isSample,
+}: {
+  niche?: string
+  clientName?: string | null
+  scannedAt?: string | null
+  isSample: boolean
+}) {
+  const scanned = scannedAt ? new Date(scannedAt) : null
+
+  return (
+    <div className="report-cover hidden print:block">
+      {/*
+        `text-on-ink-900` on the word, not just on the mark. `LogoWordmark`
+        defaults the word to `text-text`, which is near-black — correct on
+        every surface it has ever stood on, and invisible on this one.
+      */}
+      <LogoWordmark className="text-on-ink-900" markClassName="text-gold-bright" size={28} />
+
+      <p className="report-cover-eyebrow">Niche Scan</p>
+
+      <h2 className="report-cover-title">
+        {niche ? `What is working in ${niche}` : 'What is working in this niche'}
+      </h2>
+
+      <dl className="report-cover-meta">
+        {clientName ? (
+          <div>
+            <dt>Prepared for</dt>
+            <dd>{clientName}</dd>
+          </div>
+        ) : null}
+        {/*
+          Absent rows are left out rather than filled with "Not stated". A
+          cover is the formal face of the document; a blank where a fact
+          belongs reads as a template somebody forgot to complete, and the
+          sample report legitimately has neither a niche nor a scan date.
+        */}
+        {niche ? (
+          <div>
+            <dt>Niche</dt>
+            <dd>{niche}</dd>
+          </div>
+        ) : null}
+        {scanned ? (
+          <div>
+            <dt>Scanned</dt>
+            <dd>
+              {scanned.toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
+            </dd>
+          </div>
+        ) : null}
+        <div>
+          <dt>Prepared by</dt>
+          <dd>Mirrorline</dd>
+        </div>
+      </dl>
+
+      {/*
+        Non-negotiable 7, on the cover rather than inside. A sample report that
+        is going to be handed to somebody must say so on the face of it — the
+        label further down prints too, and this is the one a reader meets first.
+      */}
+      {isSample ? <p className="report-cover-sample">{SAMPLE_REPORT_LABEL}</p> : null}
+
+      <p className="report-cover-note">
+        {isSample ? `${SAMPLE_REPORT_NOTE} ` : ''}
+        {AI_NOTE}
+      </p>
+    </div>
+  )
 }
 
 function ListCard({ title, items }: { title: string; items: readonly string[] }) {
@@ -130,8 +232,15 @@ function FormatCard({ format }: { format: FormatFinding }) {
 
       {format.beats.length > 0 ? (
         <>
+          {/*
+            Screen only. The frames are an abstraction of a recipe whose text
+            is listed in full underneath, and on paper they are four filled
+            near-black rectangles per format — a page of toner spent on
+            decoration the reader already has in words.
+          */}
           <StoryboardFrames
             beats={storyboardFromBeats(format.beats)}
+            data-print-hide
             label={`Beats of ${format.name}`}
           />
           <ol className="m-0 list-none space-y-1 p-0 text-meta text-text-muted">
@@ -270,7 +379,13 @@ function ExampleRow({ example }: { example: TrendExample }) {
   )
 }
 
-export function NicheReportPanel({ findings, isSample, niche, scannedAt }: NicheReportPanelProps) {
+export function NicheReportPanel({
+  findings,
+  isSample,
+  niche,
+  scannedAt,
+  clientName,
+}: NicheReportPanelProps) {
   const examples = rankExamples(findings.examples)
 
   return (
@@ -291,6 +406,13 @@ export function NicheReportPanel({ findings, isSample, niche, scannedAt }: Niche
        */
       data-print-region
     >
+      <ReportCover
+        clientName={clientName}
+        isSample={isSample}
+        niche={niche}
+        scannedAt={scannedAt}
+      />
+
       <div className="flex flex-wrap items-center gap-3">
         <h2
           className="font-heading text-title text-text"

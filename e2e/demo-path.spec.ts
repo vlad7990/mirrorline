@@ -323,8 +323,14 @@ test('the whole demo path holds up', async ({ browser }) => {
    * Non-negotiable 7, on the surface most likely to be screenshotted and sent
    * to a prospect. With no scan the panel shows the sample report, and an
    * unlabelled sample here is the exact mistake this walk should catch.
+   *
+   * **Filtered to the visible one** since D122 put a label on the PDF's cover
+   * as well. That cover is `hidden print:block`, so it comes first in the DOM
+   * and is invisible on screen — `.first()` picked it and failed. Both labels
+   * are wanted: this asserts the one a reader sees, and `print.spec.ts`
+   * asserts the paper.
    */
-  await expect(page.getByText('Sample data').first()).toBeVisible()
+  await expect(page.getByText('Sample data').filter({ visible: true }).first()).toBeVisible()
 
   await expect(page.getByRole('region', { name: 'How remakes work', exact: true })).toContainText(
     'We remake the format, never the footage.',

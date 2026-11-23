@@ -273,7 +273,8 @@ export function StudioCopilot() {
         className={[
           'fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full print:hidden',
           'border border-gold-500/60 bg-ink-900/95 px-4 py-2.5 text-label text-on-ink-900',
-          'shadow-[0_10px_30px_-12px_rgba(0,0,0,0.65)] backdrop-blur hover:border-gold-500',
+          // `--shadow-float`, not a literal: D122's no-raw-colour test.
+          'shadow-float backdrop-blur hover:border-gold-500',
           'sm:bottom-7 sm:right-7',
           isOpen ? 'hidden' : '',
         ].join(' ')}

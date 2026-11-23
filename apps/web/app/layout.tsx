@@ -16,12 +16,12 @@ import './globals.css'
    at high priority in front of the first screen. Same files, same variables,
    same metrics — see that file for which face preloads and why.
 
-   Geist Serif is the third voice and belongs to the PUBLIC SITE ONLY (D25):
-   display headlines and the gold accent phrase. The studio stays entirely
-   sans, because a serif inside an instrument reads as decoration. It is
-   declared here because next/font must be called at module scope in a layout
-   and the root is the one every route shares; the file is still only fetched
-   where `font-serif` is actually used. */
+   Geist Serif is the third voice: display headlines and the gold accent
+   phrase on the public site (D25), and since D122 the page title of each
+   studio screen and the niche report's printed headings. Nothing else in the
+   studio — a serif on a row of costs reads as decoration. It is declared here
+   because next/font must be called at module scope in a layout and the root
+   is the one every route shares. */
 
 export const metadata: Metadata = {
   title: {
