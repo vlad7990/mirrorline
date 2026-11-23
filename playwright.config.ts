@@ -75,6 +75,7 @@ const SESSION_DEPENDENT_SPECS = [
   '**/navigation-race.spec.ts',
   '**/niche-scan-run.spec.ts',
   '**/onboarding-submit.spec.ts',
+  '**/print.spec.ts',
   '**/resources-and-auth.spec.ts',
   '**/results-persist.spec.ts',
   '**/settings-connect.spec.ts',

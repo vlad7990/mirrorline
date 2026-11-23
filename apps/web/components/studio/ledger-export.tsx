@@ -17,9 +17,10 @@
  */
 
 import { Button } from '@mirrorline/ui'
-import { Download, Printer } from 'lucide-react'
+import { Download } from 'lucide-react'
 
 import { type LedgerWeek } from '@/components/kpi/sample-dashboard'
+import { PrintButton } from '@/components/studio/print-button'
 
 const FILE_NAME = 'mirrorline-results-ledger.csv'
 
@@ -58,15 +59,18 @@ export function LedgerExport({ rows }: { readonly rows: readonly LedgerWeek[] })
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2" data-print-hide>
       <Button variant="secondary" onClick={downloadCsv}>
         <Download aria-hidden="true" className="size-4" strokeWidth={1.8} />
         Download CSV
       </Button>
-      <Button variant="secondary" onClick={() => window.print()}>
-        <Printer aria-hidden="true" className="size-4" strokeWidth={1.8} />
-        Print or save as PDF
-      </Button>
+      {/*
+        Shared with the niche report since D120, and the print *stylesheet*
+        arrived with it. Until then this button printed the whole studio —
+        sidebar, nav and co-pilot — around a ledger that was meant to be the
+        document. It did produce a PDF, which is why nobody noticed.
+      */}
+      <PrintButton />
     </div>
   )
 }

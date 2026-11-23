@@ -782,3 +782,89 @@
     transition: padding-right var(--duration-dropdown, 200ms) var(--ease-out);
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Printing a niche report (V1, D120).
+
+   BACKEND_PHASE §V1 asks for the report to be "viewable in the studio,
+   downloadable as PDF, and usable by us for prospects". This is that, and it
+   is deliberately CSS rather than a PDF library.
+
+   **Why no dependency.** jsPDF, pdfkit and @react-pdf/renderer all mean a
+   second renderer: the report would be laid out twice, by two engines, and
+   the printed copy would start drifting from the screen the first time
+   somebody changed one of them. The browser already has a typesetter that
+   agrees with the screen by construction, and `window.print()` already offers
+   "Save as PDF" on every platform we support. The cost of the library is a
+   new dependency, a licence review and a permanent second source of truth;
+   the cost of this is one `@media` block.
+
+   **The visibility trick rather than a print-only route.** Hiding everything
+   and re-showing one subtree is a well-worn pattern precisely because it
+   needs no second copy of the markup and no second data fetch. `visibility`
+   rather than `display` so the subtree keeps its layout box.
+   --------------------------------------------------------------------------- */
+@media print {
+  /* Paper, not a 1440px viewport. The margin is the printer's, so the browser
+     puts the page number and date in the places a reader expects them. */
+  @page {
+    margin: 16mm;
+  }
+
+  html,
+  body {
+    background: #fff;
+    /* A dark-theme report would print as a solid black rectangle and empty a
+       cartridge. The report is ink on paper whatever the screen was. */
+    color: #000;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  [data-print-region],
+  [data-print-region] * {
+    visibility: visible;
+  }
+
+  [data-print-region] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+  }
+
+  /* Controls are not paper. A "Save as PDF" button printed onto the PDF it
+     produced is the kind of detail that makes a document look unfinished to
+     the prospect it was sent to. */
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  /* ---------------------------------------------------------------------------
+     The URLs are printed, and this is the one rule that is not cosmetic.
+
+     Every example in the report is a **link out** — we hold the pointer and
+     never the work (D115, non-negotiable 1) — and `12 §1` requires a
+     `source_note` per row so that an audit of our sources is answerable from
+     the data. A printed copy that dropped the hrefs would keep the claim and
+     lose the evidence, which is exactly the failure D115 corrected in the
+     schema. So the link text carries its own address on paper.
+     --------------------------------------------------------------------------- */
+  [data-print-region] a[href^='http']::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.75em;
+    word-break: break-all;
+  }
+
+  /* A finding should not be split across a page break if it can be helped. */
+  [data-print-region] section,
+  [data-print-region] li {
+    break-inside: avoid;
+  }
+
+  [data-print-region] h2,
+  [data-print-region] h3 {
+    break-after: avoid;
+  }
+}
