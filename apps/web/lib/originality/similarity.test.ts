@@ -275,9 +275,33 @@ describe('shingleOverlap', () => {
     expect(low).toBeGreaterThan(0)
   })
 
-  it('scores against the closest source rather than the average', () => {
-    // Arrange: burying a lifted line among unrelated sources must not dilute
-    // it. The gate's question is "is this too close to *something*".
+  it('catches a draft stitched out of several sources', () => {
+    // Arrange: every word comes from one of four sources, a quarter from
+    // each, so the draft is not "close to" any single one of them. Scoring
+    // against the closest source alone returned **20%** here — a pass on a 30%
+    // limit, for a draft wholly assembled from our research. That is the hole
+    // the union closes, and this is the test that would have caught it.
+    const sources = [
+      'the first thing nobody ever tells you about this work is simple',
+      'the second point worth making here concerns the price people quote',
+      'a third consideration which matters more than any of the others',
+      'finally the fourth mistake that costs the most money every time',
+    ]
+
+    // Act
+    const score = shingleOverlap(sources.join(' '), sources)
+
+    // Assert: 71%, not 100 — joining the four creates 5-grams that straddle
+    // the seams and genuinely appear in no source. What matters is that it is
+    // far over any plausible limit instead of comfortably under one.
+    expect(score).toBeGreaterThan(60)
+  })
+
+  it('is not diluted by padding the set with unrelated sources', () => {
+    // Arrange: burying a lifted source among unrelated ones must not lower
+    // the score. The denominator is the draft, so sources that share nothing
+    // with it contribute nothing either way — which is the property the
+    // closest-source version was written for, and which the union keeps.
     const source =
       'the one thing nobody tells you about recall is the timing of the reward'
 

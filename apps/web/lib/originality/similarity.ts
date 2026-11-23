@@ -228,14 +228,19 @@ function shinglesOf(text: string): Set<string> {
 }
 
 /**
- * How much of the draft's phrasing also appears in its closest source, 0–100.
+ * How much of the draft's phrasing appears anywhere in the sources, 0–100.
  *
  * This is the number the client is shown. Three decisions inside it:
  *
- * **Against the closest source, not the average.** The question is whether
- * the draft is too close to *something*. Averaging would let a lifted line be
- * diluted by padding the comparison set with unrelated sources, which is a way
- * through rather than a measurement.
+ * **Against all the sources at once, not the closest one.** This was written
+ * the other way first — the maximum over each source individually — on the
+ * reasoning that the question is "too close to *something*". It is not, and a
+ * draft stitched out of four sources proved it: a quarter of its phrasing from
+ * each, nothing close to any one of them, **20% and a pass** on a 30% limit,
+ * while being wholly assembled from our research. Taking the union answers the
+ * question actually being asked, which is how much of this draft is somebody
+ * else's phrasing — and it keeps the property the first version was for, since
+ * padding the set with unrelated sources adds nothing to a union either.
  *
  * **The share of the draft, not a symmetric similarity.** A one-line draft
  * lifted whole out of a long source is 100% copied, and Jaccard would call it
@@ -256,18 +261,15 @@ export function shingleOverlap(
   const draftShingles = shinglesOf(draft)
   if (draftShingles.size === 0) return 0
 
-  let closest = 0
-
+  const sourceShingles = new Set<string>()
   for (const source of sources) {
-    const sourceShingles = shinglesOf(source)
-    let shared = 0
-
-    for (const shingle of draftShingles) {
-      if (sourceShingles.has(shingle)) shared += 1
-    }
-
-    closest = Math.max(closest, shared / draftShingles.size)
+    for (const shingle of shinglesOf(source)) sourceShingles.add(shingle)
   }
 
-  return Math.round(closest * 100)
+  let shared = 0
+  for (const shingle of draftShingles) {
+    if (sourceShingles.has(shingle)) shared += 1
+  }
+
+  return Math.round((shared / draftShingles.size) * 100)
 }
