@@ -1,5 +1,67 @@
 # Progress — morning handoff
 
+## Demo note — 23 November 2026 (the scan knows who it is for, and ends in three things to film)
+
+**What you can do now:** tell the studio about your business — where you work,
+how you work, what you sell, what you never recommend — press **Run a scan**,
+and get back research that argues every score against *your* account and ends
+with three videos you could film this week.
+
+![The report, with its first three videos](progress/d40-niche-scan-v2.png)
+
+Three pull requests, in the order they were read as a prospect would read
+them: the honesty pass, the brand pass, and the client pass.
+
+### 1 · The scan says only what it measured (D121, PR #20, merged)
+
+Five findings from the first live report, which were really one bug wearing
+five hats: **the screen was written before the data existed.**
+
+- The header claimed "Formats rising … Growth over 7 days" above cards that
+  each read "Not measured yet". We run no growth measurement at all. It now
+  says what we do: *"Formats working in your niche, from public posts and
+  guides found this week."* The hard-coded "updated 10:05 am" went with it.
+- **The fit bar was drawn against the wrong scale.** The model scored its three
+  recommended formats 9, 8 and 7; the bar drew against 100. In words: the three
+  best formats for this account. In pixels: three terrible matches. A reader
+  believes the pixels. 0–10 is the scale everywhere now, stated beside every
+  number, and the old 0–100 rows are divided rather than clamped so stored
+  reports keep their ranking.
+- Beats overflowed the storyboard frames. A frame takes the beat's *name* now;
+  the instruction is printed in full underneath, where there is a line for it.
+- **The formats rendered twice** — the report grid and a duplicate board behind
+  a filter bar. One view now. The filters went deliberately: they filtered
+  three formats by a time window we do not measure.
+- Sources were a semicolon-joined URL dump. Numbered list now, with a page
+  title, a domain, and a **post / guide** tag — because a post is evidence and
+  a guide is somebody's opinion, and printing them alike promotes the second.
+
+### 2 · The app wears the site's clothes (D122, PR #21, merged)
+
+The "app second" half of D25. A restyle, not a re-layout: same screens, same
+routes, same flows.
+
+Ink sidebar and mobile bar through the same `band-ink` remapping the public
+site paints its dark sections with — which is why the change is small: `Card`,
+`Button` and the nav follow without knowing the studio exists. The site's
+wordmark, the gold pill as the primary action, one eyebrow treatment, and
+Geist Serif on the page title of each screen and nowhere else.
+
+**The PDF gets a cover**: ink, wordmark, your name, the niche, the date,
+"Prepared by Mirrorline", and the note that an AI wrote it — on the page a
+reader meets first rather than in a footnote on page four.
+
+Before and after, four screens, two widths, both themes, plus page one of the
+PDF: `docs/progress/d41-brand/`.
+
+One mistake worth reading in D122: the first eyebrow implementation used
+`.band-ink .eyebrow`, and the marketing layout wraps **every** page in
+`band-ink` — so a nested snow section painted bright gold on near-white, 1.9:1,
+on all thirteen public pages. Fixed the way D40 fixed `--rail-fill`: pin the
+value per band as a custom property.
+
+### 3 · The scan is about you now (D123, PR #22)
+
 ## Demo note — 23 November 2026 (the report is a document you can send)
 
 **What you can do now:** open a niche report, press **Print or save as PDF**,
