@@ -1,5 +1,54 @@
 # Progress — morning handoff
 
+## D130 — 24 November 2026 (migrating production is one label now)
+
+**What you can now do:** add the label **`migrate-production`** to a pull
+request. That is the whole procedure. The workflow checks it was you who added
+it, that the PR is from this repo and that `verify`, `pipeline` and `e2e` are
+green on its head; runs the additive-only gate; applies the migrations **from
+that exact head SHA**; verifies production holds every migration in the tree;
+then merges the PR and comments with what was applied, production's latest
+version and the run link.
+
+On any failure: **no merge**, a comment with the reason, label removed — and the
+comment says whether the migrations had already been applied, because that state
+calls for the opposite response.
+
+### Why
+
+D104's order was right; its interface asked a human to retype a ref. I typed it
+wrong: `gh workflow run migrate-production.yml --ref <branch>` sets the branch
+the *workflow file* comes from, while the tree that gets migrated comes from the
+`ref` **input**, defaulting to `main`. It would have migrated `main`, gone
+green, and shown the branch name in every summary view. The correct CLI form is
+`-f ref=<branch>` — and `migrate-production.yml`'s own header warns about that
+exact confusion six screens above the box that causes it. A warning that precise
+being missed is an interface problem, not a knowledge one.
+
+A label is already attached to the thing it refers to. Nothing to type.
+
+### What is kept
+
+`migrate-production.yml`, as the **emergency** route: migrating `main` after a
+merge that skipped the label, an apply with no PR open, or recovery when the
+normal path is broken. Both share one concurrency group so two `db push` runs
+cannot interleave.
+
+### Honest limit
+
+**It has not run.** `pull_request_target` reads its definition from the base
+branch, so this workflow does not exist until this PR is on `main` — its first
+real run is its first test. Verified instead: the YAML parses, every `run` block
+passes `bash -n`, and each guard condition was dry-run by hand against #31's
+live data (head `ddb71d6`, three required checks `success`,
+`mergeable: MERGEABLE`, one migration detected). The merge step carries the
+residual risk — whether the `main` ruleset accepts a merge commit made by
+`GITHUB_TOKEN`. If it refuses, the failure path says so, the migrations are
+already applied, and you pressing Merge is the fallback, which is D104 exactly.
+
+Full reasoning in **D130**. CLAUDE.md non-negotiable 11 and the four-things rule
+are amended to match.
+
 ## Handoff — 24 November 2026 (P0 closed: the scan is bounded, and its failures say why)
 
 ### What merged

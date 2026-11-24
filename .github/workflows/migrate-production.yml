@@ -2,6 +2,28 @@
 # click on *Run workflow* is the approval (docs/DECISIONS.md D93, D104).
 #
 # ==============================================================================
+# This is the emergency route now. The normal one is a label (D130)
+# ==============================================================================
+#
+# `migrate-on-label.yml` does the same apply when Vlad adds the label
+# `migrate-production` to a pull request, and then verifies and merges it. Use
+# that. **Everything below is still true and still works**, and it is kept for
+# the cases a label cannot serve:
+#
+#   - migrating `main` itself, after a merge that skipped the label
+#   - re-running an apply when there is no pull request open
+#   - any recovery where the normal path is the thing that is broken
+#
+# The reason for the move is the `ref` box six screens down. Three manual steps
+# with a free-text ref, typed from memory, is an interface that produces wrong
+# refs — and it did: on 24 November the instruction given here was
+# `gh workflow run migrate-production.yml --ref <branch>`, which sets the branch
+# the **workflow file** comes from, not the tree that gets migrated. That comes
+# from the `ref` input, which would have defaulted to `main`. **The correct CLI
+# form is `-f ref=<branch>`**, and the label path exists so that nobody has to
+# remember the difference.
+#
+# ==============================================================================
 # Why this exists
 # ==============================================================================
 #
