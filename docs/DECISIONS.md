@@ -9106,11 +9106,37 @@ checkout. `filter: blob:none` keeps it cheap — the diff reads commits and
 trees, never file contents — so the gate gains a checkout step and stays
 inside the one minute it is billed at either way.
 
+**The "probably" is now resolved, and the runner had been printing the answer
+all along.** Every job log opens with a group nobody reads:
+
+```
+GITHUB_TOKEN Permissions
+Contents: read
+Metadata: read
+```
+
+**Two scopes, and `pull-requests` is not one of them.** So
+`default_workflow_permissions: read` does *not* mean "read on everything" — it
+means read on `contents` and `metadata`, and nothing else is granted unless a
+workflow asks. That fully explains the 403: declaring
+`permissions: pull-requests: read` on the job would indeed have fixed it.
+
+The git approach stays, for the reason it was chosen rather than out of
+stubbornness — it depends on no scope at all, so an organisation policy
+tightening token defaults later cannot break it. But the diagnosis is a
+diagnosis now rather than a guess, and the general lesson is cheaper than the
+specific one: **what a token can do is printed at the top of every job log**,
+and I spent two runs theorising instead of scrolling up.
+
 **Measured, not assumed, this time.** The next documentation-only pull request
 is the test, and the number to look at is whether `verify` skips its `Build`
 step. PR #24's `verify` took 2m1s with a 48-second build in it, against 2m4s
 for a code change — which is how the failure was spotted at all: the saving
 that was supposed to be obvious was not there.
+
+**This entry is that test.** It changes two files, both documentation, so the
+run carrying it is the gate's first honest measurement, and the figures are in
+the handoff note at the top of `docs/PROGRESS.md`.
 
 ## D125 — the worker has a home, and it is production
 
