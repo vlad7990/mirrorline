@@ -1,5 +1,99 @@
 # Progress — morning handoff
 
+## Handoff — 24 November 2026, early hours (V3 is in; the CI gate cost more than it saved on day one)
+
+Four pull requests merged: **#23** the CI spend work, **#24** the Railway
+worker on the record, **#25** the fix for #23's gate, **#26** the V3
+Originality Gate.
+
+### What a user can do now
+
+Open `/app/trends` and read, under each of the three videos, what the
+Originality Gate did — the word, the number, the limit, what it compared
+against, and **what it could not compare against**. Shot:
+`docs/progress/d42-originality-gate.png`. Full reasoning in **D126**.
+
+### The CI numbers, before and after, since that was the question
+
+Measured off the jobs API, each job rounded up to the minute, which is how
+Actions bills. `gh api .../timing` returns zeros on this repo, so nothing here
+is wall clock.
+
+**Before** — 19–23 November, `ci.yml` alone: **1,329 billable minutes.**
+`pull_request` 40 runs / 588 min (mean 14.7); `push` to `main` 19 runs / 285
+min; feature-branch pushes 456 min, already eliminated earlier. Live spend
+~873 min per five days, about **5,200 a month**. Individual code pull requests
+measured **19, 22, 22**. `e2e` is ~70% of every run.
+
+**After**, today:
+
+| PR | kind | billable | |
+|---|---|---|---|
+| #23 | code | 25 | the change itself |
+| #25 run 1 | code | 22 | |
+| #25 run 2 | code | 20 | |
+| #26 | code | 20 | V3 |
+| #24 | **docs-only** | **27** | the 403 — should have been ~4 |
+
+**A code pull request costs about +1 minute**, which is the `changes` job at
+its one-minute minimum. The 20–25 spread is `e2e`'s own variance (11m23s to
+16m12s), the long one because two suites raced on the shared preview database
+while two pull requests were open at once.
+
+**Two of the three savings are live but unproven, and I would rather say so
+than quote the projection as a result.**
+
+- **Concurrency** is configured correctly and **nothing has been superseded
+  since it landed**, so it has saved nothing measurable yet. The baseline it
+  will act on is real: four of the last forty PR runs were overtaken
+  mid-flight, at 81 billable minutes.
+- **The docs-only skip was broken on its first run** (D124 addendum) and is
+  fixed. **The run carrying this note is its first honest test** — look at
+  whether `verify` skipped its 48-second `Build`.
+- **Caching is settled**, because it was a measurement rather than a change:
+  pnpm is already cached and installs the workspace in **four seconds**;
+  Playwright's browser is deliberately **not** cached, because the download is
+  nineteen seconds and a 150 MB cache restore eats most of it.
+
+### Two hazards I hit, both the D111 lesson in a new coat
+
+1. **A full local `pnpm test:e2e` overwrites committed evidence.** Five
+   `*.tmp.spec.ts` files left in `e2e/` from the previous session are
+   gitignored — invisible to `git status` — but Playwright's default
+   `testMatch` collects them, and three write straight into
+   `docs/progress/d41-brand/`. Thirteen committed PNGs and a PDF were silently
+   modified. Restored, and the five specs are moved out of `e2e/` (their own
+   headers said "deleted before the pull request"; they are in this session's
+   scratchpad, not destroyed).
+2. **Two of those specs drive a real scan and gate to `chromium`**, the project
+   a normal local run uses. **Only `playwright.config.ts:219` — which forces
+   `ANTHROPIC_API_KEY: ''` for the app under test — stood between that and a
+   paid call.** It held, and nothing was spent. Worth knowing the protection is
+   load-bearing rather than belt-and-braces.
+
+Local suite on V3: **445 passed**, and the only two failures were those
+throwaway specs, which cannot pass against a deliberately keyless server.
+
+### Needs you
+
+1. **A migration, when you are ready.** V3's server-side approve refusal has
+   nothing to refuse: there is no drafts table, no approve action and no
+   compliance column anywhere in the schema — `scheduled_posts` lists
+   `'approved'` in its status check and grants `authenticated` update on two
+   date columns only, so nothing can set it. That table is the next piece of
+   V3, and it carries the attempt count the "blocked twice" rule needs too.
+2. **The worker has no alert.** A crash-looping Railway worker looks exactly
+   like a quiet afternoon with no scans queued, and since D114 a merge of mine
+   replaces that process.
+3. **The live screenshot is still owed.** D123's addendum wants one clean
+   production scan, and that is the worker's job now rather than this laptop's.
+4. **The V1 source question and the video generator choice**, both unchanged.
+
+### Where to pick up
+
+`BACKEND_PHASE §V3`'s remaining two done-whens, which both need item 1 above;
+then V4. `docs/progress/tmp/` holds throwaway shots and can be deleted.
+
 ## Demo note — 23 November 2026 (every script now carries the gate's verdict, including the half it could not check)
 
 **What you can do now:** open `/app/trends` and read, under each of the three
