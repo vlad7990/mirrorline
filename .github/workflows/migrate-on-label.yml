@@ -193,11 +193,26 @@ jobs:
           fi
 
           # ---- 4. Is the pull request in a state that can be merged -------------
-          state=$(gh pr view "$PR" --repo "$REPO" --json state,isDraft,mergeable,mergeStateStatus,baseRefOid)
+          state=$(gh pr view "$PR" --repo "$REPO" --json state,isDraft,mergeable,mergeStateStatus,baseRefOid,baseRefName)
           echo "$state"
 
           [ "$(jq -r .state <<<"$state")" = "OPEN" ] || refuse "This pull request is not open."
           [ "$(jq -r .isDraft <<<"$state")" = "false" ] || refuse "This pull request is a draft."
+
+          # The base must be `main`, and this is a correctness rule rather than
+          # tidiness. **Production tracks `main` (D85)**, so merging into any
+          # other branch deploys nothing — the schema would go to production and
+          # the code that needs it would stay unshipped, which is the one state
+          # D104's order exists to avoid.
+          #
+          # The case this catches is a stacked pull request: #32 was based on
+          # #31's branch, and labelling it first would have applied both
+          # migrations and then merged it into #31. Nothing would have broken
+          # loudly, which is exactly why it is worth refusing.
+          base_branch=$(jq -r .baseRefName <<<"$state")
+          if [ "$base_branch" != "main" ]; then
+            refuse "This pull request targets \`$base_branch\`, not \`main\`. Production tracks \`main\`, so merging there would migrate the schema and ship no code. If this is stacked on another pull request, land that one first."
+          fi
 
           mergeable=$(jq -r .mergeable <<<"$state")
           if [ "$mergeable" != "MERGEABLE" ]; then

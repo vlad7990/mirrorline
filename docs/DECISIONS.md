@@ -9587,6 +9587,13 @@ Three details worth keeping:
   everything." That polarity was chosen in D124 for exactly this kind of
   surprise, and here it pays out.
 
+The same pass added a sixth guard condition, found while checking #32: **the
+base must be `main`.** Production tracks `main` (D85), so merging anywhere else
+applies the schema and ships no code — the exact state D104's order exists to
+avoid. The case is a stacked pull request: #32 was based on #31's branch, and
+labelling it first would have applied both migrations and merged it into #31.
+Nothing would have broken loudly, which is why it was worth refusing.
+
 **Not observed, derived.** #31 had not been merged when this was found, so there
 was no merge commit to inspect — the behaviour is GitHub's documented rule
 rather than something seen in the Actions tab. What the tab *does* show is
