@@ -50,11 +50,15 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-import { JOB_LEASE_SECONDS } from '../../../apps/web/lib/jobs/types'
+import { WORKER_ERROR_BACKOFF_MS, WORKER_IDLE_POLL_MS } from '../../../apps/web/lib/jobs/liveness'
+import { JOB_LEASE_SECONDS, type JobKind } from '../../../apps/web/lib/jobs/types'
 import { runNicheScan } from '../../../apps/web/lib/niche-scan/scan'
 
+import { createHeartbeat, type Heartbeat } from './heartbeat'
+import { startHealthServer } from './health-server'
+
 /** Which kinds this worker will claim. `render-cuts` joins the list with B5. */
-const CLAIMED_KINDS = ['niche-scan'] as const
+const CLAIMED_KINDS: readonly JobKind[] = ['niche-scan']
 
 /**
  * Fifteen minutes, matching `claim_job`'s default.
@@ -73,12 +77,16 @@ const CLAIMED_KINDS = ['niche-scan'] as const
  */
 const LEASE_SECONDS = JOB_LEASE_SECONDS
 
-/** How long to wait when there was nothing to do. */
-const IDLE_POLL_MS = 5_000
-
-/** How long to wait after an unexpected error, so a broken loop does not spin. */
-const ERROR_BACKOFF_MS = 30_000
-
+/**
+ * The two waits, and why they now live next to the staleness threshold.
+ *
+ * They moved to `apps/web/lib/jobs/liveness.ts` for the same reason the lease
+ * moved to `types.ts`: each is half of a relationship whose other half is
+ * elsewhere. A heartbeat is only "stale" relative to how often this loop beats,
+ * and a backoff is only "a blip" relative to how many of them the reader will
+ * forgive. `liveness.test.ts` asserts those inequalities, which it can only do
+ * because the numbers are importable from both sides.
+ */
 interface JobRow {
   readonly id: string
   readonly kind: string
@@ -213,12 +221,27 @@ function clientMessage(error: unknown): string {
   return 'The scan stopped before it finished.'
 }
 
-async function runOnce(supabase: SupabaseClient): Promise<boolean> {
-  const job = await claim(supabase)
+async function runOnce(supabase: SupabaseClient, heartbeat: Heartbeat): Promise<boolean> {
+  let job: JobRow | null
+
+  try {
+    job = await claim(supabase)
+  } catch (error: unknown) {
+    // Counted before it is rethrown. This is the failure a heartbeat alone
+    // cannot see: the process is up and beating, and `claim_job` is refusing
+    // because a grant, a name or a kind changed under it. The loop's own
+    // handler does the backing off; the count is what makes the queue's
+    // silence legible from outside.
+    heartbeat.claimFailed()
+    throw error
+  }
+
+  heartbeat.claimSucceeded()
   if (job === null) return false
 
   console.log(`[worker] claimed ${job.kind} ${job.id}`)
   const startedAt = Date.now()
+  heartbeat.jobStarted(job.kind as JobKind)
 
   try {
     const result = await handle(job)
@@ -239,6 +262,11 @@ async function runOnce(supabase: SupabaseClient): Promise<boolean> {
     const message = clientMessage(error)
     await finish(supabase, job.id, { status: 'failed', error: message })
     console.error(`[worker] ${job.id} failed: ${message}`)
+  } finally {
+    // `finally`, because a worker whose heartbeat still says "running a
+    // niche-scan" after the job ended is a worker that will be reported
+    // `over-lease` fifteen minutes later for a job nobody is running.
+    heartbeat.jobFinished()
   }
 
   return true
@@ -249,6 +277,14 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 async function main(): Promise<void> {
   const supabase = serviceClient()
   console.log(`[worker] claiming ${CLAIMED_KINDS.join(', ')}`)
+
+  // The pulse starts before the first claim, so that a container which boots
+  // and then cannot reach Supabase is visible as such rather than as an empty
+  // queue (D125, D128). The health endpoint reads the same state and is what
+  // Railway's deploy-time healthcheck should point at.
+  const heartbeat = createHeartbeat(supabase, CLAIMED_KINDS)
+  heartbeat.start()
+  const health = startHealthServer(heartbeat.pulse)
 
   // `SIGTERM` is how a container is asked to stop. Finishing the job in hand
   // would be better still; this at least stops us claiming a new one seconds
@@ -263,16 +299,23 @@ async function main(): Promise<void> {
 
   while (running) {
     try {
-      const didWork = await runOnce(supabase)
-      if (!didWork) await sleep(IDLE_POLL_MS)
+      const didWork = await runOnce(supabase, heartbeat)
+      if (!didWork) await sleep(WORKER_IDLE_POLL_MS)
     } catch (error: unknown) {
       // The claim itself failed — the database is unreachable, or the key is
       // wrong. Back off rather than spinning: a tight loop against a broken
       // dependency is how one outage becomes a rate limit.
       console.error(`[worker] ${clientMessage(error)}`)
-      await sleep(ERROR_BACKOFF_MS)
+      await sleep(WORKER_ERROR_BACKOFF_MS)
     }
   }
+
+  // The row is **not** deleted on the way out. A graceful stop with nothing
+  // replacing this process is a queue that has stopped draining, and the honest
+  // report of that is a heartbeat that goes stale — not a missing row that
+  // reads as "never deployed". A redeploy overwrites it within seconds anyway.
+  heartbeat.stop()
+  health.close()
 
   console.log('[worker] stopped')
 }
