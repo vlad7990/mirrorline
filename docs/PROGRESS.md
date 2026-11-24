@@ -1,5 +1,58 @@
 # Progress — morning handoff
 
+## Status — 23 November 2026, evening (the worker lives on Railway; CI stops paying twice)
+
+Three state changes from Vlad, recorded before any new feature work.
+
+**1 · The worker has a home (D125).** It runs on **Railway** as the service
+`@mirrorline/worker`, building `services/worker/Dockerfile` from `main`,
+against the **production** Supabase project, Online, redeploying on every merge
+to `main`. The "Needs you" item that has been open for two days is closed: a
+queued scan now drains without a laptop being awake.
+
+Two things that follow, both in D125 and both worth a sentence here. **I have
+stopped running the worker locally for production work** — local runs stay
+useful against preview. And **a merge to `main` is now a worker deploy as well
+as a site deploy**, which means my own green merges (D114) replace the process
+holding the production service-role key. A worker that fails to boot is silent
+in a way a broken site is not; that wants an alert and does not have one.
+
+**2 · PR #22 is merged**, migration dispatched by Vlad. `client_profiles`,
+`save_client_profile` and `niche_reports.first_videos` are in production.
+
+**3 · Actions ran out of included minutes, and there is now a $30/month
+budget.** PR #23 is the one small change that buys the runway back, before
+anything else. Measured rather than guessed — `ci.yml` spent **1,329 billable
+minutes over five days**, of which ~873 is live spend, and the browser suite is
+~70% of every run.
+
+| | before | after |
+|---|---|---|
+| Code PR | 19 min | **20** (the gate job is seconds, billed at one minute) |
+| Docs-only PR | 19 min | **~4** |
+| A push that overtakes a running one | ~19 min | **~1** |
+
+Three changes: `concurrency` with `cancel-in-progress` per pull request (four
+of the last forty runs were overtaken mid-flight and finished anyway, at 81
+minutes for answers about commits that no longer existed); a `changes` gate so
+the build, the browser suite and the Python suite skip a documentation-only
+commit — **20 of the 62 commits on `main` in that window were exactly that**;
+and Playwright's browser left **uncached on the measurement**, because the
+download is 19 seconds and a 150 MB cache restore eats most of it. pnpm was
+already cached and installs the workspace in four seconds.
+
+The two details that keep it honest are in D124: every required check still
+runs and still reports, because a skipped required check never arrives and
+auto-merge waits for it forever; and the polarity is `!= 'false'`, so a gate
+that breaks spends money rather than going green over code it never built.
+Lint, typecheck, the unit tests, the licence gate and migration safety run on
+every commit regardless — 25 seconds, and the typecheck is now the only thing
+between a bad merge and a dead worker container.
+
+**Still not done: the live screenshot.** D123's addendum is waiting on one
+clean run, and that run is now the production worker's rather than this
+laptop's.
+
 ## Demo note — 23 November 2026 (the scan knows who it is for, and ends in three things to film)
 
 **What you can do now:** tell the studio about your business — where you work,
@@ -107,18 +160,14 @@ both entries.
 
 ### Needs you
 
-1. **GitHub Actions is blocked on billing.** PR #22's three checks did not run
-   at all: *"The job was not started because recent account payments have
-   failed or your spending limit needs to be increased."* #20 and #21 merged
-   green an hour earlier, so this is new. Nothing merges until it is cleared
-   in **Billing & plans**; re-run the checks on #22 afterwards.
-2. **Dispatch *Migrate production* against `feat/v2-first-videos`**, then merge
-   PR #22 yourself. It carries `client_profiles`, `save_client_profile` and
-   `niche_reports.first_videos` — a migration, which is one of the five things
-   non-negotiable 11 keeps for you. Applied to preview already.
-3. **The worker still needs a home.** Unchanged from yesterday: `SUPABASE_URL`,
-   `SUPABASE_SERVICE_ROLE_KEY` and `ANTHROPIC_API_KEY`. Everything today was
-   proved by running it on this laptop against the preview database.
+1. ~~**GitHub Actions is blocked on billing.**~~ **Cleared**, with a
+   $30/month budget on it. That budget is why PR #23 exists; the numbers are in
+   the status note at the top of this file and in D124.
+2. ~~**Dispatch *Migrate production* against `feat/v2-first-videos`**, then
+   merge PR #22 yourself.~~ **Done** — migration dispatched and #22 merged.
+3. ~~**The worker still needs a home.**~~ **Done: Railway**, service
+   `@mirrorline/worker`, from `main`, against production (D125). I no longer
+   run it on this laptop for production work.
 4. **What a scan costs now, measured.** 443 seconds, **25 searches**, and a
    complete report at 28k output tokens. The declared search ceiling is 12 and
    the real count is twice that — the projection doubles it so the cap errs

@@ -9071,3 +9071,70 @@ the largest remaining line item and it is deliberately untouched: the header of
 "identical" when the base has moved since the check ran, and reversing a logged
 decision to save money belongs in its own change with Vlad's eye on it. Worth
 revisiting if the budget is still tight once the two above have been measured.
+
+## D125 — the worker has a home, and it is production
+
+**23 November 2026, Vlad.** The job worker runs on **Railway**, as the service
+`@mirrorline/worker`. It builds `services/worker/Dockerfile` from `main`,
+points at the **production** Supabase project, and is Online. It redeploys on
+every merge to `main`.
+
+That answers the open item that has been in "Needs you" for two days (D119:
+*"until it is running, a scan queues and nothing drains it"*). Four
+consequences, and the last two are the ones to hold onto.
+
+### Scans drain themselves now
+
+A queued `niche-scan` is claimed and run without anybody's laptop being awake.
+`claim_job`'s `skip locked` and the fifteen-minute lease were written for this
+and are now actually doing it rather than being proved by a test.
+
+### Stop running the worker locally for anything that matters
+
+Vlad's instruction, and it is not only hygiene. Two processes claiming from the
+same queue is the case `claim_job` handles correctly, so nothing *breaks* — but
+a laptop worker against production means a job's output depends on which
+machine won the race, which code that machine had checked out, and whether
+somebody closed a lid. Local runs stay useful against **preview**, which is
+what they were for.
+
+### A merge to `main` is now a worker deploy as well as a site deploy
+
+Non-negotiable 11 says merging is the only thing that deploys. That sentence
+has quietly grown a second subject. Since D114 lets me merge my own green pull
+requests, **a merge of mine now replaces the process that holds the production
+service-role key and calls a paid API.** Three things follow:
+
+- The five exceptions reserved for Vlad (migrations, payments, auth, account
+  deletion, secrets) matter more, not less, because the blast radius of the
+  rest now includes a long-running process rather than only a stateless render.
+- A worker that fails to boot is **silent**. A broken site is visible in
+  seconds; a worker that crash-loops looks exactly like a quiet afternoon with
+  no scans queued. This is the first thing I would want an alert on, and there
+  is no alert. Written down as debt rather than fixed here.
+- `services/worker/Dockerfile` has no build step — `tsx` runs the TypeScript
+  directly — so **a type error reaches the running container.** `verify`
+  typechecks the worker, which is the only thing standing between a bad merge
+  and a dead queue. That is an argument for never letting the typecheck be the
+  check that got skipped, and it is why D124's gate keeps typecheck running on
+  every commit including documentation-only ones.
+
+### The spend cap holds, for the reason it was designed to
+
+`BACKEND_PHASE`'s known debt says the co-pilot's in-memory ledger "must land on
+`agent_runs` before we run more than one server instance". **The worker is a
+second process, and it does not trip that.** The scan's cap reads and writes
+the `agent_runs` table (D115), and the worker takes one job at a time on
+purpose — `index.ts` says so: running two at once "makes the window between
+'check the month's spend' and 'spend it' twice as wide".
+
+The co-pilot's `Map` is still a `Map`, and it is still Vercel functions that
+would multiply it. Unchanged by this, and still owed.
+
+### What is not recorded here
+
+I have not seen the Railway dashboard, the environment variables, or a
+deployment log. This entry records what Vlad told me — service name, source,
+Dockerfile, database, status, redeploy trigger — and nothing is inferred past
+it. The first live scan run through it will be the proof, and it is the
+screenshot D123's addendum is still waiting for.
