@@ -110,6 +110,7 @@ permissions:
   pull-requests: write # comment, and remove the label
   checks: read # read the required checks on the head SHA
   statuses: read # and the commit statuses Vercel posts
+  actions: write # dispatch the two workflows the merge cannot trigger itself
 
 env:
   # The label, and the one account allowed to mean it. Both are literals rather
@@ -192,11 +193,26 @@ jobs:
           fi
 
           # ---- 4. Is the pull request in a state that can be merged -------------
-          state=$(gh pr view "$PR" --repo "$REPO" --json state,isDraft,mergeable,mergeStateStatus,baseRefOid)
+          state=$(gh pr view "$PR" --repo "$REPO" --json state,isDraft,mergeable,mergeStateStatus,baseRefOid,baseRefName)
           echo "$state"
 
           [ "$(jq -r .state <<<"$state")" = "OPEN" ] || refuse "This pull request is not open."
           [ "$(jq -r .isDraft <<<"$state")" = "false" ] || refuse "This pull request is a draft."
+
+          # The base must be `main`, and this is a correctness rule rather than
+          # tidiness. **Production tracks `main` (D85)**, so merging into any
+          # other branch deploys nothing — the schema would go to production and
+          # the code that needs it would stay unshipped, which is the one state
+          # D104's order exists to avoid.
+          #
+          # The case this catches is a stacked pull request: #32 was based on
+          # #31's branch, and labelling it first would have applied both
+          # migrations and then merged it into #31. Nothing would have broken
+          # loudly, which is exactly why it is worth refusing.
+          base_branch=$(jq -r .baseRefName <<<"$state")
+          if [ "$base_branch" != "main" ]; then
+            refuse "This pull request targets \`$base_branch\`, not \`main\`. Production tracks \`main\`, so merging there would migrate the schema and ship no code. If this is stacked on another pull request, land that one first."
+          fi
 
           mergeable=$(jq -r .mergeable <<<"$state")
           if [ "$mergeable" != "MERGEABLE" ]; then
@@ -359,6 +375,44 @@ jobs:
           # guard and here cannot be merged unmigrated.
           gh pr merge "$PR" --repo "$REPO" --merge --match-head-commit "$SHA"
 
+          # ====================================================================
+          # The merge starts nothing. Start it by hand.
+          # ====================================================================
+          #
+          # GitHub: "events triggered by the GITHUB_TOKEN, **with the exception
+          # of `workflow_dispatch` and `repository_dispatch`**, will not create a
+          # new workflow run." This job merges as `GITHUB_TOKEN`, so the push to
+          # `main` it produces is silent: no `CI` run and — the one that matters
+          # — **no `Production schema check`**, which is the independent
+          # confirmation that production holds every migration on `main`.
+          #
+          # Without this step the label path would quietly disable the check that
+          # exists to catch the label path going wrong. D104 built that check
+          # precisely because the migration step "cannot notice its own
+          # absence"; a merge that silences it is the same hole from the other
+          # side.
+          #
+          # The named exception is the way out, and it is why both workflows
+          # carry `workflow_dispatch`.
+          #
+          # **Best effort, and it must never fail this job.** The merge has
+          # already happened by the time we get here, and a failure now would
+          # run the `report` job — which would comment "Not migrated, and not
+          # merged", a sentence that would be false. A warning is the honest
+          # outcome: the checks can be started from the Actions tab.
+          #
+          # `--ref main` is correct here and is not the mistake D130 is about:
+          # neither workflow takes a tree as an input, so the ref *is* what they
+          # run against.
+          dispatched=""
+          for wf in production-schema-check.yml ci.yml; do
+            if gh workflow run "$wf" --repo "$REPO" --ref main; then
+              dispatched="$dispatched \`$wf\`"
+            else
+              echo "::warning title=Could not dispatch $wf::The merge landed. Start $wf on main from the Actions tab — a GITHUB_TOKEN merge does not trigger it."
+            fi
+          done
+
           # `printf` one line at a time rather than a quoted block, because a
           # YAML block scalar keeps its indentation and four leading spaces turn
           # a markdown paragraph into a code block.
@@ -366,8 +420,9 @@ jobs:
             printf '%s\n' "**Production migrated, then merged.** ✅" ""
             printf '%s\n' "- migrations applied from \`${SHA:0:9}\` — the head this pull request was labelled on"
             printf '%s\n' "- production's latest applied version: \`$LATEST\`"
-            printf '%s\n' "- [run log]($RUN)" ""
-            printf '%s\n' "The schema went first and the code followed, which is D104's order. \`Production schema check\` runs on this merge and is the independent confirmation."
+            printf '%s\n' "- [run log]($RUN)"
+            printf '%s\n' "- dispatched on \`main\`:${dispatched:- nothing — start them from the Actions tab}" ""
+            printf '%s\n' "The schema went first and the code followed, which is D104's order. A \`GITHUB_TOKEN\` merge does not trigger workflows, so \`Production schema check\` was **dispatched** rather than left to the push — it is the independent confirmation that production holds every migration on \`main\`."
           } > "$RUNNER_TEMP/merged.md"
 
           gh pr comment "$PR" --repo "$REPO" --body-file "$RUNNER_TEMP/merged.md"

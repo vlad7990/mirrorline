@@ -9550,6 +9550,57 @@ nothing to do).
 dies half-way may still have moved the schema, and a flag set on success is the
 one that would lie about it.
 
+### Addendum, same day: the merge starts nothing, so it dispatches
+
+**Caught by Vlad before the label was ever used**, and it would have quietly
+disabled the check that exists to catch this path going wrong.
+
+GitHub: "events triggered by the GITHUB_TOKEN, **with the exception of
+`workflow_dispatch` and `repository_dispatch`**, will not create a new workflow
+run." The merge above runs as `GITHUB_TOKEN`, so the push to `main` it produces
+is **silent**: no `CI` run, and — the one that matters — no **`Production schema
+check`**.
+
+That is worse than a missing nicety. D104 built that check because the migration
+step "cannot notice its own absence", and a merge that silences it is the same
+hole from the other side: the label path would be the one route to production
+whose independent verification never runs.
+
+The exception named in the quote is the way out. `production-schema-check.yml`
+already had `workflow_dispatch` (added so it could be re-run without an empty
+commit); `ci.yml` did not and now does. The merge job dispatches both on `main`
+immediately after merging, and the success comment says which were started.
+
+Three details worth keeping:
+
+- **It is best effort and must never fail the job.** The merge has already
+  happened by then, and a failure would run the `report` job — which would
+  comment "Not migrated, and not merged", a sentence that would be false. A
+  warning plus a line in the comment is the honest outcome.
+- **`--ref main` is correct here**, and is not the mistake this entry is about:
+  neither workflow takes a tree as an input, so the ref *is* what they run
+  against. The earlier error was passing `--ref` to a workflow whose tree comes
+  from an input.
+- **A dispatched `CI` run tests everything.** Its documentation-only gate reads
+  the pull request's base and head, or a push's `before` SHA; a dispatch has
+  neither, so it falls through to "No base commit to compare against; running
+  everything." That polarity was chosen in D124 for exactly this kind of
+  surprise, and here it pays out.
+
+The same pass added a sixth guard condition, found while checking #32: **the
+base must be `main`.** Production tracks `main` (D85), so merging anywhere else
+applies the schema and ships no code — the exact state D104's order exists to
+avoid. The case is a stacked pull request: #32 was based on #31's branch, and
+labelling it first would have applied both migrations and merged it into #31.
+Nothing would have broken loudly, which is why it was worth refusing.
+
+**Not observed, derived.** #31 had not been merged when this was found, so there
+was no merge commit to inspect — the behaviour is GitHub's documented rule
+rather than something seen in the Actions tab. What the tab *does* show is
+consistent with it: #33 merged at 20:13 and both workflows ran, because
+auto-merge is attributed to the user who armed it, not to `GITHUB_TOKEN`. That
+is a different path from this one, which is why it proves nothing about it.
+
 ### What is kept
 
 `migrate-production.yml` stays, as the **emergency** route: migrating `main`

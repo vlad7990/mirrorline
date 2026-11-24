@@ -27,6 +27,20 @@ being missed is an interface problem, not a knowledge one.
 
 A label is already attached to the thing it refers to. Nothing to type.
 
+### Addendum: the merge starts nothing, so it dispatches
+
+Vlad caught this before the label was ever used. A merge made by the workflow
+runs as `GITHUB_TOKEN`, and GitHub does not start workflows from that token's
+events — **except `workflow_dispatch`**. So the push to `main` would have been
+silent: no `CI`, and no **`Production schema check`**, which is the independent
+confirmation that production holds every migration on `main`. The label path
+would have been the one route to production whose verification never ran.
+
+`ci.yml` gained `workflow_dispatch` (`production-schema-check.yml` already had
+it), and the merge job now dispatches both on `main` and says which it started
+in its comment. Best effort: the merge has already happened by then, so a
+failed dispatch warns rather than failing the job and claiming nothing merged.
+
 ### What is kept
 
 `migrate-production.yml`, as the **emergency** route: migrating `main` after a
