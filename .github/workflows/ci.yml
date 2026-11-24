@@ -58,8 +58,21 @@ jobs:
   # only code that touches the tree is the screenshot specs, which *write* into
   # it, and `scripts/mascot-assets.mjs`, which is run by hand.
   #
-  # No checkout: the file list comes from the API, so this job is a few seconds
-  # of the one minute GitHub bills it at.
+  # **The file list comes from git, not from the REST API, and that is a fix
+  # rather than a preference.** The first version called
+  # `gh api repos/.../pulls/N/files` and got `Resource not accessible by
+  # integration (HTTP 403)` on its first real run: the default `GITHUB_TOKEN`
+  # could not read that endpoint, even though the repository's default workflow
+  # permission is `read`. The fail-safe below did its job — it ran everything
+  # rather than going green over unbuilt code — so the gate was safe and
+  # useless at the same time.
+  #
+  # Declaring `permissions: pull-requests: read` would probably have fixed it.
+  # Git removes the dependency on token scopes altogether, which is the thing
+  # that just failed, and the two SHAs it needs are already in the event
+  # payload. `filter: blob:none` is what keeps it cheap: `git diff --name-only`
+  # reads commits and trees, never file contents, so a blobless clone with full
+  # history is both complete and small.
   #
   # **The polarity is deliberate, and it is the whole safety argument.** Every
   # condition downstream reads `!= 'false'`, never `== 'true'`, so the heavy
@@ -74,11 +87,17 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history, no file contents. `git diff --name-only` needs the
+          # commits and their trees; the blobs are what make a deep clone slow.
+          fetch-depth: 0
+          filter: blob:none
+
       - id: filter
         env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
         run: |
@@ -93,12 +112,18 @@ jobs:
             exit 0
           }
 
-          if [ -n "${PR_NUMBER:-}" ]; then
-            files=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" --jq '.[].filename') \
-              || code "Could not read the pull request's files; running everything."
+          if [ -n "${BASE_SHA:-}" ] && [ -n "${HEAD_SHA:-}" ]; then
+            # Three dots: what this branch changed, measured from where it left
+            # the base. Two dots would also report everything that landed on
+            # `main` since, reversed, and a busy afternoon on main would make
+            # every documentation PR look like code.
+            files=$(git diff --name-only "$BASE_SHA...$HEAD_SHA") \
+              || code "Could not diff $BASE_SHA...$HEAD_SHA; running everything."
           elif [ -n "${BEFORE:-}" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
-            files=$(gh api --paginate "repos/$REPO/compare/$BEFORE...$AFTER" --jq '.files[]?.filename') \
-              || code "Could not compare $BEFORE...$AFTER; running everything."
+            # A push to main. Two dots is right here: it is a linear range, and
+            # for a merge commit it is exactly the pull request's own files.
+            files=$(git diff --name-only "$BEFORE..$AFTER") \
+              || code "Could not diff $BEFORE..$AFTER; running everything."
           else
             code "No base commit to compare against; running everything."
           fi

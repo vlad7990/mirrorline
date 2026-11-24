@@ -9072,6 +9072,46 @@ the largest remaining line item and it is deliberately untouched: the header of
 decision to save money belongs in its own change with Vlad's eye on it. Worth
 revisiting if the budget is still tight once the two above have been measured.
 
+### D124 addendum — the gate was safe and useless at the same time
+
+Its first real run, on PR #24 (a two-file documentation change), **ran the
+whole suite anyway**. The log says why in one line:
+
+```
+gh: Resource not accessible by integration (HTTP 403)
+Could not read the pull request's files; running everything.
+```
+
+The default `GITHUB_TOKEN` could not read `repos/{repo}/pulls/{n}/files`, even
+though the repository's `default_workflow_permissions` is `read`. The
+fail-safe worked exactly as written — it ran everything rather than going green
+over code it had not built — so the **safety** property held and the **saving**
+did not. A gate that always says "run everything" is indistinguishable from no
+gate, which is the same shape of problem as a gate that always says "fine".
+
+Two things worth keeping from it.
+
+**The polarity earned its keep on day one.** Had the condition been
+`== 'true'`, this exact 403 would have produced three green checks over an
+unbuilt, untested branch, and it would have looked like a 15-minute saving
+rather than a bug. The reason to write `!= 'false'` was hypothetical when D124
+was written; it stopped being hypothetical within the hour.
+
+**Declaring `permissions: pull-requests: read` would probably have fixed it,
+and the fix is to stop needing the token.** "Probably" is the problem: the
+repository default is already `read`, so the 403 is not fully explained, and a
+second guess at a permission model is not a diagnosis. `git diff --name-only`
+over the two SHAs already in the event payload depends on nothing but the
+checkout. `filter: blob:none` keeps it cheap — the diff reads commits and
+trees, never file contents — so the gate gains a checkout step and stays
+inside the one minute it is billed at either way.
+
+**Measured, not assumed, this time.** The next documentation-only pull request
+is the test, and the number to look at is whether `verify` skips its `Build`
+step. PR #24's `verify` took 2m1s with a 48-second build in it, against 2m4s
+for a code change — which is how the failure was spotted at all: the saving
+that was supposed to be obvious was not there.
+
 ## D125 — the worker has a home, and it is production
 
 **23 November 2026, Vlad.** The job worker runs on **Railway**, as the service
