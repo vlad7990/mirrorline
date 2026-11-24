@@ -17,6 +17,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server-client'
 
 import {
+  evidenceCaveatFor,
   normaliseFit,
   parseClaims,
   parseExample,
@@ -183,6 +184,9 @@ export async function readLatestNicheReport(): Promise<NicheReportResult | null>
         lengths: asLengthList(row.lengths),
         postingPatterns: parseClaims(row.posting_patterns, 8),
         firstVideos: parseVideoIdeas(row.first_videos),
+        // The same rule the writer used, from the same function, over the
+        // examples that still parse today.
+        evidenceCaveat: evidenceCaveatFor(examples.length),
         // The same parser the agent writes through, so a stored source that
         // would not be accepted today is not printed today either — including
         // the bare-url rows written before sources had a shape.

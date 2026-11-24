@@ -199,6 +199,15 @@ export interface NicheReportFindings {
   readonly examples: readonly TrendExample[]
   readonly sourcesUsed: readonly ReportSource[]
   /**
+   * One honest line when the open web held no public posts we could link to.
+   *
+   * `null` on a normal report. Computed by `evidenceCaveatFor` on both the
+   * write and the read path, because a report is persisted into separate
+   * columns rather than one blob — see that function for why deriving is the
+   * honest option here rather than a shortcut around a migration.
+   */
+  readonly evidenceCaveat: string | null
+  /**
    * Three video ideas written from the formats above (V2).
    *
    * On the report because they are the end of it: the research is only useful
@@ -465,8 +474,155 @@ export interface ParsedReport {
  * has; a report with nothing in it would render as a screen claiming research
  * happened.
  */
-export function parseReport(value: unknown): ParsedReport | null {
-  if (typeof value !== 'object' || value === null) return null
+const PLACEHOLDER_PATTERNS: readonly { readonly name: string; readonly test: RegExp }[] = [
+  { name: 'placeholder', test: /^placeholders?$/ },
+  { name: 'lorem', test: /^lorem(\s+ipsum.*)?$/ },
+  { name: 'tbd', test: /^(tbd|to be determined|to be confirmed)$/ },
+  { name: 'todo', test: /^(todo|to do|fixme)$/ },
+  { name: 'na', test: /^(n\s*\/?\s*a|none|null|undefined|unknown)$/ },
+  { name: 'type-name', test: /^(string|text|number|example|sample|value|item)$/ },
+  { name: 'ellipsis', test: /^[.…\-–—\s]*$/ },
+]
+
+/**
+ * Does this one field read as a placeholder? Returns the pattern's name.
+ *
+ * Matched against a **whole normalised field**, never a substring, so a real
+ * finding that happens to contain one of these words survives: "why the price
+ * is TBD until you have seen the job" is research, and `tbd` alone in a
+ * format's name is not. The patterns are ours, so naming the one that matched
+ * in a log leaks nothing about the client or the model's output.
+ */
+function placeholderIn(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const normalised = value.trim().toLowerCase()
+  if (normalised === '') return null
+  return PLACEHOLDER_PATTERNS.find((pattern) => pattern.test.test(normalised))?.name ?? null
+}
+
+/** What the review saw, in numbers. Safe to log: no model text, no secrets. */
+export interface ReportCounts {
+  readonly formats: number
+  readonly hooks: number
+  readonly topics: number
+  readonly lengths: number
+  readonly postingPatterns: number
+  /** How many example rows the model offered, before any were dropped. */
+  readonly examplesOffered: number
+  /** How many survived `parseExample` — a link we can store and show. */
+  readonly examplesKept: number
+  readonly examplesDropped: number
+  readonly sources: number
+  /** How many individual fields read as placeholder text. */
+  readonly placeholderFields: number
+}
+
+export type ReportRejection =
+  | { readonly rule: 'not-an-object' }
+  | { readonly rule: 'placeholder-text'; readonly patterns: readonly string[] }
+  | { readonly rule: 'nothing-substantive' }
+
+export type ReportReview =
+  | {
+      readonly status: 'ok'
+      readonly report: ParsedReport
+      /** One honest line when the evidence is thin, otherwise `null`. */
+      readonly caveat: string | null
+      readonly counts: ReportCounts
+    }
+  | {
+      readonly status: 'rejected'
+      readonly rejection: ReportRejection
+      readonly counts: ReportCounts
+    }
+
+const EMPTY_COUNTS: ReportCounts = {
+  formats: 0,
+  hooks: 0,
+  topics: 0,
+  lengths: 0,
+  postingPatterns: 0,
+  examplesOffered: 0,
+  examplesKept: 0,
+  examplesDropped: 0,
+  sources: 0,
+  placeholderFields: 0,
+}
+
+/**
+ * The line a client reads when the open web held few public posts.
+ *
+ * Said once, at the top, rather than as a badge on every row — D121's lesson
+ * that a caveat repeated twenty times trains the reader to skip it.
+ */
+export const THIN_EVIDENCE_CAVEAT =
+  'We found no public post examples we could link to for this niche, so everything below comes from published guidance rather than from posts we measured. It is a starting point, not evidence.'
+
+/**
+ * The caveat for a report holding this many linkable examples.
+ *
+ * **Derived rather than stored, deliberately.** A report is persisted into
+ * separate columns (`top_formats`, `top_hooks`, … and a `trends` row per
+ * example) rather than one `findings` blob, so a caveat field would need a
+ * migration to survive a round trip — and it would then be a second copy of a
+ * fact the row already states by having no examples under it.
+ *
+ * One function, called by the writer and by the reader, so the sentence on a
+ * fresh report and the sentence on a re-read one cannot drift apart. The
+ * reader's count comes from `trends` rows that still parse today, which means
+ * a report whose examples have all become unreadable says the honest thing:
+ * we have no linkable evidence to show you.
+ */
+export function evidenceCaveatFor(exampleCount: number): string | null {
+  return exampleCount === 0 ? THIN_EVIDENCE_CAVEAT : null
+}
+
+/** Every claim re-tagged as guidance. */
+function asGuidance(claims: readonly Claim[]): readonly Claim[] {
+  return claims.map((claim) =>
+    claim.basis === 'guidance' ? claim : { ...claim, basis: 'guidance' as const },
+  )
+}
+
+/**
+ * Review whatever the model returned: a report, or a named reason it is not.
+ *
+ * Replaces a function that returned `ParsedReport | null`. That boolean was
+ * the first bug in the first live production failure — 829 seconds and 41
+ * searches produced "The scan did not come back with a usable report", which
+ * cannot distinguish a thin niche from a placeholder reply from a bad schema
+ * field. Every path out of here now carries a rule name and a set of counts,
+ * and both are safe to print: counts are integers and the pattern names are
+ * ours.
+ *
+ * ## Three rules, in order
+ *
+ * 1. **Not an object.** Nothing to read.
+ * 2. **Placeholder text.** The failure the D123 addendum was written for: a
+ *    format named `placeholder`, every field a well-formed string, no research
+ *    anywhere. Rejected whatever else is present.
+ * 3. **Nothing substantive.** No formats, no usable examples, and almost
+ *    nothing else. An empty answer rather than a wrong one.
+ *
+ * ## What is deliberately no longer a rule
+ *
+ * **"No examples" was an automatic rejection and is not any more.** The D123
+ * addendum made it one after a placeholder report slipped through, and it
+ * caught the wrong thing as well as the right one: a real niche whose
+ * practitioners post little that is publicly indexable would fail outright,
+ * with nothing shown and nothing explained. Thin web visibility is a finding
+ * about the niche, not a failure of the scan.
+ *
+ * So a thin report ships, with `THIN_EVIDENCE_CAVEAT` and with **every claim
+ * re-tagged `guidance`** — a `posts` tag on a report containing no posts is a
+ * claim about measurement we did not do (D121). Placeholder detection now
+ * carries the weight the examples rule was carrying, which is the right place
+ * for it: it tests whether the model answered, not whether the web is rich.
+ */
+export function reviewReport(value: unknown): ReportReview {
+  if (typeof value !== 'object' || value === null) {
+    return { status: 'rejected', rejection: { rule: 'not-an-object' }, counts: EMPTY_COUNTS }
+  }
   const root = value as Record<string, unknown>
 
   const rawFormats = root.topFormats ?? root.top_formats
@@ -495,39 +651,87 @@ export function parseReport(value: unknown): ParsedReport | null {
     .map((entry) => entry.dropped)
     .filter((entry): entry is string => entry !== null)
 
-  /*
-   * **No examples, no report.** Not "an empty report" — no report at all.
-   *
-   * The rule used to be `no formats AND no examples`, and a live run walked
-   * straight through it: 297 seconds, 22 searches, and then a single format
-   * named `placeholder` with `whyItWorks: "placeholder"`, no hooks and no
-   * examples. Every field was a well-formed string, so the parser kept it, the
-   * job reported success, and the client would have opened a report that had
-   * researched their niche and found a placeholder.
-   *
-   * Examples are what makes a report evidence rather than opinion (`12 §1`:
-   * links, a source note per row). A set of formats with nothing underneath
-   * them is the shape of a model answering the schema instead of the question,
-   * and the honest outcome is the failure path — which already says "the model
-   * returned nothing that parsed as a report" and leaves the previous report
-   * standing.
-   */
-  if (examples.length === 0) return null
+  const topHooks = parseClaims(root.topHooks ?? root.top_hooks, 10)
+  const topics = parseClaims(root.topics, 12)
+  const postingPatterns = parseClaims(root.postingPatterns ?? root.posting_patterns, 8)
+  const sourcesUsed = parseSources(root.sourcesUsed ?? root.sources_used)
+
+  // Every field a human would read, flattened once, so the placeholder check
+  // and the substance check look at the same thing.
+  const writtenFields: readonly unknown[] = [
+    ...topFormats.flatMap((format) => [
+      format.name,
+      format.whyItWorks,
+      format.fitReason,
+      ...format.beats,
+    ]),
+    ...[...topHooks, ...topics, ...postingPatterns].map((claim) => claim.text),
+    ...lengths.map((length) => length.note),
+    ...examples.map((example) => example.whyItWorks),
+  ]
+
+  const matched = writtenFields.map(placeholderIn).filter((name): name is string => name !== null)
+
+  const counts: ReportCounts = {
+    formats: topFormats.length,
+    hooks: topHooks.length,
+    topics: topics.length,
+    lengths: lengths.length,
+    postingPatterns: postingPatterns.length,
+    examplesOffered: rawExamples.length,
+    examplesKept: examples.length,
+    examplesDropped: droppedExamples.length,
+    sources: sourcesUsed.length,
+    placeholderFields: matched.length,
+  }
+
+  if (matched.length > 0) {
+    return {
+      status: 'rejected',
+      rejection: { rule: 'placeholder-text', patterns: [...new Set(matched)] },
+      counts,
+    }
+  }
+
+  // Substance is "did the research produce anything at all", not "is it
+  // complete". A report missing its posting patterns is still a report.
+  const substance =
+    counts.formats +
+    counts.hooks +
+    counts.topics +
+    counts.lengths +
+    counts.sources +
+    counts.examplesKept
+
+  if (counts.formats === 0 && counts.examplesKept === 0 && substance < 4) {
+    return { status: 'rejected', rejection: { rule: 'nothing-substantive' }, counts }
+  }
+
+  const thin = examples.length === 0
+  const caveat = evidenceCaveatFor(examples.length)
 
   return {
-    droppedExamples,
-    findings: {
-      topFormats,
-      topHooks: parseClaims(root.topHooks ?? root.top_hooks, 10),
-      topics: parseClaims(root.topics, 12),
-      lengths,
-      postingPatterns: parseClaims(root.postingPatterns ?? root.posting_patterns, 8),
-      examples,
-      sourcesUsed: parseSources(root.sourcesUsed ?? root.sources_used),
-      // The scan never writes these: the script agent does, after the report
-      // exists and from what is in it. Parsed here so a stored report round-
-      // trips through the same function that validated it.
-      firstVideos: parseVideoIdeas(root.firstVideos ?? root.first_videos),
+    status: 'ok',
+    caveat,
+    counts,
+    report: {
+      droppedExamples,
+      findings: {
+        topFormats,
+        topHooks: thin ? asGuidance(topHooks) : topHooks,
+        topics: thin ? asGuidance(topics) : topics,
+        lengths: thin
+          ? lengths.map((length) => ({ ...length, basis: 'guidance' as const }))
+          : lengths,
+        postingPatterns: thin ? asGuidance(postingPatterns) : postingPatterns,
+        examples,
+        sourcesUsed,
+        evidenceCaveat: caveat,
+        // The scan never writes these: the script agent does, after the report
+        // exists and from what is in it. Parsed here so a stored report round-
+        // trips through the same function that validated it.
+        firstVideos: parseVideoIdeas(root.firstVideos ?? root.first_videos),
+      },
     },
   }
 }

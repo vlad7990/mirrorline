@@ -50,6 +50,7 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
+import { JOB_LEASE_SECONDS } from '../../../apps/web/lib/jobs/types'
 import { runNicheScan } from '../../../apps/web/lib/niche-scan/scan'
 
 /** Which kinds this worker will claim. `render-cuts` joins the list with B5. */
@@ -58,12 +59,19 @@ const CLAIMED_KINDS = ['niche-scan'] as const
 /**
  * Fifteen minutes, matching `claim_job`'s default.
  *
- * Comfortably longer than the slowest scan observed (six minutes), because the
- * failure mode of a short lease is the expensive one: a second worker decides
- * the first is dead, claims the same job, and bills a second Sonnet call with
- * 28 web searches for a report already being written.
+ * The failure mode of a short lease is the expensive one: a second worker
+ * decides the first is dead, claims the same job, and bills a second Sonnet
+ * research run for a report already being written.
+ *
+ * **It used to say "comfortably longer than the slowest scan observed (six
+ * minutes)", and the first production scan made that false** — one leg, 829
+ * seconds, 92% of this lease, with the script agent still to come. The number
+ * was never the problem; the absence of anything on the other side of the
+ * inequality was. It now lives in `apps/web/lib/jobs/types.ts` so that
+ * `budget.test.ts` can add the agents' budgets up and assert they fit inside
+ * it with margin.
  */
-const LEASE_SECONDS = 900
+const LEASE_SECONDS = JOB_LEASE_SECONDS
 
 /** How long to wait when there was nothing to do. */
 const IDLE_POLL_MS = 5_000

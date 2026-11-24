@@ -61,6 +61,21 @@ export const SCRIPT_EFFORT = 'medium' as const
  */
 export const SCRIPT_MAX_REQUEST_USD = 0.5
 
+/**
+ * This call's share of the job's wall clock.
+ *
+ * It had **no timeout at all**, which made it a second unbounded leg inside
+ * the same 900-second lease the scan had already spent 829 seconds of. One
+ * call, no searches, 6k of output: two minutes is generous, and the point is
+ * that the number exists and is added up in `budget.test.ts`.
+ *
+ * Unlike the scan's budget this one can be a plain request timeout, because
+ * the call is **not** streaming — the SDK's timeout bounds a whole
+ * non-streaming request, which is exactly what it does not do for a stream
+ * (see `SCAN_REQUEST_TIMEOUT_MS`).
+ */
+export const SCRIPT_TIME_BUDGET_MS = 2 * 60 * 1000
+
 /** How many formats to write from. Three ideas, three formats, no repeats. */
 const FORMATS_USED = 3
 
@@ -336,7 +351,11 @@ export async function writeFirstVideos(request: FirstVideosRequest): Promise<Fir
       },
       system: [{ type: 'text', text: SCRIPT_SYSTEM, cache_control: { type: 'ephemeral' } }],
       messages: [firstTurn],
-    })
+    },
+    // The lease's other half. Without this the SDK scales its own timeout *up*
+    // with `max_tokens`, so a wedged request could sit open past the job's
+    // lease and let a second worker claim the same job.
+    { timeout: SCRIPT_TIME_BUDGET_MS })
   } catch (error) {
     console.error('[first-videos] the call failed:', describe(error))
     await recordRun(supabase, {
