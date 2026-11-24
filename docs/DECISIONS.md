@@ -9455,3 +9455,119 @@ reason, which is strictly better than 829 seconds of silence but is not the
 same as succeeding. The number to watch is how often `stopped by the searches
 budget` appears; if it is common, the ceiling moves with a measurement beside
 it rather than by feel.
+
+## D130 — the approval is a label, because the free-text ref box was an accident waiting to be typed
+
+**24 November 2026, Vlad's decision.** A migration reaches production by Vlad
+adding the label **`migrate-production`** to the pull request. The workflow
+`migrate-on-label.yml` does everything after that: gate, apply, verify, merge,
+comment. **Amends D104** (the procedure) and **D114** (what "Vlad approves a
+migration" means in practice). The order D104 chose — schema first, then code —
+is unchanged and is the reason this works at all.
+
+### What went wrong with the old interface
+
+D104's procedure was three manual steps: Actions → *Migrate production* → *Run
+workflow*, with `ref` set to the PR's branch; confirm green; merge. Every step
+was correct and the middle one asked a human to retype a value.
+
+On 24 November the instruction I gave for it was:
+
+```
+gh workflow run migrate-production.yml --ref feat/worker-heartbeat
+```
+
+**That is wrong in the worst available way.** `--ref` selects the branch the
+*workflow file* comes from. The tree that gets migrated comes from the `ref`
+**input**, which has `default: main` — so that command would have migrated
+`main`, found nothing to apply, gone green, and displayed the branch name in
+every summary view. The correct CLI form is `-f ref=feat/worker-heartbeat`.
+
+The sharpest part: `migrate-production.yml`'s own header already warns about
+exactly this confusion, under the heading "How to read a run, because one field
+lies about what was migrated" — six screens above the input that causes it. A
+warning that precise, ignored that completely, is not a knowledge problem. It is
+an interface problem, and the fix belongs in the interface.
+
+So the ref stops being typed. **A label is already attached to the thing it
+refers to**; there is nothing to get wrong.
+
+### The gate, and why each condition is there
+
+1. **The label was added by `vlad7990`.** D114 reserves a migration merge for
+   Vlad; the label now *is* that decision, so it has to carry the same
+   authority. Without an actor check, anyone who can label could migrate — and
+   that includes me.
+2. **The pull request is from this repository.** A fork cannot reach it. Checked
+   explicitly rather than left to secret-masking rules, because this job holds
+   the production database password.
+3. **`verify`, `pipeline` and `e2e` are green on the exact head SHA.** The three
+   are the `main` ruleset's required contexts, asserted **by name** so a renamed
+   or never-run check is a refusal rather than a silent absence. Anything else
+   that outright failed also stops it.
+4. **The PR is open, not a draft, and `MERGEABLE`.** Migrating a PR that cannot
+   merge would leave production's schema ahead of `main` with nothing to catch
+   up.
+5. **The PR actually adds a migration.** A labelled PR with none is a mistake,
+   and merging it this way would bypass the ordinary route.
+
+### `pull_request_target`, which is the safe choice here and not the dangerous one
+
+It has an earned bad reputation: base-repository secrets, and a workflow that
+builds PR code hands them to a stranger. It is still right here, because the
+alternative is worse. Under `pull_request` the workflow definition comes from
+the pull request — **a PR could edit the gate it has to pass.** Under
+`pull_request_target` the definition always comes from `main`.
+
+The usual danger is closed from the other side: the actor and fork checks above,
+plus **no dependency install**. Both gate scripts import only `node:fs` and
+`node:path`, so they run under bare `node` and the PR's lockfile executes
+nothing. `production-schema-check.yml` set that precedent and it is load-bearing
+here.
+
+What the job does unavoidably run from the pull request is its SQL, against
+production. That is the point of it, and the additive-only gate is what bounds
+it.
+
+### Verify before merge, not after
+
+`migration-drift.mjs` — the same script `production-schema-check.yml` uses, with
+its 15 tests and its "no rows parsed is a failure" rule — runs against the
+checked-out tree after the apply. Only if production holds every migration in
+that tree does the merge happen. A merge conditional on a verification is the
+part the manual procedure could not express; it relied on a human reading a log.
+
+### The failure comment names which of two states production is in
+
+Any failure: no merge, a comment with the reason, label removed. The comment
+distinguishes **failed before applying** (nothing happened; fix and label again)
+from **failed after applying** (production's schema is ahead of `main` with the
+PR still open — D104's documented intermediate state, not an emergency, but it
+has to be said or the next person re-labels and wonders why `db push` has
+nothing to do).
+
+`applied` is set **before** the push rather than after, deliberately: a push that
+dies half-way may still have moved the schema, and a flag set on success is the
+one that would lie about it.
+
+### What is kept
+
+`migrate-production.yml` stays, as the **emergency** route: migrating `main`
+after a merge that skipped the label, re-running an apply with no PR open, or
+recovery when the normal path is itself broken. Both workflows share
+`concurrency: migrate-production` — the group name is repository-wide, so two
+`db push` runs cannot interleave against one database.
+
+### The honest limit
+
+**This has not run.** `pull_request_target` reads its definition from the base
+branch, so the workflow does not exist until this PR is on `main` — which means
+its first real execution is also its first test. What *was* verified: the YAML
+parses, every `run` block passes `bash -n`, and each guard condition was
+dry-run by hand against PR #31's live data (head `ddb71d6`, three required
+checks `success`, `mergeable: MERGEABLE`, one migration detected). The merge step
+is the one with residual risk — the `main` ruleset carries
+`require_extra_approval_for_unattributed_changes`, and whether that accepts a
+merge commit created by `GITHUB_TOKEN` is not something a dry run can answer. If
+it refuses, the failure path reports it, the migrations are already applied, and
+Vlad pressing Merge is the fallback — which is D104's procedure exactly.

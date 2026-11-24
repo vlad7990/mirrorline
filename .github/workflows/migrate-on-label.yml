@@ -1,0 +1,434 @@
+# Vlad's label is the approval: migrate production, verify, merge (D130).
+#
+# ==============================================================================
+# What this replaces
+# ==============================================================================
+#
+# D104's order — migrate the PR's branch, confirm it went green, then merge —
+# is right and stays right. What was wrong with it was the **interface**: three
+# manual steps, one of them a free-text `ref` box, with the correct value typed
+# from memory. It produced exactly the failure you would predict. On 24 November
+# the instruction given was `gh workflow run migrate-production.yml --ref
+# feat/worker-heartbeat`, which is wrong in the worst available way: `--ref`
+# selects the branch the **workflow file** comes from, while the tree that gets
+# migrated comes from the `ref` **input**, which would have defaulted to `main`.
+# A run that migrated `main` would have reported the branch name in every
+# summary view. `migrate-production.yml`'s own header warns about precisely that
+# confusion, two screens above the input that causes it.
+#
+# So the ref stops being typed. Adding the label `migrate-production` to a pull
+# request names the tree by *being on* it, and this workflow does the rest:
+# gate, apply, verify, merge, comment.
+#
+# ==============================================================================
+# `pull_request_target`, and why that is the safe choice here rather than the
+# dangerous one
+# ==============================================================================
+#
+# `pull_request_target` has a bad reputation, earned: it runs with the base
+# repository's secrets, and a workflow that checks out PR code and *builds* it
+# hands those secrets to a stranger.
+#
+# It is still the right trigger, because the alternative is worse. Under
+# `pull_request`, the workflow definition comes from the pull request itself —
+# so a PR could edit the gate it has to pass. Under `pull_request_target` the
+# definition always comes from `main`. **A pull request cannot weaken its own
+# approval path**, which for a workflow holding the production database password
+# is the property that matters.
+#
+# The usual danger is then closed from the other side, by four rules:
+#
+#   1. **The label must have been added by Vlad.** Not a collaborator, not a
+#      bot, not me.
+#   2. **The pull request must come from this repository.** A fork cannot reach
+#      this at all — checked explicitly rather than left to secret-masking
+#      rules, because this job *does* hold the secrets.
+#   3. **No dependency install, and nothing from the PR is executed.** Both
+#      gate scripts are dependency-free ESM run under bare `node`, so there is
+#      no `pnpm install` and therefore no lifecycle script from the PR's
+#      lockfile. `production-schema-check.yml` set that precedent.
+#   4. **The required checks must already be green** on the exact head SHA, so
+#      the tree has been through `verify`, `pipeline` and `e2e` before it
+#      reaches production's schema.
+#
+# What the job unavoidably *does* run from the pull request is its SQL, against
+# production. That is the point of it, and it is what the four rules above plus
+# the additive-only gate exist to bound.
+#
+# ==============================================================================
+# The order is still migrate-then-merge, and that is still the whole design
+# ==============================================================================
+#
+# D104: production tracks `main`, so a merge deploys the app and nothing deploys
+# the schema. Applying first means the window where production runs old code
+# against a new schema — which is survivable, because `migration-safety` allows
+# only additive migrations — rather than new code against an old schema, which
+# is not.
+#
+# The merge therefore happens **after** a verification step that production
+# actually has every migration in the tree. If that fails, nothing is merged.
+#
+# ==============================================================================
+# The failure path says what state production is in
+# ==============================================================================
+#
+# Any failure: no merge, a comment naming the reason, label removed. The comment
+# distinguishes the two cases that matter, because they call for opposite
+# responses:
+#
+#   - **Failed before applying** — nothing happened; fix and label again.
+#   - **Failed after applying** — production's schema is ahead of `main` and the
+#     pull request is still open. That is the documented intermediate state of
+#     D104 and not an emergency, but it has to be *said*, or the next person
+#     re-labels and wonders why `db push` has nothing to do.
+#
+# ==============================================================================
+# The manual workflow stays
+# ==============================================================================
+#
+# `migrate-production.yml` is kept for the cases this cannot serve: migrating
+# `main` itself after a merge that skipped the label, re-running an apply with
+# no pull request open, or any recovery where the normal path is the thing that
+# is broken. It is the emergency route now, not the documented one.
+#
+# Shared `concurrency: migrate-production` with that workflow, deliberately. The
+# group name is repository-wide, so the two cannot interleave two `db push`
+# runs against one database.
+
+name: Migrate production (label)
+
+on:
+  pull_request_target:
+    types: [labeled]
+
+concurrency:
+  group: migrate-production
+  cancel-in-progress: false
+
+permissions:
+  contents: write # merge the pull request
+  pull-requests: write # comment, and remove the label
+  checks: read # read the required checks on the head SHA
+  statuses: read # and the commit statuses Vercel posts
+
+env:
+  # The label, and the one account allowed to mean it. Both are literals rather
+  # than inputs: a configurable approver is a configurable approval.
+  LABEL: migrate-production
+  APPROVER: vlad7990
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  # ============================================================================
+  # Everything that must be true before production is touched
+  # ============================================================================
+  #
+  # One job, so one place to read. It sets `reason` on the way out whatever
+  # happens, then fails — a refused label must read as a red run rather than a
+  # green one, and the downstream `report` job still gets the sentence.
+  guard:
+    name: May this proceed?
+    # The label's name is checked here rather than inside, so that adding any
+    # other label does nothing at all — no run, no comment, no noise.
+    if: github.event.label.name == 'migrate-production'
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.check.outputs.sha }}
+      pr: ${{ steps.check.outputs.pr }}
+      reason: ${{ steps.check.outputs.reason }}
+    steps:
+      - id: check
+        env:
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          SENDER: ${{ github.event.sender.login }}
+          ENABLED: ${{ vars.PRODUCTION_MIGRATIONS_ENABLED }}
+          HAS_REF: ${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF != '' }}
+          HAS_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD != '' }}
+          HAS_ACCESS_TOKEN: ${{ secrets.SUPABASE_PRODUCTION_ACCESS_TOKEN != '' }}
+        run: |
+          set -euo pipefail
+
+          echo "pr=$PR" >> "$GITHUB_OUTPUT"
+          echo "sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+
+          refuse() {
+            echo "reason=$1" >> "$GITHUB_OUTPUT"
+            echo "::error title=Migration refused::$1"
+            exit 1
+          }
+
+          # ---- 1. Who asked ----------------------------------------------------
+          #
+          # D114 reserves a migration merge for Vlad. The label is that decision
+          # now, so the label has to carry the same authority — and an actor
+          # check is the only thing that gives it one.
+          if [ "$SENDER" != "$APPROVER" ]; then
+            refuse "The \`$LABEL\` label was added by @$SENDER. Only @$APPROVER's label approves a production migration (D114, D130)."
+          fi
+
+          # ---- 2. Where the code is from ---------------------------------------
+          if [ "$HEAD_REPO" != "$REPO" ]; then
+            refuse "This pull request is from \`$HEAD_REPO\`, not \`$REPO\`. A fork cannot migrate production."
+          fi
+
+          # ---- 3. Is the gate even configured ----------------------------------
+          #
+          # Enabled-and-half-configured is the state worth failing on: it looks
+          # armed and is not. The same reasoning, and the same message, as
+          # `migrate-production.yml`'s preflight.
+          if [ "$ENABLED" != "true" ]; then
+            refuse "Production migrations are not enabled. Set the repository variable \`PRODUCTION_MIGRATIONS_ENABLED=true\` and add the three \`SUPABASE_PRODUCTION_*\` secrets (D93, D104)."
+          fi
+
+          missing=""
+          [ "$HAS_ACCESS_TOKEN" = "true" ] || missing="$missing SUPABASE_PRODUCTION_ACCESS_TOKEN"
+          [ "$HAS_REF" = "true" ] || missing="$missing SUPABASE_PRODUCTION_PROJECT_REF"
+          [ "$HAS_PASSWORD" = "true" ] || missing="$missing SUPABASE_PRODUCTION_DB_PASSWORD"
+          if [ -n "$missing" ]; then
+            refuse "\`PRODUCTION_MIGRATIONS_ENABLED\` is true but these secrets are missing:$missing"
+          fi
+
+          # ---- 4. Is the pull request in a state that can be merged -------------
+          state=$(gh pr view "$PR" --repo "$REPO" --json state,isDraft,mergeable,mergeStateStatus,baseRefOid)
+          echo "$state"
+
+          [ "$(jq -r .state <<<"$state")" = "OPEN" ] || refuse "This pull request is not open."
+          [ "$(jq -r .isDraft <<<"$state")" = "false" ] || refuse "This pull request is a draft."
+
+          mergeable=$(jq -r .mergeable <<<"$state")
+          if [ "$mergeable" != "MERGEABLE" ]; then
+            refuse "GitHub reports this pull request as \`$mergeable\` — it cannot be merged as it stands, so migrating would leave production ahead of \`main\` with nothing to merge. Rebase it and label again."
+          fi
+
+          # ---- 5. Are the required checks green, on this exact SHA --------------
+          #
+          # The three names are the `main` ruleset's required contexts. Hardcoded
+          # rather than read from the ruleset API, which needs admin scope the
+          # job token does not have — and asserted *by name*, so a check that
+          # was renamed or never ran is a refusal rather than a silent absence.
+          runs=$(gh api "repos/$REPO/commits/$HEAD_SHA/check-runs?per_page=100" \
+            --jq '.check_runs[] | "\(.name)|\(.status)|\(.conclusion // "none")"')
+          echo "$runs"
+
+          for required in verify pipeline e2e; do
+            line=$(grep -m1 "^$required|" <<<"$runs" || true)
+            [ -n "$line" ] || refuse "Required check \`$required\` has not run on \`${HEAD_SHA:0:9}\`."
+            conclusion=${line##*|}
+            [ "$conclusion" = "success" ] || refuse "Required check \`$required\` is \`$conclusion\` on \`${HEAD_SHA:0:9}\`."
+          done
+
+          # Anything else that outright failed is also a stop. Not required by
+          # the ruleset, and a production migration is not the moment to be
+          # relaxed about a red tick somebody added for a reason.
+          bad=$(grep -E "\|(failure|timed_out|cancelled|action_required)$" <<<"$runs" | cut -d'|' -f1 | paste -sd' ' - || true)
+          [ -z "$bad" ] || refuse "These checks are not green on \`${HEAD_SHA:0:9}\`: $bad"
+
+          # Vercel reports as a commit *status* rather than a check run. Only a
+          # hard `failure` blocks: `pending` is a preview still building, which
+          # has nothing to do with the schema.
+          status=$(gh api "repos/$REPO/commits/$HEAD_SHA/status" --jq '.state')
+          echo "combined status: $status"
+          [ "$status" != "failure" ] || refuse "The combined commit status on \`${HEAD_SHA:0:9}\` is \`failure\`."
+
+          # ---- 6. Is there a migration to apply --------------------------------
+          #
+          # A labelled pull request with no migration is a mistake, and merging
+          # it through this path would skip the ordinary route. Said plainly
+          # rather than applied as a no-op and merged.
+          base=$(jq -r .baseRefOid <<<"$state")
+          added=$(gh api "repos/$REPO/compare/$base...$HEAD_SHA" \
+            --jq '[.files[]? | select(.filename | startswith("supabase/migrations/")) | .filename] | join(" ")')
+          echo "migrations in this PR: ${added:-(none)}"
+          [ -n "$added" ] || refuse "This pull request adds no migration. Use the ordinary route — \`gh pr merge --auto --merge\` — rather than the migration label."
+
+          {
+            echo "### Migrating production from a label"
+            echo
+            echo "- pull request: #$PR"
+            echo "- head: \`$HEAD_SHA\`"
+            echo "- approved by: @$SENDER"
+            echo "- migrations: \`$added\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ============================================================================
+  # Apply, from the head SHA and nothing else
+  # ============================================================================
+  migrate:
+    name: Apply migrations
+    needs: guard
+    runs-on: ubuntu-latest
+    outputs:
+      applied: ${{ steps.apply.outputs.applied }}
+      latest: ${{ steps.verify.outputs.latest }}
+    env:
+      # The left-hand names are what the CLI reads; the right-hand ones are the
+      # secrets, both scoped to production (D94). `link` talks to the Management
+      # API and needs the token; `db push` talks to Postgres and needs the
+      # password. They are not interchangeable.
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_PRODUCTION_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD }}
+    steps:
+      # The exact commit the guard checked. Not a branch name, which could have
+      # moved between the label and this step, and not the merge ref, which is a
+      # commit that exists nowhere else.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.guard.outputs.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # Expand/contract, re-checked on the tree about to reach production rather
+      # than trusted from the pull request's own CI run. No install: the script
+      # imports only `node:fs` and `node:path`, which is what keeps a PR's
+      # lockfile from running anything here.
+      - name: Migrations are additive
+        run: node scripts/migration-safety.mjs
+
+      - uses: supabase/setup-cli@v3
+        with:
+          version: latest
+
+      - name: Link
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF }}"
+
+      - name: What production has now
+        run: supabase migration list --remote
+
+      # The dry run names exactly what the apply will do, in the log, before
+      # anything is written — so a surprise is visible in the step above the one
+      # that acts on it.
+      - name: Dry run
+        run: supabase db push --remote --dry-run
+
+      # `--yes` is passed rather than relied upon. D94's near-miss was learning
+      # that a closed stdin answers **Y** to `[Y/n]`, so omitting the flag in CI
+      # is indistinguishable from passing it.
+      #
+      # `applied` is set **before** the push, not after: if the push dies
+      # half-way the schema may still have moved, and the failure comment has to
+      # say so. A flag set on success would be the one that lies.
+      - id: apply
+        name: Apply
+        run: |
+          echo "applied=true" >> "$GITHUB_OUTPUT"
+          supabase db push --remote --yes
+
+      # Does production now have every migration in this tree? This is the
+      # question the merge is conditional on, and `migration-drift.mjs` is the
+      # existing answer to it — 15 tests, and "no rows parsed" is a failure
+      # there rather than a pass, because a check that cannot read the schema
+      # cannot vouch for it.
+      - id: verify
+        name: Production has every migration in this pull request
+        run: |
+          set -euo pipefail
+          supabase migration list --remote | tee "$RUNNER_TEMP/migration-list.txt"
+          node scripts/migration-drift.mjs < "$RUNNER_TEMP/migration-list.txt"
+
+          # The newest version production holds, for the comment. Taken from the
+          # table that was just printed.
+          latest=$(grep -oE '[0-9]{14}' "$RUNNER_TEMP/migration-list.txt" | sort | tail -1)
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+
+  # ============================================================================
+  # Only now is the pull request allowed to merge
+  # ============================================================================
+  merge:
+    name: Merge the pull request
+    needs: [guard, migrate]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge, and say what happened
+        env:
+          REPO: ${{ github.repository }}
+          PR: ${{ needs.guard.outputs.pr }}
+          SHA: ${{ needs.guard.outputs.sha }}
+          LATEST: ${{ needs.migrate.outputs.latest }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          # A merge commit, because that is the only method the `main` ruleset
+          # allows — and `--match-head-commit` so a push that landed between the
+          # guard and here cannot be merged unmigrated.
+          gh pr merge "$PR" --repo "$REPO" --merge --match-head-commit "$SHA"
+
+          # `printf` one line at a time rather than a quoted block, because a
+          # YAML block scalar keeps its indentation and four leading spaces turn
+          # a markdown paragraph into a code block.
+          {
+            printf '%s\n' "**Production migrated, then merged.** ✅" ""
+            printf '%s\n' "- migrations applied from \`${SHA:0:9}\` — the head this pull request was labelled on"
+            printf '%s\n' "- production's latest applied version: \`$LATEST\`"
+            printf '%s\n' "- [run log]($RUN)" ""
+            printf '%s\n' "The schema went first and the code followed, which is D104's order. \`Production schema check\` runs on this merge and is the independent confirmation."
+          } > "$RUNNER_TEMP/merged.md"
+
+          gh pr comment "$PR" --repo "$REPO" --body-file "$RUNNER_TEMP/merged.md"
+
+  # ============================================================================
+  # Anything went wrong: no merge, say why, take the label off
+  # ============================================================================
+  #
+  # `always()`, and keyed on each job's result rather than on `failure()`, so a
+  # *skipped* `migrate` — which is what a refused guard produces — is reported
+  # too. A silent skip would look exactly like a label nobody noticed.
+  report:
+    name: Report a refusal
+    needs: [guard, migrate, merge]
+    if: |
+      always() && github.event.label.name == 'migrate-production' &&
+      (needs.guard.result != 'success' ||
+       needs.migrate.result != 'success' ||
+       needs.merge.result != 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment, and remove the label
+        env:
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          REASON: ${{ needs.guard.outputs.reason }}
+          GUARD: ${{ needs.guard.result }}
+          MIGRATED: ${{ needs.migrate.result }}
+          MERGED: ${{ needs.merge.result }}
+          APPLIED: ${{ needs.migrate.outputs.applied }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          # The two states that call for opposite responses. `applied` is set
+          # before the push rather than after, so "may have been applied" is the
+          # honest wording for a push that died half-way.
+          if [ "$APPLIED" = "true" ]; then
+            schema="⚠️ **The migrations were applied, or may have been.** Production's schema is at or ahead of \`main\` while this pull request is still open — the documented intermediate state of D104, not an emergency. Read the run log before labelling again: a second apply of the same migration has nothing to do, but a *different* migration added since would be a new change."
+          else
+            schema="Nothing was applied. Production's schema is untouched."
+          fi
+
+          if [ -n "$REASON" ]; then
+            why="$REASON"
+          else
+            why="The \`guard\` job was \`$GUARD\`, \`migrate\` was \`$MIGRATED\`, \`merge\` was \`$MERGED\`. The run log has the step that failed."
+          fi
+
+          {
+            printf '%s\n' "**Not migrated, and not merged.**" ""
+            printf '%s\n' "$why" ""
+            printf '%s\n' "$schema" ""
+            printf '%s\n' "- head: \`${SHA:0:9}\`"
+            printf '%s\n' "- [run log]($RUN)" ""
+            printf '%s\n' "The \`$LABEL\` label has been removed. Add it again once the reason above is dealt with."
+          } > "$RUNNER_TEMP/refused.md"
+
+          gh pr comment "$PR" --repo "$REPO" --body-file "$RUNNER_TEMP/refused.md"
+
+          # Last, so that a failure to comment does not also lose the label and
+          # with it the only trace that anything was attempted.
+          gh pr edit "$PR" --repo "$REPO" --remove-label "$LABEL"
