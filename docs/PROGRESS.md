@@ -1,5 +1,85 @@
 # Progress — morning handoff
 
+## Handoff — 24 November 2026 (P0 closed: the scan is bounded, and its failures say why)
+
+### What merged
+
+| PR | What |
+|---|---|
+| **#23** | CI spend work: concurrency, the docs-only gate, the Playwright cache measurement (D124) |
+| **#24** | The Railway worker on the record (D125); three stale asks closed |
+| **#25** | The fix for #23's gate, which failed on its first run (D124 addendum) |
+| **#26** | The V3 Originality Gate (D126) |
+| **#27 / #28** | The docs-only gate measured: **19–27 → 5 billable minutes** |
+| **#29** | **P0: the scan's budgets and its diagnosable rejections (D127)** |
+
+### The P0 numbers
+
+Job `51401914` — "independent dog trainers", profile filled in — ran 829
+seconds and 41 searches and failed with one sentence that could not tell a
+placeholder reply from a thin niche from a bad schema field.
+
+| | production, before | preview, after |
+|---|---|---|
+| wall clock | 829s | **292s** |
+| searches | 41 | **22** |
+| outcome | rejected, undiagnosable | **complete report** |
+
+Five formats, three hooks, twelve sources, **seven real post examples with
+live links**, three first videos, $0.79. Shot:
+`docs/progress/d127-scan-repro.png`. Four causes and the reasoning: **D127**.
+
+### Watch item: 22 of 24 searches
+
+**Two searches of headroom.** The budgets are bounds, not a cure — a niche
+that genuinely wants 30 searches will now stop at 24 and fail. That failure is
+six minutes long, inside the lease, and carries a precise reason, which is
+strictly better than 829 seconds of silence but **is not the same as
+succeeding**.
+
+What to look for in Railway: `stopped by the searches budget`. If it is rare,
+leave it. If it is common the ceiling moves **with a measurement written down
+beside it** rather than by feel — and raising it means raising
+`SCAN_SEARCH_PROJECTION` too, because `budget.test.ts` requires the enforced
+ceiling to equal what the spend cap charges for.
+
+That same test is what stops the wall-clock budget drifting: scan plus script
+plus a third of the lease in margin has to fit inside `JOB_LEASE_SECONDS`.
+
+### Re-running on production
+
+**After #29 merges and Railway redeploys** — it redeploys on merge to `main`
+(D125, from Vlad; I have never seen that dashboard, so I can say the redeploy
+is *due*, not that it happened). Same niche is the fair test. Expect about
+five minutes and ~22 searches. The log now prints `report accepted:` with its
+counts, or `report rejected: rule=…` with them.
+
+### Queued, in order
+
+1. **Worker heartbeat / liveness.** A crash-looping Railway worker looks
+   exactly like a quiet afternoon with no scans queued, and since D114 a merge
+   of mine replaces that process. The first thing worth an alert, and there is
+   none.
+2. **V3's drafts table and the server-side approve refusal.** `§V3`'s second
+   done-when has nothing to refuse today: no drafts table, no approve action,
+   no compliance column — `scheduled_posts` lists `'approved'` in its status
+   check and grants `authenticated` update on two date columns only, so
+   nothing can set it. The same table carries the attempt count the "blocked
+   twice" rule needs. **This is a migration, so Vlad dispatches it.**
+
+### Two local hazards, both D111's lesson in a new coat
+
+1. **A full local `pnpm test:e2e` overwrote thirteen committed PNGs and a
+   PDF.** Gitignored `*.tmp.spec.ts` files from an earlier session are
+   invisible to `git status` but collected by Playwright's default
+   `testMatch`. Restored; the five specs are out of `e2e/`.
+2. **Two of them drive a real scan on the `chromium` project.** Only
+   `playwright.config.ts:219`, which forces `ANTHROPIC_API_KEY: ''` for the
+   app under test, stood between that and a paid call. It held — but that
+   protection is load-bearing rather than belt-and-braces.
+
+`docs/progress/tmp/` holds throwaway shots and can be deleted.
+
 ## P0 — 24 November 2026 (the first production scan failed; four things were wrong behind one sentence)
 
 Job `51401914`, niche "independent dog trainers", profile filled in: **829
