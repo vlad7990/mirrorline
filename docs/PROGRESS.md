@@ -34,6 +34,7 @@ measured **19, 22, 22**. `e2e` is ~70% of every run.
 | #25 run 2 | code | 20 | |
 | #26 | code | 20 | V3 |
 | #24 | **docs-only** | **27** | the 403 — should have been ~4 |
+| #27 | **docs-only** | **5** | the gate, working |
 
 **A code pull request costs about +1 minute**, which is the `changes` job at
 its one-minute minimum. The 20–25 spread is `e2e`'s own variance (11m23s to
@@ -47,9 +48,13 @@ than quote the projection as a result.**
   since it landed**, so it has saved nothing measurable yet. The baseline it
   will act on is real: four of the last forty PR runs were overtaken
   mid-flight, at 81 billable minutes.
-- **The docs-only skip was broken on its first run** (D124 addendum) and is
-  fixed. **The run carrying this note is its first honest test** — look at
-  whether `verify` skipped its 48-second `Build`.
+- **The docs-only skip was broken on its first run** (D124 addendum), was
+  fixed, and **is now measured**. The run carrying this note went
+  **19–27 → 5 billable minutes**: `e2e` 3 seconds, `pipeline` 5 seconds,
+  `verify` 1m7s with `Build` **skipped** — while lint, typecheck, the unit
+  tests, the licence gate and migration safety all still ran, which was the
+  point of gating steps rather than jobs. Three green required checks, none
+  missing.
 - **Caching is settled**, because it was a measurement rather than a change:
   pnpm is already cached and installs the workspace in **four seconds**;
   Playwright's browser is deliberately **not** cached, because the download is
