@@ -9134,9 +9134,16 @@ step. PR #24's `verify` took 2m1s with a 48-second build in it, against 2m4s
 for a code change — which is how the failure was spotted at all: the saving
 that was supposed to be obvious was not there.
 
-**This entry is that test.** It changes two files, both documentation, so the
-run carrying it is the gate's first honest measurement, and the figures are in
-the handoff note at the top of `docs/PROGRESS.md`.
+**This entry was that test, and it passed.** Two documentation files, and the
+run carrying them cost **5 billable minutes against 19–27**: `e2e` 3 seconds,
+`pipeline` 5 seconds, `verify` 1m7s with `Build` **skipped** — while lint,
+typecheck, the unit tests, the licence gate and migration safety all still
+ran, which was the point of gating steps rather than jobs. Three required
+checks reported green and none went missing.
+
+So the ledger for D124 is: **concurrency live but still unexercised**, the
+docs-only skip **measured at a 73–81% saving on a documentation change**, and
+caching settled as a measurement rather than a change.
 
 ## D125 — the worker has a home, and it is production
 
