@@ -42,7 +42,7 @@ import { NO_USAGE, type EnvLike, type Usage } from '../copilot/spend'
 import type { FormatFinding, TrendExample } from '../niche-scan/report'
 import type { ComparisonCorpus } from '../originality/gate'
 import { profileBrief, profileFacts, type ClientProfile } from '../workspace/client-profile'
-import { parseVideoIdeas, screenIdeas, type VideoIdea } from './video-idea'
+import { parseVideoIdeas, screenIdeas, type RejectedIdea, type VideoIdea } from './video-idea'
 
 /** `18 §0`: the studio tier. The scan's model, a fraction of the work. */
 export const SCRIPT_MODEL = 'claude-sonnet-5'
@@ -161,9 +161,19 @@ export interface FirstVideosOutcome {
   readonly ideas: readonly VideoIdea[]
   /** Why there are fewer than three, in words, for the log and the report. */
   readonly note: string | null
+  /**
+   * The ideas screening refused, with the verdict each one got (D129).
+   *
+   * Returned rather than only logged, because `writeDrafts` stores them: until
+   * now a refused idea existed as a `console.warn` and a number in `note`, and
+   * V3 wants the block itself visible in the studio with its number and its
+   * limit. A gate whose failures only reach a log is a gate the client is asked
+   * to take on trust.
+   */
+  readonly refused: readonly RejectedIdea[]
 }
 
-const NOTHING: FirstVideosOutcome = { ideas: [], note: null }
+const NOTHING: FirstVideosOutcome = { ideas: [], note: null, refused: [] }
 
 function usageFrom(usage: Anthropic.Usage | null | undefined): Usage {
   if (!usage) return NO_USAGE
@@ -292,6 +302,7 @@ export async function writeFirstVideos(request: FirstVideosRequest): Promise<Fir
     return {
       ideas: [],
       note: 'Add your business details above and the next scan will end with three videos to film.',
+      refused: [],
     }
   }
 
@@ -337,7 +348,7 @@ export async function writeFirstVideos(request: FirstVideosRequest): Promise<Fir
       searches: 0,
       reason: decision.reason,
     })
-    return { ideas: [], note: decision.message }
+    return { ideas: [], note: decision.message, refused: [] }
   }
 
   let response: Anthropic.Message
@@ -412,5 +423,8 @@ export async function writeFirstVideos(request: FirstVideosRequest): Promise<Fir
       kept.length === 0
         ? 'The script agent wrote nothing that passed the originality and fact checks, so nothing was kept.'
         : null,
+    // Every refusal, not just the ones that fitted in the note. `writeDrafts`
+    // turns these into rows the studio can show the gate's numbers on.
+    refused: screened.rejected,
   }
 }

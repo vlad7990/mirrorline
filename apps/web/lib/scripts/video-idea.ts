@@ -86,6 +86,21 @@ export interface VideoIdea {
 export interface RejectedIdea {
   readonly title: string
   readonly reason: string
+  /**
+   * What the gate said, carried on the refusal as well as on the keeper (D129).
+   *
+   * It used to be dropped, and that is what made V3's first done-when true of
+   * the mechanism and false of the screen: a blocked draft never reached the
+   * database, so the studio could render a block perfectly and was never given
+   * one. `write-drafts.ts` stores this, and the client sees the number and the
+   * limit on the draft that failed rather than a count in a log line.
+   *
+   * **It is not always a failing verdict.** The gate runs first, so an idea
+   * refused for an ungrounded fact carries a *passing* originality verdict —
+   * which is why the status a refused draft gets is decided by whether it was
+   * refused, not by reading this field.
+   */
+  readonly originality: OriginalityVerdict | null
 }
 
 export interface ScreenedIdeas {
@@ -247,7 +262,11 @@ export function screenIdeas({ ideas, corpora, facts }: ScreenInput): ScreenedIde
     })
 
     if (!isApprovable(verdict)) {
-      rejected.push({ title: idea.title, reason: verdict.reasons.join(' ') })
+      rejected.push({
+        title: idea.title,
+        reason: verdict.reasons.join(' '),
+        originality: verdict,
+      })
       continue
     }
 
@@ -255,6 +274,11 @@ export function screenIdeas({ ideas, corpora, facts }: ScreenInput): ScreenedIde
       rejected.push({
         title: idea.title,
         reason: `the fact "${idea.fact}" is not in the client's profile`,
+        // The gate passed this one; the fact check did not. Carried anyway, so
+        // the studio can show that the originality half was run and what it
+        // found — a verdict omitted because a *different* rule refused the
+        // draft would read as a check that never happened.
+        originality: verdict,
       })
       continue
     }

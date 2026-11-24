@@ -3,10 +3,13 @@ import { Info } from 'lucide-react'
 import type { Metadata } from 'next'
 
 import { runNicheScanAction, saveClientProfileAction } from '@/app/app/(studio)/trends/actions'
+import { approveDraft } from '@/app/app/(studio)/trends/draft-actions'
 import { ClientProfileForm } from '@/components/trends/client-profile-form'
+import { DraftDecisions } from '@/components/trends/draft-decisions'
 import { NicheReportPanel } from '@/components/trends/niche-report-panel'
 import { RunScanForm } from '@/components/trends/run-scan-form'
 import { ScanProgress } from '@/components/trends/scan-progress'
+import { readReportDrafts } from '@/lib/drafts/read-drafts'
 import { readLatestScanJob } from '@/lib/jobs/read-scan-job'
 import { isJobPending } from '@/lib/jobs/types'
 import { SAMPLE_REPORT } from '@/lib/niche-scan/canned'
@@ -74,6 +77,17 @@ export default async function TrendsPage() {
   const jobRead = await readLatestScanJob()
   const scanJob = jobRead?.job ?? null
   const isScanPending = scanJob !== null && isJobPending(scanJob)
+
+  /*
+   * The drafts this report produced, refused ones included (V3, D129).
+   *
+   * Empty for a sample report and for anything scanned before D129 — there is
+   * no report id to hang them off, and inventing one would be worse than an
+   * absent panel. Null is a failed read and renders as such: a blocked draft
+   * hidden behind "no drafts" is exactly the invisibility `04 §4` forbids.
+   */
+  const reportId = reportResult?.report?.id ?? ''
+  const drafts = reportId === '' ? [] : await readReportDrafts(reportId)
 
   return (
     <div className="flex flex-col gap-6">
@@ -174,6 +188,15 @@ export default async function TrendsPage() {
           scannedAt={reportResult.report?.completedAt ?? reportResult.report?.createdAt}
         />
       )}
+
+      {/*
+        V3 · the gate's decisions, directly under the report that produced
+        them. Below rather than inside `NicheReportPanel`, because that panel
+        is what a client reads and prints, and a list of refusals with an
+        Approve button is what they *act on* — two different jobs, and the
+        panel is already 787 lines against an 800-line ceiling.
+      */}
+      <DraftDecisions drafts={drafts} onApprove={approveDraft} />
 
       {/*
         One empty state, and it is about *us*: nothing has run yet. It sits

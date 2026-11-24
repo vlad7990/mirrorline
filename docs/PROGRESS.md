@@ -129,6 +129,59 @@ counts, or `report rejected: rule=…` with them.
 
 `docs/progress/tmp/` holds throwaway shots and can be deleted.
 
+## D129 — 24 November 2026 (V3's approval is refused by a check constraint, not by code we promise to keep)
+
+**What you can now do** (once the migration lands): see **every** draft a scan
+judged — including the ones the gate refused, which until now existed as a
+`console.warn` and a number in a note — with the gate's percentage, its limit,
+its reasons and the attempt number. Approve is offered only where it can work,
+and **the server refuses it anyway**. Queued item 2 is closed.
+
+### Three layers, bottom one not negotiable
+
+| | what it stops |
+|---|---|
+| `drafts_approved_passed`, a **check constraint** | an approved row without a passing verdict — from *any* role: a member, the action, the worker's service role, a psql prompt |
+| `approve_draft`, `security definer` | a member writing a status directly: `authenticated` has **no update grant at all** on `drafts` |
+| `approveDraft`, the server action | nothing on its own — it carries the sentence to the screen |
+
+Remove any one and the other two still refuse. `04 §Originality Gate` forbids an
+override "from anywhere", and a check constraint is the only mechanism that
+means *anywhere*.
+
+**Terminality is a constraint too:** `attempts` may only be 1 or 2, so a third
+attempt is unrepresentable, and a `blocked` verdict may only sit on a `blocked`
+draft. `drafts.test.ts` reads the migration and asserts the ceiling still equals
+`MAX_ATTEMPTS`.
+
+**A refusal is not an error.** `approve_draft` returns `{ok, reason}` rather than
+raising — the call `jobs.result` made for the spend cap, and the same `18 §6`
+reasoning: painting a working control red teaches the reader to distrust it.
+
+Evidence: **23 new unit tests**, typecheck, lint, build, `migration-safety`.
+
+### Honest limits
+
+1. **Nothing has run against a real `drafts` table** — the migration is
+   unapplied. Until it is, the scan's draft write logs once and swallows, and
+   the panel renders nothing. **No screenshot for the same reason**: with no
+   rows the panel is absent rather than broken.
+2. **The rewrite loop does not exist**, so `attempt` is always 1 and the gate
+   never returns `blocked` today. Every originality failure is a *first* failure
+   — stored as `rejected` with a `rewritten` verdict, visible, not approvable.
+   The terminal state is enforced before anything can reach it.
+3. **No reject action.** Sending a draft back is V6's ops console; adding it
+   here would be a second write path to a table whose point is having one.
+4. The client's own last 90 posts are still an empty corpus (D126) — every row
+   says so in `notComparedAgainst`.
+
+Full reasoning in **D129**.
+
+### Needs you
+
+**Dispatch `Migrate production` on `feat/v3-drafts-approval`** — additive: one
+new table, one new function, no existing table or policy touched.
+
 ## D128 — 24 November 2026 (the worker says it is alive, and silence now means something)
 
 **What you can now do:** open `/api/health/worker` and get a straight answer to

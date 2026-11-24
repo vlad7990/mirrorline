@@ -9687,3 +9687,98 @@ and `/healthz` answers 503.
 That last clause is an ordering constraint, not a detail. **Set the Railway
 healthcheck path only after the migration is applied**, or the first deploy
 after it will fail for a table that does not exist yet.
+
+## D129 — the approval rule is a check constraint, because "no override from anywhere" has to mean anywhere
+
+**24 November 2026.** `BACKEND_PHASE §V3`'s second and third done-whens: "the
+approve action is refused **server-side**, not merely hidden; and 'blocked
+twice' reaches a terminal state rather than looping."
+
+D126 built the gate and showed its verdict, and left both unmet for one reason:
+**there was nothing to approve.** A judged draft lived in
+`niche_reports.first_videos` — a jsonb blob with no identity and no status — and
+only the drafts that *passed* were stored there, because `screenIdeas` dropped
+the rest. So a block existed as a `console.warn` and a count in a note.
+`scheduled_posts` lists `'approved'` in its status check and grants
+`authenticated` update on two date columns, so nothing could set it.
+
+### Three layers, and the bottom one is the only one that is not negotiable
+
+1. **`drafts_approved_passed`**, a check constraint: an approved row must carry
+   a `passed` verdict. **A check constraint applies to every role** — a member,
+   the server action, the worker's service role, somebody at a psql prompt.
+2. **`approve_draft`**, a `security definer` function that checks membership and
+   the verdict and returns a sentence when it refuses. It exists because
+   `authenticated` holds **no update grant at all** on `drafts`, so there is no
+   PostgREST patch that sets a status.
+3. **`approveDraft`**, the server action, which carries the answer to a screen.
+
+Remove any one and the other two still refuse. That is what `04 §Originality
+Gate` is asking for when it forbids an override "from anywhere" — and a policy
+could not do it, because RLS scopes rows by *who is asking* and this rule does
+not depend on who is asking. Application code could not do it either, not
+durably: it holds until somebody adds a second way to approve, which is exactly
+how the predecessor project's gate came to be optional.
+
+### Terminality is also a constraint, and it bites before it can happen
+
+`attempts` may only be 1 or 2, so a third attempt is **unrepresentable** — `04
+§3`'s "two failures mean the recipe is too close to its source to remake", in
+the schema rather than in a counter somebody has to remember to increment. And a
+`blocked` verdict may only sit on a `blocked` draft, so nothing can file a
+blocked draft back into `needs-review` to wait for a kinder reviewer.
+`drafts.test.ts` reads the migration and asserts the ceiling still equals
+`MAX_ATTEMPTS`, because two numbers that must agree deserve an assertion rather
+than a comment.
+
+### The refusal returns rather than raises
+
+`approve_draft` answers `{ ok, status, reason }` instead of raising. The same
+call `jobs.result` made for the spend cap, for the same reason: `18 §6` — "a
+scan the cap refused is not an error, and rendering it as one would teach the
+reader to distrust a control that is working exactly as asked". An exception
+would also reach the client as a PostgREST error body, which is more likely to
+quote the statement it refused.
+
+`{ status: 'refused' }` is therefore its own result in the action, separate from
+`'error'`. A refusal is the gate working; an error is ours.
+
+### A refused draft is now a row, which is the part that was actually missing
+
+`screenIdeas` returns its refusals with the verdict attached, `writeFirstVideos`
+passes them up, and the scan writes **one row per judged draft, kept and refused
+alike**. That is what makes the first done-when true of the *screen* and not
+only of the mechanism: the studio could render a block perfectly and was never
+given one.
+
+One subtlety worth recording, because getting it wrong would quietly repeal
+`§V2`: **the gate runs before the fact check**, so an idea refused for an
+ungrounded fact carries a *passing* originality verdict. Reading the verdict
+alone would make that draft approvable. `statusForDraft` therefore takes whether
+screening refused it, and a refused draft is never `needs-review`.
+
+### What the client sees
+
+`DraftDecisions`, under the report: every draft, its chip, the gate's own
+percentage and limit, its reasons, and the attempt number. The Approve button is
+hidden where it cannot work **and** the server refuses — `§V3` asks for both,
+and they do different jobs. The hidden button spares a client a pointless click;
+the refusal is what makes it true.
+
+### What this does not prove, and what is still owed
+
+- **Nothing has run against a real `drafts` table.** The migration is written
+  and unapplied, so the evidence is 23 unit tests, typecheck, lint and build.
+  Until it is dispatched, the scan's draft write logs a failure and swallows it
+  — deliberately, because a four-minute piece of research must not be lost over
+  bookkeeping — and the panel renders nothing.
+- **The rewrite loop does not exist**, so `attempt` is always 1 and the gate
+  never returns `blocked` today. Every originality failure is a *first* failure:
+  stored as `rejected` with a `rewritten` verdict, visible, and not approvable.
+  The terminal state is enforced before anything can reach it, which is the
+  right order — but "blocked twice" is a rule the pipeline cannot yet exercise.
+- **There is no reject action.** Approve is the decision with a compliance rule
+  attached; sending a draft back is V6's ops console, and inventing it here
+  would be a second write path to a table whose whole point is that it has one.
+- **The client's own last 90 posts are still an empty corpus** (D126). The
+  verdict says so, in `notComparedAgainst`, on every row.
