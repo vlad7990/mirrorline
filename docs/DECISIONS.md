@@ -9352,3 +9352,106 @@ problem in the first second" may write something close to it. `IDEAS_REQUESTED`
 is 4 to keep 3 precisely so the gate can refuse some — but if it refuses too
 many in practice, the `agent_runs` reason already counts them, and that count
 is the evidence to act on rather than a loosened limit.
+
+## D127 — the first production scan failed, and four things were wrong behind one sentence
+
+**24 November 2026.** Job `51401914` — niche "independent dog trainers", client
+profile filled in — ran one leg for **829 seconds** with **41 searches** and
+failed with `The scan did not come back with a usable report.` The
+infrastructure was fine: the claim worked, the model answered. Every problem
+was in the scan.
+
+### 1. The rejection was a boolean
+
+`parseReport` returned `ParsedReport | null`, so a placeholder reply, a thin
+niche and a bad schema field were one outcome with one message. **A failure
+nobody can diagnose from the logs is the first bug**, ahead of whatever caused
+it.
+
+`reviewReport` returns a named rule — `not-an-object`, `placeholder-text`,
+`nothing-substantive` — and eleven counts, logged on every run, pass or fail.
+Safe to print by construction: counts are integers, and the placeholder
+pattern names are our own matcher's rather than the model's text. No prompt,
+no answer, nothing about the client.
+
+### 2. `max_uses` is not a stop
+
+It was already declared at 12. That is *why* 41 is interesting: a run that
+declared 12 made 24 once and 41 this time, so whatever the server-side search
+loop does with the field, it does not stop at it. Trusting it is how a scan
+reaches 41 searches.
+
+The ceiling is enforced in code now, counting `server_tool_use` blocks as they
+stream and aborting at `SCAN_SEARCH_CEILING` — set to the projection the spend
+cap already charges for, which makes that projection true rather than hopeful.
+
+### 3. Nothing bounded the wall clock, and the file already said why
+
+`SCAN_REQUEST_TIMEOUT_MS`'s own comment reads: on a stream it governs the
+**connection**, not the generation. So a steadily-streaming 829-second
+response never tripped a five-minute value, exactly as documented — the
+document was right and the conclusion was never drawn. `SCAN_TIME_BUDGET_MS`
+is six minutes across all legs, enforced by aborting the stream. The script
+agent had **no timeout at all** and now has two minutes.
+
+A budget stop is its own outcome with its own reason, because the next move
+differs: time means the brief is too wide, searches mean the model is grazing.
+Usage comes off the last stream snapshot so an aborted leg is still billed —
+under-reporting is the direction that quietly raises the cap.
+
+### 4. Lease safety was an assumption, and a false one
+
+829s is **92% of the 900-second lease**, with the script agent still to come.
+Overrunning a lease is not a slow job: `claim_job` reclaims expired leases, so
+a second worker claims it and bills a second research run for a report already
+being written. `JOB_LEASE_SECONDS` now lives in `apps/web/lib/jobs/types.ts`,
+the worker imports it, and `budget.test.ts` asserts scan + script + a third of
+the lease in margin fits inside it. The worker's comment calling the lease
+"comfortably longer than the slowest scan observed (six minutes)" was false
+and is corrected.
+
+### And a thin niche is no longer a failure (amends the D123 addendum)
+
+That addendum made "no examples" an automatic rejection after a placeholder
+report slipped through. It caught the wrong thing as well as the right one: a
+real niche whose practitioners post little that is publicly indexable would
+fail outright, with nothing shown and nothing explained.
+
+Placeholder detection carries that weight now — it tests whether the *model*
+answered, which is the actual question, rather than whether the *web* is rich.
+A thin report ships with one honest caveat and **every claim re-tagged
+`guidance`**, because a `posts` tag over a report containing no posts is a
+claim about measurement we did not do (D121). The prompt says the same from
+the other side and is told its research budget, which it never had been.
+
+The caveat is **derived** from one shared function on both the write and the
+read path rather than stored: a report persists into separate columns rather
+than one blob, so storing it would need a migration to hold a second copy of a
+fact the row already states by having no examples under it.
+
+### Reproduced on preview before merging
+
+Same niche, same profile shape, real money:
+
+| | production, before | preview, after |
+|---|---|---|
+| wall clock | 829s | **292s** |
+| searches | 41 | **22** |
+| outcome | rejected, undiagnosable | **complete report** |
+
+Five formats (fit 9/8/9/6/7), three hooks, twelve sources, **seven real post
+examples with live links**, three first videos, $0.79. The report is
+client-specific in the way P1 asks for — one format is argued as "the exact
+shape of a $450 four-session Reactive Dog Intensive", another as letting the
+client "publicly stand for positive reinforcement only without naming or
+showing prong collars or board-and-train", and a fifth is honestly marked
+guidance-level rather than a format found posted. Shot:
+`docs/progress/d127-scan-repro.png`.
+
+**What this does not prove.** 22 searches is close to the 24 ceiling. The
+budgets are bounds, not a cure: a niche that genuinely wants 30 searches will
+now stop at 24 and fail — in six minutes, inside the lease, with a precise
+reason, which is strictly better than 829 seconds of silence but is not the
+same as succeeding. The number to watch is how often `stopped by the searches
+budget` appears; if it is common, the ceiling moves with a measurement beside
+it rather than by feel.

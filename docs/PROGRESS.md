@@ -1,5 +1,67 @@
 # Progress — morning handoff
 
+## P0 — 24 November 2026 (the first production scan failed; four things were wrong behind one sentence)
+
+Job `51401914`, niche "independent dog trainers", profile filled in: **829
+seconds, 41 searches**, and `The scan did not come back with a usable report.`
+Infrastructure was fine. Every problem was in the scan, and the first one was
+that **the log could not tell you which of the others it was**.
+
+Fixed and reproduced on preview before merging:
+
+| | production, before | preview, after |
+|---|---|---|
+| wall clock | 829s | **292s** |
+| searches | 41 | **22** |
+| outcome | rejected, undiagnosable | **complete report** |
+
+![The reproduced report](progress/d127-scan-repro.png)
+
+Five formats (fit 9/8/9/6/7), three hooks, twelve sources, **seven real post
+examples with live links**, three first videos, $0.79. It reads as research
+about *this* client: one format is argued as "the exact shape of a $450
+four-session Reactive Dog Intensive", another as letting them "publicly stand
+for positive reinforcement only without naming or showing prong collars or
+board-and-train" — their `avoid` list — and a fifth is honestly marked
+guidance-level rather than a format found posted.
+
+**What changed**, in the order the failure exposed it:
+
+1. **Rejections are diagnosable.** A named rule (`placeholder-text`,
+   `nothing-substantive`, `not-an-object`) plus eleven counts, logged every
+   run. Counts are integers and the pattern names are ours, so nothing about
+   the prompt, the answer or the client is ever printed.
+2. **`max_uses` is not a stop** — it was already 12, which is why 41 matters.
+   The ceiling is enforced in code by counting search blocks as they stream.
+3. **Nothing bounded the wall clock**, and `SCAN_REQUEST_TIMEOUT_MS`'s own
+   comment already said why: on a stream it governs the socket, not the
+   generation. Six minutes now, enforced by aborting. The script agent had no
+   timeout at all.
+4. **Lease safety is asserted, not assumed.** 829s was 92% of the 900s lease
+   with the script agent still to come; `budget.test.ts` now adds the budgets
+   up and requires a third of the lease spare.
+
+**A thin niche no longer fails.** The D123 addendum made "no examples" an
+automatic rejection; it caught real niches with little publicly indexable
+video too. Placeholder detection carries that weight now, and a thin report
+ships with one honest caveat and every claim re-tagged `guidance`.
+
+**The honest limit:** 22 searches is close to the 24 ceiling. These are bounds,
+not a cure — a niche wanting 30 will now stop and fail, in six minutes with a
+reason rather than 829 seconds of silence. Watch for `stopped by the searches
+budget` in Railway; if it is common the ceiling moves *with a measurement*.
+
+Full reasoning in **D127**.
+
+### Needs you
+
+1. **Re-run the scan on production** once this is merged and Railway has
+   redeployed (it redeploys on merge to `main`). Same niche is the fair test.
+   Expect ~5 minutes and ~22 searches; the log now prints `report accepted:`
+   with its counts, or `report rejected: rule=…` with them.
+2. Unchanged: a **migration** for V3's drafts table, an **alert** on the
+   worker, and the V1 source question.
+
 ## Handoff — 24 November 2026, early hours (V3 is in; the CI gate cost more than it saved on day one)
 
 Four pull requests merged: **#23** the CI spend work, **#24** the Railway
