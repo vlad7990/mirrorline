@@ -18,6 +18,18 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Added for D130's label path, and it is not a convenience.
+  #
+  # A merge made by `migrate-on-label.yml` runs as `GITHUB_TOKEN`, and GitHub
+  # does not start workflows from events that token caused: "events triggered by
+  # the GITHUB_TOKEN, **with the exception of `workflow_dispatch` and
+  # `repository_dispatch`**, will not create a new workflow run." So the push to
+  # `main` that a labelled merge produces starts nothing, and `main` would carry
+  # a merge with no run of its own to vouch for it.
+  #
+  # The named exception is the way out: that workflow dispatches this one on
+  # `main` after merging. Without this trigger the dispatch has nothing to call.
+  workflow_dispatch:
 
 # One run per branch, and the newest one wins (D124).
 #
