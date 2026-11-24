@@ -1,5 +1,84 @@
 # Progress — morning handoff
 
+## Handoff — 24 November 2026, afternoon (two items closed; one label does the rest)
+
+### What you do next
+
+**Add the label `migrate-production` to #31.** Then the same to #32. That is the
+whole procedure now — the workflow migrates, verifies, merges and comments
+(D130). Nothing to type, no ref, no dispatch.
+
+In that order, because #32 is stacked on #31. GitHub retargets #32 to `main`
+when #31 merges.
+
+| PR | What | Migration |
+|---|---|---|
+| **#31** `feat/worker-heartbeat` | D128 — the worker's heartbeat, `/healthz`, `/api/health/worker` | `20261124180000_worker_heartbeats` |
+| **#32** `feat/v3-drafts-approval` | D129 — V3's drafts table and the approve refusal | `20261124190000_drafts` |
+| **#33** | D130 — the label path itself | none; **merged** |
+
+Two more settings, both yours and neither urgent:
+
+1. **Healthcheck Path = `/healthz`** on the Railway service — **after** #31's
+   migration has been applied, or the next deploy fails for a table that does
+   not exist yet.
+2. **`WORKER_HEALTH_TOKEN`** in Vercel production (any value), else
+   `/api/health/worker` 404s there by design.
+
+### Why there are three PRs and not two
+
+The dispatch I told you to run was wrong — `--ref` sets the branch the
+*workflow file* comes from, not the tree that gets migrated, which comes from
+the `ref` **input** and defaults to `main`. It would have migrated `main`,
+applied nothing and gone green. You caught it by asking for the three
+conditions. D130 removes the box rather than the mistake.
+
+Both branches were then rebased onto the new `main` — the D-log conflicted,
+because D128, D129 and D130 all append to the end of the same file. One
+casualty, deliberately: the earlier afternoon handoff commit described the
+dispatch procedure D130 had just replaced, so it was dropped rather than
+merged. This is its replacement.
+
+### Both migrations share one honest limit
+
+**Nothing has run against either new table.** The evidence is 52 new unit tests,
+typecheck, lint and build. Both degrade safely until the migrations land — the
+heartbeat write and the draft write each log once and swallow, jobs keep
+draining, and the V3 panel renders nothing rather than breaking. **No screenshot
+of that panel** for the same reason: with no rows it is absent, not broken.
+
+**And the label path has never run either.** `pull_request_target` reads its
+definition from the base branch, so #31 is its first real execution. The guard
+was dry-run by hand against #31's data before #33 merged; the merge step is the
+part that cannot be rehearsed. If the ruleset refuses a merge commit from
+`GITHUB_TOKEN`, the comment will say so, the migration will already be applied,
+and you pressing Merge is the fallback — which is D104's procedure exactly.
+
+### Still waiting on you from this morning
+
+The **production scan re-run** (same niche, "independent dog trainers"). Expect
+~5 minutes and ~22 searches; the log prints `report accepted:` with counts, or
+`report rejected: rule=…`. **I have not started V4/V5** — you asked me to wait
+for that review.
+
+### Queued next, in order
+
+1. **V4** — "Generate with AI" inline assists. No migration.
+2. **V5** — the video agent. **The generator choice is yours** and is one of the
+   four things the sprint stops for.
+3. **The rewrite loop V3 is now shaped for.** `attempts` can hold 2 and
+   `blocked` is terminal, but nothing produces attempt 2 yet.
+4. **Watch item from P0:** `stopped by the searches budget` in Railway. 22 of 24
+   searches is two searches of headroom.
+
+### One local hazard, still true
+
+`docs/progress/tmp/` is untracked throwaway shots and can be deleted. The
+gitignored `*.tmp.spec.ts` specs from an earlier session are out of `e2e/` —
+leave them out; two of them drive a real paid scan on the `chromium` project.
+And `.next` survives a branch switch: it went red on a phantom route type this
+afternoon until cleared, which is D111 in a new coat again.
+
 ## D130 — 24 November 2026 (migrating production is one label now)
 
 **What you can now do:** add the label **`migrate-production`** to a pull
