@@ -23,7 +23,14 @@
  * false no matter what the database stored.
  */
 
-import { Card, Eyebrow, LogoWordmark, ProgressBar, StoryboardFrames } from '@mirrorline/ui'
+import {
+  Card,
+  Eyebrow,
+  LogoWordmark,
+  ProgressBar,
+  StatusChip,
+  StoryboardFrames,
+} from '@mirrorline/ui'
 import { ExternalLink } from 'lucide-react'
 
 // The one way the "Sample data" label gets drawn, per its own header: "so it
@@ -43,6 +50,7 @@ import {
   type ReportSource,
   type TrendExample,
 } from '@/lib/niche-scan/report'
+import type { OriginalityOutcome } from '@/lib/originality/gate'
 import type { VideoIdea } from '@/lib/scripts/video-idea'
 
 const BUCKET_LABELS: Record<string, string> = {
@@ -447,6 +455,80 @@ function ExampleRow({ example }: { example: TrendExample }) {
   )
 }
 
+/** The word for each outcome. "Rewritten" is the gate working, not a warning. */
+const GATE_OUTCOME_LABEL: Record<OriginalityOutcome, string> = {
+  passed: 'Passed',
+  rewritten: 'Sent back to be rewritten',
+  blocked: 'Blocked',
+}
+
+/**
+ * What the Originality Gate said about one idea (V3, D126).
+ *
+ * `04 §4`: "The result is shown to the client with the number, the limit, and
+ * what the gate did … A gate whose failures are invisible is indistinguishable
+ * from a gate that never fires, which is precisely what the predecessor
+ * project had." So this renders four things, and none of them is optional:
+ *
+ * 1. **The word.** Passed, sent back, or blocked.
+ * 2. **The number and the limit**, side by side — a percentage with no ceiling
+ *    beside it cannot be judged by the person reading it.
+ * 3. **What it was compared against**, and separately **what it was not**. The
+ *    second list is the honest one: we hold none of the client's own posts yet,
+ *    and printing that gap is the alternative to implying we closed it.
+ * 4. **The reasons**, when there are any — named lines, so the objection is
+ *    arguable rather than an assertion.
+ *
+ * A `null` verdict reads as "not checked" rather than as a blank space. A
+ * report stored before the gate existed carries no verdict, and absence must
+ * never look like a clean bill.
+ */
+function GateVerdict({ verdict }: { verdict: VideoIdea['originality'] }) {
+  if (!verdict) {
+    return (
+      <p className="mt-3 text-meta text-text-muted">
+        <span className="font-medium text-text">Originality Gate: </span>
+        not checked — this report was written before the gate ran.
+      </p>
+    )
+  }
+
+  return (
+    <div className="mt-3 flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-meta font-medium text-text">Originality Gate</span>
+        <StatusChip status={verdict.outcome === 'blocked' ? 'blocked' : 'passed'}>
+          {GATE_OUTCOME_LABEL[verdict.outcome]}
+        </StatusChip>
+        <span className="text-meta text-text-muted">
+          <span className="machine">{verdict.similarity}%</span> of the phrasing is shared · limit{' '}
+          <span className="machine">{verdict.limit}%</span>
+        </span>
+      </div>
+
+      <p className="m-0 max-w-prose text-meta text-text-muted">
+        Compared against {verdict.comparedAgainst.join(', ')}.
+        {verdict.notComparedAgainst.length > 0
+          ? ` Not compared against ${verdict.notComparedAgainst.join(', ')} — we do not hold those yet.`
+          : ''}
+      </p>
+
+      {verdict.reasons.length > 0 ? (
+        <ul className="m-0 mt-1 space-y-1 text-meta text-text-muted">
+          {verdict.reasons.map((reason) => (
+            <li className="flex gap-2" key={reason}>
+              <span aria-hidden="true" className="select-none text-accent">
+                ·
+              </span>
+              <span>{reason}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  )
+}
+
 /**
  * "Your first 3 videos" — where the research stops being research (V2).
  *
@@ -522,6 +604,13 @@ function FirstVideos({ ideas, niche }: { ideas: readonly VideoIdea[]; niche?: st
               <span className="font-medium text-text">Your fact: </span>
               {idea.fact}
             </p>
+
+            {/*
+              And what the gate said about it. On the screen rather than only
+              in the row — §V3's "the block is visible in the studio", and the
+              one line that makes the three above auditable.
+            */}
+            <GateVerdict verdict={idea.originality} />
           </li>
         ))}
       </ol>

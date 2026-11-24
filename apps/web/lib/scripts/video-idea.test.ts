@@ -13,13 +13,13 @@
 
 import { describe, expect, test } from 'vitest'
 
+import type { ComparisonCorpus } from '../originality/gate'
+
 import {
   factIsGrounded,
-  normaliseSentence,
+  ideaDraft,
   parseVideoIdea,
   screenIdeas,
-  sentencesOf,
-  sharedSentence,
   type VideoIdea,
 } from './video-idea'
 
@@ -36,6 +36,8 @@ const IDEA: VideoIdea = {
   ],
   footage: ['You to camera in the park, lead in shot'],
   fact: 'Reactive dog intensive, $450 for 4 sessions',
+  // Not checked yet. `screenIdeas` is what fills this in.
+  originality: null,
 }
 
 const FACTS = [
@@ -50,17 +52,41 @@ const SOURCE = [
   'Hook: show the problem in the first second',
 ]
 
+/**
+ * The same sources, in V3's labelled shape (D126).
+ *
+ * The second corpus is empty on purpose and mirrors production: we do not hold
+ * the client's own posts, so the gate reports it as not compared rather than
+ * passing it silently.
+ */
+const CORPORA: readonly ComparisonCorpus[] = [
+  { label: 'the research in your niche report', texts: SOURCE },
+  { label: 'your own last 90 posts', texts: [] },
+]
+
 describe('a script shares the structure and not the sentences', () => {
+  // These used to call `sharedSentence`, which V3's gate subsumed (D126). They
+  // now go through `screenIdeas` — the gate's real entry point — so §V2's
+  // done-when is still proved, and proved at the level that actually runs.
+  // The measuring stick's own behaviour moved to
+  // `../originality/similarity.test.ts`, and the outcome vocabulary to
+  // `../originality/gate.test.ts`.
+
   test('a clean idea passes', () => {
-    expect(sharedSentence(IDEA, SOURCE)).toBeNull()
+    // Act
+    const screened = screenIdeas({ ideas: [IDEA], corpora: CORPORA, facts: FACTS })
+
+    // Assert
+    expect(screened.rejected).toEqual([])
+    expect(screened.kept).toHaveLength(1)
   })
 
   test('a sentence lifted from a source example is caught, and named', () => {
+    // Arrange: verbatim from the research. The exact failure §V3 exists for.
     const copied: VideoIdea = {
       ...IDEA,
       beats: [
         ...IDEA.beats.slice(0, 3),
-        // Verbatim from the research. The exact failure §V3 exists for.
         {
           label: 'Call to action',
           text: 'The myth is on screen as text before the first word is spoken.',
@@ -68,36 +94,56 @@ describe('a script shares the structure and not the sentences', () => {
       ],
     }
 
-    expect(sharedSentence(copied, SOURCE)).toBe(
-      'the myth is on screen as text before the first word is spoken',
+    // Act
+    const screened = screenIdeas({ ideas: [copied], corpora: CORPORA, facts: FACTS })
+
+    // Assert: the line itself, in the draft's own wording, so a writer can
+    // search for it.
+    expect(screened.kept).toEqual([])
+    expect(screened.rejected[0]?.reason).toContain(
+      'The myth is on screen as text before the first word is spoken.',
     )
   })
 
   test('catches it through punctuation and capitals', () => {
-    // Real copying is not byte-identical: it is the same sentence with a comma
-    // moved and a capital changed, which a strict comparison misses.
+    // Arrange: real copying is not byte-identical. It is the same sentence
+    // with a comma moved and a capital changed, which a strict comparison
+    // misses.
     const copied: VideoIdea = {
       ...IDEA,
       hook: 'The myth is on screen, as text, before the first word is spoken!',
     }
 
-    expect(sharedSentence(copied, SOURCE)).not.toBeNull()
+    // Act
+    const screened = screenIdeas({ ideas: [copied], corpora: CORPORA, facts: FACTS })
+
+    // Assert
+    expect(screened.kept).toEqual([])
   })
 
   test('a shared short phrase is not copying', () => {
-    // "in the first second" appears in half the research in any niche. A check
-    // that fired on four words would reject every honest draft.
+    // Arrange: "in the first second" appears in half the research in any
+    // niche. A check that fired on four words would reject every honest draft.
     const idea: VideoIdea = { ...IDEA, hook: 'Say it in the first second.' }
 
-    expect(sharedSentence(idea, SOURCE)).toBeNull()
+    // Act
+    const screened = screenIdeas({ ideas: [idea], corpora: CORPORA, facts: FACTS })
+
+    // Assert
+    expect(screened.kept).toHaveLength(1)
   })
 
-  test('sentences shorter than five words are not compared at all', () => {
-    expect(sentencesOf('Too short. Also short.')).toEqual([])
-  })
+  test('the beat labels are not part of what is compared', () => {
+    // Arrange: the recipe's beats are what §V2 says to take. If `ideaDraft`
+    // ever started including the labels, a remake would be marked down for
+    // doing its job — so this asserts the exclusion directly rather than
+    // trusting the comment.
+    const draft = ideaDraft(IDEA)
 
-  test('normalising is case, punctuation and whitespace, nothing cleverer', () => {
-    expect(normaliseSentence('  The MYTH — on screen!  ')).toBe('the myth on screen')
+    // Assert
+    expect(draft).toContain('Ask the question back, in the words owners use.')
+    expect(draft).not.toContain('Hook')
+    expect(draft).not.toContain('Call to action')
   })
 })
 
@@ -127,23 +173,40 @@ describe('a script with no business fact is rejected rather than shipped', () =>
 
 describe('the gate keeps what passes and names what it refused', () => {
   test('keeps a clean idea', () => {
-    const screened = screenIdeas({ ideas: [IDEA], sourceTexts: SOURCE, facts: FACTS })
+    const screened = screenIdeas({ ideas: [IDEA], corpora: CORPORA, facts: FACTS })
 
     expect(screened.kept).toHaveLength(1)
     expect(screened.rejected).toEqual([])
   })
 
+  test('a kept idea carries the verdict that cleared it', () => {
+    // The number on the screen has to be the number the gate used (D126). If
+    // the verdict were dropped here, the studio would have to compute its own
+    // — and two computations can disagree.
+    const screened = screenIdeas({ ideas: [IDEA], corpora: CORPORA, facts: FACTS })
+
+    expect(screened.kept[0]?.originality?.outcome).toBe('passed')
+    expect(screened.kept[0]?.originality?.limit).toBe(30)
+    expect(screened.kept[0]?.originality?.comparedAgainst).toEqual([
+      'the research in your niche report',
+    ])
+    // The half we cannot do is named rather than omitted.
+    expect(screened.kept[0]?.originality?.notComparedAgainst).toEqual([
+      'your own last 90 posts',
+    ])
+  })
+
   test('refuses a copied idea and says which sentence', () => {
     const copied: VideoIdea = { ...IDEA, hook: SOURCE[0] as string }
-    const screened = screenIdeas({ ideas: [copied], sourceTexts: SOURCE, facts: FACTS })
+    const screened = screenIdeas({ ideas: [copied], corpora: CORPORA, facts: FACTS })
 
     expect(screened.kept).toEqual([])
-    expect(screened.rejected[0]?.reason).toContain('shares a sentence')
+    expect(screened.rejected[0]?.reason).toContain('word for word')
   })
 
   test('refuses an idea whose fact is not the client’s', () => {
     const invented: VideoIdea = { ...IDEA, fact: 'Trusted by 500 owners' }
-    const screened = screenIdeas({ ideas: [invented], sourceTexts: SOURCE, facts: FACTS })
+    const screened = screenIdeas({ ideas: [invented], corpora: CORPORA, facts: FACTS })
 
     expect(screened.kept).toEqual([])
     expect(screened.rejected[0]?.reason).toContain('not in the client')
@@ -151,7 +214,7 @@ describe('the gate keeps what passes and names what it refused', () => {
 
   test('one bad idea does not take the good ones with it', () => {
     const invented: VideoIdea = { ...IDEA, title: 'Invented', fact: 'Trusted by 500 owners' }
-    const screened = screenIdeas({ ideas: [IDEA, invented], sourceTexts: SOURCE, facts: FACTS })
+    const screened = screenIdeas({ ideas: [IDEA, invented], corpora: CORPORA, facts: FACTS })
 
     expect(screened.kept).toHaveLength(1)
     expect(screened.rejected).toHaveLength(1)

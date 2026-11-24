@@ -88,7 +88,11 @@ const PHASES: readonly Phase[] = [
       'You send a talk, a podcast, a webinar or phone footage, and the Multiplier cuts it into many genuinely different shorts.',
       'Or we remake a format you approved: its structure only, with a new script written from your voice and your facts.',
       'Every script has to cite at least one true fact about your business.',
-      'The Originality Gate checks each video against its source and against your own last 60 posts. What is too close is rewritten, never nudged under a threshold.',
+      // Was "and against your own last 60 posts", which described a check that
+      // does not exist — we hold none of your post history yet (D126). Two
+      // sentences now: what runs today, and what the other half waits on.
+      'The Originality Gate checks each script against the research it was built from, and names the lines that are too close. What is too close is rewritten, never nudged under a threshold.',
+      'Checking against your own back catalogue as well needs your post history, so that half starts once your accounts are connected.',
     ],
     agents: 'Multiplier · Remake Producer · Compliance',
   },

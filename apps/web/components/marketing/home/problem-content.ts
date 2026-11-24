@@ -282,7 +282,11 @@ export const INPUT_ROUTES: readonly InputRoute[] = [
     detail: [
       'A new script, written from your facts and your voice',
       'AI scenes are labelled, every time',
-      'Checked against the source and your own last 60 posts',
+      // Was "and your own last 60 posts". We hold none of your post history,
+      // so that half of the comparison does not run yet (D126) — and this
+      // string also grounds the co-pilot (`lib/copilot/grounding`), which
+      // would have repeated the claim to anyone who asked.
+      'Checked against the research it was built from, line by line',
     ],
     bestFor: 'New accounts, and anyone without a back catalogue yet.',
   },

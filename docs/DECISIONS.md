@@ -9178,3 +9178,144 @@ deployment log. This entry records what Vlad told me — service name, source,
 Dockerfile, database, status, redeploy trigger — and nothing is inferred past
 it. The first live scan run through it will be the proof, and it is the
 screenshot D123's addendum is still waiting for.
+
+## D126 — the Originality Gate measures expression, and says what it could not check
+
+**23 November 2026.** `BACKEND_PHASE §V3`. An automated check on every output:
+no copied text, verdict and reasons stored, blocks approval when it fails.
+What follows is the shape it took and the four judgement calls inside it.
+
+### The trap, which is the whole design
+
+**A remake is supposed to share its source's structure.** `12 §3` says take the
+recipe's beats — hook, setup, payoff, call to action — and never its footage or
+audio; D112 states it as patterns, never expression.
+
+So a similarity measure over the whole text would flag every *correct* remake.
+And the obvious fix for that is to raise the limit until the complaints stop,
+which ends in a gate that fires on nothing — the gate the predecessor project
+had. **The measure therefore never sees the beat labels.** `ideaDraft` passes
+the title, the hook, the beats' *text* and the footage notes, and a test
+asserts the labels are absent, so the exclusion is enforced rather than
+commented.
+
+### Three rules, not one number
+
+A single averaged score lets a flagrant failure on one axis be paid for by
+innocence on the others, and the three describe genuinely different ways of
+copying:
+
+1. **No sentence word for word.** V2's rule, kept. Not a threshold question: a
+   lifted sentence over five words is copying however small a share of the
+   draft it is.
+2. **No run of more than eight consecutive words.** The check a sentence
+   comparison cannot make — ten words identical and the eleventh changed.
+   Rewording the end of a line is how copying happens by accident, and how it
+   is disguised on purpose.
+3. **Phrasing overlap under 30%**, against the **closest** source rather than
+   the average. Averaging would let a lifted line be diluted by padding the
+   comparison set, which is a way through rather than a measurement.
+
+30 was adopted, not invented: it is the number the Remake screens have been
+showing since they were built, and a gate quietly using a different limit from
+the one on screen would make the screen a lie. It is **not** tuned against a
+corpus we do not have, and that is the constant to revisit when there are real
+drafts to measure.
+
+### No model call, for three reasons
+
+The V-item contract says every agent works with no key, and non-negotiable 6
+says *every* video passes Compliance — so a check needing a key is a check with
+an off switch, and a gate with an off switch is not a gate. `04 §4` requires
+the client to be shown the number, the limit and the offending lines, and "the
+model found it derivative" is none of those. And the same draft has to get the
+same verdict twice, or "submit it again" becomes a route through.
+
+### It fails closed in four directions
+
+An empty draft fails. A draft with **nothing to compare against** fails. An
+attempt number past the limit is blocked rather than wrapped round into a third
+go (`>=`, not `===`, so a caller that lost count cannot buy another attempt).
+And a corpus that comes back empty is reported as *not compared* rather than
+counted as compared and clean.
+
+`parseVerdict` carries the same rule across the storage boundary:
+`niche_reports.first_videos` is `jsonb` and therefore untrusted, so an
+unreadable verdict is `null` — "not checked", which the studio says out loud —
+never a synthesised pass. `isTerminal` is derived rather than read, because a
+stored `isTerminal: false` beside `outcome: 'blocked'` would be a way back into
+the rewrite loop `04 §3` closes.
+
+### There is no override, and that resolves a conflict in the spec
+
+`04 §Shared rules`: "Humans can override any decision, and the override is
+logged." `04 §Originality Gate`, about this one check: "there is no override —
+not from the Remake studio and not from anywhere else", and `§V3` repeats it.
+**The specific rule wins over the general one.** The module exports no `force`,
+no `override` and no options bag; a caller who wants a draft approved has to
+change the draft. `12 §3`'s other half — "blocked items are rewritten, never
+perturbed to slip under the threshold" — is why the reasons name what was
+copied and never suggest an edit that would lower the number.
+
+### The half we cannot do, printed rather than hidden
+
+`04 §1` compares a draft against the source format **and the client's own last
+90 posts**, and says the second "matters as much as the first". **We hold none
+of the client's own posts.** There is no table, no column and no ingestion:
+`metric_snapshots` stores numbers and has no text column at all, and nothing
+writes to it until B6.
+
+The corpus is therefore declared, found empty, and reported in the verdict's
+`notComparedAgainst`, which the studio prints as "Not compared against your own
+last 90 posts — we do not hold those yet." The alternative — quietly passing
+one corpus while the screen says both were checked — is a claim about a check
+we did not run, which is what non-negotiable 7 is for.
+
+**That gap was already on the public site, in three places, and had been for
+days.** `how-it-works`, `individuals` and the home page all said the gate
+checks "your own last 60 posts". The home-page string also grounds the
+co-pilot, so it would have repeated the claim to anyone who asked. All three
+now say what runs and name what the other half waits on. A fourth — the Remake
+mock's "the beat structure of the source format, and your own last 90 posts" —
+was wrong twice over, since beat structure is the one comparison the gate
+deliberately refuses to make.
+
+### 90, not 60
+
+`04` and `BACKEND_PHASE §V3` say 90; `12 §5` says 60. **`04` wins**: CLAUDE.md
+keeps specs 01–08 authoritative on "the agents' mechanics", and the plan agrees
+with it. `OWN_POSTS_COMPARED` is a named constant so the number the gate uses
+and the number the client is shown cannot drift apart.
+
+### The sample is judged by the real gate
+
+`canned.ts` runs `judgeOriginality` over the sample's three ideas against the
+sample's own research. All three pass at **0% with a 2–3 word longest match**.
+Not a hand-written verdict: the sample is the screen most likely to reach a
+prospect, so its number has to be a measurement, and a fixture later edited to
+echo its own example now fails a test. The "Sample data" label makes the
+numbers fictional; it was never going to make a false description of the
+mechanism true.
+
+### What V3 still owes
+
+**The approve action is not refused yet, because there is nothing to refuse.**
+`§V3`'s second done-when wants a server-side refusal, and there is no drafts
+table, no approve action and no compliance column anywhere in the schema —
+`scheduled_posts` lists `'approved'` in its status check and `authenticated` is
+granted update on two date columns only, so nothing can set it. That needs a
+migration, which is one of the five things non-negotiable 11 keeps for Vlad,
+and it is the next piece rather than this one.
+
+**The rewrite loop is not built either.** `screenIdeas` passes `attempt: 1`,
+which is correct for freshly drafted ideas, and a failed idea is refused and
+logged rather than silently retried — the safe half of the behaviour. Passing
+`2` needs somewhere to store an attempt count between runs, which is the same
+missing table.
+
+**Worth watching**: the gate now runs against the research, and the research
+includes the formats' own beat descriptions. A model told to follow "show the
+problem in the first second" may write something close to it. `IDEAS_REQUESTED`
+is 4 to keep 3 precisely so the gate can refuse some — but if it refuses too
+many in practice, the `agent_runs` reason already counts them, and that count
+is the evidence to act on rather than a loosened limit.

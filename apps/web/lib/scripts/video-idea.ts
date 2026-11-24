@@ -22,7 +22,24 @@
  * theatre: "The myth is on screen before the first word." and "the myth is on
  * screen before the first word" are the same sentence, and a strict comparison
  * calls them different.
+ *
+ * ## Where the comparison itself lives now (V3, D126)
+ *
+ * This file used to carry its own `normaliseSentence` and `sentencesOf`. V3's
+ * gate needs the same notion of "the same sentence", and two normalisers would
+ * be two answers to one question — so they moved to
+ * `../originality/similarity`, which this file imports. The rules below are
+ * unchanged; only the measuring stick is shared.
  */
+
+import {
+  type ComparisonCorpus,
+  isApprovable,
+  judgeOriginality,
+  type OriginalityVerdict,
+  parseVerdict,
+} from '../originality/gate'
+import { normaliseForComparison } from '../originality/similarity'
 
 /** Four beats, in order. The recipe's shape, with the client's content. */
 export interface VideoBeat {
@@ -50,6 +67,20 @@ export interface VideoIdea {
    * read the profile — which is why it is the field the gate checks.
    */
   readonly fact: string
+  /**
+   * What the Originality Gate said about this idea, or `null` (V3, D126).
+   *
+   * `null` means **not checked**, and the studio says exactly that rather than
+   * leaving the space blank: a report written before V3 existed has no verdict,
+   * and an absent verdict must never read as a clean one. `04 §4` — a gate
+   * whose failures are invisible is indistinguishable from a gate that never
+   * fires.
+   *
+   * Only `passed` verdicts are ever stored on a kept idea, because a failed
+   * idea does not become a kept one. The field carries the number and the limit
+   * so the studio shows the gate's own arithmetic rather than repeating it.
+   */
+  readonly originality: OriginalityVerdict | null
 }
 
 export interface RejectedIdea {
@@ -107,7 +138,17 @@ export function parseVideoIdea(value: unknown): VideoIdea | null {
   // script to share the *structure* of the format it was built from.
   if (beats.length < 3) return null
 
-  return { title, formatName, hook, beats, footage, fact }
+  return {
+    title,
+    formatName,
+    hook,
+    beats,
+    footage,
+    fact,
+    // Absent on a model's reply (it never writes this) and on any report
+    // stored before V3. `parseVerdict` returns null rather than inventing one.
+    originality: parseVerdict(row.originality),
+  }
 }
 
 export function parseVideoIdeas(value: unknown): readonly VideoIdea[] {
@@ -118,45 +159,22 @@ export function parseVideoIdeas(value: unknown): readonly VideoIdea[] {
     .slice(0, 6)
 }
 
-/** Lower case, no punctuation, single spaces. The comparison unit. */
-export function normaliseSentence(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-/** Sentences worth comparing: a four-word fragment is not evidence of copying. */
-const MIN_SENTENCE_WORDS = 5
-
-export function sentencesOf(text: string): readonly string[] {
-  return text
-    .split(/[.!?\n]+/)
-    .map(normaliseSentence)
-    .filter((sentence) => sentence.split(' ').length >= MIN_SENTENCE_WORDS)
-}
-
-/** Every sentence of an idea, in one list: title, hook, beats, footage. */
-export function ideaSentences(idea: VideoIdea): readonly string[] {
-  return [idea.title, idea.hook, ...idea.beats.map((beat) => beat.text), ...idea.footage].flatMap(
-    sentencesOf,
-  )
-}
-
 /**
- * The sentence an idea shares with the source material, or `null`.
+ * Everything an idea actually says, as one piece of text for the gate.
  *
- * Returns the offending sentence rather than a boolean, because `§V3` requires
- * the gate's failures to name what failed: "the draft goes back to V2 with the
- * offending lines named". A boolean makes a rejection unarguable in both
- * directions.
+ * Title, hook, the beats' *text* and the footage notes — the written
+ * expression. **The beats' labels are deliberately left out**: "Hook",
+ * "Setup", "Payoff" and "Call to action" are the recipe's structure, which
+ * `12 §3` says we are supposed to take, and feeding them to a similarity
+ * measure would mean scoring a remake for doing its job (D126).
  */
-export function sharedSentence(idea: VideoIdea, sourceTexts: readonly string[]): string | null {
-  const source = new Set(sourceTexts.flatMap(sentencesOf))
-  if (source.size === 0) return null
-
-  return ideaSentences(idea).find((sentence) => source.has(sentence)) ?? null
+export function ideaDraft(idea: VideoIdea): string {
+  return [
+    idea.title,
+    idea.hook,
+    ...idea.beats.map((beat) => beat.text),
+    ...idea.footage,
+  ].join('\n')
 }
 
 /**
@@ -170,11 +188,11 @@ export function sharedSentence(idea: VideoIdea, sourceTexts: readonly string[]):
  * exactly the plausible, unverifiable sentence a client would be quoted on.
  */
 export function factIsGrounded(fact: string, facts: readonly string[]): boolean {
-  const claimed = normaliseSentence(fact)
+  const claimed = normaliseForComparison(fact)
   if (!claimed) return false
 
   return facts.some((known) => {
-    const normalised = normaliseSentence(known)
+    const normalised = normaliseForComparison(known)
     if (normalised.length < 3) return false
     return claimed.includes(normalised) || normalised.includes(claimed)
   })
@@ -182,8 +200,13 @@ export function factIsGrounded(fact: string, facts: readonly string[]): boolean 
 
 export interface ScreenInput {
   readonly ideas: readonly VideoIdea[]
-  /** Everything we hold from the sources: descriptions, hook types, beats. */
-  readonly sourceTexts: readonly string[]
+  /**
+   * What the draft must not resemble, each body of text with the name to show
+   * the client. V3's shape: a labelled corpus rather than a bare string list,
+   * so the studio can say *what* was compared — and so an empty one can be
+   * reported as not compared rather than passing silently (D126).
+   */
+  readonly corpora: readonly ComparisonCorpus[]
   /** The client's own facts, from `profileFacts`. */
   readonly facts: readonly string[]
 }
@@ -195,15 +218,36 @@ export interface ScreenInput {
  * failures are invisible is the predecessor project's gate. A rejected idea
  * comes back with its reason, so the run can log it and the report can say how
  * many were refused.
+ *
+ * **The originality half is V3's gate now** (D126). This function used to run
+ * its own sentence-overlap check; `judgeOriginality` subsumes it and adds the
+ * two rules a sentence comparison cannot make — the long near-miss and the
+ * phrasing percentage. One draft, one gate, one vocabulary for the verdict.
+ *
+ * Every kept idea carries the verdict that cleared it, so the number the
+ * studio shows is the number the gate used rather than a second computation
+ * that could disagree with it.
+ *
+ * `attempt: 1` is correct here and is not a placeholder: these are freshly
+ * drafted ideas, and the first failure is a rewrite. The rewrite loop that
+ * would pass `2` needs somewhere to store an attempt count between runs, which
+ * is the next piece of V3 and not this one — so today a failed idea is
+ * refused and logged rather than silently retried, which is the safe half of
+ * the behaviour.
  */
-export function screenIdeas({ ideas, sourceTexts, facts }: ScreenInput): ScreenedIdeas {
+export function screenIdeas({ ideas, corpora, facts }: ScreenInput): ScreenedIdeas {
   const kept: VideoIdea[] = []
   const rejected: RejectedIdea[] = []
 
   for (const idea of ideas) {
-    const copied = sharedSentence(idea, sourceTexts)
-    if (copied) {
-      rejected.push({ title: idea.title, reason: `shares a sentence with a source: "${copied}"` })
+    const verdict = judgeOriginality({
+      draft: ideaDraft(idea),
+      corpora,
+      attempt: 1,
+    })
+
+    if (!isApprovable(verdict)) {
+      rejected.push({ title: idea.title, reason: verdict.reasons.join(' ') })
       continue
     }
 
@@ -215,7 +259,7 @@ export function screenIdeas({ ideas, sourceTexts, facts }: ScreenInput): Screene
       continue
     }
 
-    kept.push(idea)
+    kept.push({ ...idea, originality: verdict })
   }
 
   return { kept, rejected }

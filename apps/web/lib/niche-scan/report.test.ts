@@ -352,3 +352,34 @@ describe('a source is a page, with a name and a kind', () => {
     expect(sources[0]?.url).toBe('https://example.com/a')
   })
 })
+
+describe('the sample is judged by the real gate (V3, D126)', () => {
+  test('every sample idea passes, and the number is a measurement', () => {
+    // The sample is the screen most likely to reach a prospect, so its
+    // originality figure has to be the gate's own arithmetic rather than a
+    // pleasing number typed into a fixture. `canned.ts` runs `judgeOriginality`
+    // over the sample's ideas against the sample's own research; this is the
+    // test that fails if somebody later edits an idea to echo an example.
+    for (const idea of SAMPLE_REPORT.firstVideos) {
+      expect(idea.originality?.outcome).toBe('passed')
+      expect(idea.originality?.copiedSentences).toEqual([])
+      expect(idea.originality?.similarity).toBeLessThanOrEqual(
+        idea.originality?.limit ?? 0,
+      )
+    }
+  })
+
+  test('the sample does not claim a comparison we cannot make', () => {
+    // We hold none of the client's own posts (B6), so the sample must report
+    // that corpus as *not* compared. A sample implying otherwise would be
+    // advertising a check that does not run — non-negotiable 7.
+    for (const idea of SAMPLE_REPORT.firstVideos) {
+      expect(idea.originality?.comparedAgainst).toContain(
+        'the research in your niche report',
+      )
+      expect(idea.originality?.notComparedAgainst).toEqual([
+        'your own last 90 posts',
+      ])
+    }
+  })
+})

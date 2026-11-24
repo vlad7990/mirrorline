@@ -1,5 +1,67 @@
 # Progress — morning handoff
 
+## Demo note — 23 November 2026 (every script now carries the gate's verdict, including the half it could not check)
+
+**What you can do now:** open `/app/trends` and read, under each of the three
+videos, what the Originality Gate actually did — the word, the number, the
+limit, what it compared against, and **what it could not compare against**.
+
+![The gate's verdict under each of the three videos](progress/d42-originality-gate.png)
+
+> Originality Gate · **Passed** · 0% of the phrasing is shared · limit 30%
+> Compared against the research in your niche report. Not compared against your
+> own last 90 posts — we do not hold those yet.
+
+That second sentence is the point of the change. `04 §1` compares a draft
+against the source *and* the client's own last 90 posts, and says the second
+"matters as much as the first". **We hold none of the client's own posts** — no
+table, no column, no ingestion, and `metric_snapshots` has no text column at
+all. So the gate declares the corpus, finds it empty, and prints the gap.
+
+**Three public pages were already claiming that check**, and had been for days:
+`how-it-works`, `individuals` and the home page all said the gate checks "your
+own last 60 posts". The home-page string also grounds the co-pilot, so it would
+have repeated the claim to anyone who asked. A fourth, on the Remake screen,
+said the gate compares "the beat structure of the source format" — which is the
+one comparison it deliberately refuses to make. All four now say what runs.
+
+**The trap this had to avoid.** A remake is *supposed* to share its source's
+structure, so a similarity score over the whole text would flag every correct
+remake — and the tempting fix, raising the limit until the complaints stop,
+ends in a gate that fires on nothing. That is the predecessor project's gate.
+The measure never sees the beat labels, and a test asserts it.
+
+**Three rules rather than one number**, because averaging lets a flagrant
+failure on one axis be paid for by innocence on the others: no sentence word
+for word; no run of more than eight consecutive words (the check a sentence
+comparison cannot make — ten words identical, the eleventh changed); and
+phrasing overlap under 30%, against the closest source rather than the average.
+
+**No model call anywhere in it.** Every agent must work with no key, and
+non-negotiable 6 says *every* video passes Compliance — a check needing a key
+is a check with an off switch. It also has to be arguable (a number, a limit,
+named lines) and deterministic, or "submit it again" becomes a route through.
+
+**The sample is judged by the real gate**, not by a hand-written verdict: all
+three sample ideas pass at 0% with a 2–3 word longest match, measured against
+the sample's own research. A fixture later edited to echo its own example now
+fails a test.
+
+67 new tests. Full reasoning, including the spec conflicts it settled, in
+**D126**.
+
+### What V3 still owes, and it needs you
+
+**The approve action is not refused yet, because there is nothing to refuse.**
+`§V3`'s second done-when wants a server-side refusal, and there is no drafts
+table, no approve action and no compliance column in the schema at all —
+`scheduled_posts` lists `'approved'` in its status check and grants
+`authenticated` update on two date columns only, so nothing can set it. That
+needs **a migration**, which is one of the five things non-negotiable 11 keeps
+for you. The rewrite loop ("blocked twice is terminal") needs the same table to
+store an attempt count between runs; today a failed idea is refused and logged
+rather than silently retried, which is the safe half.
+
 ## Status — 23 November 2026, evening (the worker lives on Railway; CI stops paying twice)
 
 Three state changes from Vlad, recorded before any new feature work.
