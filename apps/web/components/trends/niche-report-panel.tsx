@@ -675,6 +675,25 @@ export function NicheReportPanel({
         <p className="max-w-prose text-body text-text-muted">{SAMPLE_REPORT_NOTE}</p>
       ) : null}
 
+      {/*
+        The thin-evidence line, said once at the top.
+
+        A real niche can hold very little public short video we can link to,
+        and that used to fail the whole scan — nothing shown and nothing
+        explained. It now produces a report carrying this line, with every
+        claim tagged as guidance, because a `posts` tag over no posts is a
+        claim about measurement we did not do.
+
+        Above the findings rather than beside them: it governs everything
+        below it, and D121's lesson is that a caveat repeated on every row is
+        a caveat nobody reads.
+      */}
+      {findings.evidenceCaveat ? (
+        <p className="max-w-prose rounded-lg border border-border bg-neutral-soft px-4 py-3 text-meta text-on-neutral-soft">
+          {findings.evidenceCaveat}
+        </p>
+      ) : null}
+
       {findings.topFormats.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {findings.topFormats.map((format) => (

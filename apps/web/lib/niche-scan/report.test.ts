@@ -20,7 +20,7 @@ import {
   isStorableSourceUrl,
   normaliseFit,
   parseExample,
-  parseReport,
+  reviewReport,
   parseSources,
   rankExamples,
   type TrendExample,
@@ -148,7 +148,7 @@ describe('a report is a report, or it is nothing', () => {
   test('the canned report parses, which keeps the sample honest', () => {
     // If the sample stopped satisfying the parser, the screen would be built
     // against a shape the real thing can never have.
-    const parsed = parseReport({
+    const review = reviewReport({
       topFormats: SAMPLE_REPORT.topFormats,
       topHooks: SAMPLE_REPORT.topHooks,
       topics: SAMPLE_REPORT.topics,
@@ -158,59 +158,68 @@ describe('a report is a report, or it is nothing', () => {
       sourcesUsed: SAMPLE_REPORT.sourcesUsed,
     })
 
-    expect(parsed).not.toBeNull()
-    expect(parsed?.findings.topFormats).toHaveLength(3)
-    expect(parsed?.findings.examples).toHaveLength(3)
-    expect(parsed?.droppedExamples).toEqual([])
+    expect(review.status).toBe('ok')
+    if (review.status !== 'ok') return
+    expect(review.report.findings.topFormats).toHaveLength(3)
+    expect(review.report.findings.examples).toHaveLength(3)
+    expect(review.report.droppedExamples).toEqual([])
   })
 
-  test('returns null when there are no formats and no examples', () => {
+  test('rejects a report with no formats and no examples', () => {
     // Not an empty report — *no* report. Rendering one would be a screen
-    // claiming research happened.
-    expect(parseReport({ topHooks: ['a hook'], topics: ['a topic'] })).toBeNull()
+    // claiming research happened. The rule is named now, so the log can say
+    // which one fired (`report-review.test.ts` covers the names).
+    expect(reviewReport({ topHooks: ['a hook'], topics: ['a topic'] }).status).toBe('rejected')
   })
 
-  test('refuses a report with formats and no evidence under them', () => {
+  test('refuses a report whose formats are placeholder text', () => {
     // The `placeholder` run (D123): 297 seconds, 22 searches, and one format
     // named "placeholder" with no examples. Every field was a well-formed
-    // string, so the old rule kept it and the job reported success.
+    // string, so the original rule kept it and the job reported success.
+    //
+    // What catches it now is the *placeholder* rule rather than the
+    // no-examples rule, which stopped being automatic — a real niche the open
+    // web barely shows must still produce a report.
     expect(
-      parseReport({
+      reviewReport({
         topFormats: [{ name: 'placeholder', whyItWorks: 'placeholder', fit: 0 }],
         examples: [],
-      }),
-    ).toBeNull()
+      }).status,
+    ).toBe('rejected')
   })
 
-  test('returns null for something that is not an object at all', () => {
-    expect(parseReport('a report, honestly')).toBeNull()
-    expect(parseReport(null)).toBeNull()
+  test('rejects something that is not an object at all', () => {
+    expect(reviewReport('a report, honestly').status).toBe('rejected')
+    expect(reviewReport(null).status).toBe('rejected')
   })
 
   test('keeps a partial report, and reports what it threw away', () => {
-    const parsed = parseReport({
+    const review = reviewReport({
       topFormats: [{ name: 'Myth vs fact', whyItWorks: 'It works.', fit: 150 }],
       examples: [GOOD, { ...GOOD, url: 'https://cdn.example.com/a.mp4' }],
     })
+    if (review.status !== 'ok') throw new Error('expected a report')
+    const parsed = review.report
 
-    expect(parsed?.findings.examples).toHaveLength(1)
-    expect(parsed?.droppedExamples).toHaveLength(1)
+    expect(parsed.findings.examples).toHaveLength(1)
+    expect(parsed.droppedExamples).toHaveLength(1)
     // 150 is not a fit score on any scale. Read as the 0–100 shape it most
     // resembles, then clamped — the format is still a finding, and the number
     // is the model's opinion of it rather than a reason to drop the row.
-    expect(parsed?.findings.topFormats[0]?.fit).toBe(FIT_MAX)
-    expect(parsed?.findings.topHooks).toEqual([])
+    expect(parsed.findings.topFormats[0]?.fit).toBe(FIT_MAX)
+    expect(parsed.findings.topHooks).toEqual([])
   })
 
   test('a missing fit score reads as 0, not as a confident middle', () => {
     // `examples` is present because a report without one is no report at all
     // — see the `placeholder` run in D123.
-    const parsed = parseReport({
+    const review = reviewReport({
       topFormats: [{ name: 'Three mistakes', whyItWorks: 'The count sets expectations.' }],
       examples: [GOOD],
     })
+    if (review.status !== 'ok') throw new Error('expected a report')
 
-    expect(parsed?.findings.topFormats[0]?.fit).toBe(0)
+    expect(review.report.findings.topFormats[0]?.fit).toBe(0)
   })
 })
 
@@ -286,12 +295,13 @@ describe('a fit score means something beside its scale', () => {
   })
 
   test('a parsed format carries the normalised score', () => {
-    const parsed = parseReport({
+    const review = reviewReport({
       topFormats: [{ name: 'Myth vs fact', whyItWorks: 'It works.', fit: 78 }],
       examples: [GOOD],
     })
+    if (review.status !== 'ok') throw new Error('expected a report')
 
-    expect(parsed?.findings.topFormats[0]?.fit).toBe(8)
+    expect(review.report.findings.topFormats[0]?.fit).toBe(8)
   })
 })
 

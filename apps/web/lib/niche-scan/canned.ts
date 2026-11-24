@@ -173,6 +173,8 @@ const SAMPLE_FINDINGS: NicheReportFindings = {
   // screen built against it does not break on the real thing. The domain is
   // `example.com` for the same reason the examples are: a canned source
   // naming a real publication would be a claim nobody checked.
+  // The sample has examples, so it is never the thin-evidence case.
+  evidenceCaveat: null,
   sourcesUsed: [
     {
       title: 'Sample data — no sources were consulted',

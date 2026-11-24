@@ -52,7 +52,7 @@ import { writeFirstVideos } from '../scripts/first-videos'
 import type { VideoIdea } from '../scripts/video-idea'
 import { profileBrief, type ClientProfile } from '../workspace/client-profile'
 import { SAMPLE_REPORT } from './canned'
-import { parseReport, rankExamples, type NicheReportFindings } from './report'
+import { rankExamples, reviewReport, type NicheReportFindings } from './report'
 
 /** `18 §0`: the real id. No second version digit, no date suffix. */
 export const SCAN_MODEL = 'claude-sonnet-5'
@@ -102,6 +102,40 @@ export const SCAN_MAX_SEARCHES = 12
  * holds for the runs that happened to search less.
  */
 export const SCAN_SEARCH_PROJECTION = SCAN_MAX_SEARCHES * 2
+
+/**
+ * The ceiling the **code** enforces, because `max_uses` does not.
+ *
+ * Two data points, both from runs that declared `max_uses: 12`: **24**
+ * searches, and then **41 in a single leg** of the first production scan.
+ * Whatever `max_uses` means to the server-side search loop, it is not a stop —
+ * so declaring it and trusting it is how a scan reaches 41 searches and 829
+ * seconds against a 900-second lease.
+ *
+ * Enforced here by counting `server_tool_use` blocks as they arrive and
+ * aborting the stream at the limit. Set to the projection rather than to
+ * `SCAN_MAX_SEARCHES` deliberately: the projection is what the spend cap
+ * already charges for, so enforcing it makes the projection *true* rather than
+ * hopeful, and leaves the declared 12 as the target we ask the model for.
+ */
+export const SCAN_SEARCH_CEILING = SCAN_SEARCH_PROJECTION
+
+/**
+ * The whole scan's wall-clock budget, across every leg.
+ *
+ * **The thing that was missing.** `SCAN_REQUEST_TIMEOUT_MS` is a connection
+ * guard — documented below as explicitly *not* a bound on generation — so leg
+ * one of the first production scan ran **829 seconds** against a five-minute
+ * value and was never cut off, because bytes kept arriving. Three legs could
+ * have reached 900 seconds, which is the lease exactly.
+ *
+ * Six minutes, enforced by aborting the stream. The margin under the lease is
+ * the point, and it is asserted in `budget.test.ts`: the scan, plus the script
+ * agent that runs after it, plus slack, must fit inside `JOB_LEASE_SECONDS`
+ * with room — because the failure mode of overrunning a lease is not a slow
+ * job, it is **two workers running the same job**.
+ */
+export const SCAN_TIME_BUDGET_MS = 6 * 60 * 1000
 
 /**
  * This agent's own per-request ceiling.
@@ -326,8 +360,10 @@ Hard rules. These are not style preferences:
 8. Every hook, topic and posting pattern carries a basis: "posts" if you read it off real posts, "guidance" if it comes from an article about the niche. Mark it honestly. Most published advice is "guidance".
 9. The client's METHOD is a boundary, not a preference. Never suggest a format, technique or topic that contradicts it, and never suggest anything on their "never recommend" list. If a format in this niche only works with a method they do not use, say so in its fitReason and score it low.
 10. Topics that divide this niche — where practitioners publicly disagree — get a brandRisk line saying what taking a side would cost. Raise them; never slip them in as neutral.
-11. Aim for at least 3 real post examples for each top format, spread across TikTok, Instagram and YouTube Shorts where they exist. Prefer three real examples over six plausible ones.
+11. Aim for 2 to 3 real post examples for each top format, spread across TikTok, Instagram and YouTube Shorts where they exist. Prefer two real examples over six plausible ones. If a format has no public post you can link to, return fewer examples — never invent one, and never link to something you did not open.
 12. Lengths are ranges, never single numbers: what you can see is that these videos run about 20 to 35 seconds, not that they run 21.
+13. You have a hard research budget: about ${SCAN_MAX_SEARCHES} searches and six minutes, for the whole report. Search broadly first, then stop and write. A complete report from twelve searches is worth far more than an unfinished one from forty, and the run is cut off at the limit whether or not you have written anything.
+14. Some real niches have very little public short video you can link to. That is a finding, not a failure. When it happens: write the report from published guidance, mark every basis "guidance", return an empty examples list, and say plainly in the formats' whyItWorks that this comes from guidance rather than from posts. Never pad the report with placeholder text, "TBD", "example", or a format you cannot describe — an honest thin report is accepted, and a padded one is rejected outright.
 
 Return formats as recipes: a name, why it works in one sentence, and the beats in order (hook, setup, payoff, call to action). Those beats are what gets remade with a new script and the client's own footage.`
 
@@ -398,10 +434,17 @@ function scanTools() {
   ]
 }
 
+/** Which budget stopped the run, when one did. */
+export type BudgetStop = 'searches' | 'time'
+
 interface CompletedCall {
-  readonly response: Anthropic.Message
+  /** `null` when a budget aborted the stream: there is no final message. */
+  readonly response: Anthropic.Message | null
   readonly usage: Usage
   readonly searches: number
+  readonly stoppedBy: BudgetStop | null
+  /** Wall clock for the whole call, across legs. Logged, and in the reason. */
+  readonly seconds: number
 }
 
 /**
@@ -441,7 +484,18 @@ async function callTheModel(
   let usage = NO_USAGE
   let searches = 0
 
+  const beganAt = Date.now()
+  const deadlineAt = beganAt + SCAN_TIME_BUDGET_MS
+  const elapsed = () => Math.round((Date.now() - beganAt) / 1000)
+
   for (let leg = 0; ; leg += 1) {
+    // Checked before the leg as well as during it: a leg that would start with
+    // no time left should not start at all.
+    const remainingMs = deadlineAt - Date.now()
+    if (remainingMs <= 0) {
+      return { response: null, usage, searches, stoppedBy: 'time', seconds: elapsed() }
+    }
+
     const stream = client.messages.stream(
       {
         model: SCAN_MODEL,
@@ -465,7 +519,67 @@ async function callTheModel(
     )
 
     const startedAt = Date.now()
-    const response = await stream.finalMessage()
+
+    /*
+     * Both budgets are enforced here, on the stream, because neither the
+     * declared `max_uses` nor the request timeout actually stops anything:
+     * `max_uses: 12` produced 41 searches, and the timeout is a connection
+     * guard that a steadily-streaming response never trips.
+     *
+     * `contentBlock` fires once per completed block, which is where a search
+     * becomes countable. The snapshot is kept because an aborted stream has no
+     * final message, and billing it as zero tokens would under-report spend —
+     * the direction that quietly raises the cap.
+     */
+    // A holder rather than two `let`s: these are written inside callbacks, and
+    // TypeScript's control flow cannot see a closure assignment, so plain
+    // locals would still be narrowed to `null` at the catch below.
+    const leg_ = {
+      stoppedBy: null as BudgetStop | null,
+      searches: 0,
+      snapshot: null as Anthropic.Message | null,
+    }
+
+    stream.on('streamEvent', (_event, latest) => {
+      leg_.snapshot = latest
+    })
+
+    stream.on('contentBlock', (block) => {
+      if (block.type !== 'server_tool_use') return
+      leg_.searches += 1
+      if (searches + leg_.searches >= SCAN_SEARCH_CEILING) {
+        leg_.stoppedBy = 'searches'
+        stream.abort()
+      }
+    })
+
+    const timer = setTimeout(() => {
+      leg_.stoppedBy = 'time'
+      stream.abort()
+    }, remainingMs)
+
+    let response: Anthropic.Message
+    try {
+      response = await stream.finalMessage()
+    } catch (error) {
+      clearTimeout(timer)
+      // Our own abort is not an error: it is the budget doing its job, and it
+      // carries a reason the operator can act on. Anything else is a real
+      // failure and belongs to the caller's catch.
+      const stoppedBy = leg_.stoppedBy
+      if (stoppedBy === null) throw error
+
+      searches += leg_.searches
+      usage = addUsage(usage, usageFrom(leg_.snapshot?.usage))
+      console.warn(
+        `[niche-scan] leg ${leg + 1} stopped by the ${stoppedBy} budget: ` +
+          `${elapsed()}s of ${Math.round(SCAN_TIME_BUDGET_MS / 1000)}s · ` +
+          `${searches} of ${SCAN_SEARCH_CEILING} search(es)`,
+      )
+      return { response: null, usage, searches, stoppedBy, seconds: elapsed() }
+    }
+    clearTimeout(timer)
+
     const legSeconds = Math.round((Date.now() - startedAt) / 1000)
 
     usage = addUsage(usage, usageFrom(response.usage))
@@ -474,14 +588,17 @@ async function callTheModel(
     // Logged, not merely measured. How long a scan took is the operational
     // question this agent raises — the request is minutes long, which is the
     // fact that decides whether it can stay a synchronous action at all — and
-    // nothing in `agent_runs` records duration.
+    // nothing in `agent_runs` records duration. The running totals are here so
+    // a Railway log shows how close a healthy run came to either budget.
     console.info(
       `[niche-scan] leg ${leg + 1}: ${legSeconds}s · ${searchesFrom(response.content)} search(es) · ` +
-        `stop_reason ${response.stop_reason ?? 'none'}`,
+        `stop_reason ${response.stop_reason ?? 'none'} · ` +
+        `totals ${elapsed()}s/${Math.round(SCAN_TIME_BUDGET_MS / 1000)}s, ` +
+        `${searches}/${SCAN_SEARCH_CEILING} search(es)`,
     )
 
     const canResume = response.stop_reason === 'pause_turn' && leg < SCAN_MAX_CONTINUATIONS
-    if (!canResume) return { response, usage, searches }
+    if (!canResume) return { response, usage, searches, stoppedBy: null, seconds: elapsed() }
 
     // No new user turn: the assistant's own content is the resumption.
     conversation.push({ role: 'assistant', content: response.content })
@@ -749,7 +866,40 @@ export async function runNicheScan(request: ScanRequest): Promise<ScanOutcome> {
     return { status: 'failed', message }
   }
 
-  const { response, usage, searches } = call
+  const { response, usage, searches, stoppedBy, seconds } = call
+
+  /*
+   * A budget stopped it. Its own outcome, with its own reason, because the
+   * operator's next move differs: the time budget means the brief is too wide
+   * or the niche too large, and the search budget means the model is grazing.
+   * Neither is "the model returned nothing usable", which is what the first
+   * production failure said about a run that had simply been allowed to go on
+   * for 829 seconds.
+   */
+  if (stoppedBy !== null || response === null) {
+    const limit =
+      stoppedBy === 'time'
+        ? `${Math.round(SCAN_TIME_BUDGET_MS / 1000)}s`
+        : `${SCAN_SEARCH_CEILING} searches`
+
+    await recordRun(supabase, {
+      workspaceId,
+      agent: 'trend_scout',
+      model: SCAN_MODEL,
+      status: 'failed',
+      usage,
+      searches,
+      reason: `stopped by the ${stoppedBy ?? 'unknown'} budget at ${limit} (${seconds}s, ${searches} search(es))`,
+    })
+
+    return {
+      status: 'failed',
+      message:
+        stoppedBy === 'searches'
+          ? 'The scan hit its research limit before it finished. Try a narrower niche.'
+          : 'The scan ran out of time. Try a narrower niche.',
+    }
+  }
 
   // A turn still paused after the last allowed continuation has no report in
   // it — the model was mid-research when the loop ran out. Recorded as its own
@@ -784,9 +934,36 @@ export async function runNicheScan(request: ScanRequest): Promise<ScanOutcome> {
     return { status: 'failed', message: 'The model declined to research that niche.' }
   }
 
-  const parsed = parseReport(jsonFrom(response.content))
+  const review = reviewReport(jsonFrom(response.content))
 
-  if (!parsed) {
+  /*
+   * The counts, every time, pass or fail.
+   *
+   * The first production failure logged one sentence — "The scan did not come
+   * back with a usable report" — which is true of a placeholder reply, a thin
+   * niche and a broken schema field alike. These eleven integers tell those
+   * apart from Railway alone, and they are safe to print: they are counts, and
+   * the pattern names are our own matcher's rather than the model's text. No
+   * prompt, no answer, no client detail.
+   */
+  const { counts } = review
+  const countLine =
+    `formats=${counts.formats} hooks=${counts.hooks} topics=${counts.topics} ` +
+    `lengths=${counts.lengths} patterns=${counts.postingPatterns} ` +
+    `examples=${counts.examplesKept}/${counts.examplesOffered} ` +
+    `dropped=${counts.examplesDropped} sources=${counts.sources} ` +
+    `placeholders=${counts.placeholderFields}`
+
+  if (review.status === 'rejected') {
+    const { rejection } = review
+    const detail =
+      rejection.rule === 'placeholder-text' ? ` patterns=[${rejection.patterns.join(',')}]` : ''
+
+    console.error(
+      `[niche-scan] report rejected: rule=${rejection.rule} ${countLine}${detail} · ` +
+        `${seconds}s · ${searches} search(es) · stop_reason ${response.stop_reason ?? 'none'}`,
+    )
+
     await recordRun(supabase, {
       workspaceId,
       agent: 'trend_scout',
@@ -796,11 +973,26 @@ export async function runNicheScan(request: ScanRequest): Promise<ScanOutcome> {
       searches,
       reason:
         response.stop_reason === 'max_tokens'
-          ? 'the report was cut off by max_tokens'
-          : 'the model returned nothing that parsed as a report',
+          ? `the report was cut off by max_tokens (${countLine})`
+          : `rejected: ${rejection.rule} (${countLine})`,
     })
-    return { status: 'failed', message: 'The scan did not come back with a usable report.' }
+
+    return {
+      status: 'failed',
+      message:
+        rejection.rule === 'placeholder-text'
+          ? 'The scan came back with placeholder text instead of research. Nothing was saved.'
+          : 'The scan did not come back with a usable report.',
+    }
   }
+
+  const parsed = review.report
+
+  console.info(
+    `[niche-scan] report accepted: ${countLine} · ` +
+      `${review.caveat ? 'thin evidence, caveat shown' : 'evidence present'} · ` +
+      `${seconds}s · ${searches} search(es)`,
+  )
 
   if (parsed.droppedExamples.length > 0) {
     // Reported, never silent. A scan that quietly discarded half its findings

@@ -21,6 +21,22 @@
  * rather than over the half we have built — the compiler then names what is
  * missing instead of a job silently falling through to nothing.
  */
+/**
+ * How long a claimed job belongs to the worker that claimed it, in seconds.
+ *
+ * `claim_job`'s default, which the worker passes explicitly. It lives here
+ * rather than in the worker because it is **half of a safety property**, and
+ * the other half is in the agents: every budget a job spends has to add up to
+ * less than this, with margin, or two workers run the same job.
+ *
+ * That was not hypothetical. The first production scan ran a single leg for
+ * **829 seconds** — 92% of this lease — with the script agent still to come
+ * after it, because nothing was enforcing a wall clock. `budget.test.ts` is
+ * the assertion that keeps the sum honest, and it can only exist because this
+ * number is importable from both sides.
+ */
+export const JOB_LEASE_SECONDS = 900
+
 export type JobKind = 'niche-scan' | 'render-cuts'
 
 /**
