@@ -25,7 +25,7 @@ describe('planBeatsFrom', () => {
   it('returns the four beats in the order the video plays, not the stored order', () => {
     // The jsonb order is whatever the model wrote. A video plays Hook, Setup,
     // Payoff, Call to action.
-    expect(planBeatsFrom(fourBeats).map((beat) => beat.label)).toEqual([
+    expect(planBeatsFrom(fourBeats)?.map((beat) => beat.label)).toEqual([
       'Hook',
       'Setup',
       'Payoff',
