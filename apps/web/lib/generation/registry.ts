@@ -46,17 +46,22 @@
  */
 
 import { cannedAdapter } from './providers/canned'
+import { xaiAdapter } from './providers/xai'
 import type { EnvLike, GenerationAdapter } from './types'
 
 /**
  * Every adapter that exists, most-preferred first.
  *
- * `xai` is absent until step 4 lands it. That absence is honest rather than
- * awkward: there is no module to import yet, and a registry listing an adapter
- * that does not exist would not compile — the right failure mode for this
- * particular lie.
+ * `xai` leads because it is the primary provider (D140). `canned` is last and
+ * is the only entry `chooseAdapter` will fall back to — see its implementation
+ * for why that exclusion is by identity rather than by position.
+ *
+ * Google joins between them when it is built, paid tier only. Runway never
+ * joins: its terms permit training on inputs and outputs, and
+ * `registry.test.ts` asserts its absence rather than trusting that nobody adds
+ * it back.
  */
-const ADAPTERS: readonly GenerationAdapter[] = [cannedAdapter]
+const ADAPTERS: readonly GenerationAdapter[] = [xaiAdapter, cannedAdapter]
 
 export interface AdapterChoice {
   readonly adapter: GenerationAdapter
