@@ -55,6 +55,23 @@ session owns generator adapters, and nothing here touches either.
    state rather than an error — which is why CI stays green either way.
    Screenshots at 1440px and 390px are owed against a *real* render and wait on
    the same thing.
+3. **The aligner has never met a real client's footage.** It is tested against
+   transcripts written for it, and the beats it will meet in production are
+   whatever the script agent wrote. Worth knowing *why* that is the open
+   question rather than a detail: a beat can be a **line to say** ("Here is
+   what this costs, and what changes the number") or a **direction** ("Open on
+   the price range, said plainly") — and the sample report's beats are
+   directions. Coverage against a direction is lower than against a line,
+   because half its words are instructions to the filmer rather than words
+   anybody says.
+
+   Three things make that survivable rather than a surprise. The floor
+   (`MIN_COVERAGE`, 0.4) is a named constant with tests that say what moving it
+   costs. The refusal names the beat *and* the best coverage it found, so the
+   first real run produces a number rather than a shrug. And the fix, if the
+   number is consistently low, is a prompt change in the script agent — beats
+   that quote the line — which is the SCAN session's lane and a conversation to
+   have with a measurement in hand.
 
 ### Needs Vlad — four things, none of them a deploy
 
