@@ -39,15 +39,17 @@ import { DEFAULT_CLIP_SECONDS, type GenerationRequest, type Resolution } from '.
 /**
  * `grok-imagine-video-1.5-lite`, per second of output, by resolution.
  *
- * From xAI's own pricing page, read 25 November 2026. 1080p is upscaled from
- * 720p on this model rather than native, which is most of why it costs nearly
- * five times the 720p rate for a difference Instagram's transcode mostly
- * destroys — see the plan's §4.1 for why 720p is the default.
+ * From xAI's own pricing page, read 25 November 2026.
+ *
+ * **1080p is absent because we do not offer it** (D140, and `Resolution`'s own
+ * header). Its published rate is $0.14 a second — 4.7× the 720p rate, for a
+ * render that model produces by *upscaling its own 720p output*. The number is
+ * recorded here in prose rather than as an entry, so the table holds only
+ * prices we can actually be charged.
  */
 export const XAI_CLIP_LITE_USD_PER_SECOND: Readonly<Record<Resolution, number>> = {
   '480p': 0.02,
   '720p': 0.03,
-  '1080p': 0.14,
 }
 
 /**
@@ -55,12 +57,14 @@ export const XAI_CLIP_LITE_USD_PER_SECOND: Readonly<Record<Resolution, number>> 
  *
  * Held here unused by the default path so the number is in the repository
  * rather than in a plan: the day somebody switches models, the cap should
- * already know what the new one costs. Native 1080p is the thing being bought.
+ * already know what the new one costs. Its 1080p rate — $0.25 a second, and
+ * genuinely native rather than upscaled — is the one worth revisiting if the
+ * 720p trade ever stops being acceptable, because on *this* model the premium
+ * buys a different render rather than a resize.
  */
 export const XAI_CLIP_USD_PER_SECOND: Readonly<Record<Resolution, number>> = {
   '480p': 0.08,
   '720p': 0.14,
-  '1080p': 0.25,
 }
 
 /**
@@ -80,14 +84,17 @@ export const XAI_IMAGE_USD: Readonly<Record<'1K' | '2K', number>> = {
  *
  * `GenerationRequest.resolution` is one field for both kinds, because a caller
  * asking for "a 720p beat" should not have to know that images are measured in
- * K and clips in p. The mapping is coarse on purpose: there are two image
- * tiers worth paying for and three clip tiers, so 480p and 720p both land on
- * 1K and only 1080p buys 2K.
+ * K and clips in p.
+ *
+ * **Both offered resolutions land on 1K**, which is what dropping 1080p (D140)
+ * did to this table: 2K was only ever reachable through the resolution we no
+ * longer offer. `XAI_IMAGE_USD` keeps its 2K rate anyway, because it is still
+ * doing a job — it is the most expensive tier, and therefore the figure an
+ * unrecognised resolution is priced at rather than at zero.
  */
 const IMAGE_SIZE_FOR: Readonly<Record<Resolution, '1K' | '2K'>> = {
   '480p': '1K',
   '720p': '1K',
-  '1080p': '2K',
 }
 
 /**
@@ -122,13 +129,28 @@ export function generationCapUsd(env: EnvLike = process.env): number {
  *
  * The co-pilot's number, reused deliberately rather than coincidentally: $0.50
  * is "one unit of work" across this product, and a second figure would invite
- * the question of which one applies. Approved by Vlad, 25 November 2026.
+ * the question of which one applies. Approved by Vlad, 25 November 2026, and
+ * **kept** when 1080p came off the menu (D140).
  *
- * **It has a consequence worth knowing.** At $0.14 a second, 1080p crosses
- * this at about three and a half seconds — so 1080p clips are available short
- * and refused long, with the refusal saying so. `spend.test.ts` records that
- * arithmetic where it cannot drift silently, and the handoff flags it for
- * Vlad: it is a real restriction following from an approved number, not a bug.
+ * ============================================================================
+ * It is now a backstop rather than a constraint, and that is the right shape
+ * ============================================================================
+ *
+ * It used to bind: at $0.14 a second, 1080p crossed it at about three and a
+ * half seconds, so the ceiling was deciding what a client could ask for. With
+ * 1080p gone the most expensive thing we will ask for is
+ * `MAX_CLIP_SECONDS` × $0.03 = $0.18, comfortably inside it.
+ *
+ * So the ceiling no longer refuses anything a correct caller requests — and it
+ * is still load-bearing, because the callers it refuses are the incorrect ones:
+ * a `seconds` value past `MAX_CLIP_SECONDS`, or a resolution string we do not
+ * recognise, which `projectGenerationUsd` deliberately prices at the most
+ * expensive tier it knows. Those are the runaway requests this number exists
+ * for, and they are exactly the ones that arrive from a parsed payload rather
+ * than from a person.
+ *
+ * `spend.test.ts` asserts both halves: that every clip we will actually ask for
+ * fits, and that a malformed one does not.
  */
 export const MAX_GENERATION_REQUEST_USD = MAX_REQUEST_USD
 

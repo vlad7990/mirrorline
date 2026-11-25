@@ -22,7 +22,7 @@ import {
   projectGenerationUsd,
   XAI_CLIP_LITE_USD_PER_SECOND,
 } from './spend'
-import type { BrandKit, GenerationRequest, Resolution } from './types'
+import { MAX_CLIP_SECONDS, type BrandKit, type GenerationRequest, type Resolution } from './types'
 
 const BRAND: BrandKit = { brandName: null, look: null, captionStyle: null, avoid: [] }
 
@@ -47,7 +47,6 @@ describe('projectGenerationUsd prices a clip at the published per-second rate', 
   test.each([
     ['480p' as Resolution, 0.02],
     ['720p' as Resolution, 0.03],
-    ['1080p' as Resolution, 0.14],
   ])('%s is $%s a second on the Lite model', (resolution, perSecond) => {
     // Arrange: five seconds, the shape the cost table in the plan is built on.
     const request = clip(resolution, 5)
@@ -66,11 +65,11 @@ describe('projectGenerationUsd prices a clip at the published per-second rate', 
   })
 
   test('prices the seconds asked for, rather than quietly clamping them', () => {
-    // A request for fifteen seconds is priced at fifteen seconds, so the
+    // A request for twenty seconds is priced at twenty seconds, so the
     // per-request ceiling refuses it with a number the client can see. Silently
     // trimming it to six would deliver a different video from the one asked
     // for and hide that a limit exists.
-    expect(projectGenerationUsd(clip('1080p', 15))).toBeCloseTo(0.14 * 15, 10)
+    expect(projectGenerationUsd(clip('720p', 20))).toBeCloseTo(0.03 * 20, 10)
   })
 })
 
@@ -78,8 +77,10 @@ describe('projectGenerationUsd prices an image by the size the resolution maps t
   test.each([
     ['480p' as Resolution, 0.04],
     ['720p' as Resolution, 0.04],
-    ['1080p' as Resolution, 0.06],
   ])('%s costs $%s an image', (resolution, usd) => {
+    // Both offered resolutions land on 1K. 2K was only ever reachable through
+    // 1080p, which D140 removed — its rate survives in `XAI_IMAGE_USD` as the
+    // worst tier an unrecognised resolution is charged at.
     expect(projectGenerationUsd(image(resolution))).toBeCloseTo(usd, 10)
   })
 
@@ -96,7 +97,18 @@ describe('projectGenerationUsd is pessimistic about what it does not recognise',
     // changes." A resolution string is the same hazard.
     const odd = { ...clip('720p', 5), resolution: '4K' as unknown as Resolution }
 
-    expect(projectGenerationUsd(odd)).toBeCloseTo(0.14 * 5, 10)
+    // $0.03, the dearest second on the table, rather than $0. The figure fell
+    // when D140 took 1080p out — the rule did not: price what you do not
+    // recognise at the worst thing you do.
+    expect(projectGenerationUsd(odd)).toBeCloseTo(0.03 * 5, 10)
+  })
+
+  test('an unrecognised resolution on an image is priced at the 2K tier', () => {
+    // The other half, and the reason `XAI_IMAGE_USD` keeps a 2K rate it can no
+    // longer reach by a legitimate route.
+    const odd = { ...image('720p'), resolution: '4K' as unknown as Resolution }
+
+    expect(projectGenerationUsd(odd)).toBeCloseTo(0.06, 10)
   })
 })
 
@@ -180,9 +192,8 @@ describe('decideGenerationSpend', () => {
 })
 
 describe('what the approved ceilings mean in practice', () => {
-  // These are less assertions about code than the arithmetic written down
-  // where it cannot drift. The $0.50 per-request ceiling has a consequence for
-  // 1080p that is worth being able to see.
+  // Less assertions about code than the arithmetic written down where it
+  // cannot drift.
   test('the default shape — two 5s clips at 720p plus a cover image — is $0.34', () => {
     const twoClips = projectGenerationUsd(clip('720p', 5)) * 2
     const cover = projectGenerationUsd(image('720p'))
@@ -190,17 +201,34 @@ describe('what the approved ceilings mean in practice', () => {
     expect(twoClips + cover).toBeCloseTo(0.34, 10)
   })
 
-  test('a 5-second 1080p clip is over the per-request ceiling, and is refused', () => {
-    // $0.70 against a $0.50 ceiling. 1080p is therefore available for clips of
-    // about three seconds and refused past that — a real consequence of the
-    // approved number, recorded here rather than discovered by a client.
-    const projected = projectGenerationUsd(clip('1080p', 5))
+  test('1080p is not on the menu at all, which is why the ceiling stopped binding', () => {
+    // D140. The type no longer admits it, so this asserts the only part of
+    // that decision a runtime test can see: the rate table holds exactly the
+    // two resolutions we offer. A third one reappearing here is the diff this
+    // test exists to fail on.
+    expect(Object.keys(XAI_CLIP_LITE_USD_PER_SECOND).sort()).toEqual(['480p', '720p'])
+  })
+
+  test('every clip we will actually ask for fits inside the per-request ceiling', () => {
+    // The ceiling is a backstop now rather than a constraint, and this is the
+    // assertion that says so — the worst legitimate request is
+    // MAX_CLIP_SECONDS at the dearest rate, and it has to fit with room.
+    for (const resolution of ['480p', '720p'] as const) {
+      const worst = projectGenerationUsd(clip(resolution, MAX_CLIP_SECONDS))
+
+      expect(worst, `${resolution} at ${MAX_CLIP_SECONDS}s`).toBeLessThan(
+        MAX_GENERATION_REQUEST_USD,
+      )
+      expect(decideGenerationSpend(0, worst, {}).allowed).toBe(true)
+    }
+  })
+
+  test('a malformed request is still refused, which is what the ceiling is for now', () => {
+    // Twenty seconds is past `MAX_CLIP_SECONDS` and arrives from a payload
+    // rather than from a person. $0.60 against a $0.50 ceiling.
+    const projected = projectGenerationUsd(clip('720p', 20))
 
     expect(projected).toBeGreaterThan(MAX_GENERATION_REQUEST_USD)
     expect(decideGenerationSpend(0, projected, {}).allowed).toBe(false)
-  })
-
-  test('a 3-second 1080p clip fits', () => {
-    expect(decideGenerationSpend(0, projectGenerationUsd(clip('1080p', 3)), {}).allowed).toBe(true)
   })
 })

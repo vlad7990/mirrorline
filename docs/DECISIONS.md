@@ -10088,14 +10088,18 @@ permanent and indistinguishable from an answer.
 
 ---
 
-## D137 — generators are adapters behind one interface, and the label is a literal rather than a default
+## D140 — generators are adapters behind one interface, and the label is a literal rather than a default
 
 **25 November 2026.** V4, "Generate with AI". Vlad approved
 `docs/plan/AI_GENERATION_V4.md` with five decisions and one coordination rule;
 this entry records them and the five choices the implementation then forced.
 
-Numbered D137 rather than D132: D132–D136 belong to the SCAN session on
-`feat/scan-two-legs`, which has not merged here. Reusing them would collide.
+Numbered D140 under the per-session ranges Vlad set after this entry collided
+with the SCAN session twice over: it was written as D137, which `feat/scan-two-legs`
+had already taken on PR #42. The ranges are in `CLAUDE.md` — SCAN D132–D139,
+AI-GENERATION D140–D149, VIDEO D150–D159 — and they exist because three
+sessions appending to one log cannot pick the next number by reading the file,
+since none of them can see the others' branches.
 
 **What Vlad decided.**
 
@@ -10183,13 +10187,42 @@ already logs under that name and an exact match on `agent` cannot rot the way a
 hardcoded list of model ids would. The Agents screen should fold the line under
 the Remake Producer when it displays it.
 
-**$0.50 per request has a consequence, and it is recorded rather than
-smoothed.** At $0.14 a second, 1080p crosses the ceiling at about three and a
-half seconds — so 1080p clips are available short and refused long, with the
-refusal saying which limit it hit. `spend.test.ts` asserts that arithmetic so it
-cannot drift silently. Quietly raising the ceiling to make 1080p comfortable
-would have been a change to an approved number made by whoever hit it first;
-flagged for Vlad instead.
+**1080p came off the menu rather than the ceiling coming up.** The ceiling and
+the resolution collided: at $0.14 a second, 1080p crossed $0.50 at about three
+and a half seconds, so it was available for clips too short to use and refused
+for clips the right length. Three ways out — raise the ceiling, drop 1080p, or
+leave the collision documented — and Vlad chose the second on 25 November 2026:
+**B-roll renders at 720p, the $0.50 ceiling stays, and 1080p is removed.**
+
+It is the right one for a reason beyond price. On `grok-imagine-video-1.5-lite`,
+1080p is **upscaled from that model's own 720p output**, so the 4.7× premium
+does not buy a 1080p render — it buys somebody else's resize of the render we
+were already paying for. We do the same resize ourselves at composite time,
+once, for nothing.
+
+The known consequence is recorded rather than smoothed: the renderer exports
+9:16 at 1080×1920, so a generated scene is upscaled about 1.5× when it is cut
+in. Under captions, for three to five seconds, through platforms that re-encode
+hard, that is a trade worth making — and `registry.test.ts` asserts we are not
+quietly generating at the export size, because 720 and 1080 are close enough to
+be confused by whoever reads it next.
+
+**The removal is a narrowed union, not a hidden dropdown.** `Resolution` is now
+`'480p' | '720p'`, so the value cannot be constructed — not from a parsed
+payload, not from a stale client, not by a caller working from an older plan.
+Hiding the option in the UI would have left the code able to spend $0.14 a
+second on request.
+
+**What that does to the ceiling is worth stating, because it changes its job.**
+The most expensive thing we will now ask for is `MAX_CLIP_SECONDS` × $0.03 =
+$0.18, comfortably inside $0.50 — so the ceiling no longer refuses anything a
+correct caller requests. It is a **backstop** rather than a constraint, and it
+is still load-bearing: the callers it refuses are a `seconds` value past the
+maximum, or a resolution string we do not recognise, which is deliberately
+priced at the dearest tier we know rather than at zero. Those arrive from a
+payload rather than from a person, and they are what the number is for.
+`spend.test.ts` asserts both halves — that every clip we will actually ask for
+fits, and that a malformed one does not.
 
 **A refusal is a return value, logged, and never retried.** `GenerationOutcome`
 has four cases where two would compile. `refused` is a rule saying no — ours or

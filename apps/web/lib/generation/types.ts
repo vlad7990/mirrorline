@@ -1,7 +1,7 @@
 /**
  * What a generator is asked for, and what it hands back.
  *
- * V4's "Generate with AI" (`docs/plan/AI_GENERATION_V4.md`, D137). One
+ * V4's "Generate with AI" (`docs/plan/AI_GENERATION_V4.md`, D140). One
  * interface, several providers, every output labelled.
  *
  * ============================================================================
@@ -52,10 +52,34 @@
 export type GenerationKind = 'clip' | 'image'
 
 /**
- * The three the providers agree on, and the one parameter that moves the bill
- * most. 720p is the default — see `spend.ts` for the arithmetic behind that.
+ * The two we offer, and 720p is the default.
+ *
+ * ============================================================================
+ * 1080p is deliberately not here (D140)
+ * ============================================================================
+ *
+ * xAI's Lite model will render it, at $0.14 a second against $0.03 for 720p —
+ * nearly five times the price, because on that model 1080p is *upscaled from
+ * 720p* rather than native. So the premium does not buy a 1080p render; it buys
+ * somebody else's upscale of the same 720p render.
+ *
+ * It also collided with the $0.50 per-request ceiling at about three and a half
+ * seconds, which made it available for clips too short to use and refused for
+ * clips the right length — a worse experience than not offering it. Vlad's
+ * decision, 25 November 2026: **B-roll renders at 720p, the ceiling stays, and
+ * 1080p comes off the menu.**
+ *
+ * The known consequence, recorded rather than smoothed: the renderer exports
+ * 9:16 at 1080×1920, so a 720-wide generated scene is upscaled about 1.5× when
+ * it is composited. Under captions, for three to five seconds, through a
+ * platform that re-encodes hard, that is a trade worth making — and it is our
+ * upscale, done once at render, rather than one we paid 4.7× for.
+ *
+ * Narrowing the union rather than hiding the option in a dropdown is the point:
+ * a value that cannot be constructed cannot arrive from a parsed payload, a
+ * stale client, or a caller who read an older plan.
  */
-export type Resolution = '480p' | '720p' | '1080p'
+export type Resolution = '480p' | '720p'
 
 /** Vertical first, because every platform we post to is vertical. */
 export type AspectRatio = '9:16' | '1:1' | '16:9'
@@ -325,7 +349,6 @@ export const DEFAULT_CLIP_SECONDS = 5
 const SHORT_EDGE: Readonly<Record<Resolution, number>> = {
   '480p': 480,
   '720p': 720,
-  '1080p': 1080,
 }
 
 /** How many short edges make the long one, per shape. */

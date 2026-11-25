@@ -10,7 +10,7 @@ Worktree: `/Users/vladb/Developer/mirrorline/mirrorline-gen`, branch
 
 ## Where this stands in one paragraph
 
-The plan is `docs/plan/AI_GENERATION_V4.md`, approved; the decisions are **D137**
+The plan is `docs/plan/AI_GENERATION_V4.md`, approved; the decisions are **D140**
 in `docs/DECISIONS.md`. §4.2 steps 1–3 and 5 are built, committed and pushed:
 the adapter interface, the safety gate, the media cap and ledger, the registry,
 the keyless sample provider, and the import-graph sweep that keeps the key in
@@ -25,7 +25,7 @@ them is unknown.
 
 ## Read these first, in this order
 
-1. `docs/DECISIONS.md` → **D137**. Vlad's five decisions and the five the
+1. `docs/DECISIONS.md` → **D140**. Vlad's five decisions and the five the
    implementation forced. If you read one thing, read this.
 2. `apps/web/lib/generation/types.ts`. The header explains why this is *not* a
    `Segment` and carries the mapping onto the VIDEO session's union.
@@ -46,7 +46,7 @@ them is unknown.
   Images are synchronous.
 - `aspect_ratio: '9:16'`, `resolution`, `duration` from the request. **Never**
   send a reference image, a voice reference or a start frame — the request type
-  has no field for one and that is deliberate (D137, non-negotiable 5).
+  has no field for one and that is deliberate (D140, non-negotiable 5).
 - Send `scenePrompt(request)` from `safety.ts`, not `request.prompt`. It appends
   the allow-list framing.
 - Map refusals, do not throw them: images expose `respect_moderation` on the
@@ -109,7 +109,7 @@ refuses *before* the call.
 2. Buy zero data retention on the xAI account — approved in principle, but it is
    an Order Form line item, not a flag. Until it is bought, xAI holds inputs and
    outputs for 30 days.
-3. The AUP question for the lawyer list (D137 §5). Blocks billing a client for
+3. The AUP question for the lawyer list (D140 §5). Blocks billing a client for
    generated output; blocks nothing before that.
 4. **$0.50 per request makes 1080p a short-clip-only option** — it crosses the
    ceiling at about 3.5 seconds. Raise the ceiling, drop 1080p from the UI, or

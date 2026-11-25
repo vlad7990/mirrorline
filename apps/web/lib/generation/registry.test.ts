@@ -144,16 +144,23 @@ describe('dimensionsFor', () => {
 
   test.each([
     ['9:16' as const, '480p' as const, { width: 480, height: 854 }],
-    ['9:16' as const, '1080p' as const, { width: 1080, height: 1920 }],
     ['1:1' as const, '720p' as const, { width: 720, height: 720 }],
     ['16:9' as const, '720p' as const, { width: 1280, height: 720 }],
   ])('%s at %s', (aspect, resolution, expected) => {
     expect(dimensionsFor(aspect, resolution)).toEqual(expected)
   })
 
+  test('the renderer’s own 1080×1920 export is not one of our sizes', () => {
+    // D140: B-roll generates at 720p and is upscaled ~1.5× when the renderer
+    // composites it into a 1080×1920 frame. Worth asserting that we are not
+    // quietly generating at the export size — the two numbers are close enough
+    // to be mistaken for each other by whoever reads this next.
+    expect(dimensionsFor('9:16', '720p')).toEqual({ width: 720, height: 1280 })
+  })
+
   test('is always even on both edges, because H.264 chroma subsampling requires it', () => {
     for (const aspect of ['9:16', '1:1', '16:9'] as const) {
-      for (const resolution of ['480p', '720p', '1080p'] as const) {
+      for (const resolution of ['480p', '720p'] as const) {
         const { width, height } = dimensionsFor(aspect, resolution)
         expect(width % 2, `${aspect} ${resolution} width`).toBe(0)
         expect(height % 2, `${aspect} ${resolution} height`).toBe(0)

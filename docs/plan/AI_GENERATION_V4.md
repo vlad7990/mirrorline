@@ -2,7 +2,7 @@
 
 **Status: approved 25 November 2026, and slice 1 is built.**
 
-Vlad's five decisions and the choices they forced are recorded as **D137** in
+Vlad's five decisions and the choices they forced are recorded as **D140** in
 `docs/DECISIONS.md`, which supersedes §5 of this document: xAI primary with zero
 data retention, Google later and paid-tier only, Runway not at all, $15 a month
 and $0.50 a request. §4.2 steps 1–3 and 5 are in `apps/web/lib/generation/`;
@@ -626,7 +626,7 @@ Three of these are the "stop and ask" kind; the rest are logged and I proceed.
    training on inputs and outputs; I would not point client material at it
    without something separate in writing.
 
-On approval I will log this as **D137** in `docs/DECISIONS.md` — the adapter
+On approval I will log this as **D140** in `docs/DECISIONS.md` — the adapter
 interface, the 720p Lite default, the media cap, the consent-driven capability
 subset (no references, no voices, no lip-sync), and the refusal-is-not-failure
 rule — and start at §4.2 step 1.
