@@ -23,6 +23,20 @@
 # handler that needs them, because an image is also a statement about what we
 # ship.
 #
+# ------------------------------------------------------------------------------
+# **Answered, 25 November 2026 — and in the file next door rather than in this
+# one.** V5 built the `render-cuts` handler, the review happened, and the answer
+# was the pinned **LGPL** build (D137). It lives in `Dockerfile.video`, with
+# Python, `uv` and a Whisper model, and runs the same `src/index.ts` with
+# `WORKER_KINDS=render-cuts`.
+#
+# **This image is unchanged, deliberately.** The scan worker stays Node-only at
+# ~250 MB: it idles at about 150 MB and would otherwise carry 1.5 GB of
+# transcoding stack it never executes, and an OOM during somebody's encode must
+# not kill the process draining the scan queue. Two services, one source tree,
+# one environment variable between them.
+# ------------------------------------------------------------------------------
+#
 # ==============================================================================
 # Why the whole repo is the build context
 # ==============================================================================
