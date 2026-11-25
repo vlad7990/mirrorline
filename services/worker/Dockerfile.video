@@ -1,0 +1,183 @@
+# The video worker (V5, slice 1).
+#
+# ==============================================================================
+# Two Dockerfiles, one source tree, and why that is the cheap half
+# ==============================================================================
+#
+# `Dockerfile` builds the scan worker: Node, no Python, no ffmpeg, ~250 MB. This
+# builds the same `src/index.ts` with Python, a pinned ffmpeg and a Whisper
+# model, and runs it with `WORKER_KINDS=render-cuts`.
+#
+# Both images therefore contain both handlers and each claims only its own
+# kinds. That is deliberate: `claim_job(job_kinds, lease_seconds)` already takes
+# the kinds, so the second service costs one environment variable rather than a
+# second codebase. The reasoning for splitting the *services* is in
+# `docs/plan/V5_VIDEO_PIPELINE_PLAN.md §3.3` — a scan idles at ~150 MB and a
+# render needs 4 GB, and an OOM during an encode must not kill the process
+# draining the scan queue.
+#
+# ==============================================================================
+# ffmpeg: the licence note in `Dockerfile` is answered here
+# ==============================================================================
+#
+# `Dockerfile` says, and said first: "ffmpeg is left out on purpose… if the
+# engine is ever shipped inside a container image with ffmpeg in it, that needs
+# a licence review first (LGPL build, or a decision)." This is that moment, and
+# the answer is **the LGPL build**, decided by Vlad on 25 November 2026.
+#
+# What makes it the LGPL build rather than a label:
+#
+#  * The artefact name contains `lgpl`, and BtbN's build scripts gate the
+#    GPL-only pieces on exactly that: `scripts.d/50-x264.sh` and `50-x265.sh`
+#    both `return -1` when `$VARIANT == lgpl*`, so no x264 and no x265 is
+#    compiled in. libass (ISC) and openh264 (Cisco, BSD-2-Clause) are not gated
+#    and are present, which is what lets this image burn real subtitles.
+#  * It is **pinned to an immutable release asset and checked by digest**, not
+#    to the rolling `latest` tag. A pin that can be moved underneath you is a
+#    licence claim that can be falsified by somebody else's cron job.
+#  * It is unmodified and invoked as a separate binary — never linked, never
+#    vendored — which is the same shape the Postiz carve-out in non-negotiable
+#    10 describes.
+#  * The consequence, stated rather than discovered: **no libx264**, so H.264
+#    comes from openh264. `pipeline/ffmpeg.py:pick_h264_encoder` prefers
+#    openh264 even where x264 exists, so the output being judged is the output
+#    this image produces.
+#
+# `scripts/licence-check.mjs` reads the two ARGs below and fails if the pinned
+# artefact stops saying `lgpl`. The gate is mechanical because the comment is
+# not.
+
+FROM node:24-slim
+
+# ------------------------------------------------------------------------------
+# System packages
+# ------------------------------------------------------------------------------
+#
+# `fontconfig` and `fonts-dejavu-core` are not optional decoration: libass
+# resolves a font *family* through fontconfig, and an image without one burns
+# tofu boxes where the captions should be. `pick_font_family` reports which
+# family it got, and DejaVu is the fallback it expects to find here.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+       ca-certificates \
+       curl \
+       xz-utils \
+       fontconfig \
+       fonts-dejavu-core \
+  && rm -rf /var/lib/apt/lists/*
+
+# ------------------------------------------------------------------------------
+# ffmpeg, pinned and verified
+# ------------------------------------------------------------------------------
+
+ARG FFMPEG_TAG=autobuild-2026-11-25-12-41
+ARG FFMPEG_ASSET=ffmpeg-n9.0.2-963-g4d831360c9-linux64-lgpl-9.0.tar.xz
+ARG FFMPEG_SHA256=4a34e2fb6d1261eb6df4a62ea4eb1ffaa1dd04043561a0fe83d046c221845750
+
+RUN set -eux; \
+  curl -fsSL -o /tmp/ffmpeg.tar.xz \
+    "https://github.com/BtbN/FFmpeg-Builds/releases/download/${FFMPEG_TAG}/${FFMPEG_ASSET}"; \
+  echo "${FFMPEG_SHA256}  /tmp/ffmpeg.tar.xz" | sha256sum -c -; \
+  mkdir -p /tmp/ffmpeg; \
+  tar -xJf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg --strip-components=1; \
+  install -m 0755 /tmp/ffmpeg/bin/ffmpeg /usr/local/bin/ffmpeg; \
+  install -m 0755 /tmp/ffmpeg/bin/ffprobe /usr/local/bin/ffprobe; \
+  # The licence travels with the binary. LGPL-2.1 asks that the terms be
+  # conveyed with the work, and a container nobody can read the licence out of
+  # is a container that does not comply.
+  mkdir -p /usr/local/share/licences/ffmpeg; \
+  cp -r /tmp/ffmpeg/LICENSE.txt /usr/local/share/licences/ffmpeg/ 2>/dev/null || true; \
+  echo "Source: https://github.com/BtbN/FFmpeg-Builds/releases/tag/${FFMPEG_TAG} (${FFMPEG_ASSET})" \
+    > /usr/local/share/licences/ffmpeg/SOURCE.txt; \
+  rm -rf /tmp/ffmpeg /tmp/ffmpeg.tar.xz; \
+  # Fail the build rather than the first render: an image whose ffmpeg cannot
+  # write H.264 or burn subtitles is useless in a way no test would catch until
+  # a client was waiting.
+  ffmpeg -hide_banner -encoders | grep -q libopenh264; \
+  ffmpeg -hide_banner -filters | grep -q " ass "; \
+  # And the licence claim itself, checked rather than trusted: an LGPL build's
+  # configuration must not contain `--enable-gpl`.
+  if ffmpeg -hide_banner -version | grep -q 'enable-gpl'; then \
+    echo "this ffmpeg is a GPL build; the licence review said LGPL" >&2; exit 1; \
+  fi
+
+# ------------------------------------------------------------------------------
+# uv, and the Python engine
+# ------------------------------------------------------------------------------
+
+ARG UV_VERSION=0.13.10
+RUN set -eux; \
+  curl -fsSL "https://astral.sh/uv/${UV_VERSION}/install.sh" -o /tmp/uv.sh; \
+  UV_INSTALL_DIR=/usr/local/bin sh /tmp/uv.sh; \
+  rm /tmp/uv.sh; \
+  uv --version
+
+WORKDIR /app
+
+RUN corepack enable
+
+# The manifests first, so a dependency install is cached across source edits.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/web/package.json apps/web/
+COPY packages/ui/package.json packages/ui/
+COPY packages/mock/package.json packages/mock/
+COPY services/worker/package.json services/worker/
+
+RUN pnpm install --frozen-lockfile --filter @mirrorline/worker...
+
+# The Python project next, also manifests-first.
+COPY services/pipeline/pyproject.toml services/pipeline/uv.lock services/pipeline/
+
+# `--extra transcribe` is faster-whisper (MIT) over CTranslate2 (MIT) — no
+# torch, no gated models. WhisperX is BSD-2-Clause and is deliberately **not**
+# installed: it wants torch 2.8, torchvision, transformers and pyannote-audio,
+# whose models are gated behind accepted Hugging Face conditions, for word
+# timings faster-whisper already provides. See the plan's §2.1.
+RUN cd services/pipeline \
+  && uv sync --no-editable --extra transcribe
+
+# ------------------------------------------------------------------------------
+# The Whisper weights, baked in
+# ------------------------------------------------------------------------------
+#
+# Downloaded at build rather than on boot, and the reason is D128: the Railway
+# healthcheck is load-bearing, so a container that fetches 250 MB from Hugging
+# Face before it can answer `/healthz` fails its deploy whenever Hugging Face
+# is slow — and takes the working worker with it. Baking it also means a render
+# never waits on a third party.
+ENV HF_HOME=/app/.cache/huggingface
+# Must match `_DEFAULT_MODEL` in `pipeline/adapters/transcribe.py`: this line
+# decides which weights are *in* the image and that one decides which weights
+# are *asked for*, and a disagreement would download the real one on the first
+# render — the exact failure baking them was meant to remove.
+ENV WHISPER_MODEL=small
+RUN cd services/pipeline \
+  && uv run --no-editable python -c "\
+from faster_whisper import WhisperModel; \
+WhisperModel('${WHISPER_MODEL}', device='cpu', compute_type='int8'); \
+print('whisper ${WHISPER_MODEL} is in the image')"
+
+COPY . .
+
+# ------------------------------------------------------------------------------
+# Not root
+# ------------------------------------------------------------------------------
+#
+# Nothing here needs it, and the running container holds the service-role key —
+# the one credential in this system that ignores every row-level policy we
+# wrote. `/app` is chowned because `uv run` may touch the virtualenv and the
+# model cache, and a root-owned cache under a non-root process is a render that
+# fails on a permission error twenty minutes in.
+RUN chown -R node:node /app
+USER node
+
+# This is the whole difference in behaviour between the two images.
+ENV WORKER_KINDS=render-cuts
+
+# `src/health-server.ts` serves `GET /healthz` on `PORT`, and answers 200 only
+# once a heartbeat row has been written. Set **Healthcheck Path = `/healthz`**
+# on the Railway service; without that field this port is a status page nobody
+# reads (D125, D128).
+EXPOSE 8080
+
+CMD ["pnpm", "--filter", "@mirrorline/worker", "start"]

@@ -22,6 +22,10 @@ claude = ["anthropic>=0.40"]
 
 [project.scripts]
 make-samples = "pipeline.cli:main"
+# V5's render leg. The worker shells out to these exactly as a human runs
+# make-samples, which is why they are console scripts rather than imports.
+render-short = "pipeline.cli_short:main"
+transcribe-source = "pipeline.cli_transcribe:main"
 
 [dependency-groups]
 dev = ["pytest>=8.3"]

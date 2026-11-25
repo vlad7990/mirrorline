@@ -93,7 +93,12 @@ the KPI tier it serves.
 - **Data, auth, storage:** Supabase. Tonight, mock data only; wire Supabase only if keys exist in `.env.local`.
 - **Billing:** Stripe, **test mode only**.
 - **Hosting:** Vercel, **preview deployments only**.
-- **Media engine (later):** Python workers + queue. ffmpeg, WhisperX, ClipsAI, Remotion; Claude API for writing.
+- **Media engine:** Python workers + the `jobs` queue, in their own Railway service (`video-worker`). Decided 25 November 2026 with V5 slice 1, replacing the earlier "ffmpeg, WhisperX, ClipsAI, Remotion" line, which named three tools we do not use:
+  - **ffmpeg — the pinned BtbN `linux64-lgpl` build**, by digest, in `services/worker/Dockerfile.video`. This closes the licence review that Dockerfile deferred: x264 and x265 are GPL-only and absent, libass (ISC) and openh264 (BSD-2) are present, so captions are burned by `-vf ass=` and H.264 comes from openh264. Enforced by a gate in `pnpm licence-check`, which fails if the pinned artefact stops saying `lgpl`.
+  - **Transcription — faster-whisper (MIT)** over CTranslate2 (MIT), `small`, int8, weights baked into the image. **WhisperX is BSD-2-Clause** — that licence question is answered — but it is not installed: it wants torch, torchvision, transformers and pyannote's gated models for word timings faster-whisper already gives. whisper.cpp (MIT) is the fallback if image size ever binds.
+  - **ClipsAI is out** (MIT, but unmaintained since January 2024). The beat aligner in `services/pipeline/src/pipeline/beats.py` does what V5 needs, and does it against an approved script rather than by guessing at interestingness.
+  - **Remotion — slice 2, and it is a purchase.** Its licence is a custom source-available one that requires a **paid company licence** and is *not* on non-negotiable 10's allow-list, so it is not in slice 1: `.ass` plus ffmpeg burns captions and text overlays without it. **Slice 2 is animated brand templates** — intro and outro, the `introTemplate`/`outroTemplate` the brand kit already holds — and Vlad buys the Company Licence then. Its agent skills (`everything-claude-code:remotion-video-creation`) come in at the same time and not before, because a skill that installs Remotion would buy it by accident.
+  - Claude API for writing, unchanged.
 - **Automation:** n8n, self-hosted, for back-office flows only (`docs/automation/N8N_AND_ZAPIER.md`). Zapier only for low-volume links when no API exists.
 - **Tests:** Vitest for units, Playwright for end-to-end and visual checks against the reference PNGs.
 

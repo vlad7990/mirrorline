@@ -105,6 +105,28 @@ const LGPL_DYNAMIC_BINARY_EXCEPTIONS = new Set([
  * Whether a file obeys that scope is not a manifest question, so it is
  * enforced in ./gsap-scope.mjs instead of here.
  */
+/**
+ * Packages whose **manifest** omits a licence the package itself states (V5).
+ *
+ * `combine-errors` is a transitive dependency of `tus-js-client`, which is the
+ * resumable-upload client Supabase's own documentation points at. It ships
+ * `License.md` containing the full MIT text, and simply has no `license` field
+ * in `package.json` — an npm metadata omission from 2016, not a licence
+ * question.
+ *
+ * It is listed here rather than by widening `ALLOWED_LICENCES`, because
+ * "UNKNOWN" must keep failing: an undeclared licence is all-rights-reserved by
+ * default, and one package with a readable MIT file is not a reason to admit
+ * the next package that has nothing at all. Each entry names the evidence, and
+ * the evidence is a file in the installed package that anybody can open.
+ */
+const MANIFEST_OMITS_LICENCE = new Map([
+  [
+    'combine-errors',
+    { licence: 'MIT', evidence: 'License.md holds the full MIT text; package.json omits the field' },
+  ],
+]);
+
 const GSAP_LICENCE_EXCEPTIONS = new Set(['gsap', '@gsap/react']);
 const GSAP_LICENCE_PATTERN = /gsap\.com\/standard-license/i;
 
@@ -166,6 +188,11 @@ const isAllowed = (expression, name) => {
   if (name && GSAP_LICENCE_EXCEPTIONS.has(name) && GSAP_LICENCE_PATTERN.test(expression)) {
     return true;
   }
+  // A manifest with no licence field, where the package ships the text anyway.
+  // Named one by one, with the evidence recorded beside the name.
+  if (expression === 'UNKNOWN' && name && MANIFEST_OMITS_LICENCE.has(name)) {
+    return ALLOWED_LICENCES.has(MANIFEST_OMITS_LICENCE.get(name).licence);
+  }
   if (expression === 'UNKNOWN') return false;
   const cleaned = expression.replace(/[()]/g, ' ').trim();
   const terms = cleaned
@@ -190,6 +217,76 @@ const printOffenders = (offenders) => {
     console.error(row(offender.name, offender.version, offender.licence));
   }
   console.error(`\nAllow-list: ${[...ALLOWED_LICENCES].join(', ')}\n`);
+};
+
+/**
+ * The third gate: the ffmpeg binary we put in an image (V5).
+ *
+ * Rule 10's two halves were "may we install this" and "where may we use it".
+ * ffmpeg adds a third that no manifest can answer, because it is not a
+ * dependency — it is a binary downloaded in a Dockerfile, and the thing that
+ * decides its licence is **which artefact name was typed there**.
+ *
+ * The LGPL build and the GPL build differ by six characters in a URL. The
+ * licence review that chose LGPL (V5, 25 November 2026) is a comment; this is
+ * the part that cannot be edited away by somebody bumping a version. It checks:
+ *
+ *  * the artefact says `lgpl`, and does not say plain `gpl`;
+ *  * the release tag is not `latest`, because a pin that moves underneath us is
+ *    a licence claim somebody else's cron job can falsify;
+ *  * there is a sha256 to check it against, and it is a sha256.
+ *
+ * `services/pipeline`'s Python dependencies are still **not** covered by any
+ * automated check (docs/PROGRESS.md "Needs Vlad" 2 calls that a gap, not a
+ * pass). This closes the binary half of it; `uv.lock` is still owed one.
+ */
+const FFMPEG_DOCKERFILE = join(REPO_ROOT, 'services', 'worker', 'Dockerfile.video');
+
+export const checkFfmpegPin = () => {
+  if (!existsSync(FFMPEG_DOCKERFILE)) return [];
+
+  const text = readFileSync(FFMPEG_DOCKERFILE, 'utf8');
+  const argOf = (name) => text.match(new RegExp(`^ARG\\s+${name}=(\\S+)`, 'm'))?.[1] ?? null;
+
+  const tag = argOf('FFMPEG_TAG');
+  const asset = argOf('FFMPEG_ASSET');
+  const sha = argOf('FFMPEG_SHA256');
+  const problems = [];
+
+  if (asset === null || tag === null || sha === null) {
+    problems.push('Dockerfile.video must declare FFMPEG_TAG, FFMPEG_ASSET and FFMPEG_SHA256');
+    return problems;
+  }
+
+  if (!/-lgpl[-.]/.test(asset)) {
+    problems.push(`FFMPEG_ASSET ${asset} is not an lgpl build`);
+  }
+
+  // `linux64-gpl-9.0` matches this and `linux64-lgpl-9.0` does not, which is
+  // the whole point of writing it as a boundary rather than a substring.
+  if (/(?:^|[^l])-gpl[-.]/.test(asset)) {
+    problems.push(`FFMPEG_ASSET ${asset} is a GPL build; the licence review chose LGPL`);
+  }
+
+  if (tag === 'latest') {
+    problems.push('FFMPEG_TAG is "latest", which is a pin that moves. Use an autobuild tag.');
+  }
+
+  if (!/^[0-9a-f]{64}$/.test(sha)) {
+    problems.push(`FFMPEG_SHA256 ${sha} is not a sha256 digest`);
+  }
+
+  return problems;
+};
+
+const printFfmpegProblems = (problems) => {
+  console.error(`\nffmpeg pin (${problems.length}):\n`);
+  for (const problem of problems) console.error(`  - ${problem}`);
+  console.error(
+    '\nThe worker image ships ffmpeg as a separate, unmodified binary. LGPL is the\n' +
+      'build the licence review allowed (V5); x264 and x265 are GPL-only and are\n' +
+      'absent from it by construction. See services/worker/Dockerfile.video.\n',
+  );
 };
 
 const collectPackages = () => {
@@ -223,16 +320,19 @@ const main = () => {
   // unrelated reasons — a dependency's licence, and one of our own imports —
   // so stopping at the first would hide the second until the next commit.
   const scopeViolations = checkGsapScope();
+  const ffmpegProblems = checkFfmpegPin();
 
   if (offenders.length > 0) printOffenders(offenders);
   if (scopeViolations.length > 0) printScopeViolations(scopeViolations);
+  if (ffmpegProblems.length > 0) printFfmpegProblems(ffmpegProblems);
 
-  if (offenders.length > 0 || scopeViolations.length > 0) {
+  if (offenders.length > 0 || scopeViolations.length > 0 || ffmpegProblems.length > 0) {
     process.exit(1);
   }
 
   console.log(
-    `licence-check: ${packages.length} packages checked, all licences allowed; GSAP scope clean`,
+    `licence-check: ${packages.length} packages checked, all licences allowed; ` +
+      'GSAP scope clean; ffmpeg pinned to an LGPL build',
   );
   process.exit(0);
 };

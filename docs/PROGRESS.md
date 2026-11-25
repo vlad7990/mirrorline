@@ -1,5 +1,82 @@
 # Progress — morning handoff
 
+## V5 slice 1 — footage in, a captioned 9:16 short out (25 November 2026)
+
+Branch `feat/video-v5-slice-1`, planned in `docs/plan/V5_VIDEO_PIPELINE_PLAN.md`
+and approved with five decisions (D137). **This is the VIDEO session's lane:**
+the SCAN session owns `lib/niche-scan` and `lib/scripts`, the AI-GENERATION
+session owns generator adapters, and nothing here touches either.
+
+### What a user can now do
+
+- **Send their own long video from the studio.** The Upload screen has a real
+  panel above the sample one: choose an **approved** idea, name the rights
+  holder, tick the box, pick a file. The upload goes **straight to Supabase
+  Storage over TUS** — no bytes through Vercel — resumes after a dropped
+  connection, and takes up to 5 GB and an hour.
+- **Get one short back.** A `render-cuts` job transcribes the source once
+  (faster-whisper, stored so a second cut never pays again), finds each of the
+  script's four beats in the footage, burns the brand's captions with libass,
+  exports 1080×1920 H.264, and stores it privately.
+- **Watch it and approve it.** The card shows the poster, a signed-URL player,
+  the number of beats and the length, the Compliance verdict with its findings,
+  and an Approve button that the database refuses unless the gate passed.
+- **Be told why not, when not.** "The Payoff beat is not in this footage (best
+  match 18% of its words)" is a sentence they can act on by filming that line.
+  Every refusal path writes it: no audio track, a source over an hour, an
+  unapproved idea, an upload that stopped at 94%.
+- **See an AI scene labelled the day one exists.** `renders.ai_scenes` plus
+  `renders_ai_scene_is_labelled` make an unlabelled generated scene a *failed
+  insert*, so the slot is safe to ship before any generator does.
+
+### Verified
+
+| | |
+|---|---|
+| `pnpm lint`, `pnpm typecheck` | green |
+| `pnpm test` | **1315 passing** (29 new: the shared `Segment` seam and the render job's budget arithmetic) |
+| `pnpm build` | green |
+| `pnpm licence-check` | green, now including the **ffmpeg pin gate** |
+| `pnpm migration-safety` | additive |
+| `uv run pytest -q` (engine) | **143 passing, 4 skipped** — the four are the full render, skipped because this laptop's ffmpeg has no libass (D16). **CI's `pipeline` job runs them**, because Debian's ffmpeg does. |
+
+### Not verified, and both are honest gaps
+
+1. **The video image has not been built.** There is no Docker on this machine.
+   What *is* checked: the pinned artefact's sha256 matches
+   (`4a34e2fb…45750`), the tarball's layout is as the Dockerfile assumes
+   (`bin/ffmpeg`, `bin/ffprobe`, `LICENSE.txt` under one top-level directory),
+   and the uv installer version exists and honours `UV_INSTALL_DIR`. The build
+   itself fails loudly if libopenh264 or the `ass` filter is missing, so the
+   first Railway build is the verification.
+2. **The migration is not on preview.** This checkout is not `supabase link`ed
+   and the preview DB password is not in `apps/web/.env.local`. The screen is
+   built to survive that — every read fails soft, so the panel renders its empty
+   state rather than an error — which is why CI stays green either way.
+   Screenshots at 1440px and 390px are owed against a *real* render and wait on
+   the same thing.
+
+### Needs Vlad — four things, none of them a deploy
+
+- **N1. Raise the preview Storage limit.** Dashboard → the preview project
+  (`qypakxvxnjmsvxmxiynf`) → **Storage → Settings → Global file size limit** →
+  **5 GB**. The default is 50 MB, which refuses every real upload; the org is on
+  **Pro**, so up to 500 GB is allowed. The `client-footage` bucket already caps
+  itself at 5 GiB, and the global limit is the ceiling above it.
+- **N2. The preview database password**, or a `supabase link` in this checkout —
+  then I apply migrations to preview myself, which is where this one needs to
+  be. (The SCAN session's `preview-schema` CI job would also do it once that
+  branch lands.)
+- **N3. The Railway `video-worker` service.** Dockerfile
+  `services/worker/Dockerfile.video`, build context the repo root,
+  **`WORKER_KINDS=render-cuts`**, **Healthcheck Path `/healthz`**, replica limits
+  2 vCPU / 4 GB. It needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` and
+  **not** `ANTHROPIC_API_KEY` — the render path calls no model. Idle cost is
+  $1–2/month (D137 §2 corrects the plan's $80).
+- **N4. The merge.** This pull request carries a migration *and* touches
+  `services/worker`, so it is yours twice over: **`migrate-production` label**
+  when you want it on production. I have not added it and will not.
+
 ## The seven fixes from the first live report review — written down (24 November 2026)
 
 Vlad reviewed the report from the **24 November 8:31 PM EST** scan and called it
