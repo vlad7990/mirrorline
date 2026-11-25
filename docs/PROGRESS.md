@@ -1,29 +1,55 @@
 # Progress — morning handoff
 
-## Handoff — 24 November 2026, afternoon (two items closed; one label does the rest)
+## Handoff — 25 November 2026 (production is a migration behind `main`, and the check caught it)
 
-### What you do next
+### What happened
 
-**Add the label `migrate-production` to #31.** Then the same to #32. That is the
-whole procedure now — the workflow migrates, verifies, merges and comments
-(D130). Nothing to type, no ref, no dispatch.
+#31 and #32 were merged with the **Merge button**, not the label. Two
+consequences, and only the first is urgent:
 
-In that order, because #32 is stacked on #31. GitHub retargets #32 to `main`
-when #31 merges.
+1. **#31 landed on `main` as `ffcd83a` without production being migrated
+   first.** `Production schema check` went **red** on that commit, naming
+   `20261124180000` — the check doing exactly its job (D104 built it to notice
+   a merge that skipped the migration). Production's schema is one migration
+   behind the code `main` is deploying.
+2. **#32 merged into `feat/worker-heartbeat`, not `main`** — it was still
+   stacked when the button was pressed, so its work is **not on `main`** and
+   neither is the drafts migration. #31 merged 27 seconds earlier, so `main`
+   carries the heartbeat and nothing of D129.
 
-| PR | What | Migration |
-|---|---|---|
-| **#31** `feat/worker-heartbeat` | D128 — the worker's heartbeat, `/healthz`, `/api/health/worker` | `20261124180000_worker_heartbeats` |
-| **#32** `feat/v3-drafts-approval` | D129 — V3's drafts table and the approve refusal | `20261124190000_drafts` |
-| **#33** | D130 — the label path itself | none; **merged** |
+### The one action
 
-Two more settings, both yours and neither urgent:
+**Actions → Migrate production → Run workflow**, *Use workflow from* `main`,
+**`ref` input = `main`**. That applies `20261124180000`, and the red check goes
+green on a re-run.
 
-1. **Healthcheck Path = `/healthz`** on the Railway service — **after** #31's
-   migration has been applied, or the next deploy fails for a table that does
-   not exist yet.
-2. **`WORKER_HEALTH_TOKEN`** in Vercel production (any value), else
-   `/api/health/worker` 404s there by design.
+Not the label flow on the replacement pull request, even though that would also
+fix it: the red check is about **`main` ↔ production agreement**, and the fix
+for that is to migrate `main`. Routing it through a feature PR would leave
+production behind the code for however long that PR's CI takes, and would
+bundle a recovery into shipping something new.
+
+### Meanwhile, nothing is broken
+
+The heartbeat degrades safely, and that was designed in rather than lucky:
+
+- the heartbeat write fails, logs **once** (`[worker] heartbeat write failed:`)
+  and is swallowed; **jobs still claim, run and finish**
+- `pulse()` stays null, so `/healthz` answers **503** — which matters only if
+  the Railway healthcheck path is set, so **do not set it until the migration
+  is applied**
+- `/api/health/worker` answers 503 with `Could not read worker_heartbeats
+  (HTTP 404)` — a status endpoint, not a client surface
+- **no draft writes are happening at all**: D129's code is not on `main`, so
+  there is nothing to degrade there
+
+### Then
+
+A replacement pull request carries #32's work to `main`, migration included,
+ready for the label. **Label that one** — do not press Merge.
+
+Still outstanding and unchanged: **`WORKER_HEALTH_TOKEN`** in Vercel
+production (any value), else `/api/health/worker` 404s there by design.
 
 ### Why there are three PRs and not two
 
