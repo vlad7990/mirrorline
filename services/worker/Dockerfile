@@ -26,7 +26,7 @@
 # ------------------------------------------------------------------------------
 # **Answered, 25 November 2026 — and in the file next door rather than in this
 # one.** V5 built the `render-cuts` handler, the review happened, and the answer
-# was the pinned **LGPL** build (D137). It lives in `Dockerfile.video`, with
+# was the pinned **LGPL** build (D150). It lives in `Dockerfile.video`, with
 # Python, `uv` and a Whisper model, and runs the same `src/index.ts` with
 # `WORKER_KINDS=render-cuts`.
 #

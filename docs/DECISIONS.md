@@ -10263,15 +10263,27 @@ this session until theirs does.
 
 ---
 
-## D137 — the video pipeline's first slice, and the four decisions inside it
+## D150 — the video pipeline's first slice, and the four decisions inside it
 
 **25 November 2026.** V5 slice 1: an approved four-beat script plus the
 client's own upload becomes one captioned 9:16 short, as a `render-cuts` job.
 Planned in `docs/plan/V5_VIDEO_PIPELINE_PLAN.md`, approved by Vlad with five
 decisions, four of which changed the shape of the code.
 
-**Numbering:** D132–D136 are the SCAN session's, on `feat/scan-two-legs`, and
-are not in this branch. This is D137 so the two cannot collide.
+**Numbering, now allocated by session** (Vlad, 25 November 2026). Three
+sessions write decisions in parallel against branches that cannot see each
+other's, so the numbers are ranges rather than a queue:
+
+| Range | Session |
+|---|---|
+| **D132–D139** | SCAN — `lib/niche-scan`, the script agent |
+| **D140–D149** | AI-GENERATION — the generator adapters |
+| **D150–D159** | VIDEO — this pipeline |
+
+This decision was written as D137 and renumbered to **D150**, which is the
+first of the video range. The AI-GENERATION session records the ranges in
+`docs/PROGRESS.md`; this table is the same allocation seen from the decisions
+log, and if the two ever disagree, `PROGRESS.md` is the one being maintained.
 
 ### 1. ffmpeg is the pinned LGPL build, and a gate holds it there
 

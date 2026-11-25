@@ -197,7 +197,7 @@ Honest list; these are v0 shortcomings, not secrets.
   an opt-in extra for a different reason: it wants torch, torchvision,
   transformers and pyannote-audio, whose models are gated behind accepted
   Hugging Face conditions, for word timings faster-whisper already returns. The
-  worker image installs **faster-whisper** only (D137).
+  worker image installs **faster-whisper** only (D150).
 * **`render-short` makes one short per run.** The schema is built for a
   60-minute source yielding several (`renders.cut_index`), and slice 1 does not
   yet loop. Nothing has to change to add it.

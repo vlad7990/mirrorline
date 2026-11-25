@@ -3,7 +3,9 @@
 ## V5 slice 1 — footage in, a captioned 9:16 short out (25 November 2026)
 
 Branch `feat/video-v5-slice-1`, planned in `docs/plan/V5_VIDEO_PIPELINE_PLAN.md`
-and approved with five decisions (D137). **This is the VIDEO session's lane:**
+and approved with five decisions (**D150** — the video session's decision range
+is **D150–D159**; SCAN holds D132–D139 and AI-GENERATION D140–D149, which is
+that session's table to maintain here). **This is the VIDEO session's lane:**
 the SCAN session owns `lib/niche-scan` and `lib/scripts`, the AI-GENERATION
 session owns generator adapters, and nothing here touches either.
 
@@ -89,7 +91,7 @@ session owns generator adapters, and nothing here touches either.
   **`WORKER_KINDS=render-cuts`**, **Healthcheck Path `/healthz`**, replica limits
   2 vCPU / 4 GB. It needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` and
   **not** `ANTHROPIC_API_KEY` — the render path calls no model. Idle cost is
-  $1–2/month (D137 §2 corrects the plan's $80).
+  $1–2/month (D150 §2 corrects the plan's $80).
 - **N4. The merge.** This pull request carries a migration *and* touches
   `services/worker`, so it is yours twice over: **`migrate-production` label**
   when you want it on production. I have not added it and will not.

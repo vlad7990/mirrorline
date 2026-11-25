@@ -27,7 +27,7 @@ week 1, and non-negotiables 1, 2, 4, 6 and 10.
 ## 0. Approved 25 November 2026 — the decisions, and what they changed
 
 Vlad approved this plan with five decisions. Three of them changed what is
-written below, so they are here rather than only in `docs/DECISIONS.md` D137.
+written below, so they are here rather than only in `docs/DECISIONS.md` D150.
 
 | Decision | Effect on this plan |
 |---|---|
