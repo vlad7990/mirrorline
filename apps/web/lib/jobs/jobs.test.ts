@@ -19,7 +19,7 @@
 
 import { describe, expect, test } from 'vitest'
 
-import { isJobPending, parseJobOutcome, type JobSummary } from './types'
+import { isJobPending, isRestarting, parseJobOutcome, type JobSummary } from './types'
 
 function job(overrides: Partial<JobSummary> = {}): JobSummary {
   return {
@@ -91,5 +91,53 @@ describe('parseJobOutcome', () => {
     ['a non-string outcome', { outcome: 42 }],
   ])('refuses %s', (_label, value) => {
     expect(parseJobOutcome(value)).toBeNull()
+  })
+
+  test('accepts the interrupted marker a released job carries', () => {
+    // D135. `interrupted` is how the worker says "I put this back"; the screen
+    // needs it to tell a restart from a silent wait.
+    expect(parseJobOutcome({ outcome: 'interrupted' })).toBe('interrupted')
+  })
+})
+
+/**
+ * The fourteen-minute spinner (D135).
+ *
+ * A merge to `main` at 21:53 killed an in-flight scan; the lease held until
+ * 22:07 and the studio said "Scanning your niche…" throughout. The worker now
+ * releases the lease and marks the job, and this is the predicate the screen
+ * reads to say so.
+ */
+describe('isRestarting', () => {
+  test('a queued job carrying the interrupted marker is restarting', () => {
+    // Arrange
+    const released = job({ status: 'queued', outcome: 'interrupted' })
+
+    // Act
+    const restarting = isRestarting(released)
+
+    // Assert
+    expect(restarting).toBe(true)
+  })
+
+  test('is still pending, which is why it recovers on its own', () => {
+    // The restarting branch has to sit *above* the generic pending branch in
+    // the component, because both are true of a released job.
+    expect(isJobPending(job({ status: 'queued', outcome: 'interrupted' }))).toBe(true)
+  })
+
+  test('an ordinary queued job is not restarting', () => {
+    expect(isRestarting(job({ status: 'queued', outcome: null }))).toBe(false)
+  })
+
+  test('a running job is not restarting, even if it was once released', () => {
+    // `claim_job` sets `running` and the marker becomes history. A job being
+    // worked on must read as in progress rather than as about to start again.
+    expect(isRestarting(job({ status: 'running', outcome: 'interrupted' }))).toBe(false)
+  })
+
+  test('a finished job is never restarting', () => {
+    expect(isRestarting(job({ status: 'complete', outcome: 'complete' }))).toBe(false)
+    expect(isRestarting(job({ status: 'failed', outcome: null }))).toBe(false)
   })
 })

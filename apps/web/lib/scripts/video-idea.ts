@@ -41,6 +41,8 @@ import {
 } from '../originality/gate'
 import { normaliseForComparison } from '../originality/similarity'
 
+import { factIsGrounded } from './fact-check'
+
 /** Four beats, in order. The recipe's shape, with the client's content. */
 export interface VideoBeat {
   /** "Hook", "Setup", "Payoff", "Call to action". */
@@ -283,23 +285,16 @@ export function ideaDraft(idea: VideoIdea): string {
 /**
  * Does the idea's `fact` actually come from the profile?
  *
- * Substring in either direction, on the normalised text: the model will write
- * "her reactive-dog intensive, $450 for four sessions" from a profile holding
- * "Reactive dog intensive" and "$450 for 4 sessions", and that is a fact used
- * properly rather than a new one invented. What it refuses is the fact that
- * appears nowhere in the profile — "she has trained over 500 dogs" — which is
- * exactly the plausible, unverifiable sentence a client would be quoted on.
+ * **Moved to `fact-check.ts` (D133).** It used to be two-directional substring
+ * containment right here, and that refused three of Maya Torres Coaching's own
+ * facts on the first live run — "Private reactive-dog sessions **are** $150 per
+ * session" against a profile holding "Private reactive-dog sessions, $150 per
+ * session" is one inserted word apart and fails containment both ways.
+ *
+ * Re-exported rather than relocated silently, because `screenIdeas` below is the
+ * only caller that matters and the name is the one `§V2` is written about.
  */
-export function factIsGrounded(fact: string, facts: readonly string[]): boolean {
-  const claimed = normaliseForComparison(fact)
-  if (!claimed) return false
-
-  return facts.some((known) => {
-    const normalised = normaliseForComparison(known)
-    if (normalised.length < 3) return false
-    return claimed.includes(normalised) || normalised.includes(claimed)
-  })
-}
+export { factIsGrounded }
 
 export interface ScreenInput {
   readonly ideas: readonly VideoIdea[]

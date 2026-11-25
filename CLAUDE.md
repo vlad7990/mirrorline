@@ -146,6 +146,17 @@ docs/                Specs, plan, designs, decisions, progress
   Rebuild from clean before calling a failure pre-existing, and treat "I have
   been running builds in this directory" as a confound to remove rather than
   background noise.
+- **The scan eval gates the scan** (D134, 24 November 2026). **Before merging any
+  change to the scan or the script agents, run `pnpm eval:scan` on preview and
+  put its summary in the pull request** — the success rate, and per case the
+  time, the searches and the cost. The files it covers are
+  `niche-scan/research.ts`, `write-leg.ts`, `notes.ts`, `scan.ts`, `report.ts`,
+  `scripts/first-videos.ts` and `scripts/fact-check.ts`. It costs about five
+  dollars a run and it exists because three live production scans produced one
+  report and no test said so — the hermetic suite cannot, because what broke was
+  the model's behaviour rather than our parser. `pnpm eval:scan:dog` runs the
+  reviewed dog-trainer profile three times, which is the bar for a change to the
+  legs themselves.
 - **Pull requests:** keep each under ~400 lines where practical. Merge your own when green, within the five exceptions in non-negotiable 11.
 - **Every end of day** (D114): post a short demo note in `docs/PROGRESS.md` — **what a user can now do**, with screenshots — then stop for Vlad's ten-minute review before continuing.
 - **Manage your own context** (D114): write the handoff at every milestone rather than trusting auto-compact to keep the right half.

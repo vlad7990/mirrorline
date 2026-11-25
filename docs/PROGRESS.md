@@ -1,5 +1,400 @@
 # Progress — morning handoff
 
+## Handoff — 25 November 2026, evening (the token cap is solved; three new faults, all three fixed — D138)
+
+### What you need to do
+
+**Re-run the eval and tell me the summary.** Nothing else is waiting on anybody.
+
+```
+pnpm eval:scan:dog      # 3 runs of the reviewed profile
+pnpm eval:scan          # all five cases
+```
+
+**#42 merges only on 3 of 3.** I still have not run it — this environment kills
+a fifteen-minute process.
+
+### Your 2-of-3 on `d3e5731`, and the good news in it
+
+**$1.25, half the round before it**, and the research leg used **35% and 42%**
+of a ceiling it was hitting two rounds ago. D137's compact ask works, and the
+token cap is closed as a question. What was left was three separate faults:
+
+| | |
+|---|---|
+| **The leg stopped answering** | 361s, 11 searches, **five output tokens**, then silence to the deadline. Every budget behaved and the diagnosis was still wrong: "ran out of research time" means *this niche needs more than six minutes*, and it needed about forty seconds. |
+| **A passing report cited nothing** | `sources=0` while the notes held `pages=8`. `sourcesUsed` was not `required` in the schema, and a field that copies rather than writes is the first thing dropped under length pressure. |
+| **A fifth true fact withheld** | "force-free approach, no prong, choke or e-collar used to read or correct the dog" — seven of the profile's nine terms present, **0.778** against a 0.8 bar. |
+
+### What is now on `feat/scan-two-legs`
+
+**1. A stall is told apart from a timeout, and retried once.** Ninety seconds of
+silence aborts the attempt; only a stall earns a second one, and only with two
+minutes of the leg left. The retry is free rather than a doubling, in all three
+currencies: it is handed the **same absolute deadline** (two attempts cannot
+outlast one), the search count is **carried** so the ceiling stays global and the
+spend projection stays true, and a stalled attempt's output is five tokens.
+`budget.test.ts` asserts each of those. `streamLeg` had **no tests at all**; it
+now has nine, with a stubbed stream and a fake clock — the watchdog fires on
+silence, leaves a slow-but-talking stream alone, bills what a stalled attempt
+used, and still says *timeout* when the deadline is what ran out.
+
+**2. Sources are derived from the notes, not asked for.** The write prompt no
+longer requests them and the schema no longer carries them; `sources.ts` builds
+the list from the notes' pages and post urls, merged **before** the review
+because `counts.sources` feeds its substance test. It cannot be dropped, it is
+cheaper by a few hundred output tokens, and a url cannot be mistyped into a page
+that does not exist.
+
+**3. The fact check's two directions got their own thresholds.** Forward — *are
+the fact's key terms present* — is now 0.75, because a paraphrase is mostly
+additions and they cannot be held against it. Reverse — *is the claim inside the
+fact* — keeps 0.8. What makes that safe is that **the negation rule now applies
+in both directions**: at 0.75, dropping the one word "no" from a nine-term method
+costs a ninth of the coverage and inverts the claim entirely, so the inverted
+sentence is asserted as refused. Your exact sentence is a test.
+
+I tried sentence-clause matching first and threw it away: your note quoted the
+method with a full stop, the eval fixture stores it with commas, so it would not
+have touched the failing case — and splitting on commas *would* have, by cutting
+"no prong, choke or e-collars" into a clause reading "choke or e-collars" with no
+negation in it. That is the one way this check could invert a client's method in
+public.
+
+Green on `pnpm lint`, `pnpm typecheck`, `pnpm test` (**1438**) and `pnpm build`.
+Full reasoning in `docs/DECISIONS.md` **D138**.
+
+### If it is still not 3 of 3
+
+Unchanged, in this order, and both change *what the research is* rather than how
+much of it survives:
+
+1. `RESEARCH_EFFORT` from `high` to `medium`.
+2. Split research into two narrower calls — formats first, then posts.
+3. Accept 2 of 3 honestly, with a clear failure message.
+
+### Still waiting on Vlad (unchanged)
+
+Three secrets for the preview-migration job: `SUPABASE_PREVIEW_PROJECT_REF`,
+`SUPABASE_PREVIEW_ACCESS_TOKEN`, `SUPABASE_PREVIEW_DB_PASSWORD`.
+
+---
+
+## Handoff — 25 November 2026, afternoon (the gate got to 2 of 3 and named its own failure; D137 is the fix)
+
+### What you need to do
+
+**Re-run the eval locally and tell me the summary.** Nothing else is waiting on
+anybody.
+
+```
+pnpm eval:scan:dog      # 3 runs of the reviewed profile, ~$3.30
+pnpm eval:scan          # all five cases, ~$5
+```
+
+**#42 merges only on 3 of 3.** I have not run it — this environment kills a
+fifteen-minute process, which is what cost the last two attempts.
+
+### What your 2-of-3 run found, which is the whole value of it
+
+The failure was **not** searches and **not** the clock — D136 widened both and
+neither fired. It was the research leg's **output ceiling**, and run #1 finished
+**88 tokens** under where run #2 stopped. A coin flip, not a budget.
+
+It is also the quietest of the three budgets. A search or time abort has no final
+message and says so. A `max_tokens` stop *returns* a message — `stop_reason` one
+word from `end_turn`, usage billed, text block full of notes — and because the
+last object is half-written, `JSON.parse` throws and the client is told the scan
+"could not find enough about that niche" after twenty paid searches.
+
+### What is now on `feat/scan-two-legs` (D137, four changes)
+
+| | |
+|---|---|
+| **The ask is compact by design** | `RESEARCH_NOTE_CAPS`: 4 formats, 5 posts, 4/5/3/4 notes, 8 pages, notes of 20 words, "how it goes" of 40, coverage of 60. The parser caps the same sections slightly *above* the ask, because both passing runs recorded six formats where four were asked for and those tokens were already spent. Not in the JSON schema — `minimum` on an integer is a 400 on this model, and a gate costing $3.30 a round is not where to guess at `maxItems`. |
+| **The ceiling moved with its projection** | `RESEARCH_MAX_TOKENS` 16k → **24k**. `max_tokens` is per *request* and a paused turn is resumed twice, so the spend cap now projects `RESEARCH_OUTPUT_PROJECTION` = 36k (1.7x the worst measured total) rather than one leg. `budget.test.ts` asserts the whole request projects under the $2 ceiling with a fifth in hand — about **$1.52**. |
+| **A truncated reply is read, not thrown away** | `partial-json.ts`: cut back to where a value finished, close what is open, parse. Nothing is re-sent — this is not D136's impossible salvage. **A number is never a cut point**, because closing `"views": 12345` at `12` would print a figure nobody reported. Salvaged notes carry a line telling leg two the research is incomplete, so it reports the gap instead of inventing coverage. `notesAreUsable` is still the gate. |
+| **Output vs. cap is logged every run** | In the per-leg line and the leg-1 summary. The number that named this was there to be printed all along. |
+
+**And the fourth withheld fact.** Run #3's refusal — "force-free, no prong, choke
+or e-collar **method**" against "Positive reinforcement, force-free. No prong,
+choke or e-collars." — was the client's own method with a label on the end and
+one plural dropped, 0.75 against a 0.8 threshold. The check now singularises and
+ignores field labels (`method`, `approach`, `style`). Both lists are tiny on
+purpose, and the strict half is untouched and tested: invented numbers still
+fail, the right service at the wrong price still fails, and "prong and choke
+collar method" is still refused, because dropping a label must not drop a
+negation with it.
+
+Green on `pnpm lint`, `pnpm typecheck`, `pnpm test` (**1402**) and `pnpm build`.
+Full reasoning in `docs/DECISIONS.md` **D137**.
+
+### If it is still not 3 of 3
+
+The levers are unchanged and in this order, and both change *what the research
+is* rather than how much of it survives:
+
+1. `RESEARCH_EFFORT` from `high` to `medium`.
+2. Split research into two narrower calls — formats first, then posts for the
+   formats found.
+3. Accept 2 of 3 honestly, with a clear failure message, and say so out loud.
+
+### Still waiting on Vlad (unchanged)
+
+Three secrets for the preview-migration job: `SUPABASE_PREVIEW_PROJECT_REF`,
+`SUPABASE_PREVIEW_ACCESS_TOKEN`, `SUPABASE_PREVIEW_DB_PASSWORD`. Until they exist
+`preview-schema` warns on ordinary PRs and fails on any PR touching
+`supabase/migrations/`.
+
+---
+
+## Handoff — 25 November 2026, P0 night (five decisions on one branch; the gate is still red on 1 of 3)
+
+### Where it stands
+
+**PR #42 is open and NOT merged.** Its bar is three consecutive preview runs of
+the dog-trainer profile, and across two full attempts the eval says **1 of 3**
+both times — for two different reasons, both now fixed, with a third attempt
+running when this was written.
+
+`main` is at `1078f92`. Everything below is on `feat/scan-two-legs`, green on
+`pnpm lint`, `pnpm typecheck`, `pnpm test` (1359) and `pnpm build`.
+
+| | |
+|---|---|
+| **D132** | The scan is two legs — research (absolute deadline, notes out) then write (no tools, own budget, one retry) |
+| **D133** | The fact check matches substance, not substrings |
+| **D134** | `pnpm eval:scan` — five fixed cases on preview, with success rate, time, searches and cost |
+| **D135** | A redeploy releases the lease instead of stranding the scan; "Restarting…" in the UI; "Nothing was saved." said once |
+| **D136** | The research leg stopped losing its notes, and `preview-schema` stops preview drifting |
+
+### What the eval found, in order, and it is the whole value of tonight
+
+**Attempt 1 — 1 of 3.** Two runs hit the 24-search ceiling with **nothing
+written** (`formats=0 … pages=0`). Not a flaky model: the old single leg survived
+that ceiling only because it wrote the report in the same turn and had usually
+produced something first. D132 removed that accident with the shaping work.
+
+**Attempt 2 — 1 of 3, and the interesting failure.** The salvage call — re-send
+the aborted turn with no tools, ask for the notes — is **structurally
+impossible**:
+
+```
+400 invalid_request_error — When responding to programmatic tool calling,
+only tool_result blocks are allowed.
+```
+
+A server-side tool conversation cannot be continued with a user turn. The search
+results are in the aborted message's content blocks and there is no way to hand
+them back. **Recovery is off the table; only prevention is left.** The salvage
+code is removed rather than left as a path that always 400s, and the reasoning
+lives in `ResearchOutcome.notes` so nobody rediscovers it.
+
+**What six measured runs then said.** Successes at **16 and 19** searches; of
+five failures, **four were a budget firing** — three on the ceiling at 24, one on
+the clock at 270s — each with nothing written. A ceiling the normal path reaches
+is not a backstop, it is the failure mode. So:
+
+```
+ceiling    24  -> 32      ($0.32 of the $2 cap; whole projection ~$1.21)
+research  270s -> 360s    the six minutes Vlad specified
+the ask    3-6 formats, 9 posts -> 3-4 formats, 6 posts
+lease      900s -> 1200s
+```
+
+The clock's room comes from the **lease**, not from leg two — the write leg
+finished inside its 75-second attempts every time, including the passing run that
+needed its retry. And the lease could afford it precisely because D135 landed: a
+longer lease's only cost is how long a *stranded* job stays unclaimable, and the
+common cause of stranding was a redeploy killing a worker mid-scan, which now
+releases in seconds. **The margin went up, not down: 630s of 1200, 47.5%
+unspent.**
+
+### The good news, which is easy to lose in the failures
+
+Both passing runs prove the pipe end to end and prove D133 on the exact profile
+that failed the night before:
+
+```
+PASS  dog-trainers  283s  19 search(es)  $0.723  formats=6 videos=3 withheld=0
+```
+
+**Three videos, nothing withheld** — Vlad's 3-of-3 fact-check target, where
+twelve hours earlier all three of that client's own facts were refused. The
+passing run also needed **2 write attempts**, so D132's retry is earning its keep
+rather than sitting unused.
+
+### The third attempt could not be run here
+
+Twice, the eval process was **terminated by this environment** before its first
+case finished — once as a harness background task, once detached with `nohup`.
+No results, and `afterAll` never ran, so a few `Scan eval …` workspaces are
+probably left in preview (they cascade-delete by name).
+
+**So the verdict is still outstanding and #42 must not merge.** It needs a shell
+where a fifteen-minute process survives:
+
+```
+pnpm eval:scan:dog      # 3 runs of the reviewed profile, ~$3.30
+pnpm eval:scan          # all five cases, ~$5
+```
+
+Both summaries go in #42. Spent on the eval so far: about **$2.40** across two
+complete attempts.
+
+### If the third attempt is still not 3 of 3
+
+The next lever is **not** another budget raise. Try, in this order:
+
+1. `RESEARCH_EFFORT` from `high` to `medium`. `high` is why it searches
+   exhaustively; the notes do not need deep reasoning, and leg two does the
+   thinking that matters.
+2. Split the research into two narrower calls (formats first, then posts for the
+   formats found) so neither can spend the whole budget.
+3. Accept a lower bar honestly: a scan that works 2 of 3 with a clear failure
+   message is shippable; one that silently writes placeholders is not.
+
+### Still waiting on Vlad
+
+**Three secrets for the preview-migration job**, or it stays half-armed:
+`SUPABASE_PREVIEW_PROJECT_REF`, `SUPABASE_PREVIEW_ACCESS_TOKEN`,
+`SUPABASE_PREVIEW_DB_PASSWORD`. Until they exist `preview-schema` warns on
+ordinary PRs and **fails on any PR touching `supabase/migrations/`** — a skip is
+drift, and drift on a migration PR is what it exists to close.
+
+`RAILWAY_DEPLOYMENT_DRAINING_SECONDS=30` is **done**.
+
+### Queued, unstarted
+
+- **Fix 5** — report history on Niche Scan (date, niche, status, open, download
+  PDF). No migration, mine to merge. Never begun; there is no branch.
+- **Fix 6** — immutable delivered-snapshot PDF in a private workspace-scoped
+  bucket. Migration → label.
+- **Fix 7** — client invite by email. Auth → Vlad merges.
+
+### Debt
+
+1. **An interrupted scan's spend is not in `agent_runs`** — usage is only known
+   when the stream ends, and a released lease abandons the stream. Logged loudly.
+2. **A released scan re-runs from the beginning** and `attempts` is deliberately
+   not reset, so three deploys during one scan exhausts it. Right bound; will
+   read as a mysterious failure the first time.
+3. **A few `Scan eval …` workspaces may be left in preview** if an eval run was
+   killed mid-flight. They are named with that prefix and cascade-delete.
+4. **The eval costs about $1.20 a dog-trainer round and ~$5 for all five.** Worth
+   it, and worth knowing before running it on a whim.
+
+
+## Handoff — 25 November 2026, P0 night (four decisions shipped to a branch; the eval is blocked on one preview migration)
+
+### The two things only you can do
+
+1. **Apply `20261124213000_client_brand_name.sql` to the preview database.**
+   This is the blocker. The `migrate-production` label on #40 applied it to
+   **production only**, and nothing applies migrations to preview — there is no
+   workflow for it, and my Supabase CLI is logged into an account that cannot
+   see either mirrorline project (`supabase projects list` shows neither ref, and
+   nothing is `LINKED`). So I cannot do it and did not guess: D's own rule is
+   that a local link is how preview is migrated, and mis-identifying which ref is
+   production is exactly the mistake that rule exists to prevent.
+
+   Until it is applied, **preview cannot run a scan properly**: both profile
+   readers select `brand_name`, the select 400s, and `readClientProfileForAgent`
+   returns `EMPTY_PROFILE` — so every scan on preview runs with no client facts
+   and produces no videos.
+
+2. **Set `RAILWAY_DEPLOYMENT_DRAINING_SECONDS=30`** on the Railway service.
+   The number is reasoned in D135: it is sized for a clean lease release, not for
+   finishing a scan. Finishing an average interruption needs several minutes,
+   which would make every deploy that slow including the ones that interrupt
+   nothing.
+
+### What is on the branch `feat/scan-two-legs`
+
+Four commits, all green on `pnpm lint`, `pnpm typecheck`, `pnpm test` (1359
+passing) and `pnpm build`.
+
+| | |
+|---|---|
+| **D132** | The scan is two legs: research (absolute deadline, notes out) then write (no tools, own budget, one retry from the same notes) |
+| **D133** | The fact check matches substance, not substrings — the three facts it refused tonight all pass, inventions still refused |
+| **D134** | `pnpm eval:scan` — five fixed cases on preview, reporting success rate, time, searches and cost |
+| **D135** | A redeploy releases the lease instead of stranding the scan for fourteen minutes; the banner says "Restarting…"; and it stops saying "Nothing was saved." twice |
+
+**C was already done** — the brand name has been first in the "About your
+business" summary since #40.
+
+### The eval ran, spent nothing, and found the gap
+
+`SCAN_EVAL_CASE=dog-trainers SCAN_EVAL_REPEATS=3 pnpm eval:scan:dog`
+
+```
+Error: could not write the profile for dog-trainers:
+HTTP 400 Could not find the 'brand_name' column of 'client_profiles'
+in the schema cache
+```
+
+It failed in 1.2 seconds, before any model call, so **no money was spent**. That
+is the eval working on its first run: it caught an environment drift between
+preview and production that nothing else was watching, and it caught it instead
+of a client catching it.
+
+**D132 is therefore not merged and must not be.** Its bar is three consecutive
+successful preview runs of the dog-trainer profile, and the first one has not
+been possible yet.
+
+### What to do, in order, once preview has the migration
+
+```
+pnpm eval:scan:dog        # 3 runs of the reviewed profile, ~$3.30, ~20 min
+pnpm eval:scan            # all five cases, ~$5, ~30 min
+```
+
+Paste both summaries into the pull request. If the dog case passes three times,
+D132 may merge. If it does not, the per-leg lines are in the output —
+`[niche-scan research]` and `[niche-scan write 1/2]` carry their own seconds,
+searches, tokens and `stop_reason`, which is the diagnosis the old single line
+could not give.
+
+### What I could not verify, said plainly
+
+**No part of the two-leg scan has ever been executed.** It typechecks, the
+hermetic suite covers every pure piece of it (notes parsing, the budget
+arithmetic, the fact check, the drain arithmetic), and the thing none of that
+reaches is whether the request shape is accepted: `output_config.format` with no
+`tools` key at all on the write leg is new, and `streamLeg`'s single cast to
+`MessageStreamParams` is where a bad parameter would hide. The eval is how that
+gets found, which is the other reason it has to run before D132 merges.
+
+### Fix 5 is not started
+
+Vlad asked me to pause it and commit any work in progress. **There was none** — I
+had not begun it, so there is no branch. It stays queued: report history on the
+Niche Scan screen (date, niche, status, open, download PDF), needs no migration,
+and is mine to merge.
+
+### Still queued from the first review
+
+- **Fix 6** — an immutable delivered-snapshot PDF in a private, workspace-scoped
+  Supabase Storage bucket with signed URLs and RLS. Needs a migration → label.
+- **Fix 7** — client access to a workspace you set up (invite by email as a
+  member). Auth → yours to merge.
+
+### Debt this night added, written down rather than discovered later
+
+1. **Nothing applies migrations to preview.** Tonight that cost a blocked eval.
+   It deserves either a workflow or a documented one-line command in CLAUDE.md;
+   right now it is folklore.
+2. **An interrupted scan's spend is not in `agent_runs`.** When the worker
+   releases a lease on `SIGTERM`, the research leg's tokens up to that point are
+   paid for and unrecorded, because usage is only known when the stream ends. The
+   release logs it. Cheaper than the alternatives (D135), and still a gap.
+3. **A released scan re-runs from the beginning.** `attempts` is deliberately not
+   reset, so three deploys during one scan will exhaust it and the job will stop
+   rather than loop — which is the right bound and will read as a mysterious
+   failure the first time it happens.
+
+
 ## The seven fixes from the first live report review — written down (24 November 2026)
 
 Vlad reviewed the report from the **24 November 8:31 PM EST** scan and called it

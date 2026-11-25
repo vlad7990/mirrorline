@@ -54,6 +54,8 @@ import { WORKER_ERROR_BACKOFF_MS, WORKER_IDLE_POLL_MS } from '../../../apps/web/
 import { JOB_LEASE_SECONDS, type JobKind } from '../../../apps/web/lib/jobs/types'
 import { runNicheScan } from '../../../apps/web/lib/niche-scan/scan'
 
+import { graceMs, releaseJob, waitForJob } from './draining'
+
 import { createHeartbeat, type Heartbeat } from './heartbeat'
 import { startHealthServer } from './health-server'
 
@@ -221,6 +223,18 @@ function clientMessage(error: unknown): string {
   return 'The scan stopped before it finished.'
 }
 
+/**
+ * The job this process is in the middle of, for the signal handler (D135).
+ *
+ * Module scope because `SIGTERM` arrives outside the loop and has to be able to
+ * find the work: the old handler could only stop us claiming a *new* job, which
+ * left the one in hand holding a lease nothing could claim for fourteen minutes.
+ */
+const inFlight: { jobId: string | null; done: Promise<unknown> | null } = {
+  jobId: null,
+  done: null,
+}
+
 async function runOnce(supabase: SupabaseClient, heartbeat: Heartbeat): Promise<boolean> {
   let job: JobRow | null
 
@@ -243,8 +257,14 @@ async function runOnce(supabase: SupabaseClient, heartbeat: Heartbeat): Promise<
   const startedAt = Date.now()
   heartbeat.jobStarted(job.kind as JobKind)
 
+  // Held before it is awaited, so a signal arriving mid-scan can race it
+  // against the drain window instead of abandoning it (D135).
+  const work = handle(job)
+  inFlight.jobId = job.id
+  inFlight.done = work
+
   try {
-    const result = await handle(job)
+    const result = await work
     const seconds = Math.round((Date.now() - startedAt) / 1000)
 
     await finish(supabase, job.id, {
@@ -267,6 +287,8 @@ async function runOnce(supabase: SupabaseClient, heartbeat: Heartbeat): Promise<
     // niche-scan" after the job ended is a worker that will be reported
     // `over-lease` fifteen minutes later for a job nobody is running.
     heartbeat.jobFinished()
+    inFlight.jobId = null
+    inFlight.done = null
   }
 
   return true
@@ -286,16 +308,80 @@ async function main(): Promise<void> {
   heartbeat.start()
   const health = startHealthServer(heartbeat.pulse)
 
-  // `SIGTERM` is how a container is asked to stop. Finishing the job in hand
-  // would be better still; this at least stops us claiming a new one seconds
-  // before being killed and leaving it to a lease expiry.
+  /*
+   * `SIGTERM` is how a container is asked to stop (D135).
+   *
+   * It used to only set `running = false`, which stops us claiming a *new* job
+   * and does nothing about the one in hand. A merge to `main` at 21:53 killed an
+   * in-flight scan; its lease held until 22:07 and the studio said "Scanning
+   * your niche…" for all fourteen minutes.
+   *
+   * Now: stop claiming, give the job in hand whatever the drain window allows,
+   * and if it does not finish, **release the lease** so the next worker claims
+   * it in seconds. `draining.ts` carries the arithmetic and the recommended
+   * `RAILWAY_DEPLOYMENT_DRAINING_SECONDS`.
+   */
   let running = true
-  const stop = (signal: string) => {
-    console.log(`[worker] ${signal}: finishing the job in hand, then stopping`)
+  let stopping = false
+
+  const stop = async (signal: string): Promise<void> => {
+    // A second signal during the drain must not start a second release.
+    if (stopping) return
+    stopping = true
     running = false
+
+    const jobId = inFlight.jobId
+    const work = inFlight.done
+
+    if (jobId === null || work === null) {
+      console.log(`[worker] ${signal}: nothing in hand, stopping`)
+      return
+    }
+
+    const grace = graceMs(process.env)
+    console.log(
+      `[worker] ${signal}: ${jobId} is in flight · giving it ${Math.round(grace / 1000)}s ` +
+        `of the drain window, then releasing its lease`,
+    )
+
+    if (await waitForJob(work, grace)) {
+      console.log(`[worker] ${signal}: ${jobId} finished inside the drain window`)
+      return
+    }
+
+    const released = await releaseJob(supabase, jobId)
+
+    if (released.ok) {
+      // Loud, because the spend up to this point is real and is **not** in
+      // `agent_runs`: the usage is only known when the stream ends, and this
+      // stream is about to be killed with the process. See `draining.ts`.
+      console.warn(
+        `[worker] ${signal}: released ${jobId} back to the queue · ` +
+          'its in-flight model spend is abandoned and not recorded in agent_runs',
+      )
+    } else {
+      console.error(
+        `[worker] ${signal}: could NOT release ${jobId}: ${released.message} · ` +
+          'its lease will have to expire, which is the fourteen-minute wait this fixes',
+      )
+    }
+
+    /*
+     * Exit now, and that is not impatience.
+     *
+     * The abandoned `handle(job)` is still running, and if it ever reaches
+     * `finish()` it would overwrite the `queued` release with `complete` or
+     * `failed` — handing the client a result for a job the next worker is
+     * already re-running. Leaving the process alive to be `SIGKILL`ed would be
+     * a race we can simply not enter.
+     */
+    heartbeat.stop()
+    health.close()
+    process.exit(0)
   }
-  process.on('SIGTERM', () => stop('SIGTERM'))
-  process.on('SIGINT', () => stop('SIGINT'))
+
+  process.on('SIGTERM', () => void stop('SIGTERM'))
+  process.on('SIGINT', () => void stop('SIGINT'))
 
   while (running) {
     try {

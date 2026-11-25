@@ -35,7 +35,22 @@
  * the assertion that keeps the sum honest, and it can only exist because this
  * number is importable from both sides.
  */
-export const JOB_LEASE_SECONDS = 900
+/*
+ * **1200, raised from 900 (D136), because D135 changed the trade.**
+ *
+ * A longer lease used to be straightforwardly worse: its only cost is how long a
+ * *stranded* job stays unclaimable, and the common way a job got stranded was a
+ * redeploy killing a worker mid-scan — which is what happened at 21:53 and left
+ * a client watching a spinner until 22:07. The worker now releases the lease on
+ * `SIGTERM`, so that cause is gone and the remaining ones are a crashed
+ * container and a hung request.
+ *
+ * What it buys: the research leg gets back the six minutes Vlad specified, after
+ * six measured runs in which the 270-second slice was itself a failure mode. The
+ * margin went **up** — 630 seconds spent of 1200 rather than 540 of 900, 47%
+ * unspent against the third `budget.test.ts` demands.
+ */
+export const JOB_LEASE_SECONDS = 1200
 
 export type JobKind = 'niche-scan' | 'render-cuts'
 
@@ -68,7 +83,7 @@ export type JobStatus = 'queued' | 'running' | 'complete' | 'failed'
  * a status is for how it ended. `read-scan-job.ts` lifts it out so no caller
  * has to remember the jsonb shape.
  */
-export type JobOutcome = 'complete' | 'refused'
+export type JobOutcome = 'complete' | 'refused' | 'interrupted'
 
 /**
  * Lift the outcome out of `jobs.result`, which is jsonb and therefore anything
@@ -86,7 +101,27 @@ export function parseJobOutcome(result: unknown): JobOutcome | null {
   if (typeof result !== 'object' || result === null) return null
 
   const outcome = (result as { outcome?: unknown }).outcome
-  return outcome === 'complete' || outcome === 'refused' ? outcome : null
+  return outcome === 'complete' || outcome === 'refused' || outcome === 'interrupted'
+    ? outcome
+    : null
+}
+
+/**
+ * Was this job put back in the queue by a worker being replaced? (D135)
+ *
+ * **`interrupted` sits on a `queued` job**, which is the only combination that
+ * means it: the worker released the lease on `SIGTERM` rather than leaving the
+ * job to time out. A merge to `main` at 21:53 killed an in-flight scan and the
+ * client watched a spinner until 22:07 — fourteen minutes of a 900-second lease
+ * expiring, with nothing on the screen to say why.
+ *
+ * It is deliberately **not** a `JobStatus`. The job really is queued: the next
+ * worker will claim it exactly as it claims anything else, and the status column
+ * is for how a job ended rather than for why it restarted. The marker clears
+ * itself the moment `claim_job` sets the status to `running`.
+ */
+export function isRestarting(job: JobSummary): boolean {
+  return job.status === 'queued' && job.outcome === 'interrupted'
 }
 
 /** The columns the studio reads. Not the whole row — the rest is the worker's. */

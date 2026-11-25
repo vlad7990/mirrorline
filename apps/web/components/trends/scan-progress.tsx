@@ -4,7 +4,12 @@ import { AlertBar } from '@mirrorline/ui'
 import { useRouter } from 'next/navigation'
 import * as React from 'react'
 
-import { SCAN_ETA_MINUTES, isJobPending, type JobSummary } from '@/lib/jobs/types'
+import {
+  SCAN_ETA_MINUTES,
+  isJobPending,
+  isRestarting,
+  type JobSummary,
+} from '@/lib/jobs/types'
 
 /**
  * What the Niche Scan is doing right now (D119).
@@ -88,6 +93,32 @@ export function ScanProgress({ job, readFailed }: ScanProgressProps) {
   }
 
   if (job === null) return null
+
+  /*
+   * The worker was replaced mid-scan (D135).
+   *
+   * Before this branch existed, a merge to `main` at 21:53 killed an in-flight
+   * scan and the client watched "Scanning your niche…" until 22:07 — fourteen
+   * minutes of a 900-second lease expiring, with the screen saying the one thing
+   * that was not true. The job is genuinely queued again and the next worker
+   * claims it in seconds, so this is a short wait with an explanation rather
+   * than a long one without.
+   *
+   * It sits **above** the generic pending branch because `isJobPending` is true
+   * for a restarting job too — it is queued, which is exactly why it recovers on
+   * its own.
+   */
+  if (isRestarting(job)) {
+    return (
+      <AlertBar
+        aria-label="Scan restarting"
+        description="We were deploying an update and the worker running your scan was replaced. Your scan went back in the queue and the next worker picks it up within seconds."
+        role="status"
+        title="Restarting — your scan will resume shortly."
+        tone="info"
+      />
+    )
+  }
 
   if (isPending) {
     return (

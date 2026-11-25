@@ -18,6 +18,8 @@
     "test:e2e": "playwright test",
     "test:live": "vitest run --config vitest.live.config.ts",
     "test:copilot-live": "vitest run --config vitest.live.config.ts apps/web/lib/copilot",
+    "eval:scan": "vitest run --config vitest.live.config.ts apps/web/lib/niche-scan/scan-eval.live.test.ts",
+    "eval:scan:dog": "SCAN_EVAL_CASE=dog-trainers SCAN_EVAL_REPEATS=3 vitest run --config vitest.live.config.ts apps/web/lib/niche-scan/scan-eval.live.test.ts",
     "test:rls-db": "vitest run --config vitest.db.config.ts",
     "screenshots": "playwright test --project=screenshots",
     "licence-check": "node scripts/licence-check.mjs",

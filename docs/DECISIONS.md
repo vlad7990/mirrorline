@@ -10086,6 +10086,497 @@ moment the field is filled, which is why it is the *first* field on the form.
 Writing the workspace name into the column instead would have made a guess
 permanent and indistinguishable from an answer.
 
+## D132 — the scan is two legs, because one leg spent the clock on the half that had tools
+
+**24 November 2026.** Of three live production scans, **one produced a report**.
+Job `5c20fa06` is the shape of the other two:
+
+```
+leg 1: 329s · 22 searches · end_turn · totals 329s/360s, 22/24
+report rejected: rule=placeholder-text formats=1 hooks=1 topics=1
+lengths=0 patterns=1 examples=1/1 sources=0 placeholders=7
+```
+
+**The model did not fail. It finished.** It was asked to research a niche *and*
+emit a complete, placeholder-free structured report in one turn under one clock,
+and it did the research — then had 31 seconds to write a report in and wrote
+seven placeholder fields.
+
+### The split, and the one property that matters
+
+- **`research.ts`** — web search, structured notes out, and an **absolute
+  deadline**. Absolute rather than a duration is the whole fix: the only thing
+  leg one can do by running long is run out. Its prompt lost every shaping rule
+  (named beats, fit scores, ranges, brand risk), so it is only ever asked to look
+  and record.
+- **`write-leg.ts`** — **no tools at all**. The `tools` key is omitted rather than
+  passed empty, which makes "no new searches" structural rather than promised.
+  Its own 75 seconds per attempt, one retry from the same notes with the matched
+  placeholder patterns quoted back, and the rejected assistant turn appended so
+  the notes stay in the cached prefix and the retry costs almost nothing.
+
+### Notes are deliberately rawer than the report
+
+The tempting design is to make `notes.ts` the report schema, so leg two is a
+reformat. That would have moved the problem rather than solved it: **the
+placeholders came from the shaping work.** So the division is by *kind of work* —
+leg one records observations (`howItGoes` is prose, `whereSeen` is urls, numbers
+only where a page showed them) and leg two shapes them. A retry is then a
+correction rather than a re-roll of the same dice.
+
+`notes.ts` also enforces non-negotiable 1 **one leg earlier**: a media-file url
+never reaches the write prompt, and a half-example is dropped rather than handed
+to a writer that would complete it.
+
+### Budgets, derived rather than remembered
+
+`SCAN_TIME_BUDGET_MS` is now **computed** from the legs — 270s of research plus
+two 75s write attempts — so giving research another minute moves the total and
+`budget.test.ts`'s margin assertion is what says what else has to give. With the
+script agent's 120s that is 540s of a 900s lease, 40% unspent. "Six minutes for
+the research itself" is now asserted against the *research leg*, which is what
+Vlad's number was always about.
+
+**Money: the $2 cap did not move.** The projection is 18k in, 56k out and 24
+searches — about $1.13. The split costs more than the single leg did (~$0.67) and
+still clears, so no money decision was smuggled in with a reliability fix. The
+spend decision still happens **once**, before anything is spent, covering both
+legs and the retry: a check after leg one would approve the expensive half and
+then guard the cheap one.
+
+## D133 — the fact check matched literally, so it refused the client's own price list
+
+**24 November 2026.** Three facts were withheld from Maya Torres Coaching, all
+three true and all three in the profile:
+
+| The script wrote | The profile holds |
+|---|---|
+| "Private reactive-dog sessions **are** $150 per session" | "Private reactive-dog sessions, $150 per session" |
+| "Reactive Rover 6-week package **is** $750" | "Reactive Rover 6-week package, $750" |
+| "Method **is** positive reinforcement, force-free, **with** no prong, choke or e-collars" | "positive reinforcement, force-free, no prong, choke or e-collars" |
+
+The check was two-directional normalised **substring containment**, which reads
+as generous and is not: it breaks on any inserted word. And `parseServiceLine`
+splits a service from its price on a *spaced dash*, so a line typed with a comma
+is stored whole — "sessions, $150" versus "sessions **are** $150" is one word
+apart and fails both directions. **A gate that refuses a client's own price list
+is not strict, it is broken.**
+
+### Two rules, and the second keeps the first honest
+
+1. **Token coverage, not substring.** A profile fact grounds a claim when ≥80% of
+   its content words appear in the claim, in any order. Inserted words, dropped
+   commas and reordered clauses stop mattering, because none of them changes
+   which words are being asserted.
+2. **Every number in the claim must be a number in the profile.** This still
+   refuses "she has trained over 500 dogs" and the right service at the wrong
+   price. Checked against the *whole* profile, because "$450 for 4 sessions"
+   legitimately splits across a name and a price.
+
+### The two edges that needed care
+
+**The reverse direction is closed on negations.** A claim shorter than the fact
+it quotes is legitimate — "positive reinforcement" out of a longer method — but
+"no prong, choke or e-collars" would otherwise ground "with prong collars",
+whose every word *does* appear in it. That is the one way substance matching
+could invert a client's method in public, so it is closed explicitly.
+
+**A one-word fact grounds that word and nothing more.** "Miami" still grounds
+"based in Miami" — the old check got that right and a blunt two-word minimum
+regressed it — but not "the most trusted trainer in Miami". A service area must
+not become a permission slip for a rating (non-negotiable 7).
+
+**Not done:** having the agent cite the profile field it used, verified
+structurally. Vlad offered it as the other half of an "and/or"; it needs a schema
+field, a prompt change and plumbing through `drafts`. Coverage plus strict
+numbers already gets 3 of 3 passing, so the citation stays available if a later
+failure needs it.
+
+## D134 — the scan eval, because no test could have caught what broke
+
+**24 November 2026.** Three live scans produced one report and **nobody found
+that out from a test** — they found it out from a client-facing report that said
+"Nothing was saved."
+
+The hermetic suite proves the parser, the schema, the budgets and the key's one
+door. It could not prove the only thing that was wrong: whether a real research
+run, on a real niche, with a real profile, ends in a report. That is a claim
+about a model's behaviour under a clock, and the only honest way to check it is
+to make the call.
+
+So: five fixed cases, on preview, reporting success rate and — per case — wall
+clock, searches and **cost**, read from the rows the run actually wrote. Fixed on
+purpose: an eval whose inputs move measures the inputs.
+
+The five are five *shapes* rather than five dog trainers: the reviewed profile; a
+licensed trade with a strict method boundary; a thin niche where a pass means an
+honest guidance-only report; a saturated niche full of accounts coasting on raw
+views; and an **empty profile**, where the script agent is never called and zero
+videos is the correct answer.
+
+**Thresholds:** 80% overall, and the dog-trainers case must pass absolutely and
+separately — it is the profile the product was reviewed on. 80% rather than 100%
+because one case is deliberately thin and a guard that cries wolf gets switched
+off.
+
+The rule in CLAUDE.md: **run it before merging any change to the scan or the
+script agents, and record the summary in the pull request.** `pnpm eval:scan:dog`
+runs the reviewed profile three times, each in its own workspace — three
+independent runs rather than one measured three times, which is the bar D132 has
+to clear.
+
+## D135 — a redeploy puts the scan back in the queue instead of stranding it
+
+**24 November 2026.** A merge to `main` restarted the worker at **21:53** and
+killed an in-flight scan. The job kept its lease, nothing could claim it, and it
+was claimed again at **22:07** — fourteen minutes of a 900-second lease expiring
+while the studio said "Scanning your niche…", which was the one thing that was
+not true.
+
+The old `SIGTERM` handler set `running = false`. That stops us claiming a **new**
+job and does nothing about the one in hand.
+
+### Both halves of the either/or, in order
+
+On a signal the job in hand gets whatever the drain window allows minus a release
+reserve; if it does not finish, the lease is released and the next worker claims
+it in seconds. **Which half you get is arithmetic rather than preference.** A
+scan is 420 seconds of model calls, so *finishing* an average interruption needs
+a window of several minutes — which would make **every** deploy that slow,
+including the ones that interrupt nothing. A release is one `UPDATE`.
+
+**`RAILWAY_DEPLOYMENT_DRAINING_SECONDS=30`** is therefore the value: sized for a
+clean release, not for finishing a scan. 600 would buy the finish-the-scan
+behaviour at the price of ten-minute deploys.
+
+The process **exits immediately** after releasing, and that is not impatience:
+the abandoned handler is still running, and if it reached `finish()` it would
+overwrite the `queued` release with `complete` or `failed` and hand the client a
+result for a job the next worker is already re-running.
+
+`attempts` is **not** reset. `claim_job` counted this attempt and `max_attempts`
+is 3, so a released job has two more goes — the only thing standing between a bad
+deploy loop and an unbounded bill.
+
+### The cost, written down rather than discovered later
+
+A released scan **re-runs from the beginning**, so the research spend up to the
+signal is money paid for nothing — and it is **not in `agent_runs`**, because
+usage is only known when the stream ends. The release logs it so the gap is
+visible rather than inferred. It is still cheaper than a fourteen-minute spinner.
+
+### The marker is an outcome, not a fifth status
+
+`interrupted` on a **queued** job is the only combination that means "a worker
+put this back". A fifth `JobStatus` would have needed a migration and a
+check-constraint change for a fact that lives for seconds, and a status is for
+how a job *ended*. `claim_job` clears the marker by setting `running`.
+
+The banner sits **above** the generic pending branch, because `isJobPending` is
+true of a released job too — which is exactly why it recovers on its own.
+
+**Also fixed (E):** the failure banner said "Nothing was saved." twice. It
+appends that to every failure because it is true of every failure, and the
+placeholder message said it as well. Removed from the agent's message: the agent
+owns the diagnosis and the banner owns the reassurance.
+
+## D136 — the research leg stopped losing its notes, and preview stopped drifting
+
+**25 November 2026.** Two findings from the first real execution of the two-leg
+scan, and one of them is a flaw D132 introduced.
+
+### The eval's first verdict: 1 of 3
+
+```
+[scan-eval] 1/3 succeeded (33%) · 646s total · $1.21 total
+  FAIL  dog-trainers#1  104s  24 search(es)  $0.270  formats=0 videos=0
+  FAIL  dog-trainers#2  266s  24 search(es)  $0.244  formats=0 videos=0
+  PASS  dog-trainers#3  276s  16 search(es)  $0.696  formats=6 videos=3 withheld=0
+```
+
+Two runs hit the 24-search ceiling with **nothing written** — `formats=0 hooks=0
+topics=0 … pages=0`. #1 burned the ceiling in **103 seconds of its 270**, so this
+was never a time problem.
+
+**And it is not a flaky model.** The old single leg survived the same ceiling
+only because it was writing the report *in the same turn* and had usually
+produced something first. D132 stripped the shaping work out of leg one and
+removed that accident with it, so an abort now discards everything.
+
+### Two fixes, and the first is the real one
+
+**Rule 10 names the consequence rather than the number.** "The run is CUT OFF at
+24 … anything you have not written down is LOST — not summarised, not saved,
+lost. A short set of notes from ten searches is worth far more than nothing from
+twenty-five." A budget a model is told about is advice; a budget whose cost it is
+told is a constraint.
+
+**A salvage call, because the research was never lost.** The search *results* are
+content blocks of the aborted assistant message — the abort threw away the notes,
+not the pages. One short call with **no tools** asks for the notes from what was
+already read, and costs zero searches by construction.
+
+`salvageableContent` is what makes that safe to send. An aborted stream can leave
+a half-built final block, and an unpaired `server_tool_use` is a 400, so the turn
+is cut at the last completed `web_search_tool_result`: every search before it has
+its pair and nothing after it can be trusted. **It salvages nothing when no
+search completed** — a salvage call with no research in front of it would invent
+one, which is the placeholder reply D132 exists to prevent, reached by a new
+route.
+
+The budget stop is cleared **only** when the salvage produced usable notes, so a
+salvaged run continues and a hopeless one still fails. Both calls' tokens reach
+the ledger.
+
+### The good half, and it is the first proof of anything
+
+**Run #3 is the whole pipe working**: 6 formats, and **3 videos with 0
+withheld** — D133's target of 3 of 3, on the profile where all three facts were
+refused the night before.
+
+### Preview stopped drifting
+
+The `migrate-production` label applies a pull request's migrations to production
+and **nothing applied them to preview**, so preview sat three migrations behind:
+`worker_heartbeats`, `drafts` and `client_brand_name`. Nothing was watching. What
+found it was the eval failing on `Could not find the 'brand_name' column`.
+
+Preview being *behind* is the worse of the two directions: the browser suite and
+every manual check then run against a schema the deployed code does not target.
+So `preview-schema` runs before `e2e` and makes preview **ahead of or equal to**
+production — which is the invariant worth stating, because preview may hold a
+migration production has not seen (that is what a pull request *is*) and must
+never lack one production has.
+
+**Preview credentials only, and the guard is a comparison rather than a
+convention.** It refuses when the ref is empty or equals
+`SUPABASE_PRODUCTION_PROJECT_REF`. D96's warning is that the CLI reaches
+production from any workdir and `--project-ref` is the only thing that decides
+which database is touched; without the comparison, a typo in one secret is an
+unreviewed production migration on every pull request.
+
+Until the three preview secrets exist the job **warns** on ordinary pull requests
+and **fails** on any pull request touching `supabase/migrations/`. A skip is
+drift, and drift on a migration PR is precisely what this closes.
+
+## D137 — the research leg's real ceiling was its own length, and it looked like success
+
+**25 November 2026.** Vlad ran `pnpm eval:scan:dog` locally — the third attempt
+at D134's gate, in a shell where a fifteen-minute process survives — and it came
+back **2 of 3 at $2.15**:
+
+```
+PASS #1  293s  24 searches  research out 20,695 tok, end_turn      videos=3 withheld=0
+FAIL #2  231s  20 searches  research stop_reason max_tokens, out 20,783 tok  → notes empty
+PASS #3  234s  22 searches  research out 14,956 tok                videos=3 withheld=1
+```
+
+### The failure mode, named at last
+
+Not searches and not the clock — both of which D136 had already widened, and
+neither of which fired. **The output ceiling.** Run #1 finished 88 tokens under
+where run #2 stopped, and that is a coin flip rather than a budget.
+
+It is also the *quietest* of the three budgets, which is why it took three
+attempts to find. A search or time abort has no final message and says so in the
+logs. A `max_tokens` stop **returns a message**: `stop_reason` sits one word away
+from `end_turn`, the usage is billed, the text block is full of notes — and the
+last object is half-written, so `JSON.parse` throws, `jsonFrom` returns null, and
+the scan tells the client it "could not find enough about that niche" after
+paying for twenty searches.
+
+### Four changes, and the order matters
+
+1. **The ask is compact by design.** `RESEARCH_NOTE_CAPS` caps every section and
+   every field: 4 formats, 5 posts, 4 hook notes, 5 topic notes, 3 length notes,
+   4 pattern notes, 8 pages, notes of 20 words, "how it goes" of 40, coverage of
+   60. Rule 11 says why — a reply cut off mid-sentence loses the notes after the
+   cut. `notes.ts` caps the same sections a little *above* the ask
+   (`NOTE_KEEP_CAPS`), because both passing runs recorded six formats where four
+   were asked for and those tokens are already spent by the time they arrive;
+   `notes.test.ts` asserts the keep never drops below the ask.
+
+   **Not in the JSON schema.** `minimum`/`maximum` on an integer is a 400 on this
+   model, found by a live run, so `maxItems` is not something to try blind
+   against a gate that costs $3.30 a round. The prompt is the request and the
+   parser is the rule — the same division `notes.ts` already uses for media urls.
+
+2. **The ceiling moved, and the projection moved with it.**
+   `RESEARCH_MAX_TOKENS` 16k → **24k**. The honest part is the projection:
+   `max_tokens` is *per request* and a paused turn is resumed up to twice, so
+   projecting one leg charged for less output than a resumed turn can emit, while
+   projecting three legs (72k) would refuse every scan we have ever run. So
+   `RESEARCH_OUTPUT_PROJECTION` is **36k** — 1.7x the worst measured total, 1.5x
+   one full leg — and `budget.test.ts` now asserts the whole projected request
+   stays under `SCAN_MAX_REQUEST_USD` with a fifth of it in hand (it projects
+   about $1.52 of $2).
+
+3. **A truncated reply is read, not discarded** (`partial-json.ts`). Cut back to
+   where a value finished, close what is still open, parse. This is *not* D136's
+   salvage, which was structurally impossible: nothing is re-sent, because the
+   bytes are already in hand. One rule in it has teeth — **a number is never a
+   cut point**, since closing `"views": 12345` at `12` would write a figure
+   nobody reported into a report, which is rule 6 and non-negotiable 7 at once.
+   When notes are salvaged, `TRUNCATED_COVERAGE_NOTE` tells leg two the research
+   is incomplete rather than final, because a writer with no coverage note
+   invents one. `notesAreUsable` is still the gate: a truncation with nothing
+   complete in it still fails the scan.
+
+4. **Output against the cap is logged on every run**, in the per-leg line and in
+   the leg-1 summary. The number that would have named this in one reading was
+   there to be printed all along.
+
+### The fourth withheld fact (D133's tail)
+
+Run #3 withheld one video on the fact *"force-free, no prong, choke or e-collar
+method"* against a profile reading *"Positive reinforcement, force-free. No
+prong, choke or e-collars."* The claim is the client's own method with a label on
+the end and one plural dropped — 0.75 coverage against a 0.8 threshold.
+
+So the comparison now **singularises** (`collars` ≡ `collar`) and ignores
+**field labels** (`method`, `approach`, `style`) — the words a model adds to say
+which *kind* of fact it is using. Both lists are deliberately tiny: every word
+ignored is a word that can no longer be the reason a claim passes *or* fails, so
+places, services, numbers and qualifiers all stay content words, and `singular`
+leaves "texas" and "videos" alone rather than inventing a stem. The strict half
+is untouched and tested: an invented number still fails, the right service at the
+wrong price still fails, and *"prong and choke collar method"* is still refused,
+because dropping a label must never drop a negation with it.
+
+### What this does not do
+
+It does not lower `RESEARCH_EFFORT` and it does not split research into two
+calls. Those remain the next levers, in that order, if the gate still refuses —
+and they are changes to *what the research is*, where these four are changes to
+how much of it survives. The gate is unchanged: three consecutive dog-trainer
+runs, run by Vlad, because this environment kills a fifteen-minute process.
+
+## D138 — the research leg stopped answering, and a passing report cited nothing
+
+**25 November 2026, afternoon.** The fourth `pnpm eval:scan:dog`, run by Vlad on
+`d3e5731`: **2 of 3 at $1.25** — half the cost of the round before it, because
+D137's compact ask works.
+
+```
+PASS #1  157s  18 searches  research 8,444 of 24,000 tok (35%)  — report sources=0, pages=8
+PASS #2  179s  21 searches  research 10,130 tok (42%)           — one idea refused
+FAIL #3  361s  11 searches  out 5 tok, stop_reason aborted      → "ran out of research time"
+```
+
+**The token cap is solved.** 35% and 42% of a ceiling that two rounds ago was
+being hit. That question is closed; these are three new ones.
+
+### 1. The leg did not run out of time, it stopped answering
+
+361 seconds, 11 searches, **five output tokens**, then silence until the
+deadline. Every budget behaved correctly and the diagnosis was still wrong:
+"ran out of research time" says *this niche needs more than six minutes*, and it
+needed about forty seconds. It was no longer running.
+
+A stall is the only stop worth **retrying**, which is why it is now told apart
+from the other two. The other two fire because a leg did too much, and repeating
+that costs the same again — the argument `RESEARCH_MAX_RETRIES` already makes
+about letting the SDK retry behind our back. A stall accomplished nothing, so
+there is nothing to repeat.
+
+```
+RESEARCH_STALL_MS       90s     nothing streamed for this long
+RESEARCH_MAX_ATTEMPTS   2       and only a stall earns the second
+RESEARCH_MIN_RETRY_MS   120s    the least a retry may start with
+```
+
+Ninety seconds is the top of the range Vlad gave, and generous on purpose: the
+cost of being wrong is asymmetric but real in both directions, and a false
+positive is survivable *because* the retry exists. The slowest run we have
+measured averaged 33 seconds a search.
+
+**Three things make the retry free rather than a doubling**, and each is a
+place this could have gone wrong:
+
+- **Time.** The retry is handed the **same absolute deadline**, so two attempts
+  cannot outlast one. The obvious implementation — a duration per attempt —
+  would double the leg and put the lease back in play, which is what
+  `budget.test.ts` exists to catch; it now asserts the leg is shorter than two
+  of itself, and that a stall is detected early enough for a retry to be
+  allowed to start at all (otherwise the retry is dead code).
+- **Searches.** `searchesSoFar` carries the count into the next attempt, so the
+  ceiling is global and the spend cap's projection stays true. A fresh count
+  would have let two attempts run 64 searches against a projection of 32.
+- **Output.** A stalled attempt emitted five tokens, so `RESEARCH_OUTPUT_PROJECTION`
+  covers both attempts with the margin it already had.
+
+`streamLeg` had **no tests at all** before this. It does now — a stubbed SDK
+stream and a fake clock prove the watchdog fires on silence, leaves a slow-but-
+talking stream alone, bills the tokens a stalled attempt used, and reports a
+*timeout* rather than a stall when the deadline is what actually ran out.
+
+### 2. A passing report that cited nothing
+
+Run #1 produced `sources=0` while its notes held `pages=8`. Nothing threw:
+`sourcesUsed` was simply not in `REPORT_SCHEMA`'s `required` list, and a field
+that **copies** rather than writes is the first thing a model drops under length
+pressure. A niche report whose claims cite nothing reads as an assertion from us
+rather than a reading of the web.
+
+The fix is not to make the field required. The sources were never the writer's
+to invent — rule 10 already defined them as "the pages the notes say were read
+… and nothing else", which is a mechanical copy. So the write prompt stops
+asking, the schema stops carrying it, and `sources.ts` builds the list from the
+notes: pages first (the only rows with a real title), then the post urls behind
+the examples and formats, deduplicated and capped by the parser that already
+existed.
+
+- It cannot be dropped, because no model decides whether to bother.
+- It is cheaper — a few hundred output tokens of transcription, in the leg whose
+  ceiling D137 just had to raise.
+- **A url cannot be mistyped into a page that does not exist.** We hold the
+  pointer, never the work (non-negotiable 1), so the pointer had better be the
+  one the research actually read.
+
+Merged **before** `reviewReport`, because `counts.sources` feeds its substance
+test: deriving afterwards would make a thin-but-real report look thinner to the
+one check that decides whether to keep it.
+
+### 3. The fifth withheld fact, and why the threshold was asymmetric all along
+
+Run #2 refused: *"force-free approach, no prong, choke or e-collar used to read
+or correct the dog"*, against a profile holding *"positive reinforcement,
+force-free, no prong, choke or e-collars"*. Seven of the profile's nine terms are
+in the claim — **0.778** against a 0.8 bar — and the two missing ones are the
+clause the script did not happen to quote.
+
+The two directions were being held to one number, and they ask different
+questions:
+
+- **Forward** — *are the fact's key terms present?* Words the claim adds cannot
+  lower it, because a paraphrase is mostly additions. Now `MIN_FACT_TERM_COVERAGE`
+  = **0.75**.
+- **Reverse** — *is the claim inside the fact?* A stricter question, and it keeps
+  `MIN_COVERAGE` = 0.8.
+
+**Sentence-clause matching was the first attempt and it was wrong twice over.**
+Vlad's note quoted the profile with a full stop ("force-free. No prong…") and
+the eval fixture stores it with commas, so splitting on sentences would not have
+touched the failing case. Splitting on *commas* would have — and would have cut
+"no prong, choke or e-collars" into a clause reading "choke or e-collars" with
+no negation in it, which is the one way this check could invert a client's method
+in public. Not done.
+
+What makes 0.75 safe instead is that **the negation rule now applies in both
+directions**. It guarded the reverse direction only, which was enough while
+forward needed 0.8 of the terms; at 0.75, dropping the single word "no" from a
+nine-term method costs a ninth of the coverage and inverts the entire claim. A
+fact that says "no prong, choke or e-collars" may now only ever ground a claim
+that also says no — asserted on the exact inverted sentence.
+
+### What this does not do
+
+`RESEARCH_EFFORT` is still `high` and the research is still one call. Both remain
+the next levers if the gate refuses again, and both change *what the research
+is*; everything here is about a leg that stopped, a list that was dropped, and a
+true sentence that was refused. The gate is unchanged: three consecutive
+dog-trainer runs, run by Vlad.
+
 ---
 
 ## D140 — generators are adapters behind one interface, and the label is a literal rather than a default
