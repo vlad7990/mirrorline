@@ -20,11 +20,13 @@
 
 import { describe, expect, it } from 'vitest'
 
+import { RESEARCH_TIME_BUDGET_MS } from '../niche-scan/research'
 import {
   SCAN_SEARCH_CEILING,
   SCAN_SEARCH_PROJECTION,
   SCAN_TIME_BUDGET_MS,
 } from '../niche-scan/scan'
+import { WRITE_MAX_ATTEMPTS, WRITE_TIME_BUDGET_MS } from '../niche-scan/write-leg'
 import { SCRIPT_TIME_BUDGET_MS } from '../scripts/first-videos'
 
 import { JOB_LEASE_SECONDS } from './types'
@@ -66,9 +68,44 @@ describe('a niche-scan job fits inside its lease', () => {
   })
 
   it('targets six minutes or less for the research itself', () => {
-    // Vlad's number, written down so that raising it is a decision rather
-    // than a drift.
-    expect(SCAN_TIME_BUDGET_MS).toBeLessThanOrEqual(6 * 60 * 1000)
+    // Vlad's number, written down so that raising it is a decision rather than
+    // a drift. **It is the research leg's, not the scan's** (D132): the scan is
+    // now research plus a write leg with its own clock, and the six minutes was
+    // always about how long we are willing to spend reading the internet.
+    expect(RESEARCH_TIME_BUDGET_MS).toBeLessThanOrEqual(6 * 60 * 1000)
+  })
+})
+
+/**
+ * The two legs add up to the scan, and the scan is the thing the lease bounds
+ * (D132).
+ *
+ * `SCAN_TIME_BUDGET_MS` is derived rather than written down precisely so this
+ * can be asserted: if somebody gives the research leg another minute, or allows
+ * a third write attempt, the total moves with it and the margin test above is
+ * what tells them what else has to give.
+ */
+describe('the scan is its two legs and nothing else', () => {
+  it('adds the research leg to every write attempt', () => {
+    expect(SCAN_TIME_BUDGET_MS).toBe(
+      RESEARCH_TIME_BUDGET_MS + WRITE_TIME_BUDGET_MS * WRITE_MAX_ATTEMPTS,
+    )
+  })
+
+  it('reserves the write leg a slice the research leg cannot borrow', () => {
+    // The failure this split exists to fix: job 5c20fa06 spent 329 of its 360
+    // seconds researching and had 31 left to write a report in. It wrote seven
+    // placeholder fields. The reserved slice has to be big enough to write in.
+    const reserved = SCAN_TIME_BUDGET_MS - RESEARCH_TIME_BUDGET_MS
+
+    expect(reserved).toBe(WRITE_TIME_BUDGET_MS * WRITE_MAX_ATTEMPTS)
+    expect(reserved).toBeGreaterThan(31 * 1000)
+  })
+
+  it('allows exactly one retry of the write leg', () => {
+    // `04 §3`'s shape: two failures mean the notes cannot be written up, not
+    // that a third attempt would succeed.
+    expect(WRITE_MAX_ATTEMPTS).toBe(2)
   })
 })
 
