@@ -21,8 +21,8 @@ import type Anthropic from '@anthropic-ai/sdk'
 
 import { profileBrief, type ClientProfile } from '../workspace/client-profile'
 
-import { NOTES_SCHEMA, parseNotes, type ResearchNotes } from './notes'
-import { jsonFrom, streamLeg, type LegOutcome } from './stream-leg'
+import { NOTES_SCHEMA, notesAreUsable, parseNotes, type ResearchNotes } from './notes'
+import { addUsage, jsonFrom, streamLeg, type LegOutcome } from './stream-leg'
 
 /** `18 §0`: the studio tier, and the only one `MODEL_RATES` prices. */
 export const RESEARCH_MODEL = 'claude-sonnet-5'
@@ -119,7 +119,7 @@ Hard rules. These are not style preferences:
 7. Every note carries a basis: "posts" if you read it off real posts, "guidance" if it comes from an article about the niche. Mark it honestly. Most published advice is "guidance".
 8. The "coverage" field is required and it matters more than you would think. Say what you searched, what you found, and what you could NOT find. The writer cannot tell "this niche has no public short video" from "I ran out of time" unless you say which — and a writer who cannot tell them apart invents the difference.
 9. Some real niches have very little public short video you can link to. That is a finding, not a failure. Record the formats from published guidance, mark their basis "guidance", return an empty examples list, and say so plainly in coverage. NEVER pad your notes with placeholder text, "TBD", "example", or a format you cannot describe. Empty notes are better than invented ones — a thin honest report is accepted downstream, and a padded one is rejected outright.
-10. You have a hard research budget: about ${RESEARCH_MAX_SEARCHES} searches and four and a half minutes. Search broadly first, then stop and write your notes. The run is cut off at the limit whether or not you have written anything, so leave yourself room to record what you found.`
+10. **Your search budget is ${RESEARCH_MAX_SEARCHES} searches, and the run is CUT OFF at ${RESEARCH_SEARCH_CEILING}.** After about ${RESEARCH_MAX_SEARCHES} searches, stop searching and write your notes immediately. Anything you have not written down when the cut-off arrives is LOST — not summarised, not saved, lost. A short set of notes from ten searches is worth far more than nothing from twenty-five.`
 
 function researchPrompt(niche: string, profile: ClientProfile): string {
   const brief = profileBrief(profile)
@@ -149,10 +149,60 @@ export interface ResearchRequest {
 }
 
 export interface ResearchOutcome extends LegOutcome {
-  /** Empty when a budget stopped the leg or the reply did not parse. */
+  /** Empty when the leg was cut off before writing and could not be salvaged. */
   readonly notes: ResearchNotes
   readonly stopReason: string | null
+  /**
+   * Whether these notes came from the salvage call rather than the leg itself.
+   *
+   * Logged, because a run that needed salvaging searched past its budget and the
+   * prompt is what should be fixed — not the ceiling.
+   */
+  readonly salvaged: boolean
 }
+
+/**
+ * How long the salvage call gets, and how much it may write.
+ *
+ * Short: it has no tools, nothing to look up, and only has to write down what is
+ * already in the conversation. Its own small slice rather than the research
+ * leg's leftovers, because by definition the research leg has none left.
+ */
+const SALVAGE_TIME_BUDGET_MS = 60 * 1000
+
+const SALVAGE_MAX_TOKENS = 12_000
+
+/**
+ * The aborted turn's content, trimmed to something the API will accept.
+ *
+ * An aborted stream can leave a **partially-built final block** — a half-written
+ * text block, or a `server_tool_use` whose `web_search_tool_result` never
+ * arrived. Re-sending that is a 400. So the content is cut at the last block we
+ * know is complete, which is the last search result: every `server_tool_use`
+ * before it has its pair, and nothing after it can be trusted.
+ *
+ * When there is no search result at all there is nothing worth salvaging — the
+ * leg was aborted before it read anything — and the caller gets an empty list.
+ */
+export function salvageableContent(
+  partial: Anthropic.Message | null,
+): readonly Anthropic.ContentBlock[] {
+  const content = partial?.content
+  if (!Array.isArray(content) || content.length === 0) return []
+
+  let lastComplete = -1
+  content.forEach((block, index) => {
+    if (block.type === 'web_search_tool_result') lastComplete = index
+  })
+
+  return lastComplete === -1 ? [] : content.slice(0, lastComplete + 1)
+}
+
+const SALVAGE_TURN = `You have reached your search budget and the search tool is now gone — you cannot look anything else up, and you will not be asked again.
+
+Write your notes NOW, from the pages you have already read above. Record the formats you saw, how each one goes, the urls you actually opened, the hooks, topics, lengths and posting rhythms, and fill in coverage with what you searched and what you could not find.
+
+Do not apologise and do not explain. Do not invent anything you did not read. Whatever you write now is the entire result of this research run.`
 
 export function researchTurn(niche: string, profile: ClientProfile): Anthropic.MessageParam {
   return { role: 'user', content: researchPrompt(niche, profile) }
@@ -195,9 +245,96 @@ export async function runResearchLeg(request: ResearchRequest): Promise<Research
 
   const response = outcome.response
 
+  if (response !== null) {
+    return {
+      ...outcome,
+      stopReason: response.stop_reason ?? null,
+      notes: parseNotes(jsonFrom(response.content)),
+      salvaged: false,
+    }
+  }
+
+  /*
+   * The leg was cut off. Salvage the research rather than lose it (D136).
+   *
+   * The first live run of the two-leg scan hit the 24-search ceiling in 103
+   * seconds **with nothing written**: `formats=0 hooks=0 topics=0 … pages=0`,
+   * and the scan failed. The old single leg survived the same ceiling only
+   * because it was writing the report in the same turn and had usually produced
+   * something first.
+   *
+   * The search *results* are content blocks of the aborted message, so they are
+   * still in hand — aborting threw away the notes, not the research. One short
+   * call with **no tools** asks for the notes from what was already read. It
+   * costs no searches by construction, and it turns a total loss into the thing
+   * the leg was about to produce.
+   *
+   * It is a safety net, not the intended path. Rule 10 now tells the model what
+   * the cut-off costs, which is the fix; this is what happens when the model
+   * ignores it anyway.
+   */
+  const salvageable = salvageableContent(outcome.partial)
+
+  if (salvageable.length === 0) {
+    console.warn(
+      `[niche-scan research] cut off by the ${outcome.stoppedBy ?? 'unknown'} budget with ` +
+        'nothing to salvage — no search result had completed',
+    )
+    return { ...outcome, stopReason: null, notes: parseNotes(null), salvaged: false }
+  }
+
+  console.warn(
+    `[niche-scan research] cut off by the ${outcome.stoppedBy ?? 'unknown'} budget · ` +
+      `salvaging notes from ${salvageable.length} completed block(s), no further searches`,
+  )
+
+  let salvage: LegOutcome
+  try {
+    salvage = await streamLeg({
+      client: request.client,
+      label: 'niche-scan salvage',
+      model: RESEARCH_MODEL,
+      maxTokens: SALVAGE_MAX_TOKENS,
+      effort: 'low',
+      system: RESEARCH_SYSTEM,
+      schema: NOTES_SCHEMA,
+      messages: [
+        researchTurn(request.niche, request.profile),
+        { role: 'assistant', content: salvageable as Anthropic.ContentBlockParam[] },
+        { role: 'user', content: SALVAGE_TURN },
+      ],
+      // No `tools` key at all: the search tool is genuinely gone, which is what
+      // the turn above tells the model.
+      deadlineAt: Date.now() + SALVAGE_TIME_BUDGET_MS,
+      requestTimeoutMs: SALVAGE_TIME_BUDGET_MS,
+      maxContinuations: 0,
+      maxRetries: RESEARCH_MAX_RETRIES,
+    })
+  } catch (error) {
+    // The research was already lost; a failed salvage loses nothing more. Said
+    // out loud so a run that failed twice does not read as having failed once.
+    console.error(
+      `[niche-scan research] the salvage call failed: ${
+        error instanceof Error ? error.message : 'unknown error'
+      }`,
+    )
+    return { ...outcome, stopReason: null, notes: parseNotes(null), salvaged: false }
+  }
+
+  const salvaged =
+    salvage.response === null ? parseNotes(null) : parseNotes(jsonFrom(salvage.response.content))
+
   return {
     ...outcome,
-    stopReason: response?.stop_reason ?? null,
-    notes: response === null ? parseNotes(null) : parseNotes(jsonFrom(response.content)),
+    // Both calls' tokens, so the ledger records what the run actually cost.
+    usage: addUsage(outcome.usage, salvage.usage),
+    seconds: outcome.seconds + salvage.seconds,
+    // **The budget stop is cleared when the salvage produced notes**, because
+    // the scan can now continue: `stoppedBy` is what `scan.ts` treats as fatal,
+    // and a salvaged run is not.
+    stoppedBy: notesAreUsable(salvaged) ? null : outcome.stoppedBy,
+    stopReason: salvage.response?.stop_reason ?? null,
+    notes: salvaged,
+    salvaged: notesAreUsable(salvaged),
   }
 }

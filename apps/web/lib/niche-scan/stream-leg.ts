@@ -41,6 +41,16 @@ export interface LegOutcome {
   readonly usage: Usage
   readonly searches: number
   readonly stoppedBy: BudgetStop | null
+  /**
+   * What had arrived when a budget aborted the stream (D136).
+   *
+   * Null on a clean finish. On an abort it is the last snapshot, and it carries
+   * the **search results** — they are content blocks of the same assistant
+   * message, so aborting used to throw away every page the model had read. The
+   * research leg re-sends this with no tools and asks for the notes, which turns
+   * a total loss into the notes it was about to write.
+   */
+  readonly partial: Anthropic.Message | null
   /** Wall clock for this leg, across its continuations. */
   readonly seconds: number
   /** How many HTTP legs it took. More than one means a turn was resumed. */
@@ -127,7 +137,7 @@ export async function streamLeg(request: StreamLegRequest): Promise<LegOutcome> 
     // no time left should not start at all.
     const remainingMs = deadlineAt - Date.now()
     if (remainingMs <= 0) {
-      return { response: null, usage, searches, stoppedBy: 'time', seconds: elapsed(), legs: leg }
+      return { response: null, usage, searches, stoppedBy: 'time', partial: null, seconds: elapsed(), legs: leg }
     }
 
     const stream = client.messages.stream(
@@ -200,7 +210,16 @@ export async function streamLeg(request: StreamLegRequest): Promise<LegOutcome> 
         `[${label}] stopped by the ${stoppedBy} budget after ${elapsed()}s of ${budgetSeconds}s · ` +
           `${searches}${searchCeiling === undefined ? '' : ` of ${searchCeiling}`} search(es)`,
       )
-      return { response: null, usage, searches, stoppedBy, seconds: elapsed(), legs: leg + 1 }
+      return {
+        response: null,
+        usage,
+        searches,
+        stoppedBy,
+        // The research the abort would otherwise have thrown away (D136).
+        partial: current.snapshot,
+        seconds: elapsed(),
+        legs: leg + 1,
+      }
     }
     clearTimeout(timer)
 
@@ -219,7 +238,15 @@ export async function streamLeg(request: StreamLegRequest): Promise<LegOutcome> 
 
     const canResume = response.stop_reason === 'pause_turn' && leg < request.maxContinuations
     if (!canResume) {
-      return { response, usage, searches, stoppedBy: null, seconds: elapsed(), legs: leg + 1 }
+      return {
+        response,
+        usage,
+        searches,
+        stoppedBy: null,
+        partial: null,
+        seconds: elapsed(),
+        legs: leg + 1,
+      }
     }
 
     // No new user turn: the assistant's own content is the resumption. A user

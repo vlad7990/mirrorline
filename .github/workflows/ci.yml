@@ -98,6 +98,11 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       code: ${{ steps.filter.outputs.code }}
+      # Whether this change touches `supabase/migrations/` (D136). The preview
+      # schema job uses it to decide whether an unconfigured runner is a warning
+      # or a failure: a documentation PR must not be blocked, and a PR carrying a
+      # migration must not merge while preview cannot receive it.
+      migrations: ${{ steps.filter.outputs.migrations }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -118,9 +123,14 @@ jobs:
           # Nothing in here may exit non-zero. A failed gate would leave all
           # three required checks in `skipped` — never green, never red, and
           # auto-merge waiting on a verdict that is not coming.
+          # `migrations=true` on every "running everything" path as well, and
+          # that is the safe direction (D136): if we cannot tell what changed,
+          # assume preview may need a migration. Assuming it does not is how
+          # preview drifts three migrations behind without anybody noticing.
           code() {
             echo "$1"
             echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "migrations=true" >> "$GITHUB_OUTPUT"
             exit 0
           }
 
@@ -141,6 +151,13 @@ jobs:
           fi
 
           [ -n "$files" ] || code "No changed files reported; running everything."
+
+          if printf '%s\n' "$files" | grep -qE '^supabase/migrations/'; then
+            echo "This change touches supabase/migrations/."
+            echo "migrations=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "migrations=false" >> "$GITHUB_OUTPUT"
+          fi
 
           executable=$(printf '%s\n' "$files" | grep -vE '^docs/|\.md$' || true)
 
@@ -225,9 +242,141 @@ jobs:
   # Not sharded. The whole job is about four minutes — roughly two and a half to
   # build, ninety seconds to run — so a matrix would add a build per shard to
   # save nothing.
-  e2e:
+  # ==========================================================================
+  # Preview gets every migration, before anything runs against it (D136)
+  # ==========================================================================
+  #
+  # **The drift this closes.** The `migrate-production` label applies a pull
+  # request's migrations to production and nothing applied them to preview, so on
+  # 24 November preview sat **three migrations behind** — `worker_heartbeats`,
+  # `drafts` and `client_brand_name`. Nothing was watching, and what found it was
+  # the scan eval failing on `Could not find the 'brand_name' column`. Preview
+  # being *behind* production is the worst of the two directions: it means the
+  # browser suite and every manual check run against a schema the deployed code
+  # does not target.
+  #
+  # So this runs before `e2e` and makes preview **ahead of or equal to**
+  # production, which is the invariant worth stating: preview may hold a
+  # migration production has not seen (that is what a pull request *is*), and it
+  # must never lack one production has.
+  #
+  # **Preview credentials only, and a hard guard.** The step refuses to run if
+  # the preview ref is empty or equals `SUPABASE_PRODUCTION_PROJECT_REF`. D96's
+  # warning is the reason the guard is a comparison rather than a convention: the
+  # CLI reaches production from any workdir, and `--project-ref` is the only
+  # thing that decides which database is touched. A typo in one secret is
+  # otherwise an unreviewed production migration on every pull request.
+  #
+  # It deliberately **cannot** apply a destructive migration either: the
+  # additive-only gate runs here too, on the same tree.
+  preview-schema:
     runs-on: ubuntu-latest
     needs: changes
+    timeout-minutes: 10
+    env:
+      RUN: ${{ needs.changes.outputs.code != 'false' }}
+      HAS_MIGRATION_CHANGE: ${{ needs.changes.outputs.migrations }}
+      # The CLI reads these two by name. They are the **preview** ones, and the
+      # guard below is what proves it.
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_PREVIEW_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PREVIEW_DB_PASSWORD }}
+      PREVIEW_REF: ${{ secrets.SUPABASE_PREVIEW_PROJECT_REF }}
+      PRODUCTION_REF: ${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF }}
+    steps:
+      - name: Nothing executable changed
+        if: env.RUN != 'true'
+        run: echo "Documentation only — see the \`changes\` job. Preview's schema cannot be affected."
+
+      - uses: actions/checkout@v7
+        if: env.RUN == 'true'
+
+      # ----------------------------------------------------------------------
+      # The guard, before any credential is used for anything
+      # ----------------------------------------------------------------------
+      - name: The ref must exist, and must not be production
+        if: env.RUN == 'true'
+        id: guard
+        run: |
+          set -uo pipefail
+
+          if [ -n "$PRODUCTION_REF" ] && [ "$PREVIEW_REF" = "$PRODUCTION_REF" ]; then
+            echo "::error::SUPABASE_PREVIEW_PROJECT_REF equals SUPABASE_PRODUCTION_PROJECT_REF."
+            echo "::error::Refusing to migrate. This job never touches production — fix the secret."
+            exit 1
+          fi
+
+          if [ -z "$PREVIEW_REF" ] || [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$SUPABASE_DB_PASSWORD" ]; then
+            # Not configured yet. A documentation or code-only change is let
+            # through with a warning; a change that carries a **migration** is
+            # not, because merging it would recreate exactly the drift this job
+            # exists to prevent.
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+
+            if [ "$HAS_MIGRATION_CHANGE" = "true" ]; then
+              echo "::error::This pull request changes supabase/migrations/ and preview cannot be migrated."
+              echo "::error::Add SUPABASE_PREVIEW_PROJECT_REF, SUPABASE_PREVIEW_ACCESS_TOKEN and SUPABASE_PREVIEW_DB_PASSWORD."
+              exit 1
+            fi
+
+            echo "::warning::Preview migration secrets are not set, so preview's schema was not checked."
+            echo "::warning::Add SUPABASE_PREVIEW_PROJECT_REF, SUPABASE_PREVIEW_ACCESS_TOKEN and SUPABASE_PREVIEW_DB_PASSWORD."
+            exit 0
+          fi
+
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+          echo "Preview ref ends ...${PREVIEW_REF: -4}, and is not the production ref."
+
+      - uses: actions/setup-node@v6
+        if: env.RUN == 'true' && steps.guard.outputs.configured == 'true'
+        with:
+          node-version: 24
+
+      # The same gate the label path runs, on the same tree. No install: the
+      # script imports only `node:fs` and `node:path`.
+      - name: Migrations are additive
+        if: env.RUN == 'true' && steps.guard.outputs.configured == 'true'
+        run: node scripts/migration-safety.mjs
+
+      - uses: supabase/setup-cli@v3
+        if: env.RUN == 'true' && steps.guard.outputs.configured == 'true'
+        with:
+          version: latest
+
+      - name: Link to preview
+        if: env.RUN == 'true' && steps.guard.outputs.configured == 'true'
+        run: supabase link --project-ref "$PREVIEW_REF"
+
+      - name: What preview has now
+        if: env.RUN == 'true' && steps.guard.outputs.configured == 'true'
+        run: supabase migration list --remote
+
+      # Named in the log, above the step that acts on it, so a surprise is
+      # visible before anything is written.
+      - name: Dry run
+        if: env.RUN == 'true' && steps.guard.outputs.configured == 'true'
+        run: supabase db push --remote --dry-run
+
+      # `--yes` is passed rather than relied upon: a closed stdin answers **Y**
+      # to `[Y/n]`, so omitting it in CI is indistinguishable from passing it
+      # (D94's near-miss).
+      - name: Apply to preview
+        if: env.RUN == 'true' && steps.guard.outputs.configured == 'true'
+        run: supabase db push --remote --yes
+
+      # The same proof the label path takes before it merges: preview now holds
+      # every migration in this tree. A push that half-applied is a schema that
+      # moved, and the list is the only thing that says so.
+      - name: Preview has every migration in this tree
+        if: env.RUN == 'true' && steps.guard.outputs.configured == 'true'
+        run: |
+          supabase migration list --remote > "$RUNNER_TEMP/migration-list.txt"
+          node scripts/migration-drift.mjs < "$RUNNER_TEMP/migration-list.txt"
+
+  e2e:
+    runs-on: ubuntu-latest
+    # `preview-schema` first, because the browser suite runs against preview and
+    # a suite run against a stale schema proves nothing (D136).
+    needs: [changes, preview-schema]
     # The keyed suite is 422 browser tests and has taken 12m38s and 15m31s on
     # this runner, so 20 left under five minutes of head-room — and `retries: 1`
     # now adds a second attempt for anything that fails. 30 is not a fix for
