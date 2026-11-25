@@ -381,7 +381,7 @@ two encodes and two bills.
 | Footprint | The scan worker is I/O-bound and idles near 150 MB. Folding video in means paying a 4 GB footprint 24/7 for work that runs occasionally. |
 | Blast radius | An OOM during an encode must not kill the process draining the scan queue. Today they would be one process. |
 | It is nearly free to do | `claim_job(job_kinds, lease_seconds)` already takes the kinds; `skip locked` already makes two workers safe; `worker_heartbeats.id` already derives from `RAILWAY_SERVICE_NAME`, so a service named `video-worker` gets its own row; `jobs.kind` and `worker_heartbeats.job_kind` **already allow `render-cuts`**. **No migration.** |
-| The only code it touches | `CLAIMED_KINDS` becomes per-service config, and `/api/health/worker` reports *N* rows instead of one. Both small, both in my lane. |
+| The only code it touches | `CLAIMED_KINDS` becomes per-service config — **one environment variable, and that is all.** This row used to add "and `/api/health/worker` reports *N* rows instead of one"; checked while building, that was already true: the endpoint selects every heartbeat row ordered by `last_seen_at`, and its `ok` is `workers.every(...)`, so a stale video worker beside a healthy scan worker reads as not-ok. D128 built it for this. |
 
 ### 3.4 Cost per finished video
 
