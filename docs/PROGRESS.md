@@ -1,5 +1,102 @@
 # Progress — morning handoff
 
+## Handoff — 25 November 2026, end of session (the pipe is end-to-end; the next move is four fixes Vlad has in his head and not in this file)
+
+### Where everything stands
+
+| | State |
+|---|---|
+| `main` | `b2951c2` · 19 migrations, all applied to production · `Production schema check` green on the head |
+| **D128** worker heartbeat | on production, and **the Railway healthcheck is live on `/healthz`** (Vlad) |
+| **D129** V3 drafts + server-side approve refusal | on production |
+| **D130** label path | **proven end to end** — #35 applied, verified, merged and dispatched; #37 recorded it |
+| Open pull requests | none |
+
+### The label path, settled
+
+`Migrate production (label)` run #1 applied `20261124190000_drafts.sql`,
+reported `migration-drift: production has all 19 migration(s) in this tree. OK`
+**before** merging, merged #35 as `9c112a3f`, and then dispatched
+`Production schema check #36` and `CI #267` — both `workflow_dispatch`, both
+actor `github-actions[bot]`, both green. A `GITHUB_TOKEN` merge starts nothing;
+the named exception carries the checks. Full reasoning and the two questions it
+settled: **D130**, third addendum.
+
+**The rule that came out of the day:** a pull request carrying a migration is
+merged by the label and by nothing else — never the Merge button, never
+auto-merge, never `gh pr merge`. CLAUDE.md non-negotiable 11. It applies to Vlad
+too, because the label *is* his approval.
+
+### The healthcheck is now load-bearing, and that is the point
+
+Vlad set **Healthcheck Path = `/healthz`** on the Railway service. From here on,
+a container that cannot boot, cannot read its credentials, or cannot write to
+`worker_heartbeats` **fails its deploy and does not replace the working
+worker**. That is the gate D125 asked for on the most dangerous moment in this
+system — a merge replacing the process that holds the production service-role
+key, with no build step in between.
+
+Consequence worth remembering: **a migration that the worker's code depends on
+must be applied before the deploy that needs it**, or the healthcheck will
+correctly refuse the new container. The label path already enforces that order.
+
+### The first live production scan: reviewed, and strong
+
+Vlad reviewed it and called it strong. **Four fixes are queued off the back of
+it.**
+
+> **The four are not written down here, and that is the one gap in this
+> handoff.** They were decided in the review conversation and I was not given
+> them, so recording my guess at them would be worse than recording their
+> absence. **First action next session: ask Vlad for the four fixes and write
+> them into this file before starting any of them.** Everything below is
+> subordinate to them.
+
+This scan was also the first to write `drafts` rows, so it is the first chance
+to see the Originality Gate's refusals on screen — with the number, the limit
+and the gate's own reasons — rather than as a count in a log line.
+
+### Queued after the four fixes
+
+1. **V4** — "Generate with AI" inline assists (onboarding wording, hooks and
+   captions, brand-kit voice, KPI targets). No migration.
+2. **V5** — the video agent. **The generator choice is Vlad's** and is one of
+   the four things the sprint stops for.
+3. **The rewrite loop V3 is shaped for.** `attempts` can hold 2 and `blocked` is
+   terminal, but nothing produces attempt 2, so every originality failure today
+   is a first failure — stored as `rejected` with a `rewritten` verdict, visible
+   and not approvable.
+
+### Still outstanding, small
+
+**`WORKER_HEALTH_TOKEN`** in Vercel production (any value). Without it
+`/api/health/worker` 404s there by design — it fails closed. The worker's own
+`/healthz` is unaffected and is what Railway reads.
+
+### Debt, written down rather than guessed at
+
+1. **Nothing mechanically stops the Merge button on a migration PR.** The rule
+   is in CLAUDE.md; the enforcement is not. A ruleset cannot say "this PR
+   touches `supabase/migrations/`, so require the label", and a required check
+   that failed on an unlabelled migration PR would have to pass *before* the
+   label exists, which inverts the order (D130, second addendum).
+2. **The searches budget has two searches of headroom** — 22 of 24 on the
+   reproduced scan. Watch for `stopped by the searches budget` in Railway; if it
+   is common the ceiling moves *with a measurement beside it*, and
+   `SCAN_SEARCH_PROJECTION` moves with it because `budget.test.ts` requires the
+   enforced ceiling to equal what the spend cap charges for.
+3. **The co-pilot's spend ledger is still an in-memory `Map`** and must land on
+   `agent_runs` before more than one server instance serves it. The scan's cap
+   already uses the table, so the worker does not trip this.
+
+### Local hazards, unchanged
+
+`docs/progress/tmp/` is untracked throwaway shots and can be deleted. The
+gitignored `*.tmp.spec.ts` specs from an earlier session are out of `e2e/` —
+leave them out; two of them drive a real paid scan on the `chromium` project.
+And `.next` survives a branch switch: it went red on a phantom route type twice
+today until cleared, which is D111 in a new coat each time.
+
 ## Handoff — 25 November 2026 (the label path is proven; D128 and D129 are both on production)
 
 ### What a user can now do
