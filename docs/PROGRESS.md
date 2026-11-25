@@ -143,6 +143,50 @@ counts, or `report rejected: rule=…` with them.
 
 `docs/progress/tmp/` holds throwaway shots and can be deleted.
 
+## D128 — 24 November 2026 (the worker says it is alive, and silence now means something)
+
+**What you can now do:** open `/api/health/worker` and get a straight answer to
+"is anything draining the queue" — including which commit the worker is running,
+which the P0 handoff could only record as *due*. Queued item 1 is closed.
+
+Two mechanisms, because Railway's healthcheck is **only a deploy gate**: its
+docs say "Railway does not monitor the healthcheck endpoint after the deployment
+has gone live."
+
+| | what it catches |
+|---|---|
+| `GET /healthz` on the container | a merge of mine that **cannot boot, read its credentials or write to Supabase** never replaces the working worker — the deploy fails instead |
+| `worker_heartbeats` + `/api/health/worker` | a worker that dies at 3pm on a Tuesday, read from outside, because a dead process cannot serve a 503 |
+
+Six states, because the fix differs each time: `absent`, `stalled`,
+`not-claiming` (up and beating, `claim_job` refusing), `over-lease` (past the
+point a second worker bills the run twice), `working`, `idle`. The beat is on a
+**timer, not in the claim loop** — in the loop it would go silent for the six
+minutes a scan takes and make every healthy scan look like a dead worker.
+
+Evidence: **29 new unit tests** (14 against a fake Supabase client, 15 on the
+thresholds), typecheck, lint, build. The worker's `src/` is now inside the
+Vitest suite at all, which it was not before — `tsx` runs it with no build step,
+so nothing stood between a logic error and the container.
+
+**Honest limit: nothing has run against a real table.** The migration is written
+and unapplied, so the evidence is unit-level. It degrades safely — a failed
+heartbeat is logged once and swallowed, jobs keep draining — but that gives an
+**ordering constraint**: apply the migration *before* setting the Railway
+healthcheck path, or the next deploy fails for a table that does not exist.
+
+Full reasoning in **D128**.
+
+### Needs you
+
+1. **Dispatch `Migrate production` on `feat/worker-heartbeat`** — this adds
+   `worker_heartbeats`, which is additive and touches no existing table.
+2. **Then** set **Healthcheck Path = `/healthz`** on the Railway service. In
+   that order (see above).
+3. **Set `WORKER_HEALTH_TOKEN`** in Vercel production, else
+   `/api/health/worker` 404s there by design. Any value; it is only a shared
+   secret for polling. Preview and local answer without it.
+
 ## P0 — 24 November 2026 (the first production scan failed; four things were wrong behind one sentence)
 
 Job `51401914`, niche "independent dog trainers", profile filled in: **829

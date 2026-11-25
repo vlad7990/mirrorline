@@ -59,6 +59,27 @@ COPY . .
 # row-level policy we wrote.
 USER node
 
+# ==============================================================================
+# The health endpoint, and the one Railway setting that makes it matter
+# ==============================================================================
+#
+# `src/health-server.ts` serves `GET /healthz` on `PORT` (8080 by default), and
+# answers 200 only once the process has written a heartbeat row to Supabase.
+# Set **Healthcheck Path = `/healthz`** on the Railway service; without that
+# field this port is just a status page nobody reads.
+#
+# What it buys is a gate on the most dangerous moment here. There is no build
+# step below — `tsx` runs the TypeScript directly — so a type error reaches the
+# running container, and since D125 a merge to `main` replaces the process
+# holding the production service-role key. With the healthcheck set, a container
+# that cannot boot, cannot read its credentials or cannot reach Supabase is
+# marked a failed deploy and **the working worker keeps draining the queue**.
+#
+# It is a deploy gate and not a monitor: Railway "does not monitor the
+# healthcheck endpoint after the deployment has gone live". The monitor is
+# `worker_heartbeats` and `/api/health/worker` (D128).
+EXPOSE 8080
+
 # No build step: `tsx` runs the TypeScript directly, which is also what makes
 # the `server-only` alias in tsconfig.json work at runtime.
 CMD ["pnpm", "--filter", "@mirrorline/worker", "start"]

@@ -24,6 +24,11 @@ export default defineConfig({
       'packages/**/src/**/*.test.ts',
       'packages/**/src/**/*.test.tsx',
       'apps/web/**/*.test.ts',
+      // The worker is TypeScript that `tsx` runs **without a build step**, so
+      // a type error reaches the running container (D125) and a logic error
+      // reaches it just as directly. It was outside this suite until D128 gave
+      // it something worth asserting — the heartbeat it is judged alive by.
+      'services/**/src/**/*.test.ts',
       // The repo gates in scripts/ are plain ESM, not TypeScript: they run
       // under bare `node` with no build step, so their tests are .mjs too.
       'scripts/**/*.test.mjs',

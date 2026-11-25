@@ -9622,3 +9622,119 @@ is the one with residual risk — the `main` ruleset carries
 merge commit created by `GITHUB_TOKEN` is not something a dry run can answer. If
 it refuses, the failure path reports it, the migrations are already applied, and
 Vlad pressing Merge is the fallback — which is D104's procedure exactly.
+## D128 — the worker says it is alive, in two places, because one of them is only a gate
+
+*Below D130 in this file, and earlier than it in time: this was written first
+and merged second, because D130 replaced the procedure that was holding it up.*
+
+**24 November 2026.** D125 named this and left it: "a worker that crash-loops
+looks exactly like a quiet afternoon with no scans queued. This is the first
+thing I would want an alert on, and there is no alert." It is now two
+mechanisms, and keeping them separate is the decision worth recording.
+
+### The queue cannot answer the question
+
+The tempting cheap version is to watch `jobs` — a row stuck in `queued` proves
+nothing is claiming, and it needs no migration. It is not enough, and the
+reason is *when* it fires. An empty queue is the healthy state most of the day,
+so the signal only exists once a client has pressed the button; the queue
+reports a dead worker **at the moment it costs somebody their scan**. Since
+D114 a merge of mine replaces the process that drains the queue, and the window
+between a bad merge and the next button press is exactly the window nothing was
+watching.
+
+So the worker writes a row — `worker_heartbeats`, one per process, rewritten in
+place — and `last_seen_at` moving is the only fact that separates "nothing to
+do" from "nobody home". The queue check is kept as well, as a second condition
+on the same endpoint: a beating worker whose `claim_job` grant was revoked is
+healthy by heartbeat and starving by queue, and only both together are the
+system working.
+
+### The beat is on a timer, not in the loop
+
+A beat written at the top of the claim loop goes silent for the four to six
+minutes a scan takes, which would make **every healthy scan** look exactly like
+a dead worker. That is the same confusion, re-created by the fix. A
+`setInterval` keeps beating through the job — the loop spends those minutes
+awaiting a model stream, so the event loop is free — and `job_kind` is what
+tells working from idle.
+
+Fifteen seconds, with a ninety-second staleness window: six beats, and also
+**three error backoffs**, which is the number that matters. A worker that cannot
+reach Supabase fails its heartbeat for the same reason it fails its claim, so
+the window is "how many failed attempts we will forgive". `liveness.test.ts`
+asserts that inequality, and the one above it — the lease must outlast the
+staleness window, or a long scan reports as a dead worker.
+
+**That is the whole argument for the thresholds living in
+`apps/web/lib/jobs/liveness.ts` rather than in the worker.** Each is half of a
+property whose other half is elsewhere, exactly as `JOB_LEASE_SECONDS` is, and
+only a shared module lets a test hold them to each other.
+
+### Six states, because the fix differs every time
+
+`absent` (never beat — or cannot write at all), `stalled` (gone, wedged, or
+lost the database), `not-claiming` (up and beating, `claim_job` refusing),
+`over-lease` (holding a job past the point where a second worker may claim it
+and bill the run twice), `working`, `idle`. Folding the first four into
+"unhealthy" would throw away the only part of the message that tells you what
+to do.
+
+### Railway's healthcheck is a deploy gate and not a monitor
+
+This is the fact that forced two mechanisms rather than one. Railway's
+documentation: "Railway does not monitor the healthcheck endpoint after the
+deployment has gone live." It queries the endpoint **while deploying**, and a
+non-2xx answer marks that deploy failed.
+
+So `GET /healthz` on the container is worth having for precisely one thing, and
+it is the biggest thing: D125's own warning that a merge of mine replaces the
+process holding the production service-role key, with **no build step** between
+the two. With `Healthcheck Path = /healthz` set, a container that cannot boot,
+cannot read its credentials, or cannot write to Supabase **never replaces the
+working one** — the deploy fails and the old worker keeps draining the queue.
+`pulse()` answers null until one row has been accepted, so the gate waits for
+proof of a database rather than proof that Node started.
+
+And `/api/health/worker` on Vercel is the half that keeps answering afterwards.
+It reads the row from outside, with the service role, so it reports the worker
+being *gone* — which a dead process cannot do for itself.
+
+### The token, and why this route does not 404 in production
+
+`api/health/supabase` 404s in a production deployment and is right to. This
+route is the opposite case: **production is the only place the worker runs**, so
+404ing there would make it decoration. It is gated on `WORKER_HEALTH_TOKEN`
+instead and fails closed — in production with no token set it 404s and says
+nothing. Outside production it answers freely, because a check nobody can run
+during development is a check that rots.
+
+The comparison is padded to a fixed width and constant-time. Close to paranoia
+for a status page; it costs four lines, and the alternative is a token
+guessable one character at a time by timing the 404.
+
+### What it is allowed to say
+
+Counts, seconds, our own worker name, and the commit sha. **No job id, no
+workspace id, no error text** — the rule `health/supabase` wrote down ("variable
+names, status codes and row counts") and the rule D127 applied to rejection
+logging. `claim_failures` is a count for exactly that reason: it is the useful
+half of an error that must not be stored. A test asserts the served body cannot
+match `sb_secret`, `service_role` or a URL.
+
+`revision` is the one addition that is not about alerting. The P0 handoff had to
+record that a Railway redeploy was "due, not that it happened", because nothing
+in this system could be asked which code it was running. Now it can be.
+
+### What this does not prove
+
+**Nothing has run against a real `worker_heartbeats` table.** The migration is
+written and not applied — neither preview nor production has the table until it
+is dispatched — so the evidence here is fourteen unit tests against a fake
+Supabase client, plus typecheck and build. The mechanism degrades safely in the
+meantime: a failed heartbeat is logged once and swallowed, jobs keep draining,
+and `/healthz` answers 503.
+
+That last clause is an ordering constraint, not a detail. **Set the Railway
+healthcheck path only after the migration is applied**, or the first deploy
+after it will fail for a table that does not exist yet.
