@@ -35,9 +35,9 @@
 import 'server-only'
 
 import { mkdir, writeFile } from 'node:fs/promises'
-import os from 'node:os'
 import path from 'node:path'
 
+import { generationOutputDirectory } from '../asset-file'
 import { promptRef } from '../prompt-ref'
 import { scenePrompt } from '../safety'
 import { billedGenerationUsd, projectGenerationUsd } from '../spend'
@@ -123,14 +123,14 @@ function defaultSleep(ms: number): Promise<void> {
 /**
  * Write to `GENERATION_OUTPUT_DIR`, or to the system temp directory.
  *
- * Temp by default, deliberately. A default that wrote into the repository would
- * put generated media in somebody's working tree, where it would be committed
- * once and then explained forever — and non-negotiable 1 means the one thing
- * this directory must never accumulate is footage whose provenance nobody can
- * reconstruct.
+ * The directory moved to `asset-file.ts` in step 6, and took the reasoning that
+ * used to be written here with it. Not tidiness: the route that serves these
+ * bytes back has to resolve the same directory, and two expressions computing
+ * "where did we put it" is a preview that 404s on a file sitting on disk — a
+ * failure with no error attached to it.
  */
 async function defaultSaveBytes(bytes: Uint8Array, suggestedName: string): Promise<string> {
-  const directory = process.env.GENERATION_OUTPUT_DIR ?? path.join(os.tmpdir(), 'mirrorline-ai')
+  const directory = generationOutputDirectory()
   await mkdir(directory, { recursive: true })
 
   const file = path.join(directory, suggestedName)
@@ -181,7 +181,81 @@ export function imageRequestBody(request: GenerationRequest): Record<string, unk
  * are ours to fix, and `service_unavailable` is worth another go.
  */
 export function isRefusalCode(code: string | null): boolean {
-  return code === 'invalid_argument'
+  // Normalised, because the wire says `invalid-argument` and the documentation
+  // says `invalid_argument`. Observed on 25 November 2026 against the real API:
+  // `{"code":"invalid-argument","error":"Incorrect API key provided…"}`. Testing
+  // one spelling meant the comparison never matched, so every provider refusal
+  // came back as `failed` — and `failed` is the one outcome this product
+  // retries. The module's own comment three paragraphs up says why that is the
+  // expensive direction; it was describing a bug it had.
+  return code !== null && code.replace(/-/g, '_') === 'invalid_argument'
+}
+
+/**
+ * The error code in a response, whichever shape it arrived in.
+ *
+ * Two shapes, and we have now seen one of them. xAI's REST errors put the code
+ * at the **top level** beside a string `error`:
+ *
+ * ```json
+ * { "code": "invalid-argument", "error": "Incorrect API key provided." }
+ * ```
+ *
+ * The OpenAI-compatible envelope — `{ "error": { "code": …, "message": … } }` —
+ * is what the SDKs document and what this adapter was written against, and it
+ * may still arrive from the chat-compatible endpoints. Both are read, top level
+ * first, because that is the one observed from `/videos/generations`.
+ *
+ * Exported so a test can pin both, which is the only way this stays fixed: the
+ * failure mode is silent, and a wrong answer here turns a refusal into a retry.
+ */
+export function xaiErrorCode(raw: unknown): string | null {
+  const body = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>
+
+  if (typeof body.code === 'string') return body.code
+
+  const nested = (typeof body.error === 'object' && body.error !== null ? body.error : {}) as Record<
+    string,
+    unknown
+  >
+
+  return typeof nested.code === 'string' ? nested.code : null
+}
+
+/**
+ * The provider's own sentence, for the log and never for a screen.
+ *
+ * Same two shapes: a string `error`, or a nested `error.message`.
+ */
+export function xaiErrorMessage(raw: unknown): string | null {
+  const body = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>
+
+  if (typeof body.error === 'string') return body.error
+
+  const nested = (typeof body.error === 'object' && body.error !== null ? body.error : {}) as Record<
+    string,
+    unknown
+  >
+
+  return typeof nested.message === 'string' ? nested.message : null
+}
+
+/**
+ * Is this `invalid-argument` about our credential rather than about the scene.
+ *
+ * **The one case where reading the message is the lesser evil.** xAI answers a
+ * rejected API key with exactly the code it uses for a moderation block, so the
+ * code alone cannot tell them apart — and they are opposite facts. A rejected
+ * key reported as a refusal puts "the generator would not make that scene" on
+ * screen and sends somebody to rewrite a prompt that was never the problem,
+ * while the real fault is one line of configuration.
+ *
+ * Matching on the sentence is fragile and is why this is narrow: one phrase,
+ * case-insensitive, and a miss costs only the wrong one of two no-cost
+ * messages. Observed verbatim as "Incorrect API key provided."
+ */
+export function isKeyRejection(message: string | null): boolean {
+  return message !== null && /incorrect api key/i.test(message)
 }
 
 interface ClipPollResult {
@@ -209,19 +283,17 @@ export function parseClipPoll(raw: unknown): ClipPollResult {
     string,
     unknown
   >
-  const error = (typeof body.error === 'object' && body.error !== null ? body.error : {}) as Record<
-    string,
-    unknown
-  >
-
   const seconds = Number(video.duration)
 
   return {
     status,
     url: typeof video.url === 'string' ? video.url : null,
     seconds: Number.isFinite(seconds) && seconds > 0 ? seconds : null,
-    errorCode: typeof error.code === 'string' ? error.code : null,
-    errorMessage: typeof error.message === 'string' ? error.message : null,
+    // Both shapes, through the shared readers. This used to reach for
+    // `error.code` only, which is `undefined` against the shape the live API
+    // actually sends.
+    errorCode: xaiErrorCode(body),
+    errorMessage: xaiErrorMessage(body),
   }
 }
 
@@ -236,6 +308,16 @@ const DECLINED_MESSAGE =
   'The generator would not make that scene. Reword it — a different subject, or a wider shot, usually goes through.'
 
 const UNREACHABLE_MESSAGE = 'We could not reach the generator just now. Try again shortly.'
+
+/**
+ * What a rejected key says, and it says nothing about the scene.
+ *
+ * The same sentence the no-key branch uses, because they are the same fact from
+ * a client's point of view: generation is not configured here. The difference —
+ * no key at all against a key the provider will not take — is in `reason`,
+ * where whoever has to fix it will read it.
+ */
+const MISCONFIGURED_MESSAGE = 'Generation is not configured on this environment.'
 
 export function createXaiAdapter(options: XaiAdapterOptions = {}): GenerationAdapter {
   const doFetch = options.fetchImpl ?? ((...args: Parameters<typeof fetch>) => fetch(...args))
@@ -340,12 +422,21 @@ export function createXaiAdapter(options: XaiAdapterOptions = {}): GenerationAda
     const requestId = typeof submittedBody.request_id === 'string' ? submittedBody.request_id : null
 
     if (!submitted.ok || !requestId) {
-      const error = (
-        typeof submittedBody.error === 'object' && submittedBody.error !== null
-          ? submittedBody.error
-          : {}
-      ) as Record<string, unknown>
-      const code = typeof error.code === 'string' ? error.code : null
+      const code = xaiErrorCode(submittedBody)
+      const detail = xaiErrorMessage(submittedBody)
+
+      // A rejected credential wears the same code as a moderation block, and
+      // calling it a refusal would send somebody to rewrite a prompt that was
+      // never the problem. Checked before the refusal branch, because the
+      // refusal branch would otherwise swallow it.
+      if (isKeyRejection(detail)) {
+        return {
+          status: 'failed',
+          reason: 'the provider rejected the API key',
+          message: MISCONFIGURED_MESSAGE,
+          provenance: provenanceFor(request, 0, null),
+        }
+      }
 
       return isRefusalCode(code)
         ? {
@@ -369,6 +460,15 @@ export function createXaiAdapter(options: XaiAdapterOptions = {}): GenerationAda
       const result = parseClipPoll(await polled.json().catch(() => null))
 
       if (result.status === 'failed') {
+        if (isKeyRejection(result.errorMessage)) {
+          return {
+            status: 'failed',
+            reason: 'the provider rejected the API key mid-render',
+            message: MISCONFIGURED_MESSAGE,
+            provenance: provenanceFor(request, 0, requestId),
+          }
+        }
+
         return isRefusalCode(result.errorCode)
           ? {
               status: 'refused',
@@ -425,10 +525,19 @@ export function createXaiAdapter(options: XaiAdapterOptions = {}): GenerationAda
 
     const url = typeof image.url === 'string' ? image.url : null
     if (!response.ok || !url) {
-      const error = (
-        typeof body.error === 'object' && body.error !== null ? body.error : {}
-      ) as Record<string, unknown>
-      const code = typeof error.code === 'string' ? error.code : null
+      const code = xaiErrorCode(body)
+      const detail = xaiErrorMessage(body)
+
+      // Before the refusal branch, for the reason the clip path gives: the two
+      // arrive under one code and mean opposite things.
+      if (isKeyRejection(detail)) {
+        return {
+          status: 'failed',
+          reason: 'the provider rejected the API key',
+          message: MISCONFIGURED_MESSAGE,
+          provenance: provenanceFor(request, 0, null),
+        }
+      }
 
       return isRefusalCode(code)
         ? {

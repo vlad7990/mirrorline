@@ -10260,3 +10260,178 @@ label is Vlad's; a storage bucket would need its own RLS review, which
 `20261123020000_jobs.sql` already says is "its own review". Both wait for the
 VIDEO session's bucket to land, per Vlad's rule that no migration comes from
 this session until theirs does.
+
+## D141 — the dev screen, and the three things it found by being run
+
+**25 November 2026.** Step 6 of `docs/plan/AI_GENERATION_V4.md`: one screen at
+`/app/dev/generate` that runs the whole generation path with a person watching.
+No migration. Decisions taken while building it, and — more usefully — what
+running it turned up that no test had.
+
+### 1. A flag, off by default, read in exactly one place
+
+`GENERATION_ENABLED`, in `lib/generation/flag.ts`, accepting `1` and `true` and
+nothing else. Not `Boolean(raw)`, which is true for `'false'`, `'0'` and
+`'off'` — the three things somebody writes when they mean *off*.
+
+The cap and the flag answer different questions. The cap asks "how much" and
+holds; the flag asks "at all", and until a real call has been reconciled
+against the console's own figure and zero data retention is bought, the honest
+answer for every deployment is no. Off by default, because a flag that defaults
+on protects nothing: the deployment that most needs it is the one nobody
+configured.
+
+Three surfaces ask — the page, the action behind its button, and the route that
+serves the bytes — and each checks for itself. A page that stopped offering the
+button is not a reason the button stopped working.
+
+### 2. The order lives in one function, not at each call site
+
+`lib/generation/run.ts` performs `screenPrompt` → `checkGenerationSpend` →
+`adapter.generate` → `recordGenerationOutcome` and nothing else. Each of those
+modules was already correct alone; what could still go wrong was a *caller*
+doing three of them, or doing them in a different order. The dev screen is the
+first caller and the slice-2 worker will be the second.
+
+`run.test.ts` asserts the sequence as a sequence — the fakes push labels into
+one array — and the valuable assertions are the absences: a refused prompt
+produces **no** ledger read and **no** provider call. "The cap was checked" is
+easy to satisfy by accident; "the provider was not called" is the property that
+costs money when it breaks.
+
+### 3. A path is never handed to a browser
+
+`GeneratedAsset.location` is a path on this machine. `lib/generation/asset-file.ts`
+turns it into a **name**, validated against the only shape its two builders
+produce — `prompt_` plus sixteen lowercase hex digits, a beat slug, `.mp4` or
+`.jpg` — and `/api/generation/asset/[file]` rebuilds the path from the
+configured directory. `cutPath()` made this argument first; generation has one
+extra reason, in that its writer is a model's response rather than ffmpeg.
+
+An allow-list rather than a deny-list of dangerous characters, because a
+deny-list has to stay complete against every encoding a browser, a proxy and
+`path.join` disagree about. The cost is named rather than hidden: a beat label
+carrying punctuation slugs to a name this refuses, so the asset renders with no
+preview rather than with a preview of something else.
+
+The directory moved out of `defaultSaveBytes` into that module, because the
+route has to resolve the same one and two expressions computing "where did we
+put it" is a preview that 404s on a file sitting on disk — a failure with no
+error attached.
+
+**The known limit, recorded rather than implied:** a signed-in member of one
+workspace can fetch another's generated scene if they know the name. Slice 1 has
+no bucket and so no RLS over these bytes. It is one of the reasons the flag is
+off by default and this screen is `/app/dev/*`; the answer is the VIDEO
+session's bucket and its RLS review.
+
+### 4. What running it found — the ledger write was failing silently
+
+Every press logged `permission denied for table agent_runs`, swallowed by
+`recordMediaRun`'s deliberate choice not to turn a lost log line into a failed
+clip. The screen looked perfect and the ledger stayed empty.
+
+`agent_runs` revokes insert from `authenticated` on purpose (D96, D115): "a row
+a client could write would be research nobody did or a cost somebody typed". The
+scan's writes have always gone through `createAgentServiceClient`; generation's
+had not, because generation's first caller is a *screen* rather than a worker.
+Fixed in `actions.ts`, and the cap's read moved to the same client — a month
+summed under RLS is a month the policy agreed to show, and a ceiling has to be
+checked against what was actually spent.
+
+The workspace id still comes from the session, through the user's own client,
+before the service role is used. That order is the security property: the
+service role is only ever handed a workspace RLS already agreed this person
+owns, never one from a form.
+
+This is the whole argument for building the screen before the key arrived. Four
+test suites, 162 passing assertions, and the one thing none of them could see
+was that the write never happened.
+
+### 5. What running it found — a controlled `<textarea>` broke hydration
+
+The prompt box was `value={prompt}` with a `useState`. The screen rendered
+correctly and did nothing: the "load a prompt we refuse" button would not change
+the text and the character counter never moved. React said so once the console
+was read — *"A tree hydrated but some attributes of the server rendered HTML
+didn't match the client properties. This won't be patched up"* — with the diff
+pointing at a removed text child of that `<textarea>`.
+
+Server-rendering a controlled textarea writes its value as the element's child
+text; the client render has no child, the subtree is left unhydrated, and no
+handler on it ever runs. `defaultValue` renders the same child on both sides.
+So the value lives in the DOM and the button writes through a ref; the counter
+keeps state, derived from `onChange` rather than owning the text.
+
+Worth writing down because the symptom is *silence*. Nothing throws, nothing is
+red, and the screen looks finished.
+
+### 6. The AI label has to survive having no picture
+
+Non-negotiable 4 is "AI scenes are always labelled, in the UI". The badge sits
+on the media, per DESIGN.md — but a sample scene has no media, and the asset was
+then labelled only by a row in a provenance list, which is a weaker claim than
+the rule asks for. The badge now renders in the empty state too, ringed, because
+`AiLabel` is fixed white-on-ink by design and needs an edge on a light surface.
+
+Screenshots: `progress/d141-dev-generate-sample-1440.png`,
+`progress/d141-dev-generate-refused-1440.png`,
+`progress/d141-dev-generate-390.png`.
+
+## D142 — xAI's error shape, read from a real response rather than from the docs
+
+**25 November 2026.** The first live call this product has ever made. It cost
+nothing, because it was rejected — and it found two defects that twenty-nine
+tests with a fake `fetch` could not, both failing in the same silent direction.
+
+The response, verbatim:
+
+```json
+{ "code": "invalid-argument", "error": "Incorrect API key provided. You can obtain an API key from https://console.x.ai." }
+```
+
+### 1. The code is at the top level, and `error` is a string
+
+`providers/xai.ts` read `body.error.code`, which is the OpenAI-compatible
+envelope the SDKs document. Against the shape above that is `undefined`, so the
+code was always `null`.
+
+### 2. The code is hyphenated
+
+`isRefusalCode` compared against `invalid_argument`; the wire says
+`invalid-argument`. Even with the shape fixed, the comparison would have missed.
+
+Both defects land on the same side: a provider **refusal** reported as
+**`failed`** — and `failed` is the one outcome this product retries. The
+module's own comment, written before any real call, says why that is the
+expensive direction: *"misreading a moderation block as a transient failure
+would retry a prompt the provider has already declined, three times, and bill
+for each."* It was describing a bug it had.
+
+Fixed with `xaiErrorCode` and `xaiErrorMessage`, which read **both** shapes —
+top level first, because that is the one observed — and a normalised comparison
+that accepts either spelling. Both shapes are pinned in `xai.test.ts`, because
+the nested one is still what the documentation shows and may still arrive.
+
+### 3. A rejected key wears a refusal's clothes
+
+xAI answers a bad API key with exactly the code it uses for a moderation block.
+The code alone cannot tell them apart, and they are opposite facts: a rejected
+key reported as a refusal puts *"the generator would not make that scene"* on
+screen and sends somebody to rewrite a prompt that was never the problem, while
+the real fault is one line of configuration.
+
+So `isKeyRejection` matches one phrase — "incorrect api key", case-insensitive —
+and that branch is checked **before** the refusal branch in all three places a
+provider error is read. Matching on a message is fragile, which is why it is
+narrow: one phrase, and a miss costs only the wrong one of two no-cost
+sentences.
+
+### What this does not tell us
+
+The key in `apps/web/.env.local` is **rejected by xAI**, so the three things the
+handoff wanted checked against reality — that `request_id` comes back where the
+docs say, that a finished poll carries `video.duration`, and that the billed
+cost matches the console — remain unchecked. Nothing has been generated and
+nothing has been billed. Screenshot of the honest failure:
+`progress/d142-dev-generate-key-rejected-1440.png`.
