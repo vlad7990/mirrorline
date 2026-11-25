@@ -32,8 +32,27 @@ import type Anthropic from '@anthropic-ai/sdk'
 
 import { NO_USAGE, type Usage } from '../copilot/spend'
 
-/** Which budget stopped the run, when one did. */
-export type BudgetStop = 'searches' | 'time'
+/**
+ * Which budget stopped the run, when one did.
+ *
+ * `stall` is the odd one out, and it is not really a budget: the other two fire
+ * because a run did too much, and this one fires because it stopped doing
+ * anything at all. A measured research leg spent **361 seconds making 11
+ * searches and five output tokens** and then went quiet until its deadline —
+ * which the time budget reports as "ran out of research time", the one diagnosis
+ * that sends you looking at the wrong number. A stall is worth telling apart
+ * precisely because it is the one stop that is worth *retrying* (D138).
+ */
+export type BudgetStop = 'searches' | 'time' | 'stall'
+
+/**
+ * How often the stall watchdog looks, in milliseconds.
+ *
+ * Granularity, not sensitivity — the threshold is the caller's `stallMs`. Ten
+ * seconds keeps the overshoot small against a 90-second threshold and costs
+ * nothing: the check is a subtraction.
+ */
+const STALL_CHECK_MS = 10_000
 
 export interface LegOutcome {
   /** `null` when a budget aborted the stream: there is no final message. */
@@ -71,6 +90,27 @@ export interface StreamLegRequest {
   readonly tools?: readonly unknown[]
   /** Ignored when there are no tools. */
   readonly searchCeiling?: number
+  /**
+   * Searches already spent by an earlier attempt at the same leg (D138).
+   *
+   * The ceiling has to be **global across attempts**, or a stall retry doubles
+   * what the spend cap projected: the cap charges for
+   * `RESEARCH_SEARCH_PROJECTION` searches once, and two attempts starting from
+   * zero could run twice that. Counting from here keeps the projection true,
+   * and it is also the honest reading — the searches an abandoned attempt ran
+   * were still billed.
+   */
+  readonly searchesSoFar?: number
+  /**
+   * Abort when nothing has streamed for this long (D138).
+   *
+   * Omitted for a leg short enough that its own deadline is the backstop — the
+   * write leg has 75 seconds and nothing to wait on. The research leg has six
+   * minutes and a server-side search loop that can simply stop talking, which
+   * is a different failure from running out of time and deserves a different
+   * answer.
+   */
+  readonly stallMs?: number
   /** Absolute wall-clock deadline for this leg, in epoch milliseconds. */
   readonly deadlineAt: number
   readonly requestTimeoutMs: number
@@ -126,7 +166,8 @@ export async function streamLeg(request: StreamLegRequest): Promise<LegOutcome> 
 
   const conversation: Anthropic.MessageParam[] = [...request.messages]
   let usage = NO_USAGE
-  let searches = 0
+  // Global across attempts, not per attempt — see `searchesSoFar`.
+  let searches = request.searchesSoFar ?? 0
 
   const beganAt = Date.now()
   const elapsed = () => Math.round((Date.now() - beganAt) / 1000)
@@ -168,10 +209,13 @@ export async function streamLeg(request: StreamLegRequest): Promise<LegOutcome> 
       stoppedBy: null as BudgetStop | null,
       searches: 0,
       snapshot: null as Anthropic.Message | null,
+      /** When anything last arrived. The stall watchdog reads only this. */
+      heardAt: Date.now(),
     }
 
     stream.on('streamEvent', (_event, latest) => {
       current.snapshot = latest
+      current.heardAt = Date.now()
     })
 
     if (searchCeiling !== undefined) {
@@ -190,11 +234,30 @@ export async function streamLeg(request: StreamLegRequest): Promise<LegOutcome> 
       stream.abort()
     }, remainingMs)
 
+    // The watchdog. Deliberately a repeating check against a timestamp rather
+    // than a timer reset on every event: a streaming response fires thousands of
+    // events, and rescheduling a timer on each one is work in the hot path to
+    // answer a question two subtractions already answer.
+    const stallMs = request.stallMs
+    const watchdog =
+      stallMs === undefined
+        ? null
+        : setInterval(() => {
+            if (Date.now() - current.heardAt < stallMs) return
+            current.stoppedBy = 'stall'
+            stream.abort()
+          }, STALL_CHECK_MS)
+
+    const stopWatching = () => {
+      clearTimeout(timer)
+      if (watchdog !== null) clearInterval(watchdog)
+    }
+
     let response: Anthropic.Message
     try {
       response = await stream.finalMessage()
     } catch (error) {
-      clearTimeout(timer)
+      stopWatching()
       // Our own abort is not an error: it is the budget doing its job, and it
       // carries a reason the operator can act on. Anything else is a real
       // failure and belongs to the caller's catch.
@@ -207,8 +270,13 @@ export async function streamLeg(request: StreamLegRequest): Promise<LegOutcome> 
       // quietly raises the cap.
       usage = addUsage(usage, usageFrom(current.snapshot?.usage))
       console.warn(
-        `[${label}] stopped by the ${stoppedBy} budget after ${elapsed()}s of ${budgetSeconds}s · ` +
-          `${searches}${searchCeiling === undefined ? '' : ` of ${searchCeiling}`} search(es)`,
+        `[${label}] ` +
+          (stoppedBy === 'stall'
+            ? `stalled — nothing streamed for ${Math.round((stallMs ?? 0) / 1000)}s`
+            : `stopped by the ${stoppedBy} budget`) +
+          ` after ${elapsed()}s of ${budgetSeconds}s · ` +
+          `${searches}${searchCeiling === undefined ? '' : ` of ${searchCeiling}`} search(es) · ` +
+          `out ${usage.outputTokens} tok`,
       )
       return {
         response: null,
@@ -221,7 +289,7 @@ export async function streamLeg(request: StreamLegRequest): Promise<LegOutcome> 
         legs: leg + 1,
       }
     }
-    clearTimeout(timer)
+    stopWatching()
 
     const legSeconds = Math.round((Date.now() - startedAt) / 1000)
     usage = addUsage(usage, usageFrom(response.usage))

@@ -15,7 +15,14 @@ import type Anthropic from '@anthropic-ai/sdk'
 import { describe, expect, test } from 'vitest'
 
 import { notesAreUsable } from './notes'
-import { notesFromReply, RESEARCH_NOTE_CAPS, TRUNCATED_COVERAGE_NOTE } from './research'
+import {
+  notesFromReply,
+  RESEARCH_MAX_ATTEMPTS,
+  RESEARCH_MIN_RETRY_MS,
+  RESEARCH_NOTE_CAPS,
+  shouldRetryResearch,
+  TRUNCATED_COVERAGE_NOTE,
+} from './research'
 
 function reply(...texts: readonly string[]): readonly Anthropic.ContentBlock[] {
   return texts.map((text) => ({ type: 'text', text, citations: null }) as Anthropic.ContentBlock)
@@ -127,6 +134,52 @@ describe('what is still a failure', () => {
       '"sourceNote":"instagram search"}],"formats":[{"name":"myth corr'
 
     expect(notesAreUsable(notesFromReply(reply(cut)).notes)).toBe(false)
+  })
+})
+
+/**
+ * Which stop earns a second attempt (D138).
+ *
+ * One rule with teeth: **only a stall**. The run that forced this spent 361
+ * seconds on 11 searches and five output tokens and then went quiet — nothing
+ * was accomplished, so there is nothing to repeat. A search or time budget
+ * firing is the opposite, and running it again would do too much again at twice
+ * the price.
+ */
+describe('shouldRetryResearch', () => {
+  const PLENTY = RESEARCH_MIN_RETRY_MS * 2
+
+  test('retries a stall on the first attempt, with time to spare', () => {
+    expect(shouldRetryResearch('stall', 1, PLENTY)).toBe(true)
+  })
+
+  test('does not retry a second stall', () => {
+    // Two is the ceiling. A leg that goes quiet twice is not going to speak on
+    // the third try, and the clock belongs to the write leg after this.
+    expect(shouldRetryResearch('stall', RESEARCH_MAX_ATTEMPTS, PLENTY)).toBe(false)
+  })
+
+  test('does not start a retry that cannot finish', () => {
+    // A second attempt beginning with a minute left is a second failure with a
+    // bill attached.
+    expect(shouldRetryResearch('stall', 1, RESEARCH_MIN_RETRY_MS - 1)).toBe(false)
+  })
+
+  test('retries at exactly the minimum, because the boundary belongs inside', () => {
+    expect(shouldRetryResearch('stall', 1, RESEARCH_MIN_RETRY_MS)).toBe(true)
+  })
+
+  test('never retries a search budget', () => {
+    // It did too much, not too little. Again would cost the same again.
+    expect(shouldRetryResearch('searches', 1, PLENTY)).toBe(false)
+  })
+
+  test('never retries a time budget', () => {
+    expect(shouldRetryResearch('time', 1, PLENTY)).toBe(false)
+  })
+
+  test('never retries a leg that finished', () => {
+    expect(shouldRetryResearch(null, 1, PLENTY)).toBe(false)
   })
 })
 

@@ -120,6 +120,56 @@ describe('a plural and a field label are not a different fact', () => {
   })
 })
 
+/**
+ * The fifth true fact, withheld on the fourth eval run (D138).
+ *
+ * The claim is the exact sentence the gate refused, and `MAYA.method` is the
+ * exact string the eval's dog-trainer fixture stores — commas, no full stop.
+ * Seven of the profile's nine terms are in the claim; the rest is filler
+ * ("approach", "used to read or correct the dog") that only a reverse-direction
+ * threshold could object to.
+ */
+describe('a paraphrase that only adds filler is the same fact', () => {
+  const CLAIMED =
+    'force-free approach, no prong, choke or e-collar used to read or correct the dog'
+
+  test('"force-free approach, no prong, choke or e-collar used to read or correct the dog"', () => {
+    // Arrange — verbatim from the eval's withheld idea, above.
+    // Act
+    const grounded = factIsGrounded(CLAIMED, FACTS)
+
+    // Assert
+    expect(grounded).toBe(true)
+  })
+
+  test('the same sentence against the method on its own', () => {
+    const method = profileFacts(
+      parseClientProfile({
+        method: 'positive reinforcement, force-free, no prong, choke or e-collars',
+      }),
+    )
+
+    expect(factIsGrounded(CLAIMED, method)).toBe(true)
+  })
+
+  test('and the negation is still what it hangs on', () => {
+    // Drop the "no" and the same sentence asserts the opposite of the profile.
+    // This is what the forward negation guard exists for: at 0.75 coverage the
+    // missing word costs a ninth, and the meaning flips entirely.
+    expect(factIsGrounded('prong, choke or e-collar approach used to correct the dog', FACTS)).toBe(
+      false,
+    )
+  })
+
+  test('nor does filler carry an invented term', () => {
+    // "balanced" is a training philosophy this profile does not hold, and the
+    // words around it must not make up the difference.
+    expect(factIsGrounded('balanced approach, prong and choke collars as needed', FACTS)).toBe(
+      false,
+    )
+  })
+})
+
 describe('still strict on invented facts', () => {
   test('refuses a number nobody gave us', () => {
     // The plausible, unverifiable sentence a client would be quoted on.

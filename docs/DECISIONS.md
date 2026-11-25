@@ -10450,3 +10450,129 @@ calls. Those remain the next levers, in that order, if the gate still refuses �
 and they are changes to *what the research is*, where these four are changes to
 how much of it survives. The gate is unchanged: three consecutive dog-trainer
 runs, run by Vlad, because this environment kills a fifteen-minute process.
+
+## D138 — the research leg stopped answering, and a passing report cited nothing
+
+**25 November 2026, afternoon.** The fourth `pnpm eval:scan:dog`, run by Vlad on
+`d3e5731`: **2 of 3 at $1.25** — half the cost of the round before it, because
+D137's compact ask works.
+
+```
+PASS #1  157s  18 searches  research 8,444 of 24,000 tok (35%)  — report sources=0, pages=8
+PASS #2  179s  21 searches  research 10,130 tok (42%)           — one idea refused
+FAIL #3  361s  11 searches  out 5 tok, stop_reason aborted      → "ran out of research time"
+```
+
+**The token cap is solved.** 35% and 42% of a ceiling that two rounds ago was
+being hit. That question is closed; these are three new ones.
+
+### 1. The leg did not run out of time, it stopped answering
+
+361 seconds, 11 searches, **five output tokens**, then silence until the
+deadline. Every budget behaved correctly and the diagnosis was still wrong:
+"ran out of research time" says *this niche needs more than six minutes*, and it
+needed about forty seconds. It was no longer running.
+
+A stall is the only stop worth **retrying**, which is why it is now told apart
+from the other two. The other two fire because a leg did too much, and repeating
+that costs the same again — the argument `RESEARCH_MAX_RETRIES` already makes
+about letting the SDK retry behind our back. A stall accomplished nothing, so
+there is nothing to repeat.
+
+```
+RESEARCH_STALL_MS       90s     nothing streamed for this long
+RESEARCH_MAX_ATTEMPTS   2       and only a stall earns the second
+RESEARCH_MIN_RETRY_MS   120s    the least a retry may start with
+```
+
+Ninety seconds is the top of the range Vlad gave, and generous on purpose: the
+cost of being wrong is asymmetric but real in both directions, and a false
+positive is survivable *because* the retry exists. The slowest run we have
+measured averaged 33 seconds a search.
+
+**Three things make the retry free rather than a doubling**, and each is a
+place this could have gone wrong:
+
+- **Time.** The retry is handed the **same absolute deadline**, so two attempts
+  cannot outlast one. The obvious implementation — a duration per attempt —
+  would double the leg and put the lease back in play, which is what
+  `budget.test.ts` exists to catch; it now asserts the leg is shorter than two
+  of itself, and that a stall is detected early enough for a retry to be
+  allowed to start at all (otherwise the retry is dead code).
+- **Searches.** `searchesSoFar` carries the count into the next attempt, so the
+  ceiling is global and the spend cap's projection stays true. A fresh count
+  would have let two attempts run 64 searches against a projection of 32.
+- **Output.** A stalled attempt emitted five tokens, so `RESEARCH_OUTPUT_PROJECTION`
+  covers both attempts with the margin it already had.
+
+`streamLeg` had **no tests at all** before this. It does now — a stubbed SDK
+stream and a fake clock prove the watchdog fires on silence, leaves a slow-but-
+talking stream alone, bills the tokens a stalled attempt used, and reports a
+*timeout* rather than a stall when the deadline is what actually ran out.
+
+### 2. A passing report that cited nothing
+
+Run #1 produced `sources=0` while its notes held `pages=8`. Nothing threw:
+`sourcesUsed` was simply not in `REPORT_SCHEMA`'s `required` list, and a field
+that **copies** rather than writes is the first thing a model drops under length
+pressure. A niche report whose claims cite nothing reads as an assertion from us
+rather than a reading of the web.
+
+The fix is not to make the field required. The sources were never the writer's
+to invent — rule 10 already defined them as "the pages the notes say were read
+… and nothing else", which is a mechanical copy. So the write prompt stops
+asking, the schema stops carrying it, and `sources.ts` builds the list from the
+notes: pages first (the only rows with a real title), then the post urls behind
+the examples and formats, deduplicated and capped by the parser that already
+existed.
+
+- It cannot be dropped, because no model decides whether to bother.
+- It is cheaper — a few hundred output tokens of transcription, in the leg whose
+  ceiling D137 just had to raise.
+- **A url cannot be mistyped into a page that does not exist.** We hold the
+  pointer, never the work (non-negotiable 1), so the pointer had better be the
+  one the research actually read.
+
+Merged **before** `reviewReport`, because `counts.sources` feeds its substance
+test: deriving afterwards would make a thin-but-real report look thinner to the
+one check that decides whether to keep it.
+
+### 3. The fifth withheld fact, and why the threshold was asymmetric all along
+
+Run #2 refused: *"force-free approach, no prong, choke or e-collar used to read
+or correct the dog"*, against a profile holding *"positive reinforcement,
+force-free, no prong, choke or e-collars"*. Seven of the profile's nine terms are
+in the claim — **0.778** against a 0.8 bar — and the two missing ones are the
+clause the script did not happen to quote.
+
+The two directions were being held to one number, and they ask different
+questions:
+
+- **Forward** — *are the fact's key terms present?* Words the claim adds cannot
+  lower it, because a paraphrase is mostly additions. Now `MIN_FACT_TERM_COVERAGE`
+  = **0.75**.
+- **Reverse** — *is the claim inside the fact?* A stricter question, and it keeps
+  `MIN_COVERAGE` = 0.8.
+
+**Sentence-clause matching was the first attempt and it was wrong twice over.**
+Vlad's note quoted the profile with a full stop ("force-free. No prong…") and
+the eval fixture stores it with commas, so splitting on sentences would not have
+touched the failing case. Splitting on *commas* would have — and would have cut
+"no prong, choke or e-collars" into a clause reading "choke or e-collars" with
+no negation in it, which is the one way this check could invert a client's method
+in public. Not done.
+
+What makes 0.75 safe instead is that **the negation rule now applies in both
+directions**. It guarded the reverse direction only, which was enough while
+forward needed 0.8 of the terms; at 0.75, dropping the single word "no" from a
+nine-term method costs a ninth of the coverage and inverts the entire claim. A
+fact that says "no prong, choke or e-collars" may now only ever ground a claim
+that also says no — asserted on the exact inverted sentence.
+
+### What this does not do
+
+`RESEARCH_EFFORT` is still `high` and the research is still one call. Both remain
+the next levers if the gate refuses again, and both change *what the research
+is*; everything here is about a leg that stopped, a list that was dropped, and a
+true sentence that was refused. The gate is unchanged: three consecutive
+dog-trainer runs, run by Vlad.

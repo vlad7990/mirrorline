@@ -43,6 +43,7 @@ import { profileBrief, type ClientProfile } from '../workspace/client-profile'
 
 import { notesBrief, type ResearchNotes } from './notes'
 import { reviewReport, type ReportReview } from './report'
+import { withNoteSources } from './sources'
 import { addUsage, jsonFrom, streamLeg, type BudgetStop, type LegOutcome } from './stream-leg'
 
 export const WRITE_MODEL = 'claude-sonnet-5'
@@ -165,19 +166,18 @@ export const REPORT_SCHEMA = {
       },
     },
     postingPatterns: { type: 'array', items: CLAIM_SCHEMA },
-    sourcesUsed: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['title', 'url', 'kind'],
-        properties: {
-          title: { type: 'string' },
-          url: { type: 'string' },
-          kind: { type: 'string', enum: ['post', 'guide'] },
-        },
-      },
-    },
+    /*
+     * No `sourcesUsed`. It is **derived from the notes** by `withNoteSources`
+     * (D138), after a passing run shipped a report with `sources=0` while its
+     * notes held eight pages: the field was optional, and a field that copies
+     * rather than writes is the first one a model drops under length pressure.
+     *
+     * Making it `required` was the other option and it is the worse one — it
+     * spends output tokens transcribing urls in the leg whose ceiling D137 just
+     * had to raise, and a transcribed url can be mistyped into a page that does
+     * not exist. `parseReport` still *reads* the field, so a stored report and
+     * the sample report both round-trip unchanged.
+     */
     examples: {
       type: 'array',
       items: {
@@ -226,7 +226,7 @@ Hard rules. These are not style preferences:
 7. Lengths are ranges, never single numbers: "about 20 to 35 seconds", not "21 seconds". If the notes give only one number, build the range around it honestly and say in the note that it is a single observation.
 8. Examples are copied from the notes and never embellished. Keep the url, the platform, the format name, what happens, and the source note. Carry a view count, a length or a follower ratio ONLY where the notes recorded one — if the notes left it out, you leave it out. Never add a url that is not in the notes.
 9. Topics that divide this niche — where practitioners publicly disagree — get a brandRisk line saying what taking a side would cost. Raise them; never slip them in as neutral.
-10. sourcesUsed is the pages the notes say were read, with their titles and kinds, and nothing else. A "post" is a public post a format was read off; a "guide" is an article about the niche. The two are never presented as the same thing.
+10. Do NOT list sources. The report's source list is built from the notes automatically, so every page the research read is already credited — spend your length on the report instead. Never write a url the notes do not contain.
 11. If the notes say the niche has little or no public short video, that is a FINDING. Write the report from the guidance notes, mark every basis "guidance", return an empty examples list, and say plainly in each format's whyItWorks that this comes from guidance rather than from posts.
 12. Keep every description to one sentence.`
 
@@ -356,7 +356,9 @@ export async function runWriteLeg(request: WriteRequest): Promise<WriteOutcome> 
       return { review, usage, attempts, seconds: elapsed(), stoppedBy: null, stopReason }
     }
 
-    review = reviewReport(jsonFrom(outcome.response.content))
+    // The sources are merged in from the notes *before* the review, because
+    // `counts.sources` feeds its substance test (D138).
+    review = reviewReport(withNoteSources(jsonFrom(outcome.response.content), request.notes))
 
     if (review.status === 'ok') {
       return { review, usage, attempts, seconds: elapsed(), stoppedBy: null, stopReason }

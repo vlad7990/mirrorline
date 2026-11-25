@@ -78,6 +78,7 @@ import {
   RESEARCH_OUTPUT_PROJECTION,
   RESEARCH_SEARCH_CEILING,
   RESEARCH_SEARCH_PROJECTION,
+  RESEARCH_STALL_MS,
   RESEARCH_SYSTEM,
   RESEARCH_TIME_BUDGET_MS,
   researchTools,
@@ -432,27 +433,49 @@ export async function runNicheScan(request: ScanRequest): Promise<ScanOutcome> {
   console.info(
     `[niche-scan] leg 1 research: ${research.seconds}s · ${research.searches} search(es) · ` +
       `out ${research.usage.outputTokens} tok of ${RESEARCH_MAX_TOKENS}/leg cap · ` +
+      `${research.attempts} attempt(s) · ` +
       `stop_reason ${research.stopReason ?? 'none'}` +
       `${research.truncated ? ' (notes read from a truncated reply)' : ''} · ` +
       `${notesCountLine(research.notes)}`,
   )
 
   if (research.stoppedBy !== null) {
+    /*
+     * A stall is reported as a stall (D138).
+     *
+     * It used to fall into the `time` branch and come out as "ran out of
+     * research time" — true about the clock and false about the cause, which
+     * cost an eval round. The retry has already happened by the time this runs,
+     * so reaching here means the research went quiet twice, or went quiet with
+     * too little of the leg left to try again.
+     */
     const limit =
-      research.stoppedBy === 'time'
-        ? `${Math.round(RESEARCH_TIME_BUDGET_MS / 1000)}s`
-        : `${RESEARCH_SEARCH_CEILING} searches`
+      research.stoppedBy === 'searches'
+        ? `${RESEARCH_SEARCH_CEILING} searches`
+        : `${Math.round(RESEARCH_TIME_BUDGET_MS / 1000)}s`
+
+    const detail =
+      research.stoppedBy === 'stall'
+        ? `research stalled (nothing streamed for ${Math.round(RESEARCH_STALL_MS / 1000)}s) ` +
+          `after ${research.attempts} attempt(s)`
+        : `research stopped by the ${research.stoppedBy} budget at ${limit}`
+
+    const message =
+      research.stoppedBy === 'searches'
+        ? 'The scan hit its research limit before it finished. Try a narrower niche.'
+        : research.stoppedBy === 'stall'
+          ? // A stall is ours, not the niche's, so this does not tell the client
+            // to change their niche. It tells them the truth: try again.
+            'The scan stopped responding partway through the research. Try again.'
+          : 'The scan ran out of research time. Try a narrower niche.'
 
     return fail(
       supabase,
       workspaceId,
-      `research stopped by the ${research.stoppedBy} budget at ${limit} ` +
-        `(${research.seconds}s, ${research.searches} search(es))`,
+      `${detail} (${research.seconds}s, ${research.searches} search(es))`,
       research.usage,
       research.searches,
-      research.stoppedBy === 'searches'
-        ? 'The scan hit its research limit before it finished. Try a narrower niche.'
-        : 'The scan ran out of research time. Try a narrower niche.',
+      message,
     )
   }
 

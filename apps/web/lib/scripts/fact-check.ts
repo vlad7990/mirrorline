@@ -211,6 +211,33 @@ const SPELLED_NUMBERS: Readonly<Record<string, string>> = {
 export const MIN_COVERAGE = 0.8
 
 /**
+ * How much of a profile fact's **key terms** must appear in the claim (D138).
+ *
+ * The forward direction only, and lower than `MIN_COVERAGE` on purpose: the two
+ * directions ask different questions, and conflating them cost a true fact.
+ *
+ * - Forward asks *"are the fact's terms present"*. Words the claim adds cannot
+ *   lower it, because a paraphrase is mostly additions.
+ * - Reverse asks *"is the claim inside the fact"*, which is a stricter thing to
+ *   ask, and it keeps its 0.8.
+ *
+ * The case: a script wrote "force-free **approach**, no prong, choke or
+ * e-collar **used to read or correct the dog**" against a profile holding
+ * "positive reinforcement, force-free, no prong, choke or e-collars". Seven of
+ * the profile's nine terms are present — **0.778** — and the two that are not
+ * are the clause the script did not happen to quote. At 0.8 that is a refusal,
+ * and the refusal is wrong: nothing in the claim contradicts the profile, and
+ * every assertion in it came from there.
+ *
+ * 0.75 is one word of a four-word fact, two of nine. What stops it sliding
+ * further is that it is paired with the negation rule, which now applies in
+ * **both** directions — lowering a coverage threshold without that is precisely
+ * how "no prong, choke or e-collars" would come to ground "prong, choke or
+ * e-collars are fine".
+ */
+export const MIN_FACT_TERM_COVERAGE = 0.75
+
+/**
  * The shortest **claim** worth calling a fact, in content words.
  *
  * A one-word fact is not a fact about a business. "Austin" as a script's whole
@@ -300,10 +327,17 @@ function coverage(wanted: readonly string[], present: ReadonlySet<string>): numb
 /**
  * Does one profile fact ground this claim?
  *
- * Forward first — the fact's words inside the claim — because that is what a
- * model does when it uses a fact: it keeps the words and adds a verb. The
- * reverse is allowed for a claim that quotes part of a longer fact, and closed
- * when the fact carries a negation the claim has dropped.
+ * Forward first — the fact's key terms inside the claim — because that is what a
+ * model does when it uses a fact: it keeps the terms and adds words around them.
+ * The reverse is allowed for a claim that quotes part of a longer fact, at the
+ * stricter threshold.
+ *
+ * **The negation rule comes before both** (D138). It used to guard the reverse
+ * direction only, which was enough while forward coverage needed 0.8 of the
+ * fact's terms; at 0.75 it is not, because dropping the one word "no" from a
+ * nine-term method costs only a ninth of the coverage and inverts the whole
+ * claim. A fact that says "no prong, choke or e-collars" may only ever ground a
+ * claim that also says no.
  */
 function factCovers(claimTokens: readonly string[], factTokens: readonly string[]): boolean {
   const first = factTokens[0]
@@ -318,13 +352,16 @@ function factCovers(claimTokens: readonly string[], factTokens: readonly string[
     return claimed.has(first)
   }
 
-  if (coverage(factTokens, claimed) >= MIN_COVERAGE) return true
-
-  // The claim is shorter than the fact: a partial quote of a long method. Closed
-  // when the fact carries a negation the claim has dropped, because that is how
-  // "no prong, choke or e-collars" would ground "with prong collars".
+  // The one way substance matching could invert a client's method in public, so
+  // it is closed explicitly rather than left to a threshold, and in **both**
+  // directions.
   if (hasNegation(factTokens) && !hasNegation(claimTokens)) return false
 
+  // Forward: the fact's key terms are present, however much the claim adds.
+  if (coverage(factTokens, claimed) >= MIN_FACT_TERM_COVERAGE) return true
+
+  // Reverse: the claim is shorter than the fact — a partial quote of a long
+  // method — and is held to the stricter threshold.
   return coverage(claimTokens, new Set(factTokens)) >= MIN_COVERAGE
 }
 

@@ -1,5 +1,85 @@
 # Progress — morning handoff
 
+## Handoff — 25 November 2026, evening (the token cap is solved; three new faults, all three fixed — D138)
+
+### What you need to do
+
+**Re-run the eval and tell me the summary.** Nothing else is waiting on anybody.
+
+```
+pnpm eval:scan:dog      # 3 runs of the reviewed profile
+pnpm eval:scan          # all five cases
+```
+
+**#42 merges only on 3 of 3.** I still have not run it — this environment kills
+a fifteen-minute process.
+
+### Your 2-of-3 on `d3e5731`, and the good news in it
+
+**$1.25, half the round before it**, and the research leg used **35% and 42%**
+of a ceiling it was hitting two rounds ago. D137's compact ask works, and the
+token cap is closed as a question. What was left was three separate faults:
+
+| | |
+|---|---|
+| **The leg stopped answering** | 361s, 11 searches, **five output tokens**, then silence to the deadline. Every budget behaved and the diagnosis was still wrong: "ran out of research time" means *this niche needs more than six minutes*, and it needed about forty seconds. |
+| **A passing report cited nothing** | `sources=0` while the notes held `pages=8`. `sourcesUsed` was not `required` in the schema, and a field that copies rather than writes is the first thing dropped under length pressure. |
+| **A fifth true fact withheld** | "force-free approach, no prong, choke or e-collar used to read or correct the dog" — seven of the profile's nine terms present, **0.778** against a 0.8 bar. |
+
+### What is now on `feat/scan-two-legs`
+
+**1. A stall is told apart from a timeout, and retried once.** Ninety seconds of
+silence aborts the attempt; only a stall earns a second one, and only with two
+minutes of the leg left. The retry is free rather than a doubling, in all three
+currencies: it is handed the **same absolute deadline** (two attempts cannot
+outlast one), the search count is **carried** so the ceiling stays global and the
+spend projection stays true, and a stalled attempt's output is five tokens.
+`budget.test.ts` asserts each of those. `streamLeg` had **no tests at all**; it
+now has nine, with a stubbed stream and a fake clock — the watchdog fires on
+silence, leaves a slow-but-talking stream alone, bills what a stalled attempt
+used, and still says *timeout* when the deadline is what ran out.
+
+**2. Sources are derived from the notes, not asked for.** The write prompt no
+longer requests them and the schema no longer carries them; `sources.ts` builds
+the list from the notes' pages and post urls, merged **before** the review
+because `counts.sources` feeds its substance test. It cannot be dropped, it is
+cheaper by a few hundred output tokens, and a url cannot be mistyped into a page
+that does not exist.
+
+**3. The fact check's two directions got their own thresholds.** Forward — *are
+the fact's key terms present* — is now 0.75, because a paraphrase is mostly
+additions and they cannot be held against it. Reverse — *is the claim inside the
+fact* — keeps 0.8. What makes that safe is that **the negation rule now applies
+in both directions**: at 0.75, dropping the one word "no" from a nine-term method
+costs a ninth of the coverage and inverts the claim entirely, so the inverted
+sentence is asserted as refused. Your exact sentence is a test.
+
+I tried sentence-clause matching first and threw it away: your note quoted the
+method with a full stop, the eval fixture stores it with commas, so it would not
+have touched the failing case — and splitting on commas *would* have, by cutting
+"no prong, choke or e-collars" into a clause reading "choke or e-collars" with no
+negation in it. That is the one way this check could invert a client's method in
+public.
+
+Green on `pnpm lint`, `pnpm typecheck`, `pnpm test` (**1438**) and `pnpm build`.
+Full reasoning in `docs/DECISIONS.md` **D138**.
+
+### If it is still not 3 of 3
+
+Unchanged, in this order, and both change *what the research is* rather than how
+much of it survives:
+
+1. `RESEARCH_EFFORT` from `high` to `medium`.
+2. Split research into two narrower calls — formats first, then posts.
+3. Accept 2 of 3 honestly, with a clear failure message.
+
+### Still waiting on Vlad (unchanged)
+
+Three secrets for the preview-migration job: `SUPABASE_PREVIEW_PROJECT_REF`,
+`SUPABASE_PREVIEW_ACCESS_TOKEN`, `SUPABASE_PREVIEW_DB_PASSWORD`.
+
+---
+
 ## Handoff — 25 November 2026, afternoon (the gate got to 2 of 3 and named its own failure; D137 is the fix)
 
 ### What you need to do

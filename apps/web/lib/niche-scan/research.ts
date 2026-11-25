@@ -21,9 +21,11 @@ import type Anthropic from '@anthropic-ai/sdk'
 
 import { profileBrief, type ClientProfile } from '../workspace/client-profile'
 
+import { NO_USAGE } from '../copilot/spend'
+
 import { NOTES_SCHEMA, parseNotes, notesAreUsable, type ResearchNotes } from './notes'
 import { parsePartialJson } from './partial-json'
-import { jsonFrom, streamLeg, type LegOutcome } from './stream-leg'
+import { addUsage, jsonFrom, streamLeg, type BudgetStop, type LegOutcome } from './stream-leg'
 
 /** `18 §0`: the studio tier, and the only one `MODEL_RATES` prices. */
 export const RESEARCH_MODEL = 'claude-sonnet-5'
@@ -151,6 +153,63 @@ export const RESEARCH_TIME_BUDGET_MS = 6 * 60 * 1000
 export const RESEARCH_REQUEST_TIMEOUT_MS = 5 * 60 * 1000
 
 /**
+ * Nothing streamed for this long means the run is stuck, not thinking (D138).
+ *
+ * A measured run spent **361 seconds on 11 searches and five output tokens** and
+ * then went silent until its deadline. Every budget behaved: the clock fired and
+ * the leg reported "ran out of research time" — and the honest reading of that
+ * sentence, *this niche needs more than six minutes*, was wrong. It needed about
+ * forty seconds. It was simply no longer running.
+ *
+ * **Ninety seconds, the top of the range Vlad gave.** Both directions of being
+ * wrong are real: too low kills a legitimately slow search loop mid-niche, too
+ * high lets a dead run hold the leg to its deadline. Ninety is well past any
+ * search we have measured — the slowest run averaged 33 seconds across eleven —
+ * and still leaves most of the six minutes to retry in. A false positive is
+ * survivable *because* the retry exists, which is the argument for a generous
+ * threshold rather than a clever one.
+ */
+export const RESEARCH_STALL_MS = 90 * 1000
+
+/**
+ * Two attempts at the research leg, and **only a stall earns the second**.
+ *
+ * Not a general retry. A search or time budget firing means the leg did too
+ * much, and running it again would do too much again at twice the price —
+ * `RESEARCH_MAX_RETRIES` is the same argument applied to the SDK. A stall is the
+ * opposite: nothing was accomplished, so there is nothing to repeat, and the
+ * searches already spent are carried into the ceiling (`searchesSoFar`) so two
+ * attempts cost no more than the one the spend cap projected.
+ */
+export const RESEARCH_MAX_ATTEMPTS = 2
+
+/**
+ * The least time a retry may start with.
+ *
+ * A second attempt beginning with forty seconds left is a second failure with a
+ * bill attached. Two minutes is about what the fastest measured pass needed (157
+ * seconds for 18 searches) less its slack — enough that a retry is a real chance
+ * rather than a gesture.
+ */
+export const RESEARCH_MIN_RETRY_MS = 120 * 1000
+
+/**
+ * Is a second attempt at the research leg the right move?
+ *
+ * Pure and exported, because this is the whole decision and it is far easier to
+ * be sure of out here than inside a stream.
+ */
+export function shouldRetryResearch(
+  stoppedBy: BudgetStop | null,
+  attempt: number,
+  msLeft: number,
+): boolean {
+  if (stoppedBy !== 'stall') return false
+  if (attempt >= RESEARCH_MAX_ATTEMPTS) return false
+  return msLeft >= RESEARCH_MIN_RETRY_MS
+}
+
+/**
  * How many times a paused turn may be resumed.
  *
  * `web_search` runs in a server-side loop that stops at ten iterations and
@@ -259,6 +318,14 @@ export interface ResearchOutcome extends LegOutcome {
    * whether `RESEARCH_MAX_TOKENS` is still too low.
    */
   readonly truncated: boolean
+  /**
+   * How many attempts it took. More than one means a stall was retried (D138).
+   *
+   * On the outcome rather than in the logs alone because the eval reads it: a
+   * run that passes on its second attempt is a pass with a warning in it, and
+   * the number that says so should not have to be grepped out of Railway.
+   */
+  readonly attempts: number
 }
 
 export function researchTurn(niche: string, profile: ClientProfile): Anthropic.MessageParam {
@@ -334,22 +401,56 @@ export function notesFromReply(content: readonly Anthropic.ContentBlock[]): Read
  * asks. A reply that parsed *partly* is not the same thing, and is kept.
  */
 export async function runResearchLeg(request: ResearchRequest): Promise<ResearchOutcome> {
-  const outcome = await streamLeg({
-    client: request.client,
-    label: 'niche-scan research',
-    model: RESEARCH_MODEL,
-    maxTokens: RESEARCH_MAX_TOKENS,
-    effort: RESEARCH_EFFORT,
-    system: RESEARCH_SYSTEM,
-    schema: NOTES_SCHEMA,
-    messages: [researchTurn(request.niche, request.profile)],
-    tools: researchTools(),
-    searchCeiling: RESEARCH_SEARCH_CEILING,
-    deadlineAt: request.deadlineAt,
-    requestTimeoutMs: RESEARCH_REQUEST_TIMEOUT_MS,
-    maxContinuations: RESEARCH_MAX_CONTINUATIONS,
-    maxRetries: RESEARCH_MAX_RETRIES,
-  })
+  const beganAt = Date.now()
+
+  let usage = NO_USAGE
+  let searches = 0
+  let legs = 0
+  let attempts = 0
+  let outcome: LegOutcome | null = null
+
+  for (let attempt = 1; attempt <= RESEARCH_MAX_ATTEMPTS; attempt += 1) {
+    outcome = await streamLeg({
+      client: request.client,
+      label: `niche-scan research ${attempt}/${RESEARCH_MAX_ATTEMPTS}`,
+      model: RESEARCH_MODEL,
+      maxTokens: RESEARCH_MAX_TOKENS,
+      effort: RESEARCH_EFFORT,
+      system: RESEARCH_SYSTEM,
+      schema: NOTES_SCHEMA,
+      messages: [researchTurn(request.niche, request.profile)],
+      tools: researchTools(),
+      searchCeiling: RESEARCH_SEARCH_CEILING,
+      // Carried, so two attempts cannot outspend the projection.
+      searchesSoFar: searches,
+      deadlineAt: request.deadlineAt,
+      requestTimeoutMs: RESEARCH_REQUEST_TIMEOUT_MS,
+      maxContinuations: RESEARCH_MAX_CONTINUATIONS,
+      maxRetries: RESEARCH_MAX_RETRIES,
+      stallMs: RESEARCH_STALL_MS,
+    })
+
+    attempts = attempt
+    usage = addUsage(usage, outcome.usage)
+    // Already global: `searchesSoFar` went in, so the count comes back total.
+    searches = outcome.searches
+    legs += outcome.legs
+
+    const msLeft = request.deadlineAt - Date.now()
+    if (!shouldRetryResearch(outcome.stoppedBy, attempt, msLeft)) break
+
+    console.warn(
+      `[niche-scan research] stalled, retrying from scratch · ` +
+        `attempt ${attempt + 1} of ${RESEARCH_MAX_ATTEMPTS} · ` +
+        `${Math.round(msLeft / 1000)}s left of the leg · ` +
+        `${searches} of ${RESEARCH_SEARCH_CEILING} search(es) already spent`,
+    )
+  }
+
+  // The loop runs at least once, so this is a type-system concern rather than a
+  // reachable state. Said out loud instead of asserted, because a thrown
+  // non-error here would read as an API failure in `scan.ts`'s catch.
+  if (outcome === null) throw new Error('the research leg ran no attempts')
 
   const response = outcome.response
   const read: ReadNotes =
@@ -361,11 +462,11 @@ export async function runResearchLeg(request: ResearchRequest): Promise<Research
   // like a success in the logs — `end_turn`'s neighbour `max_tokens`, a final
   // message, and empty notes — and the one number that would have named it
   // immediately was how close the output came to its cap.
-  const share = Math.round((outcome.usage.outputTokens / RESEARCH_MAX_TOKENS) * 100)
+  const share = Math.round((usage.outputTokens / RESEARCH_MAX_TOKENS) * 100)
   console.info(
-    `[niche-scan research] out ${outcome.usage.outputTokens} tok of ` +
-      `${RESEARCH_MAX_TOKENS}/leg cap (${share}% across ${outcome.legs} leg(s)) · ` +
-      `stop_reason ${response?.stop_reason ?? 'aborted'}`,
+    `[niche-scan research] out ${usage.outputTokens} tok of ` +
+      `${RESEARCH_MAX_TOKENS}/leg cap (${share}% across ${legs} leg(s), ` +
+      `${attempts} attempt(s)) · stop_reason ${response?.stop_reason ?? 'aborted'}`,
   )
 
   if (response?.stop_reason === 'max_tokens') {
@@ -377,6 +478,13 @@ export async function runResearchLeg(request: ResearchRequest): Promise<Research
 
   return {
     ...outcome,
+    // The totals, not the last attempt's — a stall retry is one leg to everybody
+    // upstream, and `recordRun` must bill both attempts.
+    usage,
+    searches,
+    legs,
+    attempts,
+    seconds: Math.round((Date.now() - beganAt) / 1000),
     stopReason: response?.stop_reason ?? null,
     notes: read.notes,
     truncated: read.truncated,

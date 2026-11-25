@@ -22,8 +22,11 @@ import { describe, expect, it } from 'vitest'
 
 import { projectRequestUsd } from '../copilot/spend'
 import {
+  RESEARCH_MAX_ATTEMPTS,
   RESEARCH_MAX_TOKENS,
+  RESEARCH_MIN_RETRY_MS,
   RESEARCH_OUTPUT_PROJECTION,
+  RESEARCH_STALL_MS,
   RESEARCH_TIME_BUDGET_MS,
 } from '../niche-scan/research'
 import {
@@ -151,6 +154,21 @@ describe('a scan fits inside its per-request ceiling', () => {
     SCAN_SEARCH_PROJECTION,
   )
 
+  it('does not have to be raised for a stall retry', () => {
+    /*
+     * The retry costs no new searches beyond the ceiling, because `streamLeg`
+     * is given the count already spent (`searchesSoFar`) — asserted
+     * behaviourally in `stream-leg.test.ts`. Its output is the part that could
+     * drift, and a stalled attempt is by definition one that produced almost
+     * nothing: the measured stall emitted **five** output tokens. So the
+     * projection covers both attempts with the margin it already had rather
+     * than doubling.
+     */
+    const stalledAttemptOutput = 5
+
+    expect(RESEARCH_OUTPUT_PROJECTION).toBeGreaterThan(RESEARCH_MAX_TOKENS + stalledAttemptOutput)
+  })
+
   it('projects the research leg at no less than one full leg of output', () => {
     // A paused turn is resumed, so the projection is deliberately *above*
     // `max_tokens` — but never below it, which would charge for less output than
@@ -169,6 +187,46 @@ describe('a scan fits inside its per-request ceiling', () => {
     // Assert: raising a token budget or the search ceiling far enough to eat
     // this margin should be a decision, not a surprise at the first refusal.
     expect(headroom).toBeGreaterThanOrEqual(0.2)
+  })
+})
+
+/**
+ * The worst case once a stalled research leg is retried (D138).
+ *
+ * The retry takes its time from **inside** the research leg's own slice, not in
+ * addition to it: `streamLeg` is handed the same absolute deadline, so two
+ * attempts cannot outlast one. That is the property worth asserting, because the
+ * obvious implementation — a duration per attempt — would quietly double the
+ * leg and put the lease back in play, which is the failure this file exists for.
+ */
+describe('a stalled research leg can be retried inside its own budget', () => {
+  it('does not add a second leg to the scan', () => {
+    // If a retry were additive, the scan would need
+    // `RESEARCH_TIME_BUDGET_MS * RESEARCH_MAX_ATTEMPTS` and the lease margin
+    // above would be gone.
+    expect(SCAN_TIME_BUDGET_MS).toBeLessThan(RESEARCH_TIME_BUDGET_MS * RESEARCH_MAX_ATTEMPTS)
+  })
+
+  it('detects a stall early enough for the retry to be allowed to start', () => {
+    // Otherwise the retry is dead code: the stall fires, `shouldRetryResearch`
+    // finds less than `RESEARCH_MIN_RETRY_MS` left, and the leg fails anyway.
+    expect(RESEARCH_STALL_MS + RESEARCH_MIN_RETRY_MS).toBeLessThanOrEqual(RESEARCH_TIME_BUDGET_MS)
+  })
+
+  it('leaves room for a full second attempt after the first stalls', () => {
+    // The real worst case: one attempt silent to the threshold, then a second
+    // that has to do the whole job. What is left has to be worth starting.
+    const afterTheStall = RESEARCH_TIME_BUDGET_MS - RESEARCH_STALL_MS
+
+    expect(afterTheStall).toBeGreaterThanOrEqual(RESEARCH_MIN_RETRY_MS)
+    // And it is the larger half of the leg, not a scrap of it.
+    expect(afterTheStall).toBeGreaterThan(RESEARCH_TIME_BUDGET_MS / 2)
+  })
+
+  it('allows one retry and no more', () => {
+    // Two attempts is the ceiling for the same reason the write leg has two: a
+    // second failure means it cannot be done now, not that a third would work.
+    expect(RESEARCH_MAX_ATTEMPTS).toBe(2)
   })
 })
 
