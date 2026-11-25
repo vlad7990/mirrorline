@@ -7823,3 +7823,80 @@ end on a sentence — padding it to twelve would have meant worse cuts.
 Then: 30-name warm list and the first 3 free samples, per the plan's week-1
 sell column — and the first real decision, which is whether the samples are
 good enough to send. They are made from a test pattern today.
+
+## V4 slice 1 — the generation layer, without a key
+
+**25 November 2026.** `docs/plan/AI_GENERATION_V4.md` approved by Vlad with five
+decisions; D140 records them. This is steps 1–3 and 5 of §4.2. Steps 4 and 6 —
+the xAI provider and the dev screen — are blocked on one thing only, an
+`XAI_API_KEY` in `apps/web/.env.local`, and nothing else about them is unknown.
+
+**No migration, no production surface, no key.** `agent_runs` takes a media row
+as it stands, so the ledger needed no schema change; a new `jobs.kind` and a
+storage bucket both wait for the VIDEO session's bucket, per Vlad's rule.
+
+### What a developer can do now
+
+Nothing on a screen yet — that is step 6 and it needs the key. What exists is
+the layer underneath it, and it is exercised by 104 tests:
+
+```
+pnpm vitest run apps/web/lib/generation      # 94 tests
+pnpm dev                                     # port 3002, never 3000
+```
+
+- **Ask for a scene and get a labelled asset.** `chooseAdapter` picks a
+  provider; with no key it returns the sample adapter **and says so**
+  (`isSample`), so a screen can print "Sample data" rather than present a
+  fixture as a render. The asset comes back with `source: 'ai-scene'`, `label:
+  'AI-generated'`, its provenance (adapter, model, cost, `providerWatermark`)
+  and a `promptRef` instead of the prompt.
+- **Watch the safety gate refuse, for a named reason.** `screenPrompt` turns
+  down a public figure, a likeness request, a talking head, somebody else's
+  mark, a logo request, a banned claim, an empty prompt and an over-long one —
+  each with the rule named, a sentence for the client that says what to film
+  instead, and a log line that never contains the prompt.
+- **Watch the cap hold.** `decideGenerationSpend` refuses before anything is
+  called: over the per-request ceiling, over the month, or — the one that
+  matters — when the month could not be read at all. A failed read is `null`
+  and `null` is a refusal, never a month at zero.
+
+### Numbers worth knowing
+
+| Shape | Per short |
+| --- | --- |
+| **Default: two 5s clips at 720p + a 1K cover** | **$0.34** |
+| Two 5s clips at 480p + cover | $0.24 |
+
+$15 a month per workspace buys about forty-four shorts at the default shape.
+
+**720p is the only quality tier, and 1080p is gone** (D140). On xAI's Lite model
+1080p is upscaled from its own 720p output, so the 4.7× premium buys somebody
+else's resize of the render we already paid for — we do that resize ourselves at
+composite time, once, for nothing. The renderer exports 1080×1920, so a
+generated scene is upscaled about 1.5× when it is cut in.
+
+### Needs Vlad
+
+1. **`XAI_API_KEY` in `apps/web/.env.local`** — unblocks steps 4 and 6. Preview
+   only. Nothing else is waiting.
+2. **Buy zero data retention on the xAI account.** Approved in principle; it is
+   an Order Form line item rather than a flag, so it needs doing on the
+   account. Until it is, xAI holds inputs and outputs for 30 days by default.
+3. **The AUP question for the lawyer list** — ToS §1.1 permits a Bundled
+   Service, the AUP forbids reselling Output. Blocks billing a client for
+   generated output; blocks nothing before that. D140 §5.
+4. ~~**$0.50 per request makes 1080p a short-clip-only option.**~~ **Decided
+   25 November 2026:** B-roll renders at 720p, the ceiling stays at $0.50, and
+   1080p is removed from `Resolution` altogether. See D140 and the note above
+   the cost table.
+5. ~~**`agent_runs.agent` is written as `media_generator`.**~~ **Confirmed
+   25 November 2026.** Not an eighth agent: it is the Remake Producer's spend,
+   under its own name so the media cap can be summed separately from the script
+   agent's.
+6. **The `Segment` type.** The VIDEO session's plan (§1.6, untracked on
+   `feat/video-v5`) defines it and says this session produces `generated`
+   segments. Nothing here declares a parallel union; `types.ts` carries the
+   field mapping and the conversion function is deliberately unwritten until
+   their type lands in code. If they would rather this session land the union
+   first, say so — it is theirs either way.

@@ -77,6 +77,9 @@ const ALLOWED: Readonly<Record<string, string>> = {
     'Asks the website bot "Is Opus Clip worse than you?" to prove it refuses. The test has to name a brand to show the refusal fires, and it asserts the *answer* names none — building the question out of the pattern instead would be testing the detector with the detector.',
   'apps/web/lib/copilot/live-model.live.test.ts':
     'Asks the real model the same forbidden question, for the same reason as canned.test.ts above, and then runs this very list over the answer it gets back. A question nobody is allowed to ask is a refusal nobody has tested.',
+  // V4's generation gate, and the same case as the two co-pilot tests above.
+  'apps/web/lib/generation/safety.test.ts':
+    'Feeds the viral claim to screenPrompt as a scene that would burn it into the picture, to prove the banned-claim rule fires on a prompt and not only on copy. The phrase is the input to a refusal and the test asserts the refusal — writing the fixture as a join of fragments would be testing the detector with the detector, exactly as canned.test.ts says.',
   // This file still needs an exemption after the patterns moved out, and for
   // a different reason than before: the entries above *quote* the phrases
   // they exempt, so the allowlist is itself matched by the list. Found by the

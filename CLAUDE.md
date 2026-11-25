@@ -160,6 +160,12 @@ docs/                Specs, plan, designs, decisions, progress
 - **Pull requests:** keep each under ~400 lines where practical. Merge your own when green, within the five exceptions in non-negotiable 11.
 - **Every end of day** (D114): post a short demo note in `docs/PROGRESS.md` — **what a user can now do**, with screenshots — then stop for Vlad's ten-minute review before continuing.
 - **Manage your own context** (D114): write the handoff at every milestone rather than trusting auto-compact to keep the right half.
+- **Decision numbers are assigned by range, one range per session** (set 25 November 2026). Three sessions run in parallel on three worktrees and none can see the others' branches, so "read `docs/DECISIONS.md` and take the next number" picks a number somebody else has already taken. It did: the AI-GENERATION session wrote D137 while SCAN's PR #42 was already using it.
+  - **SCAN** (`lib/niche-scan`, the script agent): **D132–D139**
+  - **AI-GENERATION** (`lib/generation`, the generators): **D140–D149**
+  - **VIDEO PIPELINE** (cutting, captions, render, storage): **D150–D159**
+
+  Take the lowest free number **inside your own range**, never the next number in the file. When a range runs out, ask Vlad for the next block rather than borrowing from a neighbour — a borrowed number is the same collision with extra confidence. This changes nothing else about `docs/DECISIONS.md`: every decision is still logged there, in full, with its reasoning.
 - **Stop and ask for exactly four things** (D114, amended D130): **the `migrate-production` label** on a PR that carries a migration — say which PR and stop, because the label both migrates and merges it — a payments/auth/secrets merge, the video generator choice, or a product decision the specs do not cover. Everything else: choose, log it, continue.
 - **Verify every screen:**
   1. Take a Playwright screenshot at 1440px and at 390px.
