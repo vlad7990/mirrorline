@@ -76,6 +76,24 @@ twelve hours earlier all three of that client's own facts were refused. The
 passing run also needed **2 write attempts**, so D132's retry is earning its keep
 rather than sitting unused.
 
+### The third attempt could not be run here
+
+Twice, the eval process was **terminated by this environment** before its first
+case finished — once as a harness background task, once detached with `nohup`.
+No results, and `afterAll` never ran, so a few `Scan eval …` workspaces are
+probably left in preview (they cascade-delete by name).
+
+**So the verdict is still outstanding and #42 must not merge.** It needs a shell
+where a fifteen-minute process survives:
+
+```
+pnpm eval:scan:dog      # 3 runs of the reviewed profile, ~$3.30
+pnpm eval:scan          # all five cases, ~$5
+```
+
+Both summaries go in #42. Spent on the eval so far: about **$2.40** across two
+complete attempts.
+
 ### If the third attempt is still not 3 of 3
 
 The next lever is **not** another budget raise. Try, in this order:
