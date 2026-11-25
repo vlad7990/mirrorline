@@ -1,5 +1,115 @@
 # Progress — morning handoff
 
+## Handoff — 25 November 2026, P0 night (four decisions shipped to a branch; the eval is blocked on one preview migration)
+
+### The two things only you can do
+
+1. **Apply `20261124213000_client_brand_name.sql` to the preview database.**
+   This is the blocker. The `migrate-production` label on #40 applied it to
+   **production only**, and nothing applies migrations to preview — there is no
+   workflow for it, and my Supabase CLI is logged into an account that cannot
+   see either mirrorline project (`supabase projects list` shows neither ref, and
+   nothing is `LINKED`). So I cannot do it and did not guess: D's own rule is
+   that a local link is how preview is migrated, and mis-identifying which ref is
+   production is exactly the mistake that rule exists to prevent.
+
+   Until it is applied, **preview cannot run a scan properly**: both profile
+   readers select `brand_name`, the select 400s, and `readClientProfileForAgent`
+   returns `EMPTY_PROFILE` — so every scan on preview runs with no client facts
+   and produces no videos.
+
+2. **Set `RAILWAY_DEPLOYMENT_DRAINING_SECONDS=30`** on the Railway service.
+   The number is reasoned in D135: it is sized for a clean lease release, not for
+   finishing a scan. Finishing an average interruption needs several minutes,
+   which would make every deploy that slow including the ones that interrupt
+   nothing.
+
+### What is on the branch `feat/scan-two-legs`
+
+Four commits, all green on `pnpm lint`, `pnpm typecheck`, `pnpm test` (1359
+passing) and `pnpm build`.
+
+| | |
+|---|---|
+| **D132** | The scan is two legs: research (absolute deadline, notes out) then write (no tools, own budget, one retry from the same notes) |
+| **D133** | The fact check matches substance, not substrings — the three facts it refused tonight all pass, inventions still refused |
+| **D134** | `pnpm eval:scan` — five fixed cases on preview, reporting success rate, time, searches and cost |
+| **D135** | A redeploy releases the lease instead of stranding the scan for fourteen minutes; the banner says "Restarting…"; and it stops saying "Nothing was saved." twice |
+
+**C was already done** — the brand name has been first in the "About your
+business" summary since #40.
+
+### The eval ran, spent nothing, and found the gap
+
+`SCAN_EVAL_CASE=dog-trainers SCAN_EVAL_REPEATS=3 pnpm eval:scan:dog`
+
+```
+Error: could not write the profile for dog-trainers:
+HTTP 400 Could not find the 'brand_name' column of 'client_profiles'
+in the schema cache
+```
+
+It failed in 1.2 seconds, before any model call, so **no money was spent**. That
+is the eval working on its first run: it caught an environment drift between
+preview and production that nothing else was watching, and it caught it instead
+of a client catching it.
+
+**D132 is therefore not merged and must not be.** Its bar is three consecutive
+successful preview runs of the dog-trainer profile, and the first one has not
+been possible yet.
+
+### What to do, in order, once preview has the migration
+
+```
+pnpm eval:scan:dog        # 3 runs of the reviewed profile, ~$3.30, ~20 min
+pnpm eval:scan            # all five cases, ~$5, ~30 min
+```
+
+Paste both summaries into the pull request. If the dog case passes three times,
+D132 may merge. If it does not, the per-leg lines are in the output —
+`[niche-scan research]` and `[niche-scan write 1/2]` carry their own seconds,
+searches, tokens and `stop_reason`, which is the diagnosis the old single line
+could not give.
+
+### What I could not verify, said plainly
+
+**No part of the two-leg scan has ever been executed.** It typechecks, the
+hermetic suite covers every pure piece of it (notes parsing, the budget
+arithmetic, the fact check, the drain arithmetic), and the thing none of that
+reaches is whether the request shape is accepted: `output_config.format` with no
+`tools` key at all on the write leg is new, and `streamLeg`'s single cast to
+`MessageStreamParams` is where a bad parameter would hide. The eval is how that
+gets found, which is the other reason it has to run before D132 merges.
+
+### Fix 5 is not started
+
+Vlad asked me to pause it and commit any work in progress. **There was none** — I
+had not begun it, so there is no branch. It stays queued: report history on the
+Niche Scan screen (date, niche, status, open, download PDF), needs no migration,
+and is mine to merge.
+
+### Still queued from the first review
+
+- **Fix 6** — an immutable delivered-snapshot PDF in a private, workspace-scoped
+  Supabase Storage bucket with signed URLs and RLS. Needs a migration → label.
+- **Fix 7** — client access to a workspace you set up (invite by email as a
+  member). Auth → yours to merge.
+
+### Debt this night added, written down rather than discovered later
+
+1. **Nothing applies migrations to preview.** Tonight that cost a blocked eval.
+   It deserves either a workflow or a documented one-line command in CLAUDE.md;
+   right now it is folklore.
+2. **An interrupted scan's spend is not in `agent_runs`.** When the worker
+   releases a lease on `SIGTERM`, the research leg's tokens up to that point are
+   paid for and unrecorded, because usage is only known when the stream ends. The
+   release logs it. Cheaper than the alternatives (D135), and still a gap.
+3. **A released scan re-runs from the beginning.** `attempts` is deliberately not
+   reset, so three deploys during one scan will exhaust it and the job will stop
+   rather than loop — which is the right bound and will read as a mysterious
+   failure the first time it happens.
+
+
 ## The seven fixes from the first live report review — written down (24 November 2026)
 
 Vlad reviewed the report from the **24 November 8:31 PM EST** scan and called it

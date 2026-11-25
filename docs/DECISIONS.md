@@ -10085,3 +10085,197 @@ empty — a name we have beats no name, and the fallback stops being reached the
 moment the field is filled, which is why it is the *first* field on the form.
 Writing the workspace name into the column instead would have made a guess
 permanent and indistinguishable from an answer.
+
+## D132 — the scan is two legs, because one leg spent the clock on the half that had tools
+
+**24 November 2026.** Of three live production scans, **one produced a report**.
+Job `5c20fa06` is the shape of the other two:
+
+```
+leg 1: 329s · 22 searches · end_turn · totals 329s/360s, 22/24
+report rejected: rule=placeholder-text formats=1 hooks=1 topics=1
+lengths=0 patterns=1 examples=1/1 sources=0 placeholders=7
+```
+
+**The model did not fail. It finished.** It was asked to research a niche *and*
+emit a complete, placeholder-free structured report in one turn under one clock,
+and it did the research — then had 31 seconds to write a report in and wrote
+seven placeholder fields.
+
+### The split, and the one property that matters
+
+- **`research.ts`** — web search, structured notes out, and an **absolute
+  deadline**. Absolute rather than a duration is the whole fix: the only thing
+  leg one can do by running long is run out. Its prompt lost every shaping rule
+  (named beats, fit scores, ranges, brand risk), so it is only ever asked to look
+  and record.
+- **`write-leg.ts`** — **no tools at all**. The `tools` key is omitted rather than
+  passed empty, which makes "no new searches" structural rather than promised.
+  Its own 75 seconds per attempt, one retry from the same notes with the matched
+  placeholder patterns quoted back, and the rejected assistant turn appended so
+  the notes stay in the cached prefix and the retry costs almost nothing.
+
+### Notes are deliberately rawer than the report
+
+The tempting design is to make `notes.ts` the report schema, so leg two is a
+reformat. That would have moved the problem rather than solved it: **the
+placeholders came from the shaping work.** So the division is by *kind of work* —
+leg one records observations (`howItGoes` is prose, `whereSeen` is urls, numbers
+only where a page showed them) and leg two shapes them. A retry is then a
+correction rather than a re-roll of the same dice.
+
+`notes.ts` also enforces non-negotiable 1 **one leg earlier**: a media-file url
+never reaches the write prompt, and a half-example is dropped rather than handed
+to a writer that would complete it.
+
+### Budgets, derived rather than remembered
+
+`SCAN_TIME_BUDGET_MS` is now **computed** from the legs — 270s of research plus
+two 75s write attempts — so giving research another minute moves the total and
+`budget.test.ts`'s margin assertion is what says what else has to give. With the
+script agent's 120s that is 540s of a 900s lease, 40% unspent. "Six minutes for
+the research itself" is now asserted against the *research leg*, which is what
+Vlad's number was always about.
+
+**Money: the $2 cap did not move.** The projection is 18k in, 56k out and 24
+searches — about $1.13. The split costs more than the single leg did (~$0.67) and
+still clears, so no money decision was smuggled in with a reliability fix. The
+spend decision still happens **once**, before anything is spent, covering both
+legs and the retry: a check after leg one would approve the expensive half and
+then guard the cheap one.
+
+## D133 — the fact check matched literally, so it refused the client's own price list
+
+**24 November 2026.** Three facts were withheld from Maya Torres Coaching, all
+three true and all three in the profile:
+
+| The script wrote | The profile holds |
+|---|---|
+| "Private reactive-dog sessions **are** $150 per session" | "Private reactive-dog sessions, $150 per session" |
+| "Reactive Rover 6-week package **is** $750" | "Reactive Rover 6-week package, $750" |
+| "Method **is** positive reinforcement, force-free, **with** no prong, choke or e-collars" | "positive reinforcement, force-free, no prong, choke or e-collars" |
+
+The check was two-directional normalised **substring containment**, which reads
+as generous and is not: it breaks on any inserted word. And `parseServiceLine`
+splits a service from its price on a *spaced dash*, so a line typed with a comma
+is stored whole — "sessions, $150" versus "sessions **are** $150" is one word
+apart and fails both directions. **A gate that refuses a client's own price list
+is not strict, it is broken.**
+
+### Two rules, and the second keeps the first honest
+
+1. **Token coverage, not substring.** A profile fact grounds a claim when ≥80% of
+   its content words appear in the claim, in any order. Inserted words, dropped
+   commas and reordered clauses stop mattering, because none of them changes
+   which words are being asserted.
+2. **Every number in the claim must be a number in the profile.** This still
+   refuses "she has trained over 500 dogs" and the right service at the wrong
+   price. Checked against the *whole* profile, because "$450 for 4 sessions"
+   legitimately splits across a name and a price.
+
+### The two edges that needed care
+
+**The reverse direction is closed on negations.** A claim shorter than the fact
+it quotes is legitimate — "positive reinforcement" out of a longer method — but
+"no prong, choke or e-collars" would otherwise ground "with prong collars",
+whose every word *does* appear in it. That is the one way substance matching
+could invert a client's method in public, so it is closed explicitly.
+
+**A one-word fact grounds that word and nothing more.** "Miami" still grounds
+"based in Miami" — the old check got that right and a blunt two-word minimum
+regressed it — but not "the most trusted trainer in Miami". A service area must
+not become a permission slip for a rating (non-negotiable 7).
+
+**Not done:** having the agent cite the profile field it used, verified
+structurally. Vlad offered it as the other half of an "and/or"; it needs a schema
+field, a prompt change and plumbing through `drafts`. Coverage plus strict
+numbers already gets 3 of 3 passing, so the citation stays available if a later
+failure needs it.
+
+## D134 — the scan eval, because no test could have caught what broke
+
+**24 November 2026.** Three live scans produced one report and **nobody found
+that out from a test** — they found it out from a client-facing report that said
+"Nothing was saved."
+
+The hermetic suite proves the parser, the schema, the budgets and the key's one
+door. It could not prove the only thing that was wrong: whether a real research
+run, on a real niche, with a real profile, ends in a report. That is a claim
+about a model's behaviour under a clock, and the only honest way to check it is
+to make the call.
+
+So: five fixed cases, on preview, reporting success rate and — per case — wall
+clock, searches and **cost**, read from the rows the run actually wrote. Fixed on
+purpose: an eval whose inputs move measures the inputs.
+
+The five are five *shapes* rather than five dog trainers: the reviewed profile; a
+licensed trade with a strict method boundary; a thin niche where a pass means an
+honest guidance-only report; a saturated niche full of accounts coasting on raw
+views; and an **empty profile**, where the script agent is never called and zero
+videos is the correct answer.
+
+**Thresholds:** 80% overall, and the dog-trainers case must pass absolutely and
+separately — it is the profile the product was reviewed on. 80% rather than 100%
+because one case is deliberately thin and a guard that cries wolf gets switched
+off.
+
+The rule in CLAUDE.md: **run it before merging any change to the scan or the
+script agents, and record the summary in the pull request.** `pnpm eval:scan:dog`
+runs the reviewed profile three times, each in its own workspace — three
+independent runs rather than one measured three times, which is the bar D132 has
+to clear.
+
+## D135 — a redeploy puts the scan back in the queue instead of stranding it
+
+**24 November 2026.** A merge to `main` restarted the worker at **21:53** and
+killed an in-flight scan. The job kept its lease, nothing could claim it, and it
+was claimed again at **22:07** — fourteen minutes of a 900-second lease expiring
+while the studio said "Scanning your niche…", which was the one thing that was
+not true.
+
+The old `SIGTERM` handler set `running = false`. That stops us claiming a **new**
+job and does nothing about the one in hand.
+
+### Both halves of the either/or, in order
+
+On a signal the job in hand gets whatever the drain window allows minus a release
+reserve; if it does not finish, the lease is released and the next worker claims
+it in seconds. **Which half you get is arithmetic rather than preference.** A
+scan is 420 seconds of model calls, so *finishing* an average interruption needs
+a window of several minutes — which would make **every** deploy that slow,
+including the ones that interrupt nothing. A release is one `UPDATE`.
+
+**`RAILWAY_DEPLOYMENT_DRAINING_SECONDS=30`** is therefore the value: sized for a
+clean release, not for finishing a scan. 600 would buy the finish-the-scan
+behaviour at the price of ten-minute deploys.
+
+The process **exits immediately** after releasing, and that is not impatience:
+the abandoned handler is still running, and if it reached `finish()` it would
+overwrite the `queued` release with `complete` or `failed` and hand the client a
+result for a job the next worker is already re-running.
+
+`attempts` is **not** reset. `claim_job` counted this attempt and `max_attempts`
+is 3, so a released job has two more goes — the only thing standing between a bad
+deploy loop and an unbounded bill.
+
+### The cost, written down rather than discovered later
+
+A released scan **re-runs from the beginning**, so the research spend up to the
+signal is money paid for nothing — and it is **not in `agent_runs`**, because
+usage is only known when the stream ends. The release logs it so the gap is
+visible rather than inferred. It is still cheaper than a fourteen-minute spinner.
+
+### The marker is an outcome, not a fifth status
+
+`interrupted` on a **queued** job is the only combination that means "a worker
+put this back". A fifth `JobStatus` would have needed a migration and a
+check-constraint change for a fact that lives for seconds, and a status is for
+how a job *ended*. `claim_job` clears the marker by setting `running`.
+
+The banner sits **above** the generic pending branch, because `isJobPending` is
+true of a released job too — which is exactly why it recovers on its own.
+
+**Also fixed (E):** the failure banner said "Nothing was saved." twice. It
+appends that to every failure because it is true of every failure, and the
+placeholder message said it as well. Removed from the agent's message: the agent
+owns the diagnosis and the banner owns the reassurance.
