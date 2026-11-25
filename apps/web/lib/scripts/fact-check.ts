@@ -36,7 +36,11 @@
  * 1. **Token coverage, not substring.** A profile fact grounds a claim when
  *    almost all of its content words appear in the claim, in any order. Inserted
  *    words, dropped commas and reordered clauses stop mattering, because none of
- *    them changes which words are being asserted.
+ *    them changes which words are being asserted. Since D137 a plural and its
+ *    singular count as the same word, and a field label — "method", "approach" —
+ *    counts as neither: a fourth true fact was withheld on a live run because it
+ *    said "e-collar method" where the profile said "e-collars", which is the same
+ *    assertion in two places.
  *
  * 2. **Every number in the claim must be a number in the profile.** This is the
  *    rule that still refuses "she has trained over 500 dogs": 500 appears
@@ -142,6 +146,29 @@ const STOPWORDS: ReadonlySet<string> = new Set([
 ])
 
 /**
+ * Category nouns that name a field rather than assert anything (D137).
+ *
+ * Listed apart from `STOPWORDS` because they are not grammar — they are the
+ * words a model adds when it says *which kind* of fact it is using. The case
+ * that put them here: a withheld script fact reading "force-free, no prong,
+ * choke or e-collar **method**" against a profile holding "Positive
+ * reinforcement, force-free. No prong, choke or e-collars." Every asserted word
+ * matched; the label and a plural did not, and the client's own method was
+ * refused in public.
+ *
+ * Kept deliberately short. Each word removed here is a word that can no longer
+ * be the reason a claim fails *or* passes, so anything that could narrow a claim
+ * — a place, a service, a number, a qualifier — stays a content word.
+ */
+const FIELD_LABELS: ReadonlySet<string> = new Set([
+  'method',
+  'methods',
+  'approach',
+  'approaches',
+  'style',
+])
+
+/**
  * Words whose absence flips a meaning.
  *
  * Kept as content words, and checked separately: a fact containing one of these
@@ -206,6 +233,27 @@ const MIN_CLAIM_WORDS = 2
  */
 const SHORT_FACT_MAX_CLAIM_TOKENS = 3
 
+/**
+ * One word reduced to the form a plural shares with its singular (D137).
+ *
+ * Not a stemmer in any linguistic sense, and deliberately not: it only wants
+ * "e-collars" and "e-collar" to agree, and "sessions" with "session". A real
+ * stemmer would also conflate words a client's facts distinguish.
+ *
+ * The exclusions are what keep it honest. A word ending in a vowel plus `s`
+ * — "texas", "videos" — is left alone, because stripping there invents a word
+ * rather than finding a singular, and short words are left alone entirely.
+ */
+export function singular(word: string): string {
+  if (word.length <= 3) return word
+  if (word.endsWith('ies')) return `${word.slice(0, -3)}y`
+  if (/(?:ss|sh|ch|x|z)es$/u.test(word)) return word.slice(0, -2)
+  if (word.endsWith('es')) return word.slice(0, -1)
+  if (word.endsWith('ss') || /[aeiou]s$/u.test(word)) return word
+  if (word.endsWith('s')) return word.slice(0, -1)
+  return word
+}
+
 export function contentTokens(text: string): readonly string[] {
   const normalised = normaliseForComparison(text)
   if (normalised === '') return []
@@ -213,7 +261,19 @@ export function contentTokens(text: string): readonly string[] {
   return normalised
     .split(' ')
     .map((word) => SPELLED_NUMBERS[word] ?? word)
-    .filter((word) => word.length > 0 && !STOPWORDS.has(word))
+    .filter((word) => word.length > 0 && !STOPWORDS.has(word) && !FIELD_LABELS.has(word))
+}
+
+/**
+ * The tokens as the comparison sees them: content words, singularised.
+ *
+ * Separate from `contentTokens` because the two have different jobs. That one
+ * answers "what does this text assert", which `numbersIn` and the claim-length
+ * rules are built on and which stays readable; this one answers "is it the same
+ * word", and a stem is the wrong thing to count or to show.
+ */
+function comparableTokens(text: string): readonly string[] {
+  return contentTokens(text).map(singular)
 }
 
 /**
@@ -277,7 +337,7 @@ function factCovers(claimTokens: readonly string[], factTokens: readonly string[
  * A claim can only pass by satisfying both.
  */
 export function factIsGrounded(fact: string, facts: readonly string[]): boolean {
-  const claimTokens = contentTokens(fact)
+  const claimTokens = comparableTokens(fact)
   if (claimTokens.length < MIN_CLAIM_WORDS) return false
 
   // Every number asserted has to be one the client gave us. Checked first
@@ -287,5 +347,5 @@ export function factIsGrounded(fact: string, facts: readonly string[]): boolean 
   const claimedNumbers = numbersIn(fact)
   if (claimedNumbers.some((number) => !known.has(number))) return false
 
-  return facts.some((entry) => factCovers(claimTokens, contentTokens(entry)))
+  return facts.some((entry) => factCovers(claimTokens, comparableTokens(entry)))
 }

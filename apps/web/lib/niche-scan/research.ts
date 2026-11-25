@@ -21,20 +21,76 @@ import type Anthropic from '@anthropic-ai/sdk'
 
 import { profileBrief, type ClientProfile } from '../workspace/client-profile'
 
-import { NOTES_SCHEMA, parseNotes, type ResearchNotes } from './notes'
+import { NOTES_SCHEMA, parseNotes, notesAreUsable, type ResearchNotes } from './notes'
+import { parsePartialJson } from './partial-json'
 import { jsonFrom, streamLeg, type LegOutcome } from './stream-leg'
 
 /** `18 §0`: the studio tier, and the only one `MODEL_RATES` prices. */
 export const RESEARCH_MODEL = 'claude-sonnet-5'
 
 /**
- * Notes are compact, so this is far below the old 28k.
+ * The per-request output ceiling — **24k, raised from 16k (D137)**.
  *
- * The 28k ceiling was sized for thinking *plus* a full report. Leg one no longer
- * writes the report, so the output here is observations and urls — and adaptive
- * thinking still shares the budget, which is why it is 16k rather than 8k.
+ * Three measured dog-trainer runs put the research leg's whole output at 20,695,
+ * 20,783 and 14,956 tokens. The middle one **stopped on `max_tokens`** and its
+ * notes were discarded; the first finished 88 tokens under where it stopped.
+ * That is not a budget with margin, it is a coin flip — and unlike the search
+ * ceiling, hitting this one looks like success: a final message arrives, with
+ * half an object in it.
+ *
+ * So both ends move. The ask below is capped section by section so a normal run
+ * lands **well under 12k** of notes, and the ceiling goes to 24k so thinking
+ * plus notes has somewhere to go when a niche is unusually rich. The cost of the
+ * raise is projected, not hoped for — see `RESEARCH_OUTPUT_PROJECTION` — and
+ * `partial-json.ts` reads whatever a truncation did finish, so a third crossing
+ * of this line costs some notes instead of all of them.
  */
-export const RESEARCH_MAX_TOKENS = 16_000
+export const RESEARCH_MAX_TOKENS = 24_000
+
+/**
+ * What the spend cap charges for the research leg's output.
+ *
+ * Not `RESEARCH_MAX_TOKENS`, and the difference is deliberate in both
+ * directions. `max_tokens` is a **per-request** ceiling and a paused turn is
+ * resumed up to `RESEARCH_MAX_CONTINUATIONS` times, so the theoretical worst
+ * case is three full legs — 72k, which projects past the $2 per-request cap and
+ * would refuse every scan we have ever run. Projecting one leg, as this did
+ * before, is the opposite error: it charges for less output than a resumed turn
+ * can produce.
+ *
+ * 36k is sized on measurement with margin: the worst *total* across six runs was
+ * 20.8k, so this is about 1.7x the observed worst case and 1.5x one full leg.
+ * `budget.test.ts` asserts it covers a whole leg and that the whole projected
+ * request still clears `SCAN_MAX_REQUEST_USD`.
+ */
+export const RESEARCH_OUTPUT_PROJECTION = 36_000
+
+/**
+ * The volume of notes asked for, section by section (D137).
+ *
+ * One object rather than numbers inlined in the prompt, because `notes.ts` has
+ * to cap the same sections at the same numbers — the prompt is the request and
+ * the parser is the rule, and the two drifting apart is how a "compact by
+ * design" ask quietly stops being one. `notes.test.ts` asserts they agree.
+ *
+ * The numbers are not a quality judgement. Both passing runs recorded six
+ * formats where four were asked for and three videos came out of it; what cost
+ * a run was length, not breadth.
+ */
+export const RESEARCH_NOTE_CAPS = {
+  formats: 4,
+  examples: 5,
+  hookNotes: 4,
+  topicNotes: 5,
+  lengthNotes: 3,
+  patternNotes: 4,
+  pages: 8,
+  /** Words, not tokens: a limit a writer can actually keep to. */
+  noteWords: 20,
+  howItGoesWords: 40,
+  whatHappensWords: 25,
+  coverageWords: 60,
+} as const
 
 /** A research run, not a question. `low` under-reads the niche. */
 export const RESEARCH_EFFORT = 'high' as const
@@ -139,7 +195,8 @@ Hard rules. These are not style preferences:
 7. Every note carries a basis: "posts" if you read it off real posts, "guidance" if it comes from an article about the niche. Mark it honestly. Most published advice is "guidance".
 8. The "coverage" field is required and it matters more than you would think. Say what you searched, what you found, and what you could NOT find. The writer cannot tell "this niche has no public short video" from "I ran out of time" unless you say which — and a writer who cannot tell them apart invents the difference.
 9. Some real niches have very little public short video you can link to. That is a finding, not a failure. Record the formats from published guidance, mark their basis "guidance", return an empty examples list, and say so plainly in coverage. NEVER pad your notes with placeholder text, "TBD", "example", or a format you cannot describe. Empty notes are better than invented ones — a thin honest report is accepted downstream, and a padded one is rejected outright.
-10. **Your search budget is ${RESEARCH_MAX_SEARCHES} searches, and the run is CUT OFF at ${RESEARCH_SEARCH_CEILING}.** After about ${RESEARCH_MAX_SEARCHES} searches, stop searching and write your notes immediately. Anything you have not written down when the cut-off arrives is LOST — not summarised, not saved, lost. A short set of notes from ten searches is worth far more than nothing from twenty-five.`
+10. **Your search budget is ${RESEARCH_MAX_SEARCHES} searches, and the run is CUT OFF at ${RESEARCH_SEARCH_CEILING}.** After about ${RESEARCH_MAX_SEARCHES} searches, stop searching and write your notes immediately. Anything you have not written down when the cut-off arrives is LOST — not summarised, not saved, lost. A short set of notes from ten searches is worth far more than nothing from twenty-five.
+11. **Write SHORT, and keep to the counts you are given.** Your reply is also cut off at a length, and a reply cut off mid-sentence loses the notes after the cut. Notes are one line each, at most ${RESEARCH_NOTE_CAPS.noteWords} words. "How it goes" is at most ${RESEARCH_NOTE_CAPS.howItGoesWords} words, "what happens" at most ${RESEARCH_NOTE_CAPS.whatHappensWords}, coverage at most ${RESEARCH_NOTE_CAPS.coverageWords}. Keep to the number of items you are asked for in a section: past that, the extra ones buy nothing and cost you the length you needed for the rest. No preamble, no summary at the end, no explaining what you are about to do — the notes are the whole reply.`
 
 function researchPrompt(niche: string, profile: ClientProfile): string {
   const brief = profileBrief(profile)
@@ -153,11 +210,13 @@ function researchPrompt(niche: string, profile: ClientProfile): string {
 
   return `Research what is working right now on short vertical video in this niche: ${niche}
 ${about}
-Find 3 to 4 formats that are growing, and note the hooks, topics, lengths and posting rhythms behind them.
+Find up to ${RESEARCH_NOTE_CAPS.formats} formats that are growing. For each one: its name, and how it goes in at most ${RESEARCH_NOTE_CAPS.howItGoesWords} words.
 
-Record up to 6 real posts you actually opened, each with its link, which format it is, what happens in it, and where you looked. Prefer posts whose page showed you a view or follower count, and leave the numbers out where it did not.
+Record up to ${RESEARCH_NOTE_CAPS.examples} real posts you actually opened, each with its link, which format it is, what happens in it in at most ${RESEARCH_NOTE_CAPS.whatHappensWords} words, and where you looked. Prefer posts whose page showed you a view or follower count, and leave the numbers out where it did not.
 
-Write notes, not prose. Short and factual, one line each. Then fill in coverage: what you searched, what you found, and what you could not find.`
+Then, at most: ${RESEARCH_NOTE_CAPS.hookNotes} hook notes, ${RESEARCH_NOTE_CAPS.topicNotes} topic notes, ${RESEARCH_NOTE_CAPS.lengthNotes} length notes, ${RESEARCH_NOTE_CAPS.patternNotes} posting-pattern notes, and ${RESEARCH_NOTE_CAPS.pages} pages you read. One line each, at most ${RESEARCH_NOTE_CAPS.noteWords} words.
+
+Finish with coverage, at most ${RESEARCH_NOTE_CAPS.coverageWords} words: what you searched, what you found, and what you could not find. Write it even if you are running short — somebody downstream cannot tell an empty niche from an interrupted search unless you say which.`
 }
 
 export interface ResearchRequest {
@@ -172,20 +231,34 @@ export interface ResearchOutcome extends LegOutcome {
   /**
    * Empty when a budget cut the leg off before it wrote anything.
    *
-   * **There is no recovery from that, and D136 established it the hard way.**
-   * The obvious fix is to re-send the aborted turn with no tools and ask for the
-   * notes — the search results are still in its content blocks, so the research
-   * itself was never lost. The API refuses:
+   * **There is no recovery from an abort, and D136 established it the hard
+   * way.** The obvious fix is to re-send the aborted turn with no tools and ask
+   * for the notes — the search results are still in its content blocks, so the
+   * research itself was never lost. The API refuses:
    *
    *     400 invalid_request_error — When responding to programmatic tool
    *     calling, only tool_result blocks are allowed.
    *
-   * A server-side tool conversation cannot be continued with a user turn, so the
-   * only cure is prevention: finish inside the budget. That is what the raised
-   * ceiling, the longer slice and rule 10's stated consequence are for.
+   * A server-side tool conversation cannot be continued with a user turn, so for
+   * the *time* and *search* budgets the only cure is prevention: finish inside
+   * the budget. That is what the raised ceiling, the longer slice and rule 10's
+   * stated consequence are for.
+   *
+   * A **`max_tokens` stop is a different animal** and D137 treats it as one:
+   * there the turn *ended*, the final message is in hand, and the notes are
+   * complete right up to the character the ceiling fell on. Nothing has to be
+   * re-sent to read them — see `truncated`.
    */
   readonly notes: ResearchNotes
   readonly stopReason: string | null
+  /**
+   * Were these notes read out of a reply the output ceiling cut short? (D137)
+   *
+   * Recorded rather than hidden, because a thin report deserves a different
+   * explanation from a thin niche, and because this is the number that says
+   * whether `RESEARCH_MAX_TOKENS` is still too low.
+   */
+  readonly truncated: boolean
 }
 
 export function researchTurn(niche: string, profile: ClientProfile): Anthropic.MessageParam {
@@ -203,11 +276,62 @@ export function researchTools(): readonly unknown[] {
 }
 
 /**
+ * What leg two is told when the ceiling cut leg one's coverage note off.
+ *
+ * Appended rather than left blank, because `notesBrief` would otherwise say
+ * "not stated" and rule 14's distinction — an empty niche versus an interrupted
+ * search — is exactly what a writer with no coverage note invents.
+ */
+export const TRUNCATED_COVERAGE_NOTE =
+  'These notes were cut short by the research leg’s own length limit, so they are ' +
+  'incomplete rather than final. Write the report from what is here and say plainly where ' +
+  'the research is thin. Do not fill the gaps.'
+
+export interface ReadNotes {
+  readonly notes: ResearchNotes
+  readonly truncated: boolean
+}
+
+/**
+ * The notes in a reply: strictly if it closed, and as far as it got if it did
+ * not (D137).
+ *
+ * Exported for its own test, because the case it exists for — a reply the output
+ * ceiling cut mid-object — cannot be produced on demand from a live model.
+ */
+export function notesFromReply(content: readonly Anthropic.ContentBlock[]): ReadNotes {
+  const strict = jsonFrom(content)
+  if (strict !== null) return { notes: parseNotes(strict), truncated: false }
+
+  // Nothing closed the JSON. Either the reply was never notes, or the output
+  // ceiling landed mid-object — and in the second case the complete sections are
+  // sitting right there.
+  for (const block of [...content].reverse()) {
+    if (block.type !== 'text') continue
+    const salvaged = parseNotes(parsePartialJson(block.text))
+    if (!notesAreUsable(salvaged)) continue
+
+    return {
+      notes: {
+        ...salvaged,
+        coverage: salvaged.coverage
+          ? `${salvaged.coverage}\n\n${TRUNCATED_COVERAGE_NOTE}`
+          : TRUNCATED_COVERAGE_NOTE,
+      },
+      truncated: true,
+    }
+  }
+
+  return { notes: parseNotes(null), truncated: false }
+}
+
+/**
  * Run leg one. Throws only on a real API failure; a budget stop is an outcome.
  *
- * The notes come back parsed, so a reply that did not parse is indistinguishable
- * from empty notes — which is correct: both mean leg two has nothing to write
- * from, and `notesAreUsable` is the question the orchestrator asks.
+ * The notes come back parsed, so a reply that did not parse at all is
+ * indistinguishable from empty notes — which is correct: both mean leg two has
+ * nothing to write from, and `notesAreUsable` is the question the orchestrator
+ * asks. A reply that parsed *partly* is not the same thing, and is kept.
  */
 export async function runResearchLeg(request: ResearchRequest): Promise<ResearchOutcome> {
   const outcome = await streamLeg({
@@ -228,10 +352,33 @@ export async function runResearchLeg(request: ResearchRequest): Promise<Research
   })
 
   const response = outcome.response
+  const read: ReadNotes =
+    response === null
+      ? { notes: parseNotes(null), truncated: false }
+      : notesFromReply(response.content)
+
+  // Output against the ceiling, on **every** run (D137). The failing run looked
+  // like a success in the logs — `end_turn`'s neighbour `max_tokens`, a final
+  // message, and empty notes — and the one number that would have named it
+  // immediately was how close the output came to its cap.
+  const share = Math.round((outcome.usage.outputTokens / RESEARCH_MAX_TOKENS) * 100)
+  console.info(
+    `[niche-scan research] out ${outcome.usage.outputTokens} tok of ` +
+      `${RESEARCH_MAX_TOKENS}/leg cap (${share}% across ${outcome.legs} leg(s)) · ` +
+      `stop_reason ${response?.stop_reason ?? 'aborted'}`,
+  )
+
+  if (response?.stop_reason === 'max_tokens') {
+    console.warn(
+      `[niche-scan research] the ${RESEARCH_MAX_TOKENS}-token output ceiling cut the notes off; ` +
+        `${read.truncated ? 'read the complete sections' : 'nothing complete to read'}`,
+    )
+  }
 
   return {
     ...outcome,
     stopReason: response?.stop_reason ?? null,
-    notes: response === null ? parseNotes(null) : parseNotes(jsonFrom(response.content)),
+    notes: read.notes,
+    truncated: read.truncated,
   }
 }

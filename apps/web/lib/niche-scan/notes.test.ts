@@ -17,12 +17,14 @@ import { describe, expect, test } from 'vitest'
 
 import {
   isPageUrl,
+  NOTE_KEEP_CAPS,
   notesAreUsable,
   notesBrief,
   notesCountLine,
   parseNotes,
   type ResearchNotes,
 } from './notes'
+import { RESEARCH_NOTE_CAPS } from './research'
 
 const FORMAT = {
   name: 'Myth vs fact',
@@ -255,5 +257,35 @@ describe('notesCountLine', () => {
     expect(notesCountLine(parseNotes(REPLY))).toBe(
       'formats=1 hooks=1 topics=1 lengths=1 patterns=1 examples=1 pages=1',
     )
+  })
+})
+
+/**
+ * The parser keeps at least what leg one was asked for (D137).
+ *
+ * The ask is sized to fit the output ceiling; the keep is sized not to punish a
+ * model that overshoots it. They may differ — both passing dog-trainer runs
+ * recorded six formats where four were asked for — but only in one direction. A
+ * keep below the ask would silently discard work already paid for, which is the
+ * same class of mistake as discarding a truncated reply.
+ */
+describe('the parser keeps at least what the prompt asks for', () => {
+  test.each([
+    ['formats', NOTE_KEEP_CAPS.formats, RESEARCH_NOTE_CAPS.formats],
+    ['examples', NOTE_KEEP_CAPS.examples, RESEARCH_NOTE_CAPS.examples],
+    ['hookNotes', NOTE_KEEP_CAPS.hookNotes, RESEARCH_NOTE_CAPS.hookNotes],
+    ['topicNotes', NOTE_KEEP_CAPS.topicNotes, RESEARCH_NOTE_CAPS.topicNotes],
+    ['lengthNotes', NOTE_KEEP_CAPS.lengthNotes, RESEARCH_NOTE_CAPS.lengthNotes],
+    ['patternNotes', NOTE_KEEP_CAPS.patternNotes, RESEARCH_NOTE_CAPS.patternNotes],
+    ['pages', NOTE_KEEP_CAPS.pages, RESEARCH_NOTE_CAPS.pages],
+  ])('%s', (_section, keep, ask) => {
+    expect(keep).toBeGreaterThanOrEqual(ask)
+  })
+
+  test('and does not keep so many that the notes stop being notes', () => {
+    // The old caps were 12 examples and 20 pages, which is a document rather
+    // than a set of notes — and leg two pays for every line of it.
+    expect(NOTE_KEEP_CAPS.examples).toBeLessThanOrEqual(8)
+    expect(NOTE_KEEP_CAPS.pages).toBeLessThanOrEqual(12)
   })
 })

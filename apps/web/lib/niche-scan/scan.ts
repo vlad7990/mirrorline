@@ -75,6 +75,7 @@ import { rankExamples, type NicheReportFindings } from './report'
 import {
   RESEARCH_MAX_TOKENS,
   RESEARCH_MODEL,
+  RESEARCH_OUTPUT_PROJECTION,
   RESEARCH_SEARCH_CEILING,
   RESEARCH_SEARCH_PROJECTION,
   RESEARCH_SYSTEM,
@@ -376,7 +377,10 @@ export async function runNicheScan(request: ScanRequest): Promise<ScanOutcome> {
     // Leg one's real count, plus a projection for each write attempt. The write
     // prompt does not exist yet and the decision has to come first.
     promptTokens + WRITE_PROMPT_PROJECTION_TOKENS * WRITE_MAX_ATTEMPTS,
-    RESEARCH_MAX_TOKENS + WRITE_MAX_TOKENS * WRITE_MAX_ATTEMPTS,
+    // Research is projected at `RESEARCH_OUTPUT_PROJECTION`, not at its
+    // per-request ceiling: a paused turn is resumed, so one leg's `max_tokens`
+    // is not what a research leg can emit (D137).
+    RESEARCH_OUTPUT_PROJECTION + WRITE_MAX_TOKENS * WRITE_MAX_ATTEMPTS,
     now,
     env,
     { maxSearches: SCAN_SEARCH_PROJECTION, maxRequestUsd: SCAN_MAX_REQUEST_USD },
@@ -427,7 +431,10 @@ export async function runNicheScan(request: ScanRequest): Promise<ScanOutcome> {
 
   console.info(
     `[niche-scan] leg 1 research: ${research.seconds}s · ${research.searches} search(es) · ` +
-      `stop_reason ${research.stopReason ?? 'none'} · ${notesCountLine(research.notes)}`,
+      `out ${research.usage.outputTokens} tok of ${RESEARCH_MAX_TOKENS}/leg cap · ` +
+      `stop_reason ${research.stopReason ?? 'none'}` +
+      `${research.truncated ? ' (notes read from a truncated reply)' : ''} · ` +
+      `${notesCountLine(research.notes)}`,
   )
 
   if (research.stoppedBy !== null) {

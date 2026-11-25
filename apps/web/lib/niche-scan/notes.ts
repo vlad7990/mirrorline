@@ -135,6 +135,46 @@ export const EMPTY_NOTES: ResearchNotes = {
   coverage: '',
 }
 
+/**
+ * What the parser keeps, section by section (D137).
+ *
+ * Deliberately a little **above** `RESEARCH_NOTE_CAPS`, which is what leg one is
+ * asked for. The two answer different questions: the ask is sized so a normal
+ * run's reply fits inside its output ceiling, and this is sized so a model that
+ * overshoots the ask is not punished for it — both passing dog-trainer runs
+ * recorded six formats where four were asked for, and those tokens are already
+ * spent by the time they arrive. `notes.test.ts` asserts this never drops below
+ * the ask, which is the direction that would silently discard paid-for work.
+ *
+ * Both are far below the old numbers (12 examples, 20 pages), because the cost
+ * of a section is not the parse — it is the length leg one spends writing it and
+ * leg two spends reading it.
+ */
+export const NOTE_KEEP_CAPS = {
+  formats: 6,
+  examples: 8,
+  hookNotes: 6,
+  topicNotes: 8,
+  lengthNotes: 4,
+  patternNotes: 6,
+  pages: 12,
+} as const
+
+/**
+ * The longest a single field may be, in characters.
+ *
+ * About seven characters a word against `RESEARCH_NOTE_CAPS`' word limits, with
+ * room to finish a sentence. A backstop rather than the rule: the prompt is
+ * where brevity is asked for, and this is what stops one runaway field being
+ * carried into the write prompt in full.
+ */
+const FIELD_CHARS = {
+  note: 220,
+  howItGoes: 400,
+  whatHappens: 260,
+  coverage: 700,
+} as const
+
 const NOTE_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -246,12 +286,12 @@ function notes(value: unknown, cap: number): readonly Note[] {
   return value
     .map((entry): Note | null => {
       if (typeof entry === 'string') {
-        const text = str(entry, 300)
+        const text = str(entry, FIELD_CHARS.note)
         return text ? { text, basis: 'guidance' } : null
       }
       if (typeof entry !== 'object' || entry === null) return null
       const row = entry as Record<string, unknown>
-      const text = str(row.text, 300)
+      const text = str(row.text, FIELD_CHARS.note)
       return text ? { text, basis: basis(row.basis) } : null
     })
     .filter((entry): entry is Note => entry !== null)
@@ -287,17 +327,17 @@ function formats(value: unknown): readonly FormatNote[] {
       if (typeof entry !== 'object' || entry === null) return null
       const row = entry as Record<string, unknown>
       const name = str(row.name, 120)
-      const howItGoes = str(row.howItGoes ?? row.how_it_goes, 600)
+      const howItGoes = str(row.howItGoes ?? row.how_it_goes, FIELD_CHARS.howItGoes)
       if (!name || !howItGoes) return null
       return {
         name,
         howItGoes,
-        whereSeen: urls(row.whereSeen ?? row.where_seen, 6),
+        whereSeen: urls(row.whereSeen ?? row.where_seen, 4),
         basis: basis(row.basis),
       }
     })
     .filter((entry): entry is FormatNote => entry !== null)
-    .slice(0, 8)
+    .slice(0, NOTE_KEEP_CAPS.formats)
 }
 
 function examples(value: unknown): readonly ExampleNote[] {
@@ -308,7 +348,7 @@ function examples(value: unknown): readonly ExampleNote[] {
       const row = entry as Record<string, unknown>
       const url = str(row.url, 500)
       const formatName = str(row.formatName ?? row.format_name, 120)
-      const whatHappens = str(row.whatHappens ?? row.what_happens, 400)
+      const whatHappens = str(row.whatHappens ?? row.what_happens, FIELD_CHARS.whatHappens)
       const sourceNote = str(row.sourceNote ?? row.source_note, 200)
       const platform = NOTE_PLATFORMS.find((candidate) => candidate === row.platform)
 
@@ -334,7 +374,7 @@ function examples(value: unknown): readonly ExampleNote[] {
       }
     })
     .filter((entry): entry is ExampleNote => entry !== null)
-    .slice(0, 12)
+    .slice(0, NOTE_KEEP_CAPS.examples)
 }
 
 function pages(value: unknown): readonly PageNote[] {
@@ -350,7 +390,7 @@ function pages(value: unknown): readonly PageNote[] {
       return { title, url, kind }
     })
     .filter((entry): entry is PageNote => entry !== null)
-    .slice(0, 20)
+    .slice(0, NOTE_KEEP_CAPS.pages)
 }
 
 /** jsonb and model replies alike: parsed, never cast. */
@@ -360,13 +400,13 @@ export function parseNotes(value: unknown): ResearchNotes {
 
   return {
     formats: formats(root.formats),
-    hookNotes: notes(root.hookNotes ?? root.hook_notes, 10),
-    topicNotes: notes(root.topicNotes ?? root.topic_notes, 12),
-    lengthNotes: notes(root.lengthNotes ?? root.length_notes, 6),
-    patternNotes: notes(root.patternNotes ?? root.pattern_notes, 8),
+    hookNotes: notes(root.hookNotes ?? root.hook_notes, NOTE_KEEP_CAPS.hookNotes),
+    topicNotes: notes(root.topicNotes ?? root.topic_notes, NOTE_KEEP_CAPS.topicNotes),
+    lengthNotes: notes(root.lengthNotes ?? root.length_notes, NOTE_KEEP_CAPS.lengthNotes),
+    patternNotes: notes(root.patternNotes ?? root.pattern_notes, NOTE_KEEP_CAPS.patternNotes),
     examples: examples(root.examples),
     pages: pages(root.pages),
-    coverage: str(root.coverage, 1_000) ?? '',
+    coverage: str(root.coverage, FIELD_CHARS.coverage) ?? '',
   }
 }
 

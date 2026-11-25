@@ -20,13 +20,21 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { RESEARCH_TIME_BUDGET_MS } from '../niche-scan/research'
+import { projectRequestUsd } from '../copilot/spend'
 import {
+  RESEARCH_MAX_TOKENS,
+  RESEARCH_OUTPUT_PROJECTION,
+  RESEARCH_TIME_BUDGET_MS,
+} from '../niche-scan/research'
+import {
+  SCAN_MAX_REQUEST_USD,
+  SCAN_MODEL,
   SCAN_SEARCH_CEILING,
   SCAN_SEARCH_PROJECTION,
   SCAN_TIME_BUDGET_MS,
+  WRITE_PROMPT_PROJECTION_TOKENS,
 } from '../niche-scan/scan'
-import { WRITE_MAX_ATTEMPTS, WRITE_TIME_BUDGET_MS } from '../niche-scan/write-leg'
+import { WRITE_MAX_ATTEMPTS, WRITE_MAX_TOKENS, WRITE_TIME_BUDGET_MS } from '../niche-scan/write-leg'
 import { SCRIPT_TIME_BUDGET_MS } from '../scripts/first-videos'
 
 import { JOB_LEASE_SECONDS } from './types'
@@ -115,6 +123,52 @@ describe('the scan is its two legs and nothing else', () => {
     // `04 §3`'s shape: two failures mean the notes cannot be written up, not
     // that a third attempt would succeed.
     expect(WRITE_MAX_ATTEMPTS).toBe(2)
+  })
+})
+
+/**
+ * What one scan may spend, against the ceiling that lets it run (D137).
+ *
+ * The research leg's `max_tokens` went from 16k to 24k because a run stopping on
+ * `max_tokens` threw its notes away. A raise there is a raise in what the scan
+ * can cost, and the only honest place for that to show up is here — a projection
+ * nobody checked is how a "hard cap" becomes a soft one.
+ */
+describe('a scan fits inside its per-request ceiling', () => {
+  /**
+   * What leg one's prompt costs, assumed high.
+   *
+   * The real figure comes from `countTokens` at run time; this is a deliberate
+   * over-estimate of the system block, the niche, the profile and the tool
+   * declaration, so the test fails before production does.
+   */
+  const RESEARCH_PROMPT_ASSUMPTION = 4_000
+
+  const projectedUsd = projectRequestUsd(
+    SCAN_MODEL,
+    RESEARCH_PROMPT_ASSUMPTION + WRITE_PROMPT_PROJECTION_TOKENS * WRITE_MAX_ATTEMPTS,
+    RESEARCH_OUTPUT_PROJECTION + WRITE_MAX_TOKENS * WRITE_MAX_ATTEMPTS,
+    SCAN_SEARCH_PROJECTION,
+  )
+
+  it('projects the research leg at no less than one full leg of output', () => {
+    // A paused turn is resumed, so the projection is deliberately *above*
+    // `max_tokens` — but never below it, which would charge for less output than
+    // a single request is allowed to produce.
+    expect(RESEARCH_OUTPUT_PROJECTION).toBeGreaterThanOrEqual(RESEARCH_MAX_TOKENS)
+  })
+
+  it('stays under the per-request ceiling that allows the scan at all', () => {
+    expect(projectedUsd).toBeLessThan(SCAN_MAX_REQUEST_USD)
+  })
+
+  it('keeps a fifth of the ceiling in hand', () => {
+    // Act
+    const headroom = (SCAN_MAX_REQUEST_USD - projectedUsd) / SCAN_MAX_REQUEST_USD
+
+    // Assert: raising a token budget or the search ceiling far enough to eat
+    // this margin should be a decision, not a surprise at the first refusal.
+    expect(headroom).toBeGreaterThanOrEqual(0.2)
   })
 })
 

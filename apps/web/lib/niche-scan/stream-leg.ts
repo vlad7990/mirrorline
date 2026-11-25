@@ -231,7 +231,11 @@ export async function streamLeg(request: StreamLegRequest): Promise<LegOutcome> 
     console.info(
       `[${label}] leg ${leg + 1}: ${legSeconds}s · ${legSearches} search(es) · ` +
         `stop_reason ${response.stop_reason ?? 'none'} · ` +
-        `in ${usage.inputTokens} out ${usage.outputTokens} tok · ` +
+        // Output against the ceiling, because `max_tokens` is a stop reason that
+        // looks like a finish, and the only early warning is how close the last
+        // run came to it (D137).
+        `in ${usage.inputTokens} out ${usage.outputTokens} tok of ` +
+        `${request.maxTokens}/leg · ` +
         `totals ${elapsed()}s/${budgetSeconds}s, ${searches}` +
         `${searchCeiling === undefined ? '' : `/${searchCeiling}`} search(es)`,
     )

@@ -1,5 +1,73 @@
 # Progress — morning handoff
 
+## Handoff — 25 November 2026, afternoon (the gate got to 2 of 3 and named its own failure; D137 is the fix)
+
+### What you need to do
+
+**Re-run the eval locally and tell me the summary.** Nothing else is waiting on
+anybody.
+
+```
+pnpm eval:scan:dog      # 3 runs of the reviewed profile, ~$3.30
+pnpm eval:scan          # all five cases, ~$5
+```
+
+**#42 merges only on 3 of 3.** I have not run it — this environment kills a
+fifteen-minute process, which is what cost the last two attempts.
+
+### What your 2-of-3 run found, which is the whole value of it
+
+The failure was **not** searches and **not** the clock — D136 widened both and
+neither fired. It was the research leg's **output ceiling**, and run #1 finished
+**88 tokens** under where run #2 stopped. A coin flip, not a budget.
+
+It is also the quietest of the three budgets. A search or time abort has no final
+message and says so. A `max_tokens` stop *returns* a message — `stop_reason` one
+word from `end_turn`, usage billed, text block full of notes — and because the
+last object is half-written, `JSON.parse` throws and the client is told the scan
+"could not find enough about that niche" after twenty paid searches.
+
+### What is now on `feat/scan-two-legs` (D137, four changes)
+
+| | |
+|---|---|
+| **The ask is compact by design** | `RESEARCH_NOTE_CAPS`: 4 formats, 5 posts, 4/5/3/4 notes, 8 pages, notes of 20 words, "how it goes" of 40, coverage of 60. The parser caps the same sections slightly *above* the ask, because both passing runs recorded six formats where four were asked for and those tokens were already spent. Not in the JSON schema — `minimum` on an integer is a 400 on this model, and a gate costing $3.30 a round is not where to guess at `maxItems`. |
+| **The ceiling moved with its projection** | `RESEARCH_MAX_TOKENS` 16k → **24k**. `max_tokens` is per *request* and a paused turn is resumed twice, so the spend cap now projects `RESEARCH_OUTPUT_PROJECTION` = 36k (1.7x the worst measured total) rather than one leg. `budget.test.ts` asserts the whole request projects under the $2 ceiling with a fifth in hand — about **$1.52**. |
+| **A truncated reply is read, not thrown away** | `partial-json.ts`: cut back to where a value finished, close what is open, parse. Nothing is re-sent — this is not D136's impossible salvage. **A number is never a cut point**, because closing `"views": 12345` at `12` would print a figure nobody reported. Salvaged notes carry a line telling leg two the research is incomplete, so it reports the gap instead of inventing coverage. `notesAreUsable` is still the gate. |
+| **Output vs. cap is logged every run** | In the per-leg line and the leg-1 summary. The number that named this was there to be printed all along. |
+
+**And the fourth withheld fact.** Run #3's refusal — "force-free, no prong, choke
+or e-collar **method**" against "Positive reinforcement, force-free. No prong,
+choke or e-collars." — was the client's own method with a label on the end and
+one plural dropped, 0.75 against a 0.8 threshold. The check now singularises and
+ignores field labels (`method`, `approach`, `style`). Both lists are tiny on
+purpose, and the strict half is untouched and tested: invented numbers still
+fail, the right service at the wrong price still fails, and "prong and choke
+collar method" is still refused, because dropping a label must not drop a
+negation with it.
+
+Green on `pnpm lint`, `pnpm typecheck`, `pnpm test` (**1402**) and `pnpm build`.
+Full reasoning in `docs/DECISIONS.md` **D137**.
+
+### If it is still not 3 of 3
+
+The levers are unchanged and in this order, and both change *what the research
+is* rather than how much of it survives:
+
+1. `RESEARCH_EFFORT` from `high` to `medium`.
+2. Split research into two narrower calls — formats first, then posts for the
+   formats found.
+3. Accept 2 of 3 honestly, with a clear failure message, and say so out loud.
+
+### Still waiting on Vlad (unchanged)
+
+Three secrets for the preview-migration job: `SUPABASE_PREVIEW_PROJECT_REF`,
+`SUPABASE_PREVIEW_ACCESS_TOKEN`, `SUPABASE_PREVIEW_DB_PASSWORD`. Until they exist
+`preview-schema` warns on ordinary PRs and fails on any PR touching
+`supabase/migrations/`.
+
+---
+
 ## Handoff — 25 November 2026, P0 night (five decisions on one branch; the gate is still red on 1 of 3)
 
 ### Where it stands

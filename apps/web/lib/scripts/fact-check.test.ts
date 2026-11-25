@@ -15,7 +15,7 @@ import { describe, expect, test } from 'vitest'
 
 import { parseClientProfile, profileFacts } from '../workspace/client-profile'
 
-import { contentTokens, factIsGrounded, numbersIn } from './fact-check'
+import { contentTokens, factIsGrounded, numbersIn, singular } from './fact-check'
 
 /**
  * The profile as the form stores it.
@@ -69,6 +69,54 @@ describe('the three facts that were withheld tonight', () => {
     ]
 
     expect(claims.filter((claim) => factIsGrounded(claim, FACTS))).toHaveLength(3)
+  })
+})
+
+/**
+ * The fourth true fact, withheld on the third eval run (D137).
+ *
+ * Dog-trainer profile, run 3: three videos out, **one withheld**, and the
+ * refused fact was "force-free, no prong, choke or e-collar method" against a
+ * profile reading "Positive reinforcement, force-free. No prong, choke or
+ * e-collars." The claim is the profile's own method, said with a label on the
+ * end and one plural dropped.
+ */
+describe('a plural and a field label are not a different fact', () => {
+  const method = profileFacts(
+    parseClientProfile({
+      method: 'Positive reinforcement, force-free. No prong, choke or e-collars.',
+    }),
+  )
+
+  test('"force-free, no prong, choke or e-collar method"', () => {
+    // Arrange — the exact string the eval withheld.
+    const claimed = 'force-free, no prong, choke or e-collar method'
+
+    // Act
+    const grounded = factIsGrounded(claimed, method)
+
+    // Assert
+    expect(grounded).toBe(true)
+  })
+
+  test('and against the full profile, where the method is one fact among many', () => {
+    expect(factIsGrounded('force-free, no prong, choke or e-collar method', FACTS)).toBe(true)
+  })
+
+  test('a plural in the other direction too', () => {
+    expect(factIsGrounded('Private reactive-dog session, $150 per session', FACTS)).toBe(true)
+  })
+
+  test('the label still cannot carry a claim on its own', () => {
+    // "method" is ignored, not magic: a sentence whose only other content word
+    // is invented is still refused.
+    expect(factIsGrounded('Balanced training method', method)).toBe(false)
+  })
+
+  test('and it still refuses the inverted method', () => {
+    // The protection that matters most here: dropping a label must not drop a
+    // negation with it.
+    expect(factIsGrounded('prong and choke collar method', method)).toBe(false)
   })
 })
 
@@ -178,6 +226,31 @@ describe('contentTokens', () => {
 
   test('maps a spelled number to its digits', () => {
     expect(contentTokens('four sessions')).toEqual(['4', 'sessions'])
+  })
+})
+
+describe('singular', () => {
+  test('drops a plural s', () => {
+    expect(singular('collars')).toBe('collar')
+    expect(singular('sessions')).toBe('session')
+  })
+
+  test('leaves a word that merely ends in a vowel and an s', () => {
+    // "texas" must not become "texa", and a service area is exactly where this
+    // would bite.
+    expect(singular('texas')).toBe('texas')
+    expect(singular('videos')).toBe('videos')
+  })
+
+  test('leaves short words and double-s endings alone', () => {
+    expect(singular('yes')).toBe('yes')
+    expect(singular('class')).toBe('class')
+  })
+
+  test('handles the -ies and -es plurals', () => {
+    expect(singular('puppies')).toBe('puppy')
+    expect(singular('classes')).toBe('class')
+    expect(singular('prices')).toBe('price')
   })
 })
 

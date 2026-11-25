@@ -10358,3 +10358,95 @@ unreviewed production migration on every pull request.
 Until the three preview secrets exist the job **warns** on ordinary pull requests
 and **fails** on any pull request touching `supabase/migrations/`. A skip is
 drift, and drift on a migration PR is precisely what this closes.
+
+## D137 — the research leg's real ceiling was its own length, and it looked like success
+
+**25 November 2026.** Vlad ran `pnpm eval:scan:dog` locally — the third attempt
+at D134's gate, in a shell where a fifteen-minute process survives — and it came
+back **2 of 3 at $2.15**:
+
+```
+PASS #1  293s  24 searches  research out 20,695 tok, end_turn      videos=3 withheld=0
+FAIL #2  231s  20 searches  research stop_reason max_tokens, out 20,783 tok  → notes empty
+PASS #3  234s  22 searches  research out 14,956 tok                videos=3 withheld=1
+```
+
+### The failure mode, named at last
+
+Not searches and not the clock — both of which D136 had already widened, and
+neither of which fired. **The output ceiling.** Run #1 finished 88 tokens under
+where run #2 stopped, and that is a coin flip rather than a budget.
+
+It is also the *quietest* of the three budgets, which is why it took three
+attempts to find. A search or time abort has no final message and says so in the
+logs. A `max_tokens` stop **returns a message**: `stop_reason` sits one word away
+from `end_turn`, the usage is billed, the text block is full of notes — and the
+last object is half-written, so `JSON.parse` throws, `jsonFrom` returns null, and
+the scan tells the client it "could not find enough about that niche" after
+paying for twenty searches.
+
+### Four changes, and the order matters
+
+1. **The ask is compact by design.** `RESEARCH_NOTE_CAPS` caps every section and
+   every field: 4 formats, 5 posts, 4 hook notes, 5 topic notes, 3 length notes,
+   4 pattern notes, 8 pages, notes of 20 words, "how it goes" of 40, coverage of
+   60. Rule 11 says why — a reply cut off mid-sentence loses the notes after the
+   cut. `notes.ts` caps the same sections a little *above* the ask
+   (`NOTE_KEEP_CAPS`), because both passing runs recorded six formats where four
+   were asked for and those tokens are already spent by the time they arrive;
+   `notes.test.ts` asserts the keep never drops below the ask.
+
+   **Not in the JSON schema.** `minimum`/`maximum` on an integer is a 400 on this
+   model, found by a live run, so `maxItems` is not something to try blind
+   against a gate that costs $3.30 a round. The prompt is the request and the
+   parser is the rule — the same division `notes.ts` already uses for media urls.
+
+2. **The ceiling moved, and the projection moved with it.**
+   `RESEARCH_MAX_TOKENS` 16k → **24k**. The honest part is the projection:
+   `max_tokens` is *per request* and a paused turn is resumed up to twice, so
+   projecting one leg charged for less output than a resumed turn can emit, while
+   projecting three legs (72k) would refuse every scan we have ever run. So
+   `RESEARCH_OUTPUT_PROJECTION` is **36k** — 1.7x the worst measured total, 1.5x
+   one full leg — and `budget.test.ts` now asserts the whole projected request
+   stays under `SCAN_MAX_REQUEST_USD` with a fifth of it in hand (it projects
+   about $1.52 of $2).
+
+3. **A truncated reply is read, not discarded** (`partial-json.ts`). Cut back to
+   where a value finished, close what is still open, parse. This is *not* D136's
+   salvage, which was structurally impossible: nothing is re-sent, because the
+   bytes are already in hand. One rule in it has teeth — **a number is never a
+   cut point**, since closing `"views": 12345` at `12` would write a figure
+   nobody reported into a report, which is rule 6 and non-negotiable 7 at once.
+   When notes are salvaged, `TRUNCATED_COVERAGE_NOTE` tells leg two the research
+   is incomplete rather than final, because a writer with no coverage note
+   invents one. `notesAreUsable` is still the gate: a truncation with nothing
+   complete in it still fails the scan.
+
+4. **Output against the cap is logged on every run**, in the per-leg line and in
+   the leg-1 summary. The number that would have named this in one reading was
+   there to be printed all along.
+
+### The fourth withheld fact (D133's tail)
+
+Run #3 withheld one video on the fact *"force-free, no prong, choke or e-collar
+method"* against a profile reading *"Positive reinforcement, force-free. No
+prong, choke or e-collars."* The claim is the client's own method with a label on
+the end and one plural dropped — 0.75 coverage against a 0.8 threshold.
+
+So the comparison now **singularises** (`collars` ≡ `collar`) and ignores
+**field labels** (`method`, `approach`, `style`) — the words a model adds to say
+which *kind* of fact it is using. Both lists are deliberately tiny: every word
+ignored is a word that can no longer be the reason a claim passes *or* fails, so
+places, services, numbers and qualifiers all stay content words, and `singular`
+leaves "texas" and "videos" alone rather than inventing a stem. The strict half
+is untouched and tested: an invented number still fails, the right service at the
+wrong price still fails, and *"prong and choke collar method"* is still refused,
+because dropping a label must never drop a negation with it.
+
+### What this does not do
+
+It does not lower `RESEARCH_EFFORT` and it does not split research into two
+calls. Those remain the next levers, in that order, if the gate still refuses —
+and they are changes to *what the research is*, where these four are changes to
+how much of it survives. The gate is unchanged: three consecutive dog-trainer
+runs, run by Vlad, because this environment kills a fifteen-minute process.
