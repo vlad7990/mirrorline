@@ -37,7 +37,7 @@ const sourceSegment: SourceSegment = {
  * runs with `--max-warnings=0`. Written once here instead of three disable
  * comments.
  */
-function without(segment: Record<string, unknown>, key: string): Record<string, unknown> {
+function without(segment: object, key: string): Record<string, unknown> {
   return Object.fromEntries(Object.entries(segment).filter(([name]) => name !== key))
 }
 
