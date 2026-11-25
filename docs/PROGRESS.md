@@ -10,7 +10,7 @@ his priority order and in his words where it matters.
 | # | Fix | Migration | Who merges | State |
 |---|---|---|---|---|
 | 1 | Honest count on "Your first 3 videos", plus the withheld ideas and their reasons | no | me, auto-merge | **done** (D131) |
-| 2 | A client/brand name on the client profile, used on the report and the PDF cover | **yes** | **Vlad, by label** | **built — waiting on the label** |
+| 2 | A client/brand name on the client profile, used on the report and the PDF cover | **yes** | **Vlad, by label** | **done** (D131, #40) |
 | 3 | Dates in the workspace's zone, not UTC | no | me, auto-merge | **done** (D131) |
 | 4 | "Hook:" printed once | no | me, auto-merge | **done** (D131) |
 | 5 | Report history list on Niche Scan — date, niche, status, open, download PDF | probably not | me | queued |
@@ -81,28 +81,40 @@ Keeping them apart also keeps the first PR under the ~400-line rule.
 `pnpm build` all green. Screenshots are owed against a report that has a refusal
 in it — the sample report has none, so they wait on the next real scan.
 
-### Needs Vlad: the label on fix 2
+### All four are on production, and the label path ran clean a second time
 
-**Fix 2 carries a migration, so it needs `migrate-production` on its pull
-request.** That label is the whole procedure — it applies the migration,
-verifies production holds every migration in the tree, merges the PR and
-dispatches the checks (D130). I never add it, and the actor check would refuse
-me if I tried.
+| | |
+|---|---|
+| Fixes 1, 3, 4 | **#39**, auto-merged, `main` at `45ed780` |
+| Fix 2 | **#40**, merged **by the label**, `main` at `472b0ab` |
+| `Production schema check` | green on `472b0ab`, `workflow_dispatch` |
 
-- **The migration:** `supabase/migrations/20261124213000_client_brand_name.sql`
-- **What it does:** adds a nullable `client_profiles.brand_name`, and a **new
-  six-argument `save_client_profile`**. It does not drop the five-argument one.
-- **Why six arguments and not a defaulted sixth:** a defaulted sixth parameter
-  would make the deployed five-argument call match two signatures, and Postgres
-  raises `42725` — which would have broken profile saving in production the
-  moment the migration applied, before any code shipped. D97 hit the same
-  reasoning on `save_onboarding`.
-- **Gate output:** `migration-safety: 20 migration(s) are additive. OK`
+`Migrate production (label)` run **45535470590**, `pull_request_target`,
+success — the four jobs in the promised order:
 
-**After it merges:** open **Niche Scan → About your business**, fill in *What
-your business is called*, and the next report's cover reads that instead of
-"VN & MN Product Group". Until the field is filled the cover still falls back to
-the workspace name, which is deliberate — a name we have beats no name.
+| Job | Result |
+|---|---|
+| May this proceed? | success |
+| Apply migrations | success — `Applying migration 20261124213000_client_brand_name.sql…`, then `migration-drift: production has all 20 migration(s) in this tree. OK` **before** merging |
+| Merge the pull request | success — #40 merged as `472b0ab6` |
+| Report a refusal | **skipped** — the correct outcome |
+
+**This is the second clean run of the label path, and the first one that was
+not also its own rehearsal.** D130 proved the mechanism on #35; this one used
+it for ordinary work without anybody checking the workflow file first, which is
+what "settled" means.
+
+### One thing left for Vlad, and it is a form field rather than a deploy
+
+Open **Niche Scan → About your business**, fill in *What your business is
+called*, and the next report's cover reads that instead of "VN & MN Product
+Group". Until the field is filled the cover still falls back to the workspace
+name, which is deliberate — a name we have beats no name, and the fallback
+stops being reached the moment the field is filled.
+
+The agents are told it too, as the first line of the brief, and it is in
+`profileFacts` — so a script may say the business's name without the fact check
+refusing it as an invention.
 
 ## Handoff — 25 November 2026, end of session (the pipe is end-to-end; the next move is four fixes Vlad has in his head and not in this file)
 
