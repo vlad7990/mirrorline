@@ -24,7 +24,7 @@ export async function readClientProfileForAgent(
 ): Promise<ClientProfile> {
   const result = await supabase
     .from('client_profiles')
-    .select('service_area, method, avoid, services, handles')
+    .select('brand_name, service_area, method, avoid, services, handles')
     .eq('workspace_id', workspaceId)
     .limit(1)
 

@@ -179,10 +179,19 @@ export default async function TrendsPage() {
         />
       ) : (
         <NicheReportPanel
-          // The cover names the client (D122). Read here rather than in the
-          // panel: the page already holds the workspace, and a component that
-          // fetches its own identity is a component that cannot be previewed.
-          clientName={workspace?.name}
+          /*
+           * The cover names the client (D122). Read here rather than in the
+           * panel: the page already holds the workspace, and a component that
+           * fetches its own identity is a component that cannot be previewed.
+           *
+           * **The brand first, the workspace name only as a fallback (D131).**
+           * The first live report printed "Prepared for VN & MN Product Group",
+           * which is our account label on a document addressed to somebody
+           * else's business. The fallback stays because a name we have beats no
+           * name at all, and it stops being reached the moment the profile
+           * carries one — which is why the brand is the first field on the form.
+           */
+          clientName={profile.brandName ?? workspace?.name}
           findings={reportResult.report?.findings ?? SAMPLE_REPORT}
           isSample={reportResult.report === null}
           niche={reportResult.report?.niche}

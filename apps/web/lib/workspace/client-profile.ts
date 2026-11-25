@@ -40,6 +40,19 @@ export const PROFILE_PLATFORMS = ['instagram', 'tiktok', 'youtube'] as const
 export type ProfilePlatform = (typeof PROFILE_PLATFORMS)[number]
 
 export interface ClientProfile {
+  /**
+   * The name the client trades under (D131).
+   *
+   * The report's cover used to print the *workspace* name — ours, the account
+   * label — on a PDF addressed to a prospect. It lives here rather than on
+   * `workspaces` because the agents may say it: a hook that names the business
+   * is grounded only if the name is in `profileFacts`.
+   *
+   * Null means not told, and the cover's existing rule applies — leave the row
+   * out rather than print a placeholder. The fallback to the workspace name is
+   * the renderer's, never the stored value's.
+   */
+  readonly brandName: string | null
   /** "Miami", "South London", "online only". */
   readonly serviceArea: string | null
   /** How they work, in their words. */
@@ -52,6 +65,7 @@ export interface ClientProfile {
 }
 
 export const EMPTY_PROFILE: ClientProfile = {
+  brandName: null,
   serviceArea: null,
   method: null,
   avoid: [],
@@ -109,6 +123,7 @@ export function parseClientProfile(value: unknown): ClientProfile {
   const row = value as Record<string, unknown>
 
   return {
+    brandName: str(row.brandName ?? row.brand_name, 120),
     serviceArea: str(row.serviceArea ?? row.service_area, 120),
     method: str(row.method, 400),
     avoid: strList(row.avoid, 10),
@@ -120,6 +135,7 @@ export function parseClientProfile(value: unknown): ClientProfile {
 /** Has the client told us anything? Drives the "tell us about your business" copy. */
 export function isProfileEmpty(profile: ClientProfile): boolean {
   return (
+    profile.brandName === null &&
     profile.serviceArea === null &&
     profile.method === null &&
     profile.avoid.length === 0 &&
@@ -142,6 +158,10 @@ export function isProfileEmpty(profile: ClientProfile): boolean {
  */
 export function profileFacts(profile: ClientProfile, niche?: string | null): readonly string[] {
   const facts = [
+    // The trading name is a fact about the business, and the one a hook is most
+    // likely to want (D131). Without it here, "book with Oakline this week"
+    // would be refused by the fact check as an invention.
+    profile.brandName,
     profile.serviceArea,
     profile.method,
     niche ?? null,
@@ -160,6 +180,7 @@ export function profileFacts(profile: ClientProfile, niche?: string | null): rea
 export function profileBrief(profile: ClientProfile): string {
   const lines: string[] = []
 
+  if (profile.brandName) lines.push(`What the business is called: ${profile.brandName}`)
   if (profile.serviceArea) lines.push(`Where they work: ${profile.serviceArea}`)
   if (profile.method) lines.push(`Their method, in their words: ${profile.method}`)
   if (profile.avoid.length > 0) {

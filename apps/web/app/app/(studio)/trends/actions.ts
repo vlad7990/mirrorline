@@ -163,7 +163,15 @@ export async function saveClientProfileAction(
 
   const supabase = await createSupabaseServerClient()
 
+  /*
+   * The **six-argument** signature (D131). A defaulted sixth parameter would
+   * have made the deployed five-argument call ambiguous — Postgres `42725` — so
+   * `20261124213000_client_brand_name.sql` adds a distinct signature and leaves
+   * the old one callable. D104's order: the schema is applied first, and this
+   * deploy is what stops calling the five-argument version.
+   */
   const { error } = await supabase.rpc('save_client_profile', {
+    p_brand_name: (formData.get('brandName') as string | null)?.slice(0, 120) ?? null,
     p_service_area: (formData.get('serviceArea') as string | null)?.slice(0, 120) ?? null,
     p_method: (formData.get('method') as string | null)?.slice(0, 400) ?? null,
     p_avoid: lines(formData.get('avoid'), 10),
