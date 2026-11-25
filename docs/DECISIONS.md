@@ -10455,3 +10455,16 @@ every pull request before e2e. That one keeps preview ahead of the browser
 tests automatically; this one applies a branch's migration on demand, which is
 what a session needs when its own feature is the thing being tried. Both read
 the same two secrets.
+
+**Addendum, the same day.** A `workflow_dispatch` workflow is only triggerable
+once its file is on the **default branch** — dispatching it from the branch
+that introduced it answers `HTTP 404: workflow migrate-preview.yml not found on
+the default branch`. Tested rather than assumed, because the consequence is
+counter-intuitive: **this workflow cannot apply its own introducing branch.**
+
+So the sequence for the pull request that brings it is: add the two secrets,
+merge, then dispatch. That is not a gap in the slice it arrived with — every
+read in the video panel fails soft, so CI is green with the tables absent — but
+it is the reason the SCAN session's per-pull-request `preview-schema` job is
+the right tool for "preview must be ahead *before* this merges", and this one
+is the right tool for "apply that branch now".

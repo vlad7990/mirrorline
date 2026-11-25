@@ -100,9 +100,18 @@ session owns generator adapters, and nothing here touches either.
   fails if they match. There is also no `ref` input to mistype — which removes
   the `--ref` versus `-f ref=` trap D130 had to document for production.
 
+  **One ordering fact, tested rather than assumed:** a `workflow_dispatch`
+  workflow is only triggerable once its file is on `main` — dispatching it from
+  this branch answers `HTTP 404: workflow migrate-preview.yml not found on the
+  default branch`. So it cannot apply its own introducing branch. The sequence
+  is: add the two secrets → merge this PR → I dispatch it and preview catches
+  up. Nothing is waiting on that, because every read fails soft and CI is green
+  with the tables absent.
+
   (The SCAN session's `preview-schema` CI job does the same thing on every pull
-  request. The two are complementary: theirs keeps preview ahead of e2e
-  automatically, this one is for applying a branch's migration on demand.)
+  request and has no such restriction. The two are complementary: theirs keeps
+  preview ahead of e2e automatically, this one applies a branch's migration on
+  demand.)
 - **N3. The Railway `video-worker` service.** Dockerfile
   `services/worker/Dockerfile.video`, build context the repo root,
   **`WORKER_KINDS=render-cuts`**, **Healthcheck Path `/healthz`**, replica limits

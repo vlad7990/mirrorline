@@ -31,6 +31,16 @@
 # else. There is one fewer thing to get wrong and one fewer way to apply the
 # wrong tree.
 #
+# **One GitHub rule to know before relying on it:** a `workflow_dispatch`
+# workflow can only be triggered once its file is on the **default branch**.
+# Tested from the branch that introduced it, which answered
+# `HTTP 404: workflow migrate-preview.yml not found on the default branch`. So
+# this workflow cannot apply its own introducing branch — the first dispatch
+# happens after that merge. For a pull request whose migration needs to be on
+# preview *before* it merges, the route is the SCAN session's `preview-schema`
+# job in `ci.yml`, which runs per pull request and does not have this
+# restriction.
+#
 # ==============================================================================
 # It cannot touch production, and that is checked rather than intended
 # ==============================================================================
