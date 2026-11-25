@@ -9601,6 +9601,44 @@ consistent with it: #33 merged at 20:13 and both workflows ran, because
 auto-merge is attributed to the user who armed it, not to `GITHUB_TOKEN`. That
 is a different path from this one, which is why it proves nothing about it.
 
+### Second addendum, 25 November: the label was bypassed within the hour, twice
+
+Both pull requests it was built for were merged with the **Merge button**, 27
+seconds apart, and the two failures are worth recording separately because only
+one of them was visible.
+
+**#31 → `main` as `ffcd83a`, unmigrated.** `main` then deployed code for a table
+production did not have. `Production schema check` went **red** on that commit
+naming `20261124180000` — the check doing precisely the job D104 gave it, which
+is the one good outcome here. Production was one migration behind, and the
+heartbeat degraded as designed: the write logs once and is swallowed, jobs keep
+draining, `/healthz` answers 503.
+
+**#32 → `feat/worker-heartbeat` as `0e3d45e`.** It was still stacked, so the
+button merged it into #31's branch. Nothing failed, nothing went red, and
+**neither the code nor the migration reached `main`** — a green merge into the
+wrong branch. The guard added hours earlier refuses exactly this (`base must be
+main`), and the button does not consult the guard.
+
+Three things follow.
+
+1. **The rule is now in CLAUDE.md, not in a habit.** A pull request carrying a
+   migration is merged by the label and by nothing else — never the Merge
+   button, never auto-merge, never `gh pr merge`. It applies to Vlad too, which
+   is the whole reason it has to be written down: the label *is* his approval,
+   so "he can also just merge it" quietly removes the migrate step from the
+   only route that has one.
+2. **The recovery is the emergency route, not a re-label.** Once a pull request
+   is merged the label path has nothing to act on — its own refusal text has
+   said so since it was written. *Migrate production* with the **`ref` input**
+   set to `main` is the one action.
+3. **Mechanical enforcement is still missing, and is the honest gap.** Nothing
+   stops the button. A ruleset cannot express "this pull request touches
+   `supabase/migrations/`, so require the label", and the nearest approximation
+   — a required check that fails on an unlabelled migration PR — would have to
+   be satisfied *before* the label exists, which inverts the order. Left as
+   debt rather than guessed at.
+
 ### What is kept
 
 `migrate-production.yml` stays, as the **emergency** route: migrating `main`
