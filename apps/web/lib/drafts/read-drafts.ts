@@ -24,7 +24,9 @@ import { createSupabaseServerClient } from '@/lib/supabase/server-client'
 
 import { parseDraft, type DraftSummary } from './types'
 
-const DRAFT_COLUMNS = 'id, kind, title, status, originality, attempts, approved_at'
+// `body` carries the gate's reason on a refused row (D131), which is what the
+// report prints when fewer than three ideas survived.
+const DRAFT_COLUMNS = 'id, kind, title, status, originality, attempts, approved_at, body'
 
 export async function readReportDrafts(reportId: string): Promise<readonly DraftSummary[] | null> {
   if (reportId === '') return []

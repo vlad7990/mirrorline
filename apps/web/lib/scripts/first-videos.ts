@@ -42,7 +42,13 @@ import { NO_USAGE, type EnvLike, type Usage } from '../copilot/spend'
 import type { FormatFinding, TrendExample } from '../niche-scan/report'
 import type { ComparisonCorpus } from '../originality/gate'
 import { profileBrief, profileFacts, type ClientProfile } from '../workspace/client-profile'
-import { parseVideoIdeas, screenIdeas, type RejectedIdea, type VideoIdea } from './video-idea'
+import {
+  outcomeLines,
+  parseVideoIdeas,
+  screenIdeas,
+  type RejectedIdea,
+  type VideoIdea,
+} from './video-idea'
 
 /** `18 §0`: the studio tier. The scan's model, a fraction of the work. */
 export const SCRIPT_MODEL = 'claude-sonnet-5'
@@ -394,13 +400,15 @@ export async function writeFirstVideos(request: FirstVideosRequest): Promise<Fir
     facts,
   })
 
-  // Logged, never silent. A gate whose refusals are invisible is the
-  // predecessor project's gate (§V3).
-  for (const rejection of screened.rejected) {
-    console.warn(`[first-videos] rejected "${rejection.title}": ${rejection.reason}`)
-  }
-
   const kept = screened.kept.slice(0, IDEAS_KEPT)
+
+  // Every idea's fate, not just a count of the refusals (D131). Logged, never
+  // silent: a gate whose refusals are invisible is the predecessor project's
+  // gate (§V3), and a log that says "3 refused" without saying which three is
+  // only one step better than silence.
+  for (const line of outcomeLines(drafted, screened, kept)) {
+    console.warn(`[first-videos] ${line}`)
+  }
 
   await recordRun(supabase, {
     workspaceId,

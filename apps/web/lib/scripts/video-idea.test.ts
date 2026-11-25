@@ -18,8 +18,11 @@ import type { ComparisonCorpus } from '../originality/gate'
 import {
   factIsGrounded,
   ideaDraft,
+  outcomeLines,
   parseVideoIdea,
+  saysTheSameAs,
   screenIdeas,
+  splitHookBeat,
   type VideoIdea,
 } from './video-idea'
 
@@ -237,5 +240,123 @@ describe('what the parser refuses to call an idea', () => {
     const parsed = parseVideoIdea({ ...IDEA, formatName: undefined, format_name: 'Myth vs fact' })
 
     expect(parsed?.formatName).toBe('Myth vs fact')
+  })
+
+  test('strips a label the model wrote into the hook as well as onto it', () => {
+    // Arrange — the second way "Hook:" came out twice (D131).
+    const labelled = { ...IDEA, hook: 'Hook: Everyone asks me whether their dog will grow out of this.' }
+
+    // Act
+    const parsed = parseVideoIdea(labelled)
+
+    // Assert
+    expect(parsed?.hook).toBe('Everyone asks me whether their dog will grow out of this.')
+  })
+
+  test('keeps a hook that is only the word, rather than emptying it', () => {
+    expect(parseVideoIdea({ ...IDEA, hook: 'Hook:' })?.hook).toBe('Hook:')
+  })
+})
+
+/**
+ * "Video 1 prints 'Hook:' twice — de-duplicate" (D131).
+ *
+ * The report gives the hook its own line, and the beat list underneath carried
+ * a beat labelled Hook — which `SCRIPT_SYSTEM` explicitly asks for. So this was
+ * true of every idea the agent has ever written, not of one bad row.
+ */
+describe('splitHookBeat', () => {
+  test('lifts the Hook beat out of the list, so the label is printed once', () => {
+    // Arrange
+    const beats = IDEA.beats
+
+    // Act
+    const { hookBeat, rest } = splitHookBeat(beats, IDEA.hook)
+
+    // Assert
+    expect(rest.map((beat) => beat.label)).toEqual(['Setup', 'Payoff', 'Call to action'])
+    // It says something the hook line does not, so it survives as a second line.
+    expect(hookBeat?.text).toBe('Ask the question back, in the words owners use.')
+  })
+
+  test('drops the Hook beat entirely when it only repeats the hook line', () => {
+    const repeated = [{ label: 'Hook', text: IDEA.hook }, ...IDEA.beats.slice(1)]
+
+    const { hookBeat, rest } = splitHookBeat(repeated, IDEA.hook)
+
+    expect(hookBeat).toBeNull()
+    expect(rest).toHaveLength(3)
+  })
+
+  test('leaves an idea with no Hook beat untouched', () => {
+    const beats = IDEA.beats.slice(1)
+
+    const { hookBeat, rest } = splitHookBeat(beats, IDEA.hook)
+
+    expect(hookBeat).toBeNull()
+    expect(rest).toBe(beats)
+  })
+
+  test('a second Hook beat stays visible rather than being swallowed', () => {
+    // A malformed idea. Hiding the duplicate would hide content; the point of
+    // the fix is the repeated label, not the repeated beat.
+    const twice = [...IDEA.beats, { label: 'Hook', text: 'And again, differently.' }]
+
+    const { rest } = splitHookBeat(twice, IDEA.hook)
+
+    expect(rest.filter((beat) => beat.label === 'Hook')).toHaveLength(1)
+  })
+})
+
+/**
+ * "Log the per-idea outcome" (D131).
+ *
+ * The log said "3 idea(s) refused" and named none of them, which is why nobody
+ * could tell from the Railway output *why* the first live report had one video.
+ */
+describe('outcomeLines', () => {
+  test('names every idea and both numbers, not just a count', () => {
+    // Arrange — one survives, one invents a fact.
+    const invented: VideoIdea = { ...IDEA, title: 'Invented', fact: 'Trusted by 500 owners' }
+    const drafted = [IDEA, invented]
+    const screened = screenIdeas({ ideas: drafted, corpora: CORPORA, facts: FACTS })
+
+    // Act
+    const lines = outcomeLines(drafted, screened, screened.kept)
+
+    // Assert
+    expect(lines[0]).toBe('drafted 2 · kept 1 · refused 1')
+    expect(lines[1]).toContain(`kept "${IDEA.title}"`)
+    expect(lines[1]).toContain('limit')
+    expect(lines[2]).toContain('refused "Invented"')
+    expect(lines[2]).toContain('not in the client')
+  })
+
+  test('an idea dropped by the cap is reported as held back, not as refused', () => {
+    // Arrange — everything passed; the caller kept fewer than it was handed.
+    const drafted = [IDEA]
+    const screened = screenIdeas({ ideas: drafted, corpora: CORPORA, facts: FACTS })
+
+    // Act
+    const lines = outcomeLines(drafted, screened, [])
+
+    // Assert
+    expect(lines[0]).toBe('drafted 1 · kept 0 · refused 0 · 1 passed and were held back by the cap')
+  })
+})
+
+describe('saysTheSameAs', () => {
+  test('ignores case and punctuation, which is what made the duplicate hard to see', () => {
+    expect(saysTheSameAs('Your dog is not stubborn!', 'your dog is not stubborn')).toBe(true)
+  })
+
+  test('counts a line that contains the other, because a beat adds direction', () => {
+    expect(saysTheSameAs('To camera: your dog is not stubborn', 'your dog is not stubborn')).toBe(
+      true,
+    )
+  })
+
+  test('two different lines are two different lines', () => {
+    expect(saysTheSameAs('Ask the question back.', IDEA.hook)).toBe(false)
   })
 })
