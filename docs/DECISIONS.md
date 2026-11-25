@@ -10085,3 +10085,145 @@ empty — a name we have beats no name, and the fallback stops being reached the
 moment the field is filled, which is why it is the *first* field on the form.
 Writing the workspace name into the column instead would have made a guess
 permanent and indistinguishable from an answer.
+
+---
+
+## D137 — generators are adapters behind one interface, and the label is a literal rather than a default
+
+**25 November 2026.** V4, "Generate with AI". Vlad approved
+`docs/plan/AI_GENERATION_V4.md` with five decisions and one coordination rule;
+this entry records them and the five choices the implementation then forced.
+
+Numbered D137 rather than D132: D132–D136 belong to the SCAN session on
+`feat/scan-two-legs`, which has not merged here. Reusing them would collide.
+
+**What Vlad decided.**
+
+1. **xAI Grok Imagine is the primary provider, with zero data retention on.**
+   The default is 30 days of xAI holding inputs *and* outputs; ZDR deletes
+   within an hour of inference or on delivery, whichever is earlier, with no
+   logs or backups. It is an Order Form line item, so it is a purchase rather
+   than a flag — and it is the difference between a sentence we can put on the
+   data-rights card and one we would have to qualify.
+2. **Google is the later second adapter, paid tier only.** Not built in this
+   slice. `registry.ts` carries the condition that has to ship with it: on
+   Google's unpaid services, by Google's own terms, "human reviewers may read,
+   annotate, and process your API input and output". A silent fallback to the
+   free tier is therefore the worst available bug, and the adapter must refuse
+   to run without billing rather than quietly degrade.
+3. **Runway is not built at all.** Its published terms grant a perpetual,
+   sublicensable licence over inputs and outputs and permit training on them.
+   There is no Runway adapter and no commented-out line for one, because a
+   commented-out line is an invitation. `registry.test.ts` asserts the absence
+   rather than trusting that nobody adds it back.
+4. **$15 a month per workspace for media, and $0.50 per request.**
+5. **The AUP question goes on the lawyer list and does not block slice 1.** xAI's
+   ToS §1.1 expressly permits building a "Bundled Service" on the API and
+   distributing it to End Users; its AUP forbids "scraping, harvesting or
+   reselling any Input or Output". The sensible reading is that shipping
+   generated scenes inside our product to a paying client is the first and that
+   selling raw clips as a commodity is the second — but the two documents are
+   not drafted to resolve each other, and "sensible reading" is doing too much
+   work in a sentence that decides whether our supply chain is sound. **Open,
+   assigned to Vlad, blocking the day a client is billed for generated output
+   and nothing before it.**
+
+**The coordination rule, and what it turned out to mean.** The VIDEO session
+owns storage, buckets and the `Segment` type; this session imports theirs rather
+than declaring its own. Their type does not exist in code yet — it is in
+`docs/plan/V5_VIDEO_PIPELINE_PLAN.md` §1.6, untracked, on `feat/video-v5` — and
+their plan says in terms that "the AI-GENERATION session produces `generated`
+segments". So nothing here declares a cut-list union. `GeneratedAsset` is the
+generation-side artefact, named for what produced it, and `types.ts` carries the
+field-by-field mapping onto their `generated` case so the eventual conversion is
+a rename in one function. **That function is deliberately unwritten**, because
+writing it would mean declaring their type to write it against.
+
+**The label is a literal, not a parameter.** `GeneratedAsset.source` is typed
+`'ai-scene'` and `.label` is typed `'AI-generated'` — single-value string
+literal types, not `string`. An asset from this module cannot be constructed
+unlabelled, which is a stronger statement than a default would make.
+Non-negotiable 4 is already enforced twice downstream —
+`scheduled_posts.has_ai_scenes` has no `UPDATE` grant to `authenticated`, and
+`post-panel.tsx` locks the toggle on — and this is the same rule moved to the
+earliest point it can be stated. The canned adapter carries the label too: a
+sample scene is still an AI scene, and an adapter that dropped it because the
+pixels were fake would teach the wrong lesson to whoever writes the next one.
+
+**Consent is enforced by the absence of fields.** `GenerationRequest` has no
+`referenceImages`, no `voiceReference`, no `sourceFrame`, no `lipSync` and no
+`person`. Those are precisely the features `grok-imagine-video-1.5` is sold on,
+and they are left out because non-negotiable 5 requires a stored consent record
+and we hold none. A field that exists is a field somebody fills in eighteen
+months from now, in a hurry, for a good reason; a field that does not exist has
+to be added in a diff somebody reviews. Non-negotiable 1 gets the same
+treatment, and it is the same trick `20261123020000_jobs.sql` plays by having no
+column for a blob: with nowhere to put a frame from somebody else's video, an
+adapter cannot be handed one.
+
+**`providerWatermark` is three-valued, and the third value is the honest one.**
+`null` means the provider did not say — which is the true answer for xAI media
+today. Their AUP forbids "stripping, altering or circumventing embedded
+provenance metadata or watermarks", implying something is embedded; their
+watermarking documentation covers text (SynthID Text) and audio and says
+nothing about images or video. So the UI reads "we label this ourselves" rather
+than claiming a watermark we cannot evidence. `false` would be a claim we have
+not earned either. Same rule as `VideoIdea.originality`'s `null`: not checked
+must never render as checked and clean.
+
+**The media cap is its own budget, its own variable and its own sum.** The
+co-pilot's ceiling is $20; generation at the default shape is $0.34 a short and
+three a day is about $31 a month, so one shared ceiling would mean a fortnight
+of posting starves the co-pilot and raising one raises the other.
+`GENERATION_MONTHLY_CAP_USD` defaults to $15. Summing it separately needs the
+rows to be separable, which is why `agent_runs.agent` is written as
+`media_generator` rather than `remake_producer` — generating a scene *is* the
+Remake Producer's work and this is not an eighth agent, but the script agent
+already logs under that name and an exact match on `agent` cannot rot the way a
+hardcoded list of model ids would. The Agents screen should fold the line under
+the Remake Producer when it displays it.
+
+**$0.50 per request has a consequence, and it is recorded rather than
+smoothed.** At $0.14 a second, 1080p crosses the ceiling at about three and a
+half seconds — so 1080p clips are available short and refused long, with the
+refusal saying which limit it hit. `spend.test.ts` asserts that arithmetic so it
+cannot drift silently. Quietly raising the ceiling to make 1080p comfortable
+would have been a change to an approved number made by whoever hit it first;
+flagged for Vlad instead.
+
+**A refusal is a return value, logged, and never retried.** `GenerationOutcome`
+has four cases where two would compile. `refused` is a rule saying no — ours or
+the provider's — and `capped` is the ceiling saying no before anything was
+called; both become `agent_runs.status = 'refused'` at $0.00, because the
+column's own comment is that "a cap that is working looks identical to a feature
+nobody used" if refusals leave no row. Retrying either spends money to be told
+the same thing. Only `failed` is worth trying again. D129 is the precedent that
+made this worth being deliberate about: a gate whose failures never reach the
+database can be rendered perfectly and never be given anything to render.
+
+**Two audiences, two strings, and the split is not squeamishness.**
+`SafetyVerdict.reason` goes to `agent_runs.reason` and never contains the
+prompt — 18 §3.3, and that column's own instruction that "the client's text does
+not" belong there. `message` goes to the screen and *may* quote what matched,
+because the client wrote the sentence and is the one who has to change it.
+`safety.test.ts` asserts both directions, including that no distinctive word of
+a refused prompt reaches `reason`.
+
+**The import-graph walker moved out of the co-pilot's test.** V4's providers are
+a second chokepoint needing the same sweep, and two copies of a graph walk is
+the arrangement where one quietly gets weaker and still reports a clean result.
+It now lives in `lib/testing/import-graph.ts`; the assertions stayed with their
+own invariants. Extracting it immediately found a latent bug: `valueSpecifiers`
+claimed to be "the subset not erased at compile time" and did not include
+side-effect imports, which have no `from` clause and are the one kind that can
+never be erased. Harmless while the only caller filtered for
+`@anthropic-ai/sdk`, and wrong the moment V4's sweep asked "does this module
+pull in `server-only`" and was told no about two files that plainly do.
+
+**Slice 1 needed no migration, by design rather than by luck.** `agent_runs`
+takes a media row as it stands — `agent` and `model` are free text, `usd` is a
+`numeric`. A new `jobs.kind` would need the `migrate-production` label, and the
+label is Vlad's; a storage bucket would need its own RLS review, which
+`20261123020000_jobs.sql` already says is "its own review". Both wait for the
+VIDEO session's bucket to land, per Vlad's rule that no migration comes from
+this session until theirs does.

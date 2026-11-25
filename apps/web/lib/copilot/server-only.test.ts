@@ -20,6 +20,12 @@
  * So the check is a reachability question over the real import graph, which
  * is the only form of it that would have caught the mistake it exists for.
  *
+ * The walker itself now lives in `lib/testing/import-graph.ts`. It moved there
+ * when V4's generation providers became a second chokepoint needing the same
+ * sweep: two copies of a graph walk is the arrangement where one of them
+ * quietly gets weaker and still reports a clean result. The assertions stayed
+ * here, because the invariant is the co-pilot's and not the instrument's.
+ *
  * ## Two guards against the test passing vacuously
  *
  * A graph walk that resolved nothing would report no violations and look
@@ -31,18 +37,15 @@
  * forbids cannot be trusted when it says the thing is absent.
  */
 
-import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { describe, expect, test } from 'vitest'
 
-import { stripComments } from '../copy/banned-phrases'
+import { buildImportGraph } from '../testing/import-graph'
 
 const WEB_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
-
-const SKIPPED = new Set(['node_modules', '.next', '.turbo', 'dist', 'build', 'coverage'])
-const EXTENSIONS = ['.ts', '.tsx']
 
 const ADAPTER = path.join(WEB_ROOT, 'lib/copilot/adapter.ts')
 /**
@@ -59,145 +62,9 @@ function isSdk(specifier: string): boolean {
   return specifier === SDK_SPECIFIER || specifier.startsWith(`${SDK_SPECIFIER}/`)
 }
 
-function walk(directory: string): readonly string[] {
-  return readdirSync(directory).flatMap((entry) => {
-    if (SKIPPED.has(entry)) return []
-    const full = path.join(directory, entry)
-    if (statSync(full).isDirectory()) return walk(full)
-    return EXTENSIONS.includes(path.extname(full)) ? [full] : []
-  })
-}
+const GRAPH = buildImportGraph(WEB_ROOT)
+const { allFiles: ALL_FILES, modules: MODULES, byFile: BY_FILE, reachableFrom, relative } = GRAPH
 
-const ALL_FILES = walk(WEB_ROOT)
-
-/** Every `from '...'` and `import('...')` specifier in a file. */
-function specifiersIn(source: string): readonly string[] {
-  const found: string[] = []
-  for (const match of source.matchAll(/(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g)) {
-    const specifier = match[1]
-    if (specifier) found.push(specifier)
-  }
-  return found
-}
-
-/**
- * Only the specifiers that survive compilation.
- *
- * **`import type X from 'y'` emits nothing.** TypeScript erases it, so it
- * cannot put a byte of `y` into a bundle — which makes it the safe way for the
- * adapter to keep using the SDK's shapes (`TextBlockParam`, `Usage`) while the
- * chokepoint owns every runtime value. Counting it as an import would force a
- * choice between a wrong test and a worse design.
- *
- * `specifiersIn` above cannot tell the two apart, because both contain
- * `from '...'`. This looks at what sits between the `import` keyword and the
- * `from`: a leading `type` means the whole statement is erased. An inline
- * `import { type A, B }` is **not** erased — `B` is real — and correctly does
- * not match, because `type` is not the first token.
- *
- * Comments are stripped first, so a sentence discussing an import is not one.
- */
-function valueSpecifiersIn(source: string): readonly string[] {
-  const clean = stripComments(source)
-  const found: string[] = []
-
-  // `[^'"]` on the clause, not `[\s\S]`, and that is load-bearing. A
-  // side-effect import — `import 'server-only'` — has no `from`, so a clause
-  // that could cross quotes would run on to the *next* statement's `from` and
-  // attribute that specifier to the wrong statement. `lib/niche-scan/scan.ts`
-  // caught this: its `import 'server-only'` swallowed the following
-  // `import type Anthropic from '@anthropic-ai/sdk'` and reported an erased
-  // type import as a runtime one.
-  for (const match of clean.matchAll(/\b(?:import|export)\b([^'"]*?)from\s*['"]([^'"]+)['"]/g)) {
-    const clause = match[1] ?? ''
-    const specifier = match[2]
-    if (!specifier) continue
-    if (/^\s*type\b/.test(clause)) continue
-    found.push(specifier)
-  }
-
-  // A dynamic `import('x')` is always a runtime import, whatever it is used for.
-  for (const match of clean.matchAll(/\bimport\s*\(\s*['"]([^'"]+)['"]/g)) {
-    if (match[1]) found.push(match[1])
-  }
-
-  return found
-}
-
-/** A specifier to a file on disk, or null when it points outside the app. */
-function resolve(fromFile: string, specifier: string): string | null {
-  let base: string
-  if (specifier.startsWith('@/')) {
-    base = path.join(WEB_ROOT, specifier.slice(2))
-  } else if (specifier.startsWith('.')) {
-    base = path.resolve(path.dirname(fromFile), specifier)
-  } else {
-    // A package, or another workspace. Neither can reach back into apps/web.
-    return null
-  }
-
-  for (const extension of EXTENSIONS) {
-    const candidate = `${base}${extension}`
-    if (ALL_FILES.includes(candidate)) return candidate
-  }
-  for (const extension of EXTENSIONS) {
-    const candidate = path.join(base, `index${extension}`)
-    if (ALL_FILES.includes(candidate)) return candidate
-  }
-  return null
-}
-
-interface Module {
-  readonly file: string
-  readonly isClient: boolean
-  readonly imports: readonly string[]
-  readonly specifiers: readonly string[]
-  /** The subset that is not erased at compile time. */
-  readonly valueSpecifiers: readonly string[]
-}
-
-const MODULES: readonly Module[] = ALL_FILES.map((file) => {
-  const source = readFileSync(file, 'utf8')
-  const specifiers = specifiersIn(source)
-  const valueSpecifiers = valueSpecifiersIn(source)
-
-  return {
-    file,
-    // The directive has to be the first statement, so looking at the top of
-    // the file is not a shortcut — it is where the only valid one can be.
-    isClient: /^\s*(?:\/\*[\s\S]*?\*\/\s*|\/\/[^\n]*\n\s*)*['"]use client['"]/.test(source),
-    imports: specifiers
-      .map((specifier) => resolve(file, specifier))
-      .filter((resolved): resolved is string => resolved !== null),
-    specifiers,
-    valueSpecifiers,
-  }
-})
-
-const BY_FILE = new Map(MODULES.map((module) => [module.file, module]))
-
-/** Every module reachable from here, following imports as far as they go. */
-function reachableFrom(start: string): ReadonlySet<string> {
-  const seen = new Set<string>()
-  const queue = [start]
-
-  while (queue.length > 0) {
-    const current = queue.pop()
-    if (!current || seen.has(current)) continue
-    seen.add(current)
-
-    for (const next of BY_FILE.get(current)?.imports ?? []) {
-      if (!seen.has(next)) queue.push(next)
-    }
-  }
-
-  seen.delete(start)
-  return seen
-}
-
-function relative(file: string): string {
-  return path.relative(WEB_ROOT, file)
-}
 
 describe('the import graph this test reads', () => {
   test('found the app, so a clean result means something', () => {
@@ -283,10 +150,9 @@ describe('the adapter is server-side only', () => {
     // access would push those explanations out of the code, which costs more
     // than it saves. Same reasoning as the banned-phrase sweep, and the same
     // helper does the stripping.
-    const readers = MODULES.filter((module) => {
-      const source = stripComments(readFileSync(module.file, 'utf8'))
-      return /\benv\.ANTHROPIC_API_KEY\b/.test(source)
-    }).map((module) => relative(module.file))
+    const readers = MODULES.filter((module) =>
+      /\benv\.ANTHROPIC_API_KEY\b/.test(GRAPH.sourceWithoutComments(module.file)),
+    ).map((module) => relative(module.file))
 
     // Exactly one, named. The chokepoint answers `hasAnthropicKey()` and
     // hands the decision on — `copilotMode` turns it into a `CopilotMode`, a
