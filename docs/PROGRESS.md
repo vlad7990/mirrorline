@@ -1,5 +1,220 @@
 # Progress — morning handoff
 
+## Handoff — VIDEO session, 25 November 2026 (slice 1 is built and green; the next move is Vlad's phone and four numbers)
+
+**Read `docs/TESTING_SLICE_1_ON_PREVIEW.md` first** — it is the live task, and
+everything below is context for it.
+
+### Where everything stands
+
+| | State |
+|---|---|
+| **#44** `feat/video-v5-slice-1` | V5 slice 1. **CI green** on every job (`changes`, `verify`, `pipeline`, `e2e`). **Needs the `migrate-production` label** — it carries a migration *and* touches `services/worker`, so it is Vlad's twice over. |
+| **#46** `docs/v5-slice-2-plan` | The slice-2 plan (animated brand templates) + D152 + the drafted Remotion email. Docs only. **Approved in principle, parked** until slice 1 is proven on real footage. |
+| Preview schema | `20261125183653_video_pipeline` **applied by Vlad**. Buckets, `video_assets`, `transcripts`, `renders`, `approve_render` all live on `qypakxvxnjmsvxmxiynf`. |
+| Decision range | **D150–D159** is this session's (CLAUDE.md now carries the allocation). D150, D151, D152 used. Next is **D153**. |
+| `main` | Moved while slice 1 was in flight: the AI-GENERATION session merged #43 and #45 (their D140, D141). #44 and #46 both need a rebase before merge — `docs/DECISIONS.md` is an append-vs-append conflict in both. |
+
+### What a user can do, on preview, today
+
+Send a long video of their own from the studio and get back one captioned 9:16
+short cut to the four beats of an idea they approved — then watch it and approve
+it. Upload goes straight to Storage over TUS (no bytes through Vercel, resumable,
+up to 5 GB and an hour); the render transcribes once, aligns each beat, burns
+`.ass` captions with libass, exports 1080×1920 H.264 and stores it privately.
+Every refusal says why in a sentence the client can act on.
+
+### The one thing standing between that and "proven"
+
+**No worker is deployed against preview**, so a render only happens while Vlad
+runs one locally. That is what the testing doc walks through, and it needs two
+one-off installs on his Mac: an ffmpeg with libass (`brew upgrade ffmpeg` — his
+8.1.1 has none, D16) and faster-whisper (`uv sync --extra transcribe`).
+
+**The four numbers to come back with** are the per-beat coverages the worker now
+logs. They decide the only open question in slice 1: whether a beat written as a
+*direction* can be found in footage of somebody saying something adjacent to it.
+If the numbers are low the fix is upstream — the script agent writing beats as
+spoken lines — which is the SCAN session's lane and a conversation to have with
+a measurement in hand rather than an opinion.
+
+### Done since the last handoff
+
+- **Slice 1, whole** — migration and two private buckets; `beats.py` (the
+  aligner that refuses rather than approximates), `ass_captions.py`,
+  `short.py` + `render-short` and `transcribe-source`; `render_segments`,
+  `concat_filter`, `pick_h264_encoder`, `burn_poster`, `font_families` in
+  `ffmpeg.py`; the worker's `render-cuts` handler, `WORKER_KINDS`, a one-hour
+  render lease; `Dockerfile.video` with a digest-pinned LGPL ffmpeg; the studio
+  panel, TUS upload, render card and `approve_render`. **1332 unit tests, 143
+  engine tests, one e2e spec.**
+- **Gates** — the ffmpeg pin check in `pnpm licence-check` (fails if the pinned
+  artefact stops saying `lgpl`, says `latest`, or loses its digest), and
+  `combine-errors` allow-listed by name with its evidence rather than by
+  widening the list.
+- **`migrate-preview.yml`** (D151) — dispatch-only, no `ref` box to mistype,
+  refuses if the config points at production. Needs two secrets, and **cannot
+  apply its own introducing branch** (workflow_dispatch only registers from the
+  default branch — tested, HTTP 404).
+- **Two changes made for the test itself**: the render leg now refuses up front
+  with a readable sentence when ffmpeg lacks `ass` or an H.264 encoder (exit
+  code 3, which the worker treats as ours rather than as the client's footage),
+  and the worker logs each beat's coverage plus the encoder and font it used.
+
+### Still open, in priority order
+
+1. **The test above.** Everything else waits on it.
+2. **`SUPABASE_PREVIEW_ACCESS_TOKEN` + `SUPABASE_PREVIEW_DB_PASSWORD`** as repo
+   secrets, so preview migrations stop needing a hand (D151). Vlad adds them;
+   I never hold them.
+3. **The `video-worker` Railway service** — settings are in
+   `V5_VIDEO_PIPELINE_PLAN.md` §3.3 and were given in full on 25 November:
+   Dockerfile `services/worker/Dockerfile.video`, root `/`,
+   `WORKER_KINDS=render-cuts`, `WORKER_ID=video-worker`, healthcheck `/healthz`,
+   2 vCPU / 4 GB, Supabase keys only (**no** `ANTHROPIC_API_KEY` — verified:
+   `anthropicClient()` constructs lazily).
+4. **Preview's global Storage limit** → 5 GB, when a >50 MB upload matters.
+5. **The video image has never been built** (no Docker on this machine). The
+   pin's digest, the tarball layout and the uv installer were verified instead,
+   and the build self-checks libopenh264 and the `ass` filter — so the first
+   Railway build is the verification.
+6. **Screenshots at 1440 and 390 against a real render** — owed, and waiting on
+   the same test. The e2e spec attaches both for the empty state today.
+
+### Three things not to rediscover
+
+- **`segment.ts` is the only file shared with the AI-GENERATION session.** A
+  `Segment` is `source | generated`; `GeneratedSegment.label` is required and
+  `renders_ai_scene_is_labelled` makes an unlabelled AI scene a failed insert.
+  Slice 2's bookends deliberately do **not** join that union — they are brand
+  furniture with no beat, so they live in `renders.bookends`.
+- **A migration PR is merged by the label and by nothing else**, and this one
+  also touches `services/worker`, which is never auto-merged.
+- **Chain local gates with `&&`.** A pipe into `tail` returns `tail`'s exit
+  code; that let a red `tsc` through to a commit twice in one session.
+
+## V5 slice 1 — footage in, a captioned 9:16 short out (25 November 2026)
+
+Branch `feat/video-v5-slice-1`, planned in `docs/plan/V5_VIDEO_PIPELINE_PLAN.md`
+and approved with five decisions (**D150** — the video session's decision range
+is **D150–D159**; SCAN holds D132–D139 and AI-GENERATION D140–D149, which is
+that session's table to maintain here). **This is the VIDEO session's lane:**
+the SCAN session owns `lib/niche-scan` and `lib/scripts`, the AI-GENERATION
+session owns generator adapters, and nothing here touches either.
+
+### What a user can now do
+
+- **Send their own long video from the studio.** The Upload screen has a real
+  panel above the sample one: choose an **approved** idea, name the rights
+  holder, tick the box, pick a file. The upload goes **straight to Supabase
+  Storage over TUS** — no bytes through Vercel — resumes after a dropped
+  connection, and takes up to 5 GB and an hour.
+- **Get one short back.** A `render-cuts` job transcribes the source once
+  (faster-whisper, stored so a second cut never pays again), finds each of the
+  script's four beats in the footage, burns the brand's captions with libass,
+  exports 1080×1920 H.264, and stores it privately.
+- **Watch it and approve it.** The card shows the poster, a signed-URL player,
+  the number of beats and the length, the Compliance verdict with its findings,
+  and an Approve button that the database refuses unless the gate passed.
+- **Be told why not, when not.** "The Payoff beat is not in this footage (best
+  match 18% of its words)" is a sentence they can act on by filming that line.
+  Every refusal path writes it: no audio track, a source over an hour, an
+  unapproved idea, an upload that stopped at 94%.
+- **See an AI scene labelled the day one exists.** `renders.ai_scenes` plus
+  `renders_ai_scene_is_labelled` make an unlabelled generated scene a *failed
+  insert*, so the slot is safe to ship before any generator does.
+
+### Verified
+
+| | |
+|---|---|
+| `pnpm lint`, `pnpm typecheck` | green |
+| `pnpm test` | **1315 passing** (29 new: the shared `Segment` seam and the render job's budget arithmetic) |
+| `pnpm build` | green |
+| `pnpm licence-check` | green, now including the **ffmpeg pin gate** |
+| `pnpm migration-safety` | additive |
+| `uv run pytest -q` (engine) | **143 passing, 4 skipped** — the four are the full render, skipped because this laptop's ffmpeg has no libass (D16). **CI's `pipeline` job runs them**, because Debian's ffmpeg does. |
+
+### Not verified, and both are honest gaps
+
+1. **The video image has not been built.** There is no Docker on this machine.
+   What *is* checked: the pinned artefact's sha256 matches
+   (`4a34e2fb…45750`), the tarball's layout is as the Dockerfile assumes
+   (`bin/ffmpeg`, `bin/ffprobe`, `LICENSE.txt` under one top-level directory),
+   and the uv installer version exists and honours `UV_INSTALL_DIR`. The build
+   itself fails loudly if libopenh264 or the `ass` filter is missing, so the
+   first Railway build is the verification.
+2. **The migration is not on preview.** This checkout is not `supabase link`ed
+   and the preview DB password is not in `apps/web/.env.local`. The screen is
+   built to survive that — every read fails soft, so the panel renders its empty
+   state rather than an error — which is why CI stays green either way.
+   Screenshots at 1440px and 390px are owed against a *real* render and wait on
+   the same thing.
+3. **The aligner has never met a real client's footage.** It is tested against
+   transcripts written for it, and the beats it will meet in production are
+   whatever the script agent wrote. Worth knowing *why* that is the open
+   question rather than a detail: a beat can be a **line to say** ("Here is
+   what this costs, and what changes the number") or a **direction** ("Open on
+   the price range, said plainly") — and the sample report's beats are
+   directions. Coverage against a direction is lower than against a line,
+   because half its words are instructions to the filmer rather than words
+   anybody says.
+
+   Three things make that survivable rather than a surprise. The floor
+   (`MIN_COVERAGE`, 0.4) is a named constant with tests that say what moving it
+   costs. The refusal names the beat *and* the best coverage it found, so the
+   first real run produces a number rather than a shrug. And the fix, if the
+   number is consistently low, is a prompt change in the script agent — beats
+   that quote the line — which is the SCAN session's lane and a conversation to
+   have with a measurement in hand.
+
+### Needs Vlad — four things, none of them a deploy
+
+- **N1. Raise the preview Storage limit.** Dashboard → the preview project
+  (`qypakxvxnjmsvxmxiynf`) → **Storage → Settings → Global file size limit** →
+  **5 GB**. The default is 50 MB, which refuses every real upload; the org is on
+  **Pro**, so up to 500 GB is allowed. The `client-footage` bucket already caps
+  itself at 5 GiB, and the global limit is the ceiling above it.
+- **N2. Two repository secrets, and then you are out of the loop for good.**
+  `.github/workflows/migrate-preview.yml` now exists: dispatch-only, and the
+  branch it is dispatched on is the branch it applies. It needs
+  **`SUPABASE_PREVIEW_ACCESS_TOKEN`** (a personal access token, for
+  `supabase link`) and **`SUPABASE_PREVIEW_DB_PASSWORD`** (preview's Postgres
+  password, for `db push`). They are not interchangeable, and until both exist
+  the workflow posts a notice and does nothing. The project ref is **not** a
+  secret — it is read from `supabase/config.toml`.
+
+  A password in a secret beats a password in a conversation: one place, scoped
+  to this repo, in no log, and I never hold it. Then
+  `gh workflow run migrate-preview.yml --ref <branch>` is mine to run.
+
+  It cannot reach production, and that is checked rather than intended: the ref
+  it reads is compared against `SUPABASE_PRODUCTION_PROJECT_REF` and the run
+  fails if they match. There is also no `ref` input to mistype — which removes
+  the `--ref` versus `-f ref=` trap D130 had to document for production.
+
+  **One ordering fact, tested rather than assumed:** a `workflow_dispatch`
+  workflow is only triggerable once its file is on `main` — dispatching it from
+  this branch answers `HTTP 404: workflow migrate-preview.yml not found on the
+  default branch`. So it cannot apply its own introducing branch. The sequence
+  is: add the two secrets → merge this PR → I dispatch it and preview catches
+  up. Nothing is waiting on that, because every read fails soft and CI is green
+  with the tables absent.
+
+  (The SCAN session's `preview-schema` CI job does the same thing on every pull
+  request and has no such restriction. The two are complementary: theirs keeps
+  preview ahead of e2e automatically, this one applies a branch's migration on
+  demand.)
+- **N3. The Railway `video-worker` service.** Dockerfile
+  `services/worker/Dockerfile.video`, build context the repo root,
+  **`WORKER_KINDS=render-cuts`**, **Healthcheck Path `/healthz`**, replica limits
+  2 vCPU / 4 GB. It needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` and
+  **not** `ANTHROPIC_API_KEY` — the render path calls no model. Idle cost is
+  $1–2/month (D150 §2 corrects the plan's $80).
+- **N4. The merge.** This pull request carries a migration *and* touches
+  `services/worker`, so it is yours twice over: **`migrate-production` label**
+  when you want it on production. I have not added it and will not.
+
 ## The seven fixes from the first live report review — written down (24 November 2026)
 
 Vlad reviewed the report from the **24 November 8:31 PM EST** scan and called it

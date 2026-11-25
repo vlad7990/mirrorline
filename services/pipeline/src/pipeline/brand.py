@@ -28,6 +28,7 @@ __all__ = [
     "Colour",
     "RightsRecord",
     "load_brand",
+    "parse_brand",
 ]
 
 CAPTION_STYLES = ("bold-highlight", "editorial-serif", "clean-minimal")
@@ -169,6 +170,18 @@ def load_brand(path: str | Path) -> Brand:
     if not isinstance(raw, dict):
         raise BrandError(f"{file_path} must hold a JSON object")
 
+    return parse_brand(raw)
+
+
+def parse_brand(raw: dict) -> Brand:
+    """The same validation, for a brand kit that never was a file.
+
+    V5's worker holds the brand kit as rows and sends it to the render leg
+    inside a plan, so there is nothing on disk to open. Split out of
+    `load_brand` rather than duplicated: the checks below are the definition of
+    a renderable brand, and two copies of that definition would drift the first
+    time a caption style is added.
+    """
     caption_style = str(raw.get("captionStyle", CAPTION_STYLES[0]))
     if caption_style not in CAPTION_STYLES:
         offered = ", ".join(CAPTION_STYLES)

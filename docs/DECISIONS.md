@@ -10260,3 +10260,211 @@ label is Vlad's; a storage bucket would need its own RLS review, which
 `20261123020000_jobs.sql` already says is "its own review". Both wait for the
 VIDEO session's bucket to land, per Vlad's rule that no migration comes from
 this session until theirs does.
+
+---
+
+## D150 — the video pipeline's first slice, and the four decisions inside it
+
+**25 November 2026.** V5 slice 1: an approved four-beat script plus the
+client's own upload becomes one captioned 9:16 short, as a `render-cuts` job.
+Planned in `docs/plan/V5_VIDEO_PIPELINE_PLAN.md`, approved by Vlad with five
+decisions, four of which changed the shape of the code.
+
+**Numbering, now allocated by session** (Vlad, 25 November 2026). Three
+sessions write decisions in parallel against branches that cannot see each
+other's, so the numbers are ranges rather than a queue:
+
+| Range | Session |
+|---|---|
+| **D132–D139** | SCAN — `lib/niche-scan`, the script agent |
+| **D140–D149** | AI-GENERATION — the generator adapters |
+| **D150–D159** | VIDEO — this pipeline |
+
+This decision was written as D137 and renumbered to **D150**, which is the
+first of the video range. The AI-GENERATION session records the ranges in
+`docs/PROGRESS.md`; this table is the same allocation seen from the decisions
+log, and if the two ever disagree, `PROGRESS.md` is the one being maintained.
+
+### 1. ffmpeg is the pinned LGPL build, and a gate holds it there
+
+The worker's `Dockerfile` had deferred this in writing: "if the engine is ever
+shipped inside a container image with ffmpeg in it, that needs a licence review
+first (LGPL build, or a decision)". The answer is the LGPL build, and three
+things make that more than a label:
+
+- **It is pinned by digest** — `autobuild-2026-11-25-12-41`, asset
+  `…-linux64-lgpl-9.0.tar.xz`, sha256 checked in the image build. The rolling
+  `latest` tag was rejected: a pin somebody else's cron job can move is a
+  licence claim that can be falsified without us touching anything.
+- **The build proves itself at build time.** The image fails if `libopenh264`
+  or the `ass` filter is missing, or if `ffmpeg -version` mentions
+  `--enable-gpl`.
+- **`pnpm licence-check` reads the Dockerfile's ARGs** and fails if the artefact
+  stops saying `lgpl`, if the tag is `latest`, or if the digest is not a sha256.
+  The comment is not the enforcement.
+
+The cost, stated rather than discovered: **no libx264**, so H.264 comes from
+openh264 (BSD-2-Clause). `pick_h264_encoder` prefers openh264 *even where x264
+exists*, so the output being judged is the output the container produces rather
+than a nicer one from a laptop.
+
+What it buys is larger than what it costs: the LGPL build carries **libass**,
+which the Homebrew ffmpeg on this machine does not (D16). So captions are a
+real `.ass` subtitle file burned with `-vf ass=`, not PNGs composited one per
+line. `captions.py` and its Pillow path stay, because `make-samples` still runs
+on the laptop.
+
+### 2. Video is its own Railway service, and the idle cost was re-estimated
+
+The plan's §3.4 priced an always-on 4 GB / 2 vCPU service at $80/month by
+multiplying Railway's published rates by the *reserved* size. **Vlad corrected
+the premise: Railway bills measured usage, not reserved size.** Re-estimated on
+that basis, an idle poller — `WORKER_IDLE_POLL_MS` between claims, no ffmpeg
+running — holds about 150 MB and almost no CPU, so idle is **$1–2/month**, and
+the 4 GB / 2 vCPU figure becomes a *replica limit*: the ceiling a render may
+reach, not a monthly bill. Cost per finished video is unchanged at ~$0.01–0.02,
+and the honest total for a service that renders occasionally is single-digit
+dollars rather than eighty.
+
+The split itself stands on the other two reasons, which are not about money: an
+OOM during an encode must not kill the process draining the scan queue, and the
+two images have nothing in common (~250 MB versus ~1.5 GB).
+
+It cost one environment variable. `WORKER_KINDS` decides what a container
+claims, `claim_job(job_kinds, lease_seconds)` already took the kinds, and
+`worker_heartbeats.id` already came from `RAILWAY_SERVICE_NAME`, so the second
+service gets its own heartbeat row by being named. **No migration.**
+
+### 3. The render job has its own lease, because transcription cannot be hurried
+
+`JOB_LEASE_SECONDS` is 900, and `budget.test.ts` asserts the scan's budgets fit
+inside it with a third to spare. An hour of audio through faster-whisper
+`small` on two vCPUs is twenty minutes, and no amount of care makes that fit in
+fifteen. The failure mode of trying is the expensive one — `claim_job` reclaims
+an expired lease, so a second worker starts the same encode.
+
+So the lease moved to fit the work: `RENDER_JOB_LEASE_SECONDS` is one hour, the
+video worker passes it per claim, and `apps/web/lib/video/budget.test.ts` is the
+same arithmetic for the new kind — transcribe (24 min) + render (10 min) +
+transfer (5 min) = 39 min, against 60, leaving 35%. It also asserts the pair
+that nobody was watching: `MAX_SOURCE_SECONDS` × 0.4 ≤ the transcription
+budget, so raising the hour limit cannot silently outrun the clock.
+
+### 4. The beat aligner refuses rather than approximating
+
+The genuinely new logic. `moments.py` scores sentences for interestingness,
+which is right when nobody has said what the video is about. Here somebody has:
+four beats, screened by the Originality Gate and the fact check, approved by the
+client. So `beats.py` scores **agreement with a sentence they already approved**
+— what fraction of a beat's content words appear in a window — and when no
+window clears the floor it raises `BeatNotFound`, which reaches the client as
+"the Payoff beat is not in this footage (best match 18% of its words)".
+
+Coverage rather than similarity, deliberately: a client paraphrases, word order
+carries no information between a written line and somebody talking around it,
+and "7 of 9 words" is a sentence a person can act on where "cosine 0.71" is not.
+Beats are assigned best-first rather than in script order, because a podcast
+does not say the four lines in the order a script lists them and a weak beat
+must not take the window a strong one needed.
+
+The alternative — always return something — produces a video whose Payoff is
+forty seconds of unrelated conversation. That costs the client the watch to find
+out, and teaches them our cuts need checking.
+
+### 5. One shared module is the seam with the generation session
+
+`apps/web/lib/video/segment.ts` holds a discriminated union: a `Segment` is
+either a window of the client's own footage or a `generated` clip. The renderer
+concatenates segments and cannot tell which kind it got. Two sessions build
+either side of that file and neither reads the other's code.
+
+**`GeneratedSegment.label` is required, and the database agrees.**
+`renders_ai_scene_is_labelled` makes an unlabelled generated scene a *failed
+insert* for every role including the worker's service role, which is what lets
+the slot ship before a single generator exists — non-negotiable 4 enforced by
+the schema rather than by a component somebody remembers to update.
+
+### Two smaller things that were decided by being hit
+
+- **`renders_job_cut` is not a partial index.** The obvious spelling adds
+  `where job_id is not null`, and `on conflict (job_id, cut_index)` cannot infer
+  a partial index unless the statement repeats the predicate — which PostgREST
+  cannot express. The worker's upsert is the whole reason the index exists, so
+  it is written in the form the upsert can use. A unique index already ignores
+  null pairs, so nothing was lost.
+- **`combine-errors` is allow-listed by name, not by widening the list.** It is
+  a transitive dependency of `tus-js-client` (the resumable client Supabase's
+  own docs point at), ships the full MIT text in `License.md`, and omits the
+  `license` field in `package.json`. `UNKNOWN` keeps failing, because an
+  undeclared licence is all-rights-reserved by default; the exception names the
+  package and the evidence file. This is the shape `LGPL_DYNAMIC_BINARY_EXCEPTIONS`
+  already established.
+
+## D151 — preview is migrated by a dispatch, and it has no ref box to mistype
+
+**25 November 2026.** `.github/workflows/migrate-preview.yml`: dispatch-only,
+applies `supabase/migrations/` to the **preview** project, and the branch it is
+dispatched on is the branch it applies.
+
+### The problem it solves is a password in a conversation
+
+Preview had no route but a laptop that happened to be `supabase link`ed. A
+session working in a fresh checkout could not migrate preview at all, and the
+only unblocking move on offer was to pass the database password to whoever was
+asking. Two repository secrets replace that: the password lives in one place,
+scoped to this repo, printed in no log, and the agent that needs the migration
+applied never holds it. That is a smaller surface than the alternative, not a
+larger one.
+
+Both secrets or neither. `supabase link` talks to the Management API and needs a
+personal access token; `db push` connects to Postgres and needs the database
+password. Supplying one produces a failure a long way from its cause, so
+`preflight` names whichever is missing and the run stops with a notice rather
+than a red cross — an unconfigured gate is not a broken one.
+
+### No `ref` input, which is the part worth copying
+
+`migrate-production.yml` takes one, and CLAUDE.md has to carry a warning about
+it: the CLI form is `-f ref=<branch>`, because `--ref <branch>` selects the
+branch the *workflow file* comes from. The two read identically in every
+summary view, and D130's third addendum exists partly to explain that a run
+which applied a feature branch reports `main` everywhere.
+
+Here the checkout is `github.ref` and there is no input at all, so
+`gh workflow run migrate-preview.yml --ref feat/my-branch` means what it looks
+like. One less thing to get wrong, and the production workflow keeps its input
+because there the ref is a deliberate, reviewed choice rather than "the branch I
+am on".
+
+### It cannot reach production, and that is checked
+
+The target comes from `supabase/config.toml`'s own `project_id` — public, in
+every dashboard URL, and therefore not a secret. A branch could edit that file,
+so the value is compared against `SUPABASE_PRODUCTION_PROJECT_REF` and the run
+**fails** if they match.
+
+So both routes to production are closed: there is no ref to type, and a
+rewritten config is refused. Production keeps exactly one route and it is the
+label (non-negotiable 11, D130). This workflow merges nothing, comments on
+nothing, and never runs on a pull request.
+
+### What it does not replace
+
+The SCAN session's `preview-schema` job, which applies migrations to preview on
+every pull request before e2e. That one keeps preview ahead of the browser
+tests automatically; this one applies a branch's migration on demand, which is
+what a session needs when its own feature is the thing being tried. Both read
+the same two secrets.
+
+**Addendum, the same day.** A `workflow_dispatch` workflow is only triggerable
+once its file is on the **default branch** — dispatching it from the branch
+that introduced it answers `HTTP 404: workflow migrate-preview.yml not found on
+the default branch`. Tested rather than assumed, because the consequence is
+counter-intuitive: **this workflow cannot apply its own introducing branch.**
+
+So the sequence for the pull request that brings it is: add the two secrets,
+merge, then dispatch. That is not a gap in the slice it arrived with — every
+read in the video panel fails soft, so CI is green with the tables absent — but
+it is the reason the SCAN session's per-pull-request `preview-schema` job is
+the right tool for "preview must be ahead *before* this merges", and this one
+is the right tool for "apply that branch now".

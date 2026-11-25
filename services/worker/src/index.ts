@@ -53,12 +53,61 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { WORKER_ERROR_BACKOFF_MS, WORKER_IDLE_POLL_MS } from '../../../apps/web/lib/jobs/liveness'
 import { JOB_LEASE_SECONDS, type JobKind } from '../../../apps/web/lib/jobs/types'
 import { runNicheScan } from '../../../apps/web/lib/niche-scan/scan'
+import { RENDER_JOB_LEASE_SECONDS } from '../../../apps/web/lib/video/types'
 
 import { createHeartbeat, type Heartbeat } from './heartbeat'
 import { startHealthServer } from './health-server'
+import { runRenderJob } from './render/handler'
 
-/** Which kinds this worker will claim. `render-cuts` joins the list with B5. */
-const CLAIMED_KINDS: readonly JobKind[] = ['niche-scan']
+/**
+ * Which kinds this worker will claim, from `WORKER_KINDS`.
+ *
+ * ============================================================================
+ * Two services, one image's worth of code (V5)
+ * ============================================================================
+ *
+ * It used to be the literal `['niche-scan']`, with a comment saying
+ * `render-cuts` would join it. It does not join it: **video runs as its own
+ * Railway service**, and this is the only line that has to know.
+ *
+ * The reasons are in `docs/plan/V5_VIDEO_PIPELINE_PLAN.md §3.3`, and the short
+ * version is that the two jobs have nothing in common except the queue. A scan
+ * is one model call that idles at ~150 MB; a render is ffmpeg and a Whisper
+ * model, 4 GB and two cores of it. Folding them into one process means paying
+ * the video footprint around the clock for work that runs occasionally, and —
+ * worse — an OOM during an encode would kill the process draining the scan
+ * queue.
+ *
+ * Nothing else had to change for it: `claim_job(job_kinds, lease_seconds)`
+ * already takes the kinds, `skip locked` already makes two workers safe, and
+ * `worker_heartbeats.id` already comes from `RAILWAY_SERVICE_NAME`, so the
+ * second service gets its own row by being named.
+ *
+ * An unknown kind in the variable is fatal rather than ignored: a service
+ * started with a typo would claim nothing, look healthy, and leave every job
+ * queued — the silent failure `requireEnv` exists to prevent.
+ */
+function claimedKinds(): readonly JobKind[] {
+  const known: readonly JobKind[] = ['niche-scan', 'render-cuts']
+  const raw = (process.env.WORKER_KINDS ?? 'niche-scan')
+    .split(',')
+    .map((kind) => kind.trim())
+    .filter((kind) => kind !== '')
+
+  const unknown = raw.filter((kind) => !(known as readonly string[]).includes(kind))
+  if (unknown.length > 0) {
+    throw new Error(
+      `WORKER_KINDS names ${unknown.join(', ')}, which is not a job kind. Known kinds: ${known.join(', ')}.`,
+    )
+  }
+  if (raw.length === 0) {
+    throw new Error('WORKER_KINDS is empty. A worker that claims nothing is a stopped queue.')
+  }
+
+  return raw as readonly JobKind[]
+}
+
+const CLAIMED_KINDS: readonly JobKind[] = claimedKinds()
 
 /**
  * Fifteen minutes, matching `claim_job`'s default.
@@ -75,7 +124,25 @@ const CLAIMED_KINDS: readonly JobKind[] = ['niche-scan']
  * `budget.test.ts` can add the agents' budgets up and assert they fit inside
  * it with margin.
  */
-const LEASE_SECONDS = JOB_LEASE_SECONDS
+/**
+ * …and a render needs a longer one, which is why this is now a function.
+ *
+ * Transcribing an hour of audio on two vCPUs is twenty minutes of honest work
+ * and cannot be made to fit in fifteen. The lease is per claim, so the video
+ * service passes the longer number and the scan service is untouched —
+ * `apps/web/lib/video/budget.test.ts` is the arithmetic that keeps
+ * `RENDER_JOB_LEASE_SECONDS` above the sum of the render job's budgets, exactly
+ * as `lib/jobs/budget.test.ts` does for the scan.
+ *
+ * The maximum across the claimed kinds, because one claim carries one lease. A
+ * worker claiming both would hold a scan for an hour, which is wasteful and
+ * safe; the reverse — holding a render for fifteen minutes — is neither.
+ */
+function leaseFor(kinds: readonly JobKind[]): number {
+  return kinds.includes('render-cuts') ? RENDER_JOB_LEASE_SECONDS : JOB_LEASE_SECONDS
+}
+
+const LEASE_SECONDS = leaseFor(CLAIMED_KINDS)
 
 /**
  * The two waits, and why they now live next to the staleness threshold.
@@ -157,15 +224,19 @@ async function runScanJob(job: JobRow): Promise<HandlerResult> {
   throw new Error(outcome.message)
 }
 
-async function handle(job: JobRow): Promise<HandlerResult> {
+async function handle(supabase: SupabaseClient, job: JobRow): Promise<HandlerResult> {
   switch (job.kind) {
     case 'niche-scan':
       return runScanJob(job)
 
+    case 'render-cuts':
+      // V5. The handler needs the client because a render reads four tables and
+      // writes two, where a scan reaches its own storage through `runNicheScan`.
+      return runRenderJob(supabase, job)
+
     default:
-      // The schema allows `render-cuts` and B5 has not been built. Refusing
-      // loudly beats a silent success: a job marked complete that nothing ran
-      // is a client waiting for a report nobody is writing.
+      // Refusing loudly beats a silent success: a job marked complete that
+      // nothing ran is a client waiting for a video nobody is making.
       throw new Error(`no handler for job kind "${job.kind}"`)
   }
 }
@@ -244,7 +315,7 @@ async function runOnce(supabase: SupabaseClient, heartbeat: Heartbeat): Promise<
   heartbeat.jobStarted(job.kind as JobKind)
 
   try {
-    const result = await handle(job)
+    const result = await handle(supabase, job)
     const seconds = Math.round((Date.now() - startedAt) / 1000)
 
     await finish(supabase, job.id, {

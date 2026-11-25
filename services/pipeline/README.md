@@ -62,6 +62,51 @@ Exit codes: `0` samples written, `1` nothing could be made, `2` bad input.
 A batch where the gate blocks every cut still exits `0` and still writes the
 summary — the engine worked, and the answer is in the file.
 
+## Cutting an approved script (V5)
+
+`make-samples` answers "what is worth cutting out of this video". The V5 pair
+answers a different question — "where in this video did they say the four beats
+of a script they already approved" — and the worker drives both from a
+container.
+
+```sh
+# The words, once. Stored by the worker in `transcripts`, so a second cut of
+# the same upload never pays for this again.
+uv run --no-editable transcribe-source episode-47.mp4 > words.json
+
+# The short. `plan.json` carries the source, the four beats, the words and the
+# brand kit; see `pipeline.short.read_plan` for the shape.
+uv run --no-editable render-short plan.json
+```
+
+Output, beside the plan:
+
+```
+out/short.mp4      1080x1920, captions burned in by libass
+out/poster.jpg     one frame, a second in
+out/captions.ass   the subtitle file, readable when a line looks wrong
+out/summary.json   segments with their coverage, compliance, encoder, font
+```
+
+Exit codes: `0` a short was written, `1` nothing could be made — **and
+`summary.json` says why in words**, which is the sentence the client is shown —
+`2` the plan was wrong, which is our bug rather than their footage.
+
+Three things worth knowing before reading the code:
+
+* **It refuses rather than approximating.** `beats.py` scores how much of a
+  beat's content words appear in a window, and raises `BeatNotFound` when
+  nothing clears the floor: *"the Payoff beat is not in this footage (best match
+  18% of its words)"*. A video whose Payoff is forty seconds of unrelated
+  conversation costs the client the watch to find out.
+* **Captions are a real `.ass` file.** The worker image ships a pinned **LGPL**
+  ffmpeg, which carries libass — so `-vf ass=` replaces the Pillow PNG
+  compositing on this path. The Pillow path stays for `make-samples`, because
+  the Homebrew ffmpeg on a laptop still has no text filters at all (D16).
+* **H.264 comes from openh264 in the container**, since an LGPL build has no
+  libx264. `pick_h264_encoder` prefers openh264 even where x264 exists, so what
+  gets judged is what ships.
+
 ## Where the words come from
 
 The transcriber chain is whisperx → faster-whisper → script sidecar, and
@@ -117,12 +162,17 @@ src/pipeline/
   multiplier/    The Multiplier agent
     moments.py        Heuristic scoring, the default finder
     claude_moments.py The Claude finder, off unless asked for twice
-    captions.py       Word grouping, then drawing the lines
+    captions.py       Word grouping, then drawing the lines (Pillow)
+    ass_captions.py   The same lines as a .ass file, for libass (V5)
     render.py         Moments to files
   compliance/    The Compliance agent: the four rules
+  beats.py       V5: where each beat of an approved script is in the footage
+  short.py       V5: align, caption, encode, check, write summary.json
   ffmpeg.py      The only place that shells out
   brand.py       Reading and checking brand.json
   cli.py         make-samples
+  cli_short.py   render-short
+  cli_transcribe.py  transcribe-source
 ```
 
 ## Known limits
@@ -142,5 +192,12 @@ Honest list; these are v0 shortcomings, not secrets.
   kit and are not rendered yet; those are week 2's Remotion templates.
 * **No B-roll, no voice, no face.** Nothing is generated, so nothing needs a
   consent record beyond the rights flag.
-* **whisperx's licence is unverified**, which is why it is its own extra and
-  not a dependency. See "Needs Vlad" in `docs/PROGRESS.md`.
+* ~~**whisperx's licence is unverified**~~ — **it is BSD-2-Clause**, read off the
+  repository on 25 November 2026, so it is on non-negotiable 10's list. It stays
+  an opt-in extra for a different reason: it wants torch, torchvision,
+  transformers and pyannote-audio, whose models are gated behind accepted
+  Hugging Face conditions, for word timings faster-whisper already returns. The
+  worker image installs **faster-whisper** only (D150).
+* **`render-short` makes one short per run.** The schema is built for a
+  60-minute source yielding several (`renders.cut_index`), and slice 1 does not
+  yet loop. Nothing has to change to add it.

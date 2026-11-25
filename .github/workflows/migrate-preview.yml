@@ -1,0 +1,200 @@
+# Apply migrations to **preview**, from the branch you dispatch it on.
+#
+# ==============================================================================
+# Why this exists beside `migrate-production.yml`
+# ==============================================================================
+#
+# Preview is the database the e2e suite runs against and the one a feature is
+# tried on before anybody argues about production. Until now it was migrated by
+# hand from a laptop that happened to be `supabase link`ed — which meant a
+# session working in a fresh checkout could not migrate preview at all, and the
+# only way to unblock it was to pass a database password around.
+#
+# A password in a secret is strictly better than a password in a conversation:
+# it lives in one place, it is scoped to this repository, it appears in no log,
+# and the agent that needs the migration applied never holds it.
+#
+# ==============================================================================
+# The branch you dispatch from is the branch that is applied
+# ==============================================================================
+#
+# **No `ref` input, deliberately.** `migrate-production.yml` has one, and
+# CLAUDE.md has to warn that the CLI form is `-f ref=<branch>` rather than
+# `--ref <branch>` — because `--ref` selects the branch the *workflow file*
+# comes from, which is not the same thing and reads identically in every
+# summary view. That trap is worth one guard rail in production and worth
+# removing entirely here:
+#
+#     gh workflow run migrate-preview.yml --ref feat/my-branch
+#
+# applies `feat/my-branch`, because the checkout takes `github.ref` and nothing
+# else. There is one fewer thing to get wrong and one fewer way to apply the
+# wrong tree.
+#
+# **One GitHub rule to know before relying on it:** a `workflow_dispatch`
+# workflow can only be triggered once its file is on the **default branch**.
+# Tested from the branch that introduced it, which answered
+# `HTTP 404: workflow migrate-preview.yml not found on the default branch`. So
+# this workflow cannot apply its own introducing branch — the first dispatch
+# happens after that merge. For a pull request whose migration needs to be on
+# preview *before* it merges, the route is the SCAN session's `preview-schema`
+# job in `ci.yml`, which runs per pull request and does not have this
+# restriction.
+#
+# ==============================================================================
+# It cannot touch production, and that is checked rather than intended
+# ==============================================================================
+#
+# The target is read from `supabase/config.toml` — the repo's own
+# `project_id`, which is public and appears in every dashboard URL. A branch
+# could of course edit that file, so the value is compared against
+# `SUPABASE_PRODUCTION_PROJECT_REF` and the run **fails** if they match.
+#
+# So the two ways this could reach production — a branch that rewrites
+# `config.toml`, and a hand-typed ref — are closed by a comparison and by
+# having no input to type into. Production has exactly one route and it is the
+# label (non-negotiable 11, D130).
+#
+# What this workflow deliberately does not do: merge anything, comment on
+# anything, or run on a pull request. It migrates preview and stops.
+
+name: Migrate preview
+
+on:
+  workflow_dispatch:
+
+# A second dispatch must not apply migrations while the first is mid-flight.
+concurrency:
+  group: migrate-preview
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: Is the gate configured?
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - id: check
+        env:
+          HAS_PASSWORD: ${{ secrets.SUPABASE_PREVIEW_DB_PASSWORD != '' }}
+          HAS_ACCESS_TOKEN: ${{ secrets.SUPABASE_PREVIEW_ACCESS_TOKEN != '' }}
+        run: |
+          # Both or neither. Half-configured is the state that looks armed and
+          # is not: `link` needs the personal access token and `db push` needs
+          # the database password, and supplying one gets a failure a long way
+          # from its cause.
+          missing=""
+          [ "$HAS_ACCESS_TOKEN" = "true" ] || missing="$missing SUPABASE_PREVIEW_ACCESS_TOKEN"
+          [ "$HAS_PASSWORD" = "true" ] || missing="$missing SUPABASE_PREVIEW_DB_PASSWORD"
+
+          if [ -n "$missing" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Preview migrations are not configured::Add these repository secrets:$missing — a personal access token for \`supabase link\` and preview's Postgres password for \`db push\`. They are not interchangeable. The project ref is not a secret; it is read from supabase/config.toml."
+            exit 0
+          fi
+
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+  # The same expand/contract gate `ci.yml` runs, pointed at the tree about to
+  # be applied. Preview is not production, and a destructive migration here is
+  # still irreversible for whatever the e2e suite and the previews hold.
+  safety:
+    name: Migrations are additive
+    needs: preflight
+    if: needs.preflight.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm migration-safety
+
+  migrate:
+    name: Apply migrations
+    needs: [preflight, safety]
+    if: needs.preflight.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    # The left-hand names are what the CLI reads; the right-hand ones are the
+    # secrets, both scoped to preview. `link` talks to the Management API and
+    # needs the token; `db push` connects to Postgres and needs the password.
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_PREVIEW_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PREVIEW_DB_PASSWORD }}
+    steps:
+      # No `ref:`. The checkout is `github.ref` — the branch this was
+      # dispatched on — which is the whole point of having no input.
+      - uses: actions/checkout@v7
+
+      - uses: supabase/setup-cli@v3
+        with:
+          version: latest
+
+      - name: Which project, and is it preview?
+        id: target
+        env:
+          PRODUCTION_REF: ${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+
+          # `project_id = "abcd"` out of the repo's own config, quotes and
+          # whitespace stripped. Not a secret: it is in every dashboard URL.
+          ref="$(sed -n 's/^[[:space:]]*project_id[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' supabase/config.toml | head -1)"
+
+          if [ -z "$ref" ]; then
+            echo "::error title=No project ref::supabase/config.toml has no project_id, so there is nothing to link to."
+            exit 1
+          fi
+
+          # The guard that makes this workflow safe to leave lying around.
+          # Production has one route and it is the label.
+          if [ -n "${PRODUCTION_REF:-}" ] && [ "$ref" = "$PRODUCTION_REF" ]; then
+            echo "::error title=That is production::supabase/config.toml points at the production project ($ref). Production is migrated by the migrate-production label and by nothing else (CLAUDE.md non-negotiable 11, D130)."
+            exit 1
+          fi
+
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      - name: Say what is being migrated, and where
+        run: |
+          {
+            echo "### Migrating preview"
+            echo
+            echo "- project: \`${{ steps.target.outputs.ref }}\`"
+            echo "- branch: \`${{ github.ref_name }}\`"
+            echo "- commit: \`$(git rev-parse HEAD)\`"
+            echo "- migrations in tree: $(ls -1 supabase/migrations/*.sql | wc -l | tr -d ' ')"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Link
+        run: supabase link --project-ref "${{ steps.target.outputs.ref }}"
+
+      - name: What preview has now
+        run: supabase migration list --remote
+
+      # The dry run names exactly what the apply will do, in the log, before
+      # anything is written — so a surprise is visible in the step above the one
+      # that acts on it.
+      - name: Dry run
+        run: supabase db push --remote --dry-run
+
+      # `--yes` is said out loud rather than relied upon: a closed stdin answers
+      # **Y** to `[Y/n]`, so omitting it in CI is indistinguishable from passing
+      # it, and where the default is the acting direction the flag belongs in
+      # the command (D94).
+      #
+      # `--include-seed` because `supabase/seed.sql` holds the shared KPI
+      # definitions and is idempotent (`on conflict … do update`), which is what
+      # makes it safe on every push rather than something to remember.
+      - name: Apply
+        run: supabase db push --remote --include-seed --yes
+
+      - name: Confirm local and remote agree
+        run: supabase migration list --remote

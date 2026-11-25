@@ -81,6 +81,7 @@ const SESSION_DEPENDENT_SPECS = [
   '**/settings-connect.spec.ts',
   '**/sign-up-ui.spec.ts',
   '**/theme.spec.ts',
+  '**/video-panel.spec.ts',
   '**/workspace-data.spec.ts',
   '**/workspace-delete.spec.ts',
 ];
