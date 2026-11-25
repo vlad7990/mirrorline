@@ -82,10 +82,27 @@ session owns generator adapters, and nothing here touches either.
   **5 GB**. The default is 50 MB, which refuses every real upload; the org is on
   **Pro**, so up to 500 GB is allowed. The `client-footage` bucket already caps
   itself at 5 GiB, and the global limit is the ceiling above it.
-- **N2. The preview database password**, or a `supabase link` in this checkout —
-  then I apply migrations to preview myself, which is where this one needs to
-  be. (The SCAN session's `preview-schema` CI job would also do it once that
-  branch lands.)
+- **N2. Two repository secrets, and then you are out of the loop for good.**
+  `.github/workflows/migrate-preview.yml` now exists: dispatch-only, and the
+  branch it is dispatched on is the branch it applies. It needs
+  **`SUPABASE_PREVIEW_ACCESS_TOKEN`** (a personal access token, for
+  `supabase link`) and **`SUPABASE_PREVIEW_DB_PASSWORD`** (preview's Postgres
+  password, for `db push`). They are not interchangeable, and until both exist
+  the workflow posts a notice and does nothing. The project ref is **not** a
+  secret — it is read from `supabase/config.toml`.
+
+  A password in a secret beats a password in a conversation: one place, scoped
+  to this repo, in no log, and I never hold it. Then
+  `gh workflow run migrate-preview.yml --ref <branch>` is mine to run.
+
+  It cannot reach production, and that is checked rather than intended: the ref
+  it reads is compared against `SUPABASE_PRODUCTION_PROJECT_REF` and the run
+  fails if they match. There is also no `ref` input to mistype — which removes
+  the `--ref` versus `-f ref=` trap D130 had to document for production.
+
+  (The SCAN session's `preview-schema` CI job does the same thing on every pull
+  request. The two are complementary: theirs keeps preview ahead of e2e
+  automatically, this one is for applying a branch's migration on demand.)
 - **N3. The Railway `video-worker` service.** Dockerfile
   `services/worker/Dockerfile.video`, build context the repo root,
   **`WORKER_KINDS=render-cuts`**, **Healthcheck Path `/healthz`**, replica limits

@@ -10399,3 +10399,59 @@ the schema rather than by a component somebody remembers to update.
   undeclared licence is all-rights-reserved by default; the exception names the
   package and the evidence file. This is the shape `LGPL_DYNAMIC_BINARY_EXCEPTIONS`
   already established.
+
+## D151 — preview is migrated by a dispatch, and it has no ref box to mistype
+
+**25 November 2026.** `.github/workflows/migrate-preview.yml`: dispatch-only,
+applies `supabase/migrations/` to the **preview** project, and the branch it is
+dispatched on is the branch it applies.
+
+### The problem it solves is a password in a conversation
+
+Preview had no route but a laptop that happened to be `supabase link`ed. A
+session working in a fresh checkout could not migrate preview at all, and the
+only unblocking move on offer was to pass the database password to whoever was
+asking. Two repository secrets replace that: the password lives in one place,
+scoped to this repo, printed in no log, and the agent that needs the migration
+applied never holds it. That is a smaller surface than the alternative, not a
+larger one.
+
+Both secrets or neither. `supabase link` talks to the Management API and needs a
+personal access token; `db push` connects to Postgres and needs the database
+password. Supplying one produces a failure a long way from its cause, so
+`preflight` names whichever is missing and the run stops with a notice rather
+than a red cross — an unconfigured gate is not a broken one.
+
+### No `ref` input, which is the part worth copying
+
+`migrate-production.yml` takes one, and CLAUDE.md has to carry a warning about
+it: the CLI form is `-f ref=<branch>`, because `--ref <branch>` selects the
+branch the *workflow file* comes from. The two read identically in every
+summary view, and D130's third addendum exists partly to explain that a run
+which applied a feature branch reports `main` everywhere.
+
+Here the checkout is `github.ref` and there is no input at all, so
+`gh workflow run migrate-preview.yml --ref feat/my-branch` means what it looks
+like. One less thing to get wrong, and the production workflow keeps its input
+because there the ref is a deliberate, reviewed choice rather than "the branch I
+am on".
+
+### It cannot reach production, and that is checked
+
+The target comes from `supabase/config.toml`'s own `project_id` — public, in
+every dashboard URL, and therefore not a secret. A branch could edit that file,
+so the value is compared against `SUPABASE_PRODUCTION_PROJECT_REF` and the run
+**fails** if they match.
+
+So both routes to production are closed: there is no ref to type, and a
+rewritten config is refused. Production keeps exactly one route and it is the
+label (non-negotiable 11, D130). This workflow merges nothing, comments on
+nothing, and never runs on a pull request.
+
+### What it does not replace
+
+The SCAN session's `preview-schema` job, which applies migrations to preview on
+every pull request before e2e. That one keeps preview ahead of the browser
+tests automatically; this one applies a branch's migration on demand, which is
+what a session needs when its own feature is the thing being tried. Both read
+the same two secrets.
