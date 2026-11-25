@@ -62,9 +62,18 @@ describe('a niche-scan job fits inside its lease', () => {
     // Arrange: leg one of the first production scan, which no budget bounded.
     const theRunThatFailed = 829 * 1000
 
-    // Assert: it does not fit, and the scan's budget now forbids it.
+    /*
+     * Assert: the **research budget** forbids it.
+     *
+     * This used to also assert that the run plus the script agent overran the
+     * lease, and the lease went to 1200s in D136 — 829 + 120 now fits inside it.
+     * That is not the guarantee weakening; it is the guarantee moving to where
+     * it belongs. What made that run dangerous was that *nothing bounded the
+     * leg*, and the leg is now bounded at six minutes whatever the lease says. A
+     * budget that holds is worth more than a lease a run happens to exceed.
+     */
     expect(theRunThatFailed).toBeGreaterThan(SCAN_TIME_BUDGET_MS)
-    expect(theRunThatFailed + SCRIPT_TIME_BUDGET_MS).toBeGreaterThan(leaseMs)
+    expect(theRunThatFailed).toBeGreaterThan(RESEARCH_TIME_BUDGET_MS)
   })
 
   it('targets six minutes or less for the research itself', () => {

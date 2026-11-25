@@ -10279,3 +10279,82 @@ true of a released job too — which is exactly why it recovers on its own.
 appends that to every failure because it is true of every failure, and the
 placeholder message said it as well. Removed from the agent's message: the agent
 owns the diagnosis and the banner owns the reassurance.
+
+## D136 — the research leg stopped losing its notes, and preview stopped drifting
+
+**25 November 2026.** Two findings from the first real execution of the two-leg
+scan, and one of them is a flaw D132 introduced.
+
+### The eval's first verdict: 1 of 3
+
+```
+[scan-eval] 1/3 succeeded (33%) · 646s total · $1.21 total
+  FAIL  dog-trainers#1  104s  24 search(es)  $0.270  formats=0 videos=0
+  FAIL  dog-trainers#2  266s  24 search(es)  $0.244  formats=0 videos=0
+  PASS  dog-trainers#3  276s  16 search(es)  $0.696  formats=6 videos=3 withheld=0
+```
+
+Two runs hit the 24-search ceiling with **nothing written** — `formats=0 hooks=0
+topics=0 … pages=0`. #1 burned the ceiling in **103 seconds of its 270**, so this
+was never a time problem.
+
+**And it is not a flaky model.** The old single leg survived the same ceiling
+only because it was writing the report *in the same turn* and had usually
+produced something first. D132 stripped the shaping work out of leg one and
+removed that accident with it, so an abort now discards everything.
+
+### Two fixes, and the first is the real one
+
+**Rule 10 names the consequence rather than the number.** "The run is CUT OFF at
+24 … anything you have not written down is LOST — not summarised, not saved,
+lost. A short set of notes from ten searches is worth far more than nothing from
+twenty-five." A budget a model is told about is advice; a budget whose cost it is
+told is a constraint.
+
+**A salvage call, because the research was never lost.** The search *results* are
+content blocks of the aborted assistant message — the abort threw away the notes,
+not the pages. One short call with **no tools** asks for the notes from what was
+already read, and costs zero searches by construction.
+
+`salvageableContent` is what makes that safe to send. An aborted stream can leave
+a half-built final block, and an unpaired `server_tool_use` is a 400, so the turn
+is cut at the last completed `web_search_tool_result`: every search before it has
+its pair and nothing after it can be trusted. **It salvages nothing when no
+search completed** — a salvage call with no research in front of it would invent
+one, which is the placeholder reply D132 exists to prevent, reached by a new
+route.
+
+The budget stop is cleared **only** when the salvage produced usable notes, so a
+salvaged run continues and a hopeless one still fails. Both calls' tokens reach
+the ledger.
+
+### The good half, and it is the first proof of anything
+
+**Run #3 is the whole pipe working**: 6 formats, and **3 videos with 0
+withheld** — D133's target of 3 of 3, on the profile where all three facts were
+refused the night before.
+
+### Preview stopped drifting
+
+The `migrate-production` label applies a pull request's migrations to production
+and **nothing applied them to preview**, so preview sat three migrations behind:
+`worker_heartbeats`, `drafts` and `client_brand_name`. Nothing was watching. What
+found it was the eval failing on `Could not find the 'brand_name' column`.
+
+Preview being *behind* is the worse of the two directions: the browser suite and
+every manual check then run against a schema the deployed code does not target.
+So `preview-schema` runs before `e2e` and makes preview **ahead of or equal to**
+production — which is the invariant worth stating, because preview may hold a
+migration production has not seen (that is what a pull request *is*) and must
+never lack one production has.
+
+**Preview credentials only, and the guard is a comparison rather than a
+convention.** It refuses when the ref is empty or equals
+`SUPABASE_PRODUCTION_PROJECT_REF`. D96's warning is that the CLI reaches
+production from any workdir and `--project-ref` is the only thing that decides
+which database is touched; without the comparison, a typo in one secret is an
+unreviewed production migration on every pull request.
+
+Until the three preview secrets exist the job **warns** on ordinary pull requests
+and **fails** on any pull request touching `supabase/migrations/`. A skip is
+drift, and drift on a migration PR is precisely what this closes.
