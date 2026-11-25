@@ -10260,3 +10260,56 @@ label is Vlad's; a storage bucket would need its own RLS review, which
 `20261123020000_jobs.sql` already says is "its own review". Both wait for the
 VIDEO session's bucket to land, per Vlad's rule that no migration comes from
 this session until theirs does.
+
+## D152 — slice 2 is approved in principle and parked, and the licence is free
+
+**25 November 2026.** Vlad approved `docs/plan/V5_SLICE_2_BRAND_TEMPLATES_PLAN.md`
+in principle and **parked it until slice 1 is proven on real footage** — the
+right order, because the plan's whole shape depends on the aligner working
+against beats a client actually said, and that is one phone video away from
+being known rather than argued about.
+
+His five answers, recorded so the plan does not have to be re-litigated:
+
+**1. The Free Licence applies.** VN & MN Product Group has three employees or
+fewer, and Remotion's `LICENSE.md` grants the Free Licence to "a for-profit
+organization with up to 3 employees" with commercial use explicitly allowed. So
+slice 2 needs **no purchase**: the code declares eligibility with
+`licenseKey: "free-license"` and reports nothing. Vlad confirms the headcount if
+it is ever close.
+
+**The trigger, written down because it is a calendar fact and not an
+engineering one:** a fourth employee moves us to *Remotion for Automators* —
+**$0.01 per render, $100/month minimum** — which would become the largest line
+item in this stack. That is the day the per-brand architecture in the plan's §1
+stops being tidy and starts being the reason the bill is $0.04 a year instead of
+$1,200.
+
+**2. End card first; the intro is an overlaid brand mark, and there is no
+pre-roll before the hook.** Agreed as recommended. A logo sting competes with
+the only second that decides whether anybody sees the second one, and the end
+card is where the call to action the script already wrote can land. The
+`intro-sting` composition stays in the plan as an option nobody has to use.
+
+**3. Ask Remotion about their ffmpeg.** Their compositor statically links
+ffmpeg (`packages/compositor/Cargo.toml` → `ffmpeg-next`), and whether that
+build is GPL- or LGPL-configured decides whether their binary may ever sit in an
+image where we also ship our own pinned LGPL build (D150). Drafted for Vlad to
+send as `docs/correspondence/REMOTION_LICENCE_QUESTION.md`. The architecture is
+safe either way — Remotion stays out of the video worker — so this is about
+knowing, not about being blocked.
+
+**4. The third Railway service waits** until slice 2 starts. Nothing needs it
+before then.
+
+**5. The label waits** for the slice-2 migration to exist.
+
+### Why "parked" is the interesting part
+
+The plan is a set of bets on a pipeline that has rendered exactly zero client
+videos. Proving slice 1 on a real phone clip settles the one question that
+would change slice 2's design: whether a beat written as a *direction* ("Open
+on the price range, said plainly") can be found in footage of somebody saying
+something else. If it cannot, the fix is upstream in the script agent's prompt —
+and an end card built on top of a pipeline that cannot find its beats would be
+decoration on a thing that does not work.
