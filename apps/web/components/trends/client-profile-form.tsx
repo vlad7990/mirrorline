@@ -88,6 +88,7 @@ export function ClientProfileForm({ profile, action, isEmpty }: ClientProfileFor
           {isEmpty
             ? 'Not set — the scan scores fit against this, and your videos are written from it'
             : [
+                profile.brandName,
                 profile.serviceArea,
                 profile.method,
                 profile.services.length > 0
@@ -100,6 +101,26 @@ export function ClientProfileForm({ profile, action, isEmpty }: ClientProfileFor
       </summary>
 
       <form action={formAction} aria-label="Your business" className="flex flex-col gap-4 px-5 pb-5">
+        {/*
+          First, because it is the name on the report we hand to a prospect
+          (D131) — and the only field whose absence showed up as *our* account
+          label on the cover of a document about somebody else's business.
+        */}
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="profile-brand">What your business is called</Label>
+          <Input
+            defaultValue={profile.brandName ?? ''}
+            id="profile-brand"
+            maxLength={120}
+            name="brandName"
+            placeholder="e.g. Oakline Dog Training"
+            type="text"
+          />
+          <p className="m-0 text-meta text-text-muted">
+            Printed on your niche report and its PDF, and the agents may say it in a script.
+          </p>
+        </div>
+
         <div className="grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="profile-area">Where you work</Label>

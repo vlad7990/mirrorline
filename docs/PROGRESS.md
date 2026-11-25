@@ -10,7 +10,7 @@ his priority order and in his words where it matters.
 | # | Fix | Migration | Who merges | State |
 |---|---|---|---|---|
 | 1 | Honest count on "Your first 3 videos", plus the withheld ideas and their reasons | no | me, auto-merge | **done** (D131) |
-| 2 | A client/brand name on the client profile, used on the report and the PDF cover | **yes** | **Vlad, by label** | next |
+| 2 | A client/brand name on the client profile, used on the report and the PDF cover | **yes** | **Vlad, by label** | **built — waiting on the label** |
 | 3 | Dates in the workspace's zone, not UTC | no | me, auto-merge | **done** (D131) |
 | 4 | "Hook:" printed once | no | me, auto-merge | **done** (D131) |
 | 5 | Report history list on Niche Scan — date, niche, status, open, download PDF | probably not | me | queued |
@@ -80,6 +80,29 @@ Keeping them apart also keeps the first PR under the ~400-line rule.
 **Verified:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (1286 passing) and
 `pnpm build` all green. Screenshots are owed against a report that has a refusal
 in it — the sample report has none, so they wait on the next real scan.
+
+### Needs Vlad: the label on fix 2
+
+**Fix 2 carries a migration, so it needs `migrate-production` on its pull
+request.** That label is the whole procedure — it applies the migration,
+verifies production holds every migration in the tree, merges the PR and
+dispatches the checks (D130). I never add it, and the actor check would refuse
+me if I tried.
+
+- **The migration:** `supabase/migrations/20261124213000_client_brand_name.sql`
+- **What it does:** adds a nullable `client_profiles.brand_name`, and a **new
+  six-argument `save_client_profile`**. It does not drop the five-argument one.
+- **Why six arguments and not a defaulted sixth:** a defaulted sixth parameter
+  would make the deployed five-argument call match two signatures, and Postgres
+  raises `42725` — which would have broken profile saving in production the
+  moment the migration applied, before any code shipped. D97 hit the same
+  reasoning on `save_onboarding`.
+- **Gate output:** `migration-safety: 20 migration(s) are additive. OK`
+
+**After it merges:** open **Niche Scan → About your business**, fill in *What
+your business is called*, and the next report's cover reads that instead of
+"VN & MN Product Group". Until the field is filled the cover still falls back to
+the workspace name, which is deliberate — a name we have beats no name.
 
 ## Handoff — 25 November 2026, end of session (the pipe is end-to-end; the next move is four fixes Vlad has in his head and not in this file)
 

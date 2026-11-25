@@ -124,3 +124,48 @@ describe('what the model is told', () => {
     expect(profileBrief(EMPTY_PROFILE)).toBe('')
   })
 })
+
+/**
+ * The name on the report (D131).
+ *
+ * The first live report's cover read "Prepared for VN & MN Product Group" — the
+ * workspace name, which is our account label, on a PDF addressed to somebody
+ * else's business.
+ */
+describe('the brand name', () => {
+  test('is read from the row, in either case convention', () => {
+    // Arrange
+    const row = { ...ROW, brand_name: 'Oakline Dog Training' }
+
+    // Act
+    const parsed = parseClientProfile(row)
+
+    // Assert
+    expect(parsed.brandName).toBe('Oakline Dog Training')
+    expect(parseClientProfile({ brandName: 'Oakline Dog Training' }).brandName).toBe(
+      'Oakline Dog Training',
+    )
+  })
+
+  test('is null when nobody has said, which the cover leaves out', () => {
+    expect(parseClientProfile(ROW).brandName).toBeNull()
+  })
+
+  test('is a fact a script may stand on', () => {
+    // Without this, "book with Oakline this week" would be refused by the fact
+    // check as an invention.
+    const facts = profileFacts(parseClientProfile({ ...ROW, brand_name: 'Oakline' }))
+
+    expect(facts).toContain('Oakline')
+  })
+
+  test('is the first thing the agents are told', () => {
+    const brief = profileBrief(parseClientProfile({ brand_name: 'Oakline', service_area: 'Miami' }))
+
+    expect(brief).toBe('What the business is called: Oakline\nWhere they work: Miami')
+  })
+
+  test('a profile holding only a brand name is not empty', () => {
+    expect(isProfileEmpty(parseClientProfile({ brand_name: 'Oakline' }))).toBe(false)
+  })
+})

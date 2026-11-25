@@ -14,7 +14,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server-client'
 
 import { EMPTY_PROFILE, parseClientProfile, type ClientProfile } from './client-profile'
 
-const COLUMNS = 'service_area, method, avoid, services, handles'
+const COLUMNS = 'brand_name, service_area, method, avoid, services, handles'
 
 /**
  * The profile as the signed-in user, or `EMPTY_PROFILE`.

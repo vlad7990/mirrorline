@@ -10046,3 +10046,42 @@ printed.**
   fix 2 was free and fix 3 was not. It turned out to be the other way round.
   Splitting keeps the PR under the ~400-line rule and gets three fixes in
   without waiting on a label.
+
+### Addendum, same day — fix 2, and the sixth parameter that would have broken the running app
+
+**"Prepared for VN & MN Product Group"** is the workspace name: an account
+label, printed on the cover of a PDF addressed to somebody else's business.
+Three decisions came out of fixing it.
+
+**It goes on `client_profiles`, not on `workspaces`.** Not filing — the script
+agent should be *allowed to say it*. `profileFacts` is what D126's fact check
+accepts a claim against, so a hook reading "book with Oakline this week" is an
+invention until the name is in the profile. Putting it there makes the name
+sayable and the claim checkable in one move. It is also the shape that admits
+an agency with five brands later, because that is a change to this table's
+primary key rather than to the column.
+
+**The function gets a new six-argument signature, not a defaulted sixth
+parameter.** `save_client_profile(text, text, jsonb, jsonb, jsonb)` is deployed
+and called by the running app. A defaulted sixth parameter creates an overload
+the existing five-argument call matches *as well*, and Postgres raises `42725`,
+ambiguous — which would have broken profile saving in production the moment the
+migration applied, before any code shipped. D97 reached this conclusion about
+`save_onboarding` and gave the time zone its own function; here the field
+belongs in the same form and the same transaction as the rest of the profile, so
+a separate function would be the wrong shape — a brand name that saved while the
+method failed is a half-written profile. Six arguments with **no defaults**
+cannot be matched by a five-argument call, so the two coexist.
+
+**The old signature is not dropped in this migration.** Dropping it is a
+contract change against whatever is still running, which is the failure the
+production schema gate exists to prevent. D104's order holds: schema first, then
+the deploy that stops calling it. Removing it is a later migration, once nothing
+does.
+
+**The fallback is the renderer's, not the column's.** `brand_name` is nullable
+with no default, and the cover falls back to the workspace name while it is
+empty — a name we have beats no name, and the fallback stops being reached the
+moment the field is filled, which is why it is the *first* field on the form.
+Writing the workspace name into the column instead would have made a guess
+permanent and indistinguishable from an answer.
