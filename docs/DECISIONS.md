@@ -9639,6 +9639,48 @@ Three things follow.
    be satisfied *before* the label exists, which inverts the order. Left as
    debt rather than guessed at.
 
+### Third addendum, 25 November: it ran, and the dispatch is no longer a theory
+
+**`Migrate production (label)` run #1 — `pull_request_target`, success.** Four
+jobs, in the order the design promised:
+
+| Job | Result |
+|---|---|
+| May this proceed? | success — detected `20261124190000_drafts.sql` as the pull request's migration |
+| Apply migrations | success — `Applying migration 20261124190000_drafts.sql...` |
+| Merge the pull request | success — #35 merged as `9c112a3f` |
+| Report a refusal | **skipped**, which is the correct outcome and worth saying |
+
+The verification the merge is conditional on reported `migration-drift:
+production has all 19 migration(s) in this tree. OK` — *before* the merge,
+which is the whole structure of the thing.
+
+**And the dispatch worked, by the bot.** This is the part that could not be
+rehearsed and was the honest gap in the first addendum:
+
+- `Production schema check #36` — `workflow_dispatch`, actor
+  **`github-actions[bot]`**, sha `9c112a3f`, **success**
+- `CI #267` — `workflow_dispatch`, actor **`github-actions[bot]`**, sha
+  `9c112a3f`, **success**
+
+Both on the merge commit, both triggered by the token, both green. The
+documented rule that a `GITHUB_TOKEN` merge starts nothing held exactly as
+written, and the named exception for `workflow_dispatch` is what carried the
+two checks. **The label path is proven end to end**, including the half that
+was derived from documentation rather than observed.
+
+Two questions the run settled, both of which were left open on purpose:
+
+- **The ruleset accepted a merge commit created by `GITHUB_TOKEN`.**
+  `require_extra_approval_for_unattributed_changes` did not block it. That was
+  the residual risk named in the original entry, and the fallback it described
+  was never needed.
+- **`db push` applied one migration, not two.** The emergency run (*Migrate
+  production* #9, `workflow_dispatch`, `ffcd83a`) had already caught production
+  up on `20261124180000` twenty-four minutes earlier, so the label run had only
+  the drafts migration to apply. The two routes composed without either needing
+  to know about the other, which is what the shared concurrency group is for.
+
 ### What is kept
 
 `migrate-production.yml` stays, as the **emergency** route: migrating `main`
