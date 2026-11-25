@@ -580,8 +580,19 @@ export async function runNicheScan(request: ScanRequest): Promise<ScanOutcome> {
         : `rejected: ${rejection.rule} after ${written.attempts} attempt(s) (${countLine})`,
       usage,
       searches,
+      /*
+       * No "Nothing was saved." here (D135, fix E).
+       *
+       * The failure banner appends that sentence to **every** failure, because
+       * it is true of every failure — so saying it here printed it twice:
+       * "…placeholder text instead of research, twice. Nothing was saved.
+       * Nothing was saved, and you can run it again."
+       *
+       * One question, one answer, and the division is clean: the agent owns the
+       * diagnosis and the banner owns the reassurance.
+       */
       rejection.rule === 'placeholder-text'
-        ? 'The scan came back with placeholder text instead of research, twice. Nothing was saved.'
+        ? 'The scan came back with placeholder text instead of research, twice.'
         : 'The scan did not come back with a usable report.',
     )
   }
