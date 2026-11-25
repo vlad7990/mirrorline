@@ -116,6 +116,90 @@ function str(value: unknown, max = 400): string | null {
   return trimmed.slice(0, max)
 }
 
+/**
+ * The label the beats are asked to carry for the opening line.
+ *
+ * `SCRIPT_SYSTEM` tells the model "four beats, labelled Hook, Setup, Payoff and
+ * Call to action", and `VideoIdea.hook` is a *separate* field holding the same
+ * opening line. So a correctly-written idea has the word in two places, and the
+ * report printed both: "Hook:" twice on every video (D131).
+ */
+const HOOK_LABEL = 'hook'
+
+/**
+ * A label the model wrote into the value as well as into the key.
+ *
+ * `"hook": "Hook: your dog is not stubborn"` is the other way the word doubles
+ * up, and it is the same bug one layer down — a field that already says what it
+ * is, saying it again. Stripped at parse time so neither the screen nor the
+ * gate's `ideaDraft` carries it: a label is structure, and D126 is explicit that
+ * structure is not what a similarity check should be measuring.
+ */
+function stripLeadingLabel(text: string, label: string): string {
+  const prefix = new RegExp(`^\\s*${label}\\s*[:—–-]\\s*`, 'i')
+  const stripped = text.replace(prefix, '').trim()
+  // A hook that was *only* the word "Hook:" is not improved by becoming empty.
+  return stripped.length > 0 ? stripped : text
+}
+
+/**
+ * Do these two lines say the same thing?
+ *
+ * Normalised containment in either direction, the same latitude
+ * `factIsGrounded` allows: the Hook beat is often the hook line with a stage
+ * direction attached, and "say it straight to camera: your dog is not stubborn"
+ * contains the hook rather than equalling it.
+ *
+ * Deliberately **not** a similarity score. This decides whether a line is
+ * redundant on a screen, and a threshold would mean a beat disappearing because
+ * it was 0.8 of the way to being a duplicate.
+ */
+export function saysTheSameAs(text: string, other: string): boolean {
+  const left = normaliseForComparison(text)
+  const right = normaliseForComparison(other)
+  if (left.length === 0 || right.length === 0) return false
+  return left.includes(right) || right.includes(left)
+}
+
+export interface SplitBeats {
+  /**
+   * The Hook-labelled beat, when it says something the hook line does not.
+   *
+   * Null both when there is no such beat and when it merely repeats the hook —
+   * the caller renders one hook line either way, and only has to decide whether
+   * there is a second sentence to put under it.
+   */
+  readonly hookBeat: VideoBeat | null
+  /** Every other beat, in order. What the numbered list renders. */
+  readonly rest: readonly VideoBeat[]
+}
+
+/**
+ * Pull the Hook beat out of the list so the word is printed once (D131).
+ *
+ * The report gives the hook its own line on purpose — "the hook is the video" —
+ * and then listed the beats underneath, including the one labelled Hook. Both
+ * halves are worth keeping: the line is what a client reads first, and the beat
+ * sometimes carries a direction the line does not. What is not worth keeping is
+ * the label, twice, four lines apart.
+ *
+ * Only the first Hook-labelled beat is lifted. A second one is a malformed idea,
+ * and dropping it silently would hide content; it stays in `rest`, where it is
+ * visible.
+ */
+export function splitHookBeat(beats: readonly VideoBeat[], hook: string): SplitBeats {
+  const index = beats.findIndex((beat) => beat.label.trim().toLowerCase() === HOOK_LABEL)
+  if (index === -1) return { hookBeat: null, rest: beats }
+
+  const beat = beats[index]
+  const rest = beats.filter((_, position) => position !== index)
+
+  return {
+    hookBeat: beat !== undefined && !saysTheSameAs(beat.text, hook) ? beat : null,
+    rest,
+  }
+}
+
 function parseBeat(value: unknown): VideoBeat | null {
   if (typeof value !== 'object' || value === null) return null
   const row = value as Record<string, unknown>
@@ -131,9 +215,13 @@ export function parseVideoIdea(value: unknown): VideoIdea | null {
 
   const title = str(row.title, 120)
   const formatName = str(row.formatName ?? row.format_name, 120)
-  const hook = str(row.hook, 240)
+  const written = str(row.hook, 240)
   const fact = str(row.fact, 240)
-  if (!title || !formatName || !hook || !fact) return null
+  if (!title || !formatName || !written || !fact) return null
+
+  // Stripped here rather than in the component, so a report stored with the
+  // doubled label reads correctly on the screen it was already saved for.
+  const hook = stripLeadingLabel(written, HOOK_LABEL)
 
   const beats = Array.isArray(row.beats)
     ? row.beats
@@ -287,4 +375,51 @@ export function screenIdeas({ ideas, corpora, facts }: ScreenInput): ScreenedIde
   }
 
   return { kept, rejected }
+}
+
+/**
+ * Every idea's fate, one line each, for the log (D131).
+ *
+ * "Log the per-idea outcome" — Vlad, after the first live report delivered one
+ * video out of four drafted. What existed was a `console.warn` per refusal and a
+ * count in `agent_runs.reason`, which answers "how many" and not "which, and
+ * why". Reading the Railway log for that scan told you three were refused and
+ * nothing about what the gate objected to in any of them.
+ *
+ * Two things are logged that the old lines could not say:
+ *
+ *  * **The kept ideas, with their numbers.** A passing verdict is evidence the
+ *    gate ran, and a report that shows three videos with no log of the three
+ *    verdicts is a report whose gate cannot be audited after the fact.
+ *  * **The ones held back by the cap.** `IDEAS_KEPT` slices the survivors, so a
+ *    run that passed four and kept three dropped one *for no quality reason*.
+ *    That is fine and it must not look like a refusal.
+ *
+ * Returned rather than printed, so this is a pure function the tests can read.
+ * The caller prefixes and emits.
+ */
+export function outcomeLines(
+  drafted: readonly VideoIdea[],
+  screened: ScreenedIdeas,
+  kept: readonly VideoIdea[],
+): readonly string[] {
+  const spare = screened.kept.length - kept.length
+
+  const summary =
+    `drafted ${drafted.length} · kept ${kept.length} · refused ${screened.rejected.length}` +
+    (spare > 0 ? ` · ${spare} passed and were held back by the cap` : '')
+
+  const keptLines = kept.map((idea) => {
+    const verdict = idea.originality
+    const numbers = verdict
+      ? `${verdict.similarity}% shared, limit ${verdict.limit}%`
+      : 'no verdict recorded'
+    return `kept "${idea.title}" — ${numbers}`
+  })
+
+  const refusedLines = screened.rejected.map(
+    (rejection) => `refused "${rejection.title}" — ${rejection.reason}`,
+  )
+
+  return [summary, ...keptLines, ...refusedLines]
 }

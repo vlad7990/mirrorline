@@ -10,6 +10,7 @@ import { NicheReportPanel } from '@/components/trends/niche-report-panel'
 import { RunScanForm } from '@/components/trends/run-scan-form'
 import { ScanProgress } from '@/components/trends/scan-progress'
 import { readReportDrafts } from '@/lib/drafts/read-drafts'
+import { withheldFrom } from '@/lib/drafts/withheld'
 import { readLatestScanJob } from '@/lib/jobs/read-scan-job'
 import { isJobPending } from '@/lib/jobs/types'
 import { SAMPLE_REPORT } from '@/lib/niche-scan/canned'
@@ -186,6 +187,20 @@ export default async function TrendsPage() {
           isSample={reportResult.report === null}
           niche={reportResult.report?.niche}
           scannedAt={reportResult.report?.completedAt ?? reportResult.report?.createdAt}
+          /*
+           * Every date in the report, in the client's zone (D131). Null is
+           * "not captured" and the renderer falls back to New York — never to
+           * the server, which is UTC and printed "Scanned 25 November" over a
+           * scan that finished at 8:31 PM on the 24th.
+           */
+          timeZone={workspace?.timezone}
+          /*
+           * What the two checks refused, so the heading above the videos can be
+           * about the videos (D131). `null` is a failed read and stays null: a
+           * short count with no explanation is the bug, and "we could not read
+           * the decisions" is a different sentence from "there were none".
+           */
+          withheld={drafts === null ? null : withheldFrom(drafts)}
         />
       )}
 

@@ -54,6 +54,20 @@ export interface DraftSummary {
    * database treats a null outcome as a refusal too.
    */
   readonly originality: OriginalityVerdict | null
+  /**
+   * The `body` column, which holds two different things by design (D131).
+   *
+   * For a **kept** draft it is the exact text the gate judged, so a verdict can
+   * be re-derived rather than trusted. For a **refused** one the text is gone —
+   * nothing stores a draft we would not show — so it is the reason the gate gave
+   * instead. `write-drafts.ts` writes both, and `withheldFrom` is the only
+   * reader that cares, because the refusal reason is what the report has to
+   * print when fewer than three ideas survive.
+   *
+   * Null for a row whose body did not parse, which reads as "refused, and we
+   * cannot say why" rather than as "not refused".
+   */
+  readonly body: string | null
   /** 1 or 2. A third attempt is unrepresentable in the schema. */
   readonly attempts: number
   /** ISO-8601, UTC. Null until somebody approves it. */
@@ -88,6 +102,7 @@ export function parseDraft(value: unknown): DraftSummary | null {
     title,
     status,
     originality: parseVerdict(row.originality),
+    body: typeof row.body === 'string' && row.body.trim() !== '' ? row.body.trim() : null,
     attempts: typeof row.attempts === 'number' ? row.attempts : 1,
     approvedAt: typeof row.approved_at === 'string' ? row.approved_at : null,
   }

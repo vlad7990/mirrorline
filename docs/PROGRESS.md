@@ -1,5 +1,86 @@
 # Progress — morning handoff
 
+## The seven fixes from the first live report review — written down (24 November 2026)
+
+Vlad reviewed the report from the **24 November 8:31 PM EST** scan and called it
+strong: the fit reasons, the avoid-list and the evidence tagging all work. The
+previous handoff recorded their absence as its one gap; this is the record, in
+his priority order and in his words where it matters.
+
+| # | Fix | Migration | Who merges | State |
+|---|---|---|---|---|
+| 1 | Honest count on "Your first 3 videos", plus the withheld ideas and their reasons | no | me, auto-merge | **done** (D131) |
+| 2 | A client/brand name on the client profile, used on the report and the PDF cover | **yes** | **Vlad, by label** | next |
+| 3 | Dates in the workspace's zone, not UTC | no | me, auto-merge | **done** (D131) |
+| 4 | "Hook:" printed once | no | me, auto-merge | **done** (D131) |
+| 5 | Report history list on Niche Scan — date, niche, status, open, download PDF | probably not | me | queued |
+| 6 | An immutable delivered-snapshot PDF in a private workspace-scoped bucket | **yes** | **Vlad, by label** | queued |
+| 7 | Client access to a workspace Vlad sets up — invite by email as a member | **yes**, and **auth** | **Vlad** | queued |
+
+**The detail, so none of it has to be remembered again:**
+
+1. **"Your first 3 videos" delivered 1 under a "Three to film this week"
+   heading.** Either regenerate until 3 pass (within the time and budget
+   limits), *or* show the honest line — "2 ideas were withheld by the
+   Originality Gate / fact check: `<reasons>`". **Never a heading that promises
+   3 and shows 1.** Log the per-idea outcome.
+2. **The report says "Prepared for VN & MN Product Group"** — the workspace
+   name. Add a client/brand name to the client profile and use it on the report
+   and the PDF cover.
+3. **"Scanned 25 November" for a scan run 24 Nov 8:31 PM EST** — dates render in
+   UTC. Render in the workspace's/viewer's zone; store one on the workspace,
+   default `America/New_York`.
+4. **Video 1 prints "Hook:" twice** — de-duplicate.
+5. **Report history.** Keep every report (they are already stored) and show a
+   list on Niche Scan: date, niche, status, open, download PDF. The latest stays
+   the default view.
+6. **Delivered snapshot.** When a report completes, render and store an
+   immutable PDF in a private Supabase Storage bucket — workspace-scoped, signed
+   URLs, RLS — so "the report we delivered" never changes after a later scan.
+7. **Client access.** Confirm how a client gets into a workspace Vlad sets up
+   for them (invite by email as a member). If it does not exist, build the
+   minimal invite flow. Auth-related, so **Vlad merges** (D114).
+
+**Instruction on sequencing:** ship 1–4 as one PR first, auto-merge if there is
+no migration; 5–7 follow; anything with a migration goes via the label.
+
+### What actually shipped first, and why the grouping changed
+
+**1, 3 and 4 went in one PR with no migration.** Fix 2 did not join them: the
+assumption behind the grouping was that fix 2 was free and fix 3 was not, and it
+is the other way round.
+
+- **Fix 3 needed no migration.** `workspaces.timezone` has existed since **D97**
+  (19 November) and nothing had ever read it. The fix was two functions beside
+  `localDateIn` and one column added to the workspace read.
+- **Fix 2 needs one.** `client_profiles` is columnar — `service_area`,
+  `method`, `avoid`, `services`, `handles` — so a brand name is a new column,
+  and `save_client_profile` cannot take a defaulted sixth parameter without the
+  deployed five-argument call becoming ambiguous (`42725`, the trap D97
+  documented). It is its own pull request, and **it needs the
+  `migrate-production` label from Vlad.**
+
+Keeping them apart also keeps the first PR under the ~400-line rule.
+
+### What a user can now do
+
+- **The report's count is the report's count.** One video appears under "Your
+  first video · One to film this week", and the ideas that were refused are
+  listed underneath by name, with the gate's own reason and which of the two
+  checks gave it. Nothing passing is no longer silence — it says so.
+- **The scan date is their date.** The cover and the screen both print the same
+  long-form date in the workspace's zone, falling back to New York rather than
+  to the server's UTC.
+- **"Hook:" appears once per video**, and any direction the Hook beat carried
+  survives as the line beneath it.
+- **The log names every idea** — kept ones with their similarity and limit,
+  refused ones with the reason, and the ones merely held back by the three-idea
+  cap distinguished from the ones refused.
+
+**Verified:** `pnpm lint`, `pnpm typecheck`, `pnpm test` (1286 passing) and
+`pnpm build` all green. Screenshots are owed against a report that has a refusal
+in it — the sample report has none, so they wait on the next real scan.
+
 ## Handoff — 25 November 2026, end of session (the pipe is end-to-end; the next move is four fixes Vlad has in his head and not in this file)
 
 ### Where everything stands

@@ -9913,3 +9913,136 @@ the refusal is what makes it true.
   would be a second write path to a table whose whole point is that it has one.
 - **The client's own last 90 posts are still an empty corpus** (D126). The
   verdict says so, in `notComparedAgainst`, on every row.
+
+## D131 — the report described the plan, and the fix is that every number on it is now read off the data
+
+**24 November 2026.** Vlad reviewed the first live production report — the one
+produced by the 24 November 8:31 PM EST scan — and called it strong: the fit
+reasons, the avoid-list and the evidence tagging all did what they were built
+to do. Seven fixes came out of it. They are recorded in full in
+`docs/PROGRESS.md`; this entry is about the four he asked to ship first, and
+about the one thing all four have in common.
+
+### The common fault: a screen that states an intention
+
+Three of the four were the same bug wearing different clothes.
+
+- **"Your first 3 videos · Three to film this week", above one video.** The
+  agent is asked for four ideas and `screenIdeas` refused three of them. The
+  count `3` was a constant and the heading was a sentence, so neither *could*
+  be wrong about the data — they were simply not about it. Worse, the report
+  said nothing at all about the three refusals, which is `§V3`'s
+  warn-and-continue ban read backwards: a refusal nobody is shown is the same
+  failure as a warning nobody acts on.
+- **"Scanned 25 November", for a scan that finished at 8:31 PM on the 24th.**
+  `toLocaleDateString()` with no zone uses the server's, and Vercel's servers
+  are UTC. The date was not approximately right; it was the wrong day on a
+  document we hand to prospects.
+- **"Hook:" twice on every video.** `SCRIPT_SYSTEM` asks for a beat labelled
+  Hook, and `VideoIdea.hook` holds the same opening line, so the panel printed
+  the hook paragraph and then the Hook beat four lines below it. This was true
+  of every idea the agent has ever written — Vlad saw it on "video 1" because
+  video 1 was the only video.
+
+Each of those is a place where the UI asserted something it had not read. So
+the rule this decision adds is narrow and mechanical: **a count, a date or a
+label on the report is derived from the row it describes, or it is not
+printed.**
+
+### What that cost, in order
+
+1. **The heading takes the count it has.** `FirstVideos` moved out of
+   `niche-report-panel.tsx` into its own component — the panel stood at 787
+   lines against an 800 ceiling — and renders `countWord(ideas.length)` in both
+   the eyebrow and the heading. Zero ideas is no longer silence: it reads
+   "Nothing passed both checks this time", because a section that vanishes
+   hides the same refusals the old heading did.
+
+2. **The withheld ideas are named, with the reason and the check that gave
+   it.** Vlad's instruction allowed either answer — regenerate until three
+   pass, or print the honest line — and the honest line is the one that still
+   holds after the rewrite loop exists: a loop bounded by a time and a money
+   budget can end with two, and the heading must not lie on that day either.
+   The list is a projection of the `drafts` rows D129 already writes, so it
+   cannot disagree with the verdicts rendered beside the kept ideas.
+   `withheldFrom` keeps the three-state read discipline: `[]` means nothing was
+   withheld, `null` means we could not read the decisions, and the report says
+   which.
+
+   **Which check spoke is inferred from the verdict, and that is sound rather
+   than clever.** The gate runs *before* the fact check, so a refused draft
+   carrying a **passing** originality verdict can only have been refused by the
+   fact check. That asymmetry is the same one `write-drafts.ts` relies on when
+   it takes a status from the screening instead of from the verdict.
+
+3. **Dates render in the workspace's zone, and `workspaces.timezone` already
+   existed** — D97 added it on 19 November and nothing had read it. So fix 3
+   needed no migration, only `reportTimeZone` and `formatReportDate` beside
+   `localDateIn`, which has been answering the same question for the calendar
+   since D97.
+
+   Two sub-decisions worth keeping:
+
+   - **The workspace's zone, not the viewer's.** This date is printed on a PDF
+     handed to a prospect. Two people opening the same delivered report in
+     Miami and in Berlin must see the same "Scanned" line, and a browser-local
+     date gives them different ones for every scan that finishes in the
+     evening.
+   - **The fallback lives at the point of rendering, not in the column.** D97
+     refused `not null default 'UTC'` so that the stored fact could say "not
+     captured", and that stays right. A rendered date has no such option —
+     something gets printed — so `America/New_York` is the fallback *there*,
+     and the column stays honest about not knowing.
+
+4. **The hook is printed once, and nothing is lost doing it.**
+   `splitHookBeat` lifts the Hook-labelled beat out of the list; if it says
+   something the hook line does not, it survives as an unlabelled line beneath
+   it, because the label is already spent. A Hook beat that merely repeats the
+   hook is dropped. `parseVideoIdea` also strips a leading `Hook:` the model
+   wrote *into* the value — the same bug one layer down, and stripped at parse
+   time so a report already in the database reads correctly.
+
+   Stripping it at parse time has a second effect worth stating: `ideaDraft`
+   no longer feeds the label to the similarity measure. D126 is explicit that
+   structure is what we are allowed to take and expression is not, so a label
+   was never something the gate should have been scoring.
+
+5. **The log names every idea.** "3 idea(s) refused" in `agent_runs.reason`
+   answered *how many* and never *which, or why* — reading the Railway output
+   for that scan told you three were refused and nothing about the objection to
+   any of them. `outcomeLines` now emits a summary plus one line per idea, kept
+   ones included with their number and limit, because a passing verdict is the
+   evidence that the gate ran. It also distinguishes the ideas **held back by
+   the `IDEAS_KEPT` cap** from the ones refused: a run that passed four and
+   kept three dropped one for no quality reason, and that must not read as a
+   refusal.
+
+### What this did not do, and why
+
+- **No regeneration.** Vlad's fix 1 offered it as the alternative. It is the
+  rewrite loop V3 is already shaped for — `attempts` holds 2 and `blocked` is
+  terminal — and it needs somewhere to carry an attempt count between runs plus
+  a second model call inside a lease that has already spent most of its 900
+  seconds. Building it under cover of a copy fix would put an unmeasured call
+  inside the scan's budget. The honest line is correct with or without it, so
+  it ships first and alone.
+
+- **No change to `IDEAS_REQUESTED`.** Asking for five instead of four would
+  raise the pass-through rate, and it also moves output tokens inside a
+  `SCRIPT_MAX_REQUEST_USD` ceiling that `budget.test.ts` ties to the enforced
+  cap. That is a measurement, not a copy fix.
+
+- **Fix 2 is not in this change.** "Prepared for VN & MN Product Group" is the
+  workspace name, and the report needs the client's brand. `client_profiles` is
+  columnar — `service_area`, `method`, `avoid`, `services`, `handles` — so a
+  brand name is a migration, and a migration goes via the `migrate-production`
+  label (non-negotiable 11, D130). It also cannot take a defaulted sixth
+  parameter on `save_client_profile`: the deployed five-argument call would then
+  match both signatures and Postgres raises `42725`, which is the trap D97
+  documented and avoided by giving the time zone its own function. So fix 2 is
+  its own pull request, and fixes 5–7 follow it.
+
+  The grouping Vlad gave — 1–4 together, auto-merge if no migration — assumed
+  fix 2 was free and fix 3 was not. It turned out to be the other way round.
+  Splitting keeps the PR under the ~400-line rule and gets three fixes in
+  without waiting on a label.

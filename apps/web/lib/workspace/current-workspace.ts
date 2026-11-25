@@ -43,6 +43,14 @@ export interface OwnedWorkspace {
    * magic-link path has not answered that question yet.
    */
   readonly niche: string | null
+  /**
+   * The IANA zone captured at onboarding, or null for "not captured" (D97).
+   *
+   * Read so the niche report's dates are the client's dates (D131). Null is an
+   * ordinary answer and never means UTC — `reportTimeZone` decides what to print
+   * instead, and the column stays honest about not knowing.
+   */
+  readonly timezone: string | null
 }
 
 /**
@@ -79,7 +87,7 @@ export async function getOwnedWorkspace(): Promise<OwnedWorkspace | null> {
 
   const workspace = await supabase
     .from('workspaces')
-    .select('id, name, niche')
+    .select('id, name, niche, timezone')
     .eq('id', workspaceId)
     .maybeSingle()
 
@@ -89,5 +97,6 @@ export async function getOwnedWorkspace(): Promise<OwnedWorkspace | null> {
     id: workspace.data.id,
     name: workspace.data.name,
     niche: workspace.data.niche ?? null,
+    timezone: workspace.data.timezone ?? null,
   }
 }

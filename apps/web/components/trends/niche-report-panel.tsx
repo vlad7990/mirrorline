@@ -23,14 +23,7 @@
  * false no matter what the database stored.
  */
 
-import {
-  Card,
-  Eyebrow,
-  LogoWordmark,
-  ProgressBar,
-  StatusChip,
-  StoryboardFrames,
-} from '@mirrorline/ui'
+import { Card, Eyebrow, LogoWordmark, ProgressBar, StoryboardFrames } from '@mirrorline/ui'
 import { ExternalLink } from 'lucide-react'
 
 // The one way the "Sample data" label gets drawn, per its own header: "so it
@@ -38,7 +31,9 @@ import { ExternalLink } from 'lucide-react'
 // same rule is how non-negotiable 7 starts being enforced inconsistently.
 import { SampleDataLabel } from '@/components/marketing/primitives'
 import { PrintButton } from '@/components/studio/print-button'
+import { FirstVideos } from '@/components/trends/first-videos'
 import { storyboardFromBeats } from '@/components/trends/trend-beats'
+import type { WithheldIdea } from '@/lib/drafts/withheld'
 import { SAMPLE_REPORT_LABEL, SAMPLE_REPORT_NOTE } from '@/lib/niche-scan/canned'
 import {
   FIT_MAX,
@@ -50,8 +45,7 @@ import {
   type ReportSource,
   type TrendExample,
 } from '@/lib/niche-scan/report'
-import type { OriginalityOutcome } from '@/lib/originality/gate'
-import type { VideoIdea } from '@/lib/scripts/video-idea'
+import { formatReportDate } from '@/lib/workspace/timezone'
 
 const BUCKET_LABELS: Record<string, string> = {
   under_1k: 'under 1k followers',
@@ -69,6 +63,22 @@ interface NicheReportPanelProps {
   readonly scannedAt?: string | null
   /** The workspace's own name, for the cover. Absent is not an error. */
   readonly clientName?: string | null
+  /**
+   * The zone every date in this report is rendered in (D131).
+   *
+   * The workspace's, from `workspaces.timezone`. Null is "not captured" and
+   * `formatReportDate` falls back to `America/New_York` — never to the server's,
+   * which is UTC and is what printed "Scanned 25 November" over a scan that
+   * finished at 8:31 PM on the 24th.
+   */
+  readonly timeZone?: string | null
+  /**
+   * The ideas screening refused, or `null` when the drafts could not be read.
+   *
+   * Passed straight through to `FirstVideos`, which is where the count and the
+   * refusals have to agree. The panel does not interpret it.
+   */
+  readonly withheld?: readonly WithheldIdea[] | null
 }
 
 /** Printed on the cover and in the body. One sentence, non-negotiable 4's spirit. */
@@ -95,14 +105,18 @@ function ReportCover({
   niche,
   clientName,
   scannedAt,
+  timeZone,
   isSample,
 }: {
   niche?: string
   clientName?: string | null
   scannedAt?: string | null
+  timeZone?: string | null
   isSample: boolean
 }) {
-  const scanned = scannedAt ? new Date(scannedAt) : null
+  // In the client's zone, not the server's (D131). Null when there is no scan
+  // date or it will not parse, and the row below is then left out entirely.
+  const scanned = scannedAt ? formatReportDate(scannedAt, timeZone) : null
 
   return (
     <div className="report-cover hidden print:block">
@@ -141,13 +155,7 @@ function ReportCover({
         {scanned ? (
           <div>
             <dt>Scanned</dt>
-            <dd>
-              {scanned.toLocaleDateString('en-GB', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })}
-            </dd>
+            <dd>{scanned}</dd>
           </div>
         ) : null}
         <div>
@@ -455,177 +463,20 @@ function ExampleRow({ example }: { example: TrendExample }) {
   )
 }
 
-/** The word for each outcome. "Rewritten" is the gate working, not a warning. */
-const GATE_OUTCOME_LABEL: Record<OriginalityOutcome, string> = {
-  passed: 'Passed',
-  rewritten: 'Sent back to be rewritten',
-  blocked: 'Blocked',
-}
-
-/**
- * What the Originality Gate said about one idea (V3, D126).
- *
- * `04 §4`: "The result is shown to the client with the number, the limit, and
- * what the gate did … A gate whose failures are invisible is indistinguishable
- * from a gate that never fires, which is precisely what the predecessor
- * project had." So this renders four things, and none of them is optional:
- *
- * 1. **The word.** Passed, sent back, or blocked.
- * 2. **The number and the limit**, side by side — a percentage with no ceiling
- *    beside it cannot be judged by the person reading it.
- * 3. **What it was compared against**, and separately **what it was not**. The
- *    second list is the honest one: we hold none of the client's own posts yet,
- *    and printing that gap is the alternative to implying we closed it.
- * 4. **The reasons**, when there are any — named lines, so the objection is
- *    arguable rather than an assertion.
- *
- * A `null` verdict reads as "not checked" rather than as a blank space. A
- * report stored before the gate existed carries no verdict, and absence must
- * never look like a clean bill.
- */
-function GateVerdict({ verdict }: { verdict: VideoIdea['originality'] }) {
-  if (!verdict) {
-    return (
-      <p className="mt-3 text-meta text-text-muted">
-        <span className="font-medium text-text">Originality Gate: </span>
-        not checked — this report was written before the gate ran.
-      </p>
-    )
-  }
-
-  return (
-    <div className="mt-3 flex flex-col gap-1.5">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-meta font-medium text-text">Originality Gate</span>
-        <StatusChip status={verdict.outcome === 'blocked' ? 'blocked' : 'passed'}>
-          {GATE_OUTCOME_LABEL[verdict.outcome]}
-        </StatusChip>
-        <span className="text-meta text-text-muted">
-          <span className="machine">{verdict.similarity}%</span> of the phrasing is shared · limit{' '}
-          <span className="machine">{verdict.limit}%</span>
-        </span>
-      </div>
-
-      <p className="m-0 max-w-prose text-meta text-text-muted">
-        Compared against {verdict.comparedAgainst.join(', ')}.
-        {verdict.notComparedAgainst.length > 0
-          ? ` Not compared against ${verdict.notComparedAgainst.join(', ')} — we do not hold those yet.`
-          : ''}
-      </p>
-
-      {verdict.reasons.length > 0 ? (
-        <ul className="m-0 mt-1 space-y-1 text-meta text-text-muted">
-          {verdict.reasons.map((reason) => (
-            <li className="flex gap-2" key={reason}>
-              <span aria-hidden="true" className="select-none text-accent">
-                ·
-              </span>
-              <span>{reason}</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
-  )
-}
-
-/**
- * "Your first 3 videos" — where the research stops being research (V2).
- *
- * `BACKEND_PHASE §V2`'s first visible output, and the section that answers the
- * question a client actually has. Everything above it describes a niche; this
- * is three things to film this week, built on the formats above, in their
- * voice, each standing on one fact from their own profile.
- *
- * **Nothing here is a draft of someone else's video.** The scripts share the
- * formats' beat structure and no sentence with any source — checked in code by
- * `screenIdeas`, not promised in a prompt — and an idea that failed either
- * check is absent rather than flagged. `§V3`: no warn-and-continue.
- */
-function FirstVideos({ ideas, niche }: { ideas: readonly VideoIdea[]; niche?: string }) {
-  if (ideas.length === 0) return null
-
-  return (
-    <Card className="p-5">
-      <Eyebrow>Your first {ideas.length === 1 ? 'video' : `${ideas.length} videos`}</Eyebrow>
-      <h3 className="mt-2 font-heading text-title text-text">
-        {niche ? `Three to film this week in ${niche}` : 'Three to film this week'}
-      </h3>
-      <p className="mt-2 max-w-prose text-meta text-text-muted">
-        Built from the formats above, in your words, each one standing on something true about your
-        business. New script, your footage — we never remake anyone else’s video.
-      </p>
-
-      <ol className="mt-4 space-y-5">
-        {ideas.map((idea, index) => (
-          <li className="border-t border-border pt-5 first:border-t-0 first:pt-0" key={idea.title}>
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="machine text-meta text-text-muted">{index + 1}</span>
-              <h4 className="text-body font-medium text-text">{idea.title}</h4>
-              <span className="text-meta text-text-muted">from “{idea.formatName}”</span>
-            </div>
-
-            {/* The hook is the video. It gets the line it deserves. */}
-            <p className="mt-2 max-w-prose text-body text-text">
-              <span className="font-medium">Hook: </span>“{idea.hook}”
-            </p>
-
-            <ol className="mt-3 space-y-1 text-meta text-text-muted">
-              {idea.beats.map((beat) => (
-                <li key={beat.label}>
-                  <span className="font-medium text-text">{beat.label}: </span>
-                  {beat.text}
-                </li>
-              ))}
-            </ol>
-
-            {idea.footage.length > 0 ? (
-              <div className="mt-3">
-                <p className="m-0 text-meta font-medium text-text">What to film</p>
-                <ul className="mt-1 space-y-1 text-meta text-text-muted">
-                  {idea.footage.map((shot) => (
-                    <li className="flex gap-2" key={shot}>
-                      <span aria-hidden="true" className="select-none text-accent">
-                        ·
-                      </span>
-                      <span>{shot}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {/*
-              The fact is printed, not merely required. §V2 asks every script
-              to carry one; showing which one makes it checkable by the person
-              who would be quoted on it.
-            */}
-            <p className="mt-3 text-meta text-text-muted">
-              <span className="font-medium text-text">Your fact: </span>
-              {idea.fact}
-            </p>
-
-            {/*
-              And what the gate said about it. On the screen rather than only
-              in the row — §V3's "the block is visible in the studio", and the
-              one line that makes the three above auditable.
-            */}
-            <GateVerdict verdict={idea.originality} />
-          </li>
-        ))}
-      </ol>
-    </Card>
-  )
-}
-
 export function NicheReportPanel({
   findings,
   isSample,
   niche,
   scannedAt,
   clientName,
+  timeZone,
+  withheld = null,
 }: NicheReportPanelProps) {
   const examples = rankExamples(findings.examples)
+
+  // One date, formatted once, so the cover and the screen cannot disagree about
+  // which day the scan ran (D131).
+  const scannedOn = scannedAt ? formatReportDate(scannedAt, timeZone) : null
 
   return (
     <section
@@ -650,6 +501,7 @@ export function NicheReportPanel({
         isSample={isSample}
         niche={niche}
         scannedAt={scannedAt}
+        timeZone={timeZone}
       />
 
       <div className="flex flex-wrap items-center gap-3">
@@ -660,10 +512,14 @@ export function NicheReportPanel({
           {niche ? `What is working in ${niche}` : 'What is working in this niche'}
         </h2>
         {isSample ? <SampleDataLabel /> : null}
-        {scannedAt ? (
-          <span className="text-meta text-text-muted">
-            Scanned {new Date(scannedAt).toLocaleDateString('en-GB')}
-          </span>
+        {/*
+          The same long form as the cover, in the same zone. It used to be
+          `toLocaleDateString('en-GB')` — the server's zone and a numeric date,
+          so the screen and the PDF printed different-looking versions of a day
+          that was itself wrong (D131).
+        */}
+        {scannedOn ? (
+          <span className="text-meta text-text-muted">Scanned {scannedOn}</span>
         ) : null}
         {/* Pushed to the end of the row so the heading keeps the left edge. */}
         <span className="ms-auto">
@@ -781,7 +637,7 @@ export function NicheReportPanel({
 
       {findings.sourcesUsed.length > 0 ? <SourceList sources={findings.sourcesUsed} /> : null}
 
-      <FirstVideos ideas={findings.firstVideos} niche={niche} />
+      <FirstVideos ideas={findings.firstVideos} niche={niche} withheld={withheld} />
     </section>
   )
 }

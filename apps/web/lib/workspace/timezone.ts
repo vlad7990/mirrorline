@@ -24,6 +24,23 @@
 /** Generous: the longest IANA name is `America/Argentina/Buenos_Aires`, at 30. */
 const MAX_LENGTH = 48
 
+/**
+ * The zone a report's dates are rendered in when the workspace has none (D131).
+ *
+ * D97 refused `not null default 'UTC'` on the column, and that stays right: the
+ * *stored* fact has to be able to say "not captured". A **rendered** date has no
+ * such option — something gets printed — and the first live report printed
+ * "Scanned 25 November" for a scan that finished at 8:31 PM on the 24th, because
+ * `toLocaleDateString()` with no zone uses the server's and Vercel's servers run
+ * in UTC.
+ *
+ * So the fallback lives at the point of rendering rather than in the column.
+ * Vlad's decision: `America/New_York`, which is where the business is. A
+ * workspace that captured its own zone uses that instead, so this is reached
+ * only by rows predating D97's capture or whose capture failed.
+ */
+export const FALLBACK_TIME_ZONE = 'America/New_York'
+
 export function parseTimeZone(value: unknown): string | null {
   if (typeof value !== 'string') return null
 
@@ -79,4 +96,43 @@ export function localDateIn(timeZone: string, now: Date): string | null {
   } catch {
     return null
   }
+}
+
+/**
+ * The workspace's zone, or the fallback — never the server's (D131).
+ *
+ * Takes the stored column, which may be null, empty, or a string somebody typed
+ * in 2026 that ICU has since retired. All three answer the same way, because the
+ * caller is about to print a date and has nothing to do with the uncertainty.
+ */
+export function reportTimeZone(stored: string | null | undefined): string {
+  return parseTimeZone(stored) ?? FALLBACK_TIME_ZONE
+}
+
+/**
+ * When a scan finished, as the client reads it — "24 November 2026".
+ *
+ * **The workspace's zone rather than the viewer's**, and that is a decision
+ * rather than a limitation. This date is printed on a PDF we hand to a prospect:
+ * two people opening the same delivered report in Miami and in Berlin must see
+ * the same "Scanned" line, and a browser-local date would give them different
+ * ones for every scan that finished in the evening. The workspace's zone is also
+ * the zone the scan's own day is measured in everywhere else (`localDateIn`).
+ *
+ * Returns null for a timestamp that will not parse, so the caller omits the line
+ * rather than printing "Invalid Date" — the rule the cover already follows for a
+ * missing fact.
+ */
+export function formatReportDate(iso: string, timeZone: string | null | undefined): string | null {
+  const at = new Date(iso)
+  if (Number.isNaN(at.getTime())) return null
+
+  // `reportTimeZone` has already rejected anything ICU cannot construct, so the
+  // formatter below cannot throw on the zone.
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: reportTimeZone(timeZone),
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(at)
 }
