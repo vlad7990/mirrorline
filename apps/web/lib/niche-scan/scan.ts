@@ -48,8 +48,9 @@ import { checkAgentSpend, recordRun } from '../agents/ledger'
 import { createAgentServiceClient } from '../agents/service-client'
 import { NO_USAGE, type EnvLike, type Usage } from '../copilot/spend'
 import { readClientProfileForAgent } from '../agents/read-client-profile'
+import { writeDrafts } from '../drafts/write-drafts'
 import { writeFirstVideos } from '../scripts/first-videos'
-import type { VideoIdea } from '../scripts/video-idea'
+import type { RejectedIdea, VideoIdea } from '../scripts/video-idea'
 import { profileBrief, type ClientProfile } from '../workspace/client-profile'
 import { SAMPLE_REPORT } from './canned'
 import { rankExamples, reviewReport, type NicheReportFindings } from './report'
@@ -666,6 +667,14 @@ interface WriteReportInput {
   readonly now: Date
   /** Written in the same insert as the research they came from (V2). */
   readonly firstVideos?: readonly VideoIdea[]
+  /**
+   * The ideas screening refused (V3, D129).
+   *
+   * They do not go in the report — a client's "first videos" are the ones they
+   * can film. They become `drafts` rows, so a block is visible with the gate's
+   * number and limit rather than only in a log line.
+   */
+  readonly refusedVideos?: readonly RejectedIdea[]
 }
 
 type AgentClient = ReturnType<typeof createAgentServiceClient>
@@ -705,6 +714,18 @@ async function writeReport(supabase: AgentClient, input: WriteReportInput): Prom
   }
 
   const reportId = (inserted.data[0] as { id: string }).id
+
+  // One row per judged draft, kept and refused alike (V3, D129). After the
+  // report, because `report_id` has to exist; before the examples, because this
+  // is the half a client acts on. It swallows its own failures — see
+  // `writeDrafts` — so a scan is never lost over an approve surface.
+  await writeDrafts(supabase, {
+    workspaceId,
+    reportId,
+    kept: input.firstVideos ?? [],
+    refused: input.refusedVideos ?? [],
+  })
+
   const examples = rankExamples(findings.examples)
   if (examples.length === 0) return reportId
 
@@ -1033,6 +1054,7 @@ export async function runNicheScan(request: ScanRequest): Promise<ScanOutcome> {
     niche: trimmedNiche,
     findings: parsed.findings,
     firstVideos: firstVideos.ideas,
+    refusedVideos: firstVideos.refused,
     model: SCAN_MODEL,
     now,
   })

@@ -1,5 +1,110 @@
 # Progress — morning handoff
 
+## Handoff — 25 November 2026 (production is a migration behind `main`, and the check caught it)
+
+### What happened
+
+#31 and #32 were merged with the **Merge button**, not the label. Two
+consequences, and only the first is urgent:
+
+1. **#31 landed on `main` as `ffcd83a` without production being migrated
+   first.** `Production schema check` went **red** on that commit, naming
+   `20261124180000` — the check doing exactly its job (D104 built it to notice
+   a merge that skipped the migration). Production's schema is one migration
+   behind the code `main` is deploying.
+2. **#32 merged into `feat/worker-heartbeat`, not `main`** — it was still
+   stacked when the button was pressed, so its work is **not on `main`** and
+   neither is the drafts migration. #31 merged 27 seconds earlier, so `main`
+   carries the heartbeat and nothing of D129.
+
+### The one action
+
+**Actions → Migrate production → Run workflow**, *Use workflow from* `main`,
+**`ref` input = `main`**. That applies `20261124180000`, and the red check goes
+green on a re-run.
+
+Not the label flow on the replacement pull request, even though that would also
+fix it: the red check is about **`main` ↔ production agreement**, and the fix
+for that is to migrate `main`. Routing it through a feature PR would leave
+production behind the code for however long that PR's CI takes, and would
+bundle a recovery into shipping something new.
+
+### Meanwhile, nothing is broken
+
+The heartbeat degrades safely, and that was designed in rather than lucky:
+
+- the heartbeat write fails, logs **once** (`[worker] heartbeat write failed:`)
+  and is swallowed; **jobs still claim, run and finish**
+- `pulse()` stays null, so `/healthz` answers **503** — which matters only if
+  the Railway healthcheck path is set, so **do not set it until the migration
+  is applied**
+- `/api/health/worker` answers 503 with `Could not read worker_heartbeats
+  (HTTP 404)` — a status endpoint, not a client surface
+- **no draft writes are happening at all**: D129's code is not on `main`, so
+  there is nothing to degrade there
+
+### Then
+
+A replacement pull request carries #32's work to `main`, migration included,
+ready for the label. **Label that one** — do not press Merge.
+
+Still outstanding and unchanged: **`WORKER_HEALTH_TOKEN`** in Vercel
+production (any value), else `/api/health/worker` 404s there by design.
+
+### Why there are three PRs and not two
+
+The dispatch I told you to run was wrong — `--ref` sets the branch the
+*workflow file* comes from, not the tree that gets migrated, which comes from
+the `ref` **input** and defaults to `main`. It would have migrated `main`,
+applied nothing and gone green. You caught it by asking for the three
+conditions. D130 removes the box rather than the mistake.
+
+Both branches were then rebased onto the new `main` — the D-log conflicted,
+because D128, D129 and D130 all append to the end of the same file. One
+casualty, deliberately: the earlier afternoon handoff commit described the
+dispatch procedure D130 had just replaced, so it was dropped rather than
+merged. This is its replacement.
+
+### Both migrations share one honest limit
+
+**Nothing has run against either new table.** The evidence is 52 new unit tests,
+typecheck, lint and build. Both degrade safely until the migrations land — the
+heartbeat write and the draft write each log once and swallow, jobs keep
+draining, and the V3 panel renders nothing rather than breaking. **No screenshot
+of that panel** for the same reason: with no rows it is absent, not broken.
+
+**And the label path has never run either.** `pull_request_target` reads its
+definition from the base branch, so #31 is its first real execution. The guard
+was dry-run by hand against #31's data before #33 merged; the merge step is the
+part that cannot be rehearsed. If the ruleset refuses a merge commit from
+`GITHUB_TOKEN`, the comment will say so, the migration will already be applied,
+and you pressing Merge is the fallback — which is D104's procedure exactly.
+
+### Still waiting on you from this morning
+
+The **production scan re-run** (same niche, "independent dog trainers"). Expect
+~5 minutes and ~22 searches; the log prints `report accepted:` with counts, or
+`report rejected: rule=…`. **I have not started V4/V5** — you asked me to wait
+for that review.
+
+### Queued next, in order
+
+1. **V4** — "Generate with AI" inline assists. No migration.
+2. **V5** — the video agent. **The generator choice is yours** and is one of the
+   four things the sprint stops for.
+3. **The rewrite loop V3 is now shaped for.** `attempts` can hold 2 and
+   `blocked` is terminal, but nothing produces attempt 2 yet.
+4. **Watch item from P0:** `stopped by the searches budget` in Railway. 22 of 24
+   searches is two searches of headroom.
+
+### One local hazard, still true
+
+`docs/progress/tmp/` is untracked throwaway shots and can be deleted. The
+gitignored `*.tmp.spec.ts` specs from an earlier session are out of `e2e/` —
+leave them out; two of them drive a real paid scan on the `chromium` project.
+And `.next` survives a branch switch: it went red on a phantom route type this
+afternoon until cleared, which is D111 in a new coat again.
+
 ## D130 — 24 November 2026 (migrating production is one label now)
 
 **What you can now do:** add the label **`migrate-production`** to a pull
@@ -142,6 +247,59 @@ counts, or `report rejected: rule=…` with them.
    protection is load-bearing rather than belt-and-braces.
 
 `docs/progress/tmp/` holds throwaway shots and can be deleted.
+
+## D129 — 24 November 2026 (V3's approval is refused by a check constraint, not by code we promise to keep)
+
+**What you can now do** (once the migration lands): see **every** draft a scan
+judged — including the ones the gate refused, which until now existed as a
+`console.warn` and a number in a note — with the gate's percentage, its limit,
+its reasons and the attempt number. Approve is offered only where it can work,
+and **the server refuses it anyway**. Queued item 2 is closed.
+
+### Three layers, bottom one not negotiable
+
+| | what it stops |
+|---|---|
+| `drafts_approved_passed`, a **check constraint** | an approved row without a passing verdict — from *any* role: a member, the action, the worker's service role, a psql prompt |
+| `approve_draft`, `security definer` | a member writing a status directly: `authenticated` has **no update grant at all** on `drafts` |
+| `approveDraft`, the server action | nothing on its own — it carries the sentence to the screen |
+
+Remove any one and the other two still refuse. `04 §Originality Gate` forbids an
+override "from anywhere", and a check constraint is the only mechanism that
+means *anywhere*.
+
+**Terminality is a constraint too:** `attempts` may only be 1 or 2, so a third
+attempt is unrepresentable, and a `blocked` verdict may only sit on a `blocked`
+draft. `drafts.test.ts` reads the migration and asserts the ceiling still equals
+`MAX_ATTEMPTS`.
+
+**A refusal is not an error.** `approve_draft` returns `{ok, reason}` rather than
+raising — the call `jobs.result` made for the spend cap, and the same `18 §6`
+reasoning: painting a working control red teaches the reader to distrust it.
+
+Evidence: **23 new unit tests**, typecheck, lint, build, `migration-safety`.
+
+### Honest limits
+
+1. **Nothing has run against a real `drafts` table** — the migration is
+   unapplied. Until it is, the scan's draft write logs once and swallows, and
+   the panel renders nothing. **No screenshot for the same reason**: with no
+   rows the panel is absent rather than broken.
+2. **The rewrite loop does not exist**, so `attempt` is always 1 and the gate
+   never returns `blocked` today. Every originality failure is a *first* failure
+   — stored as `rejected` with a `rewritten` verdict, visible, not approvable.
+   The terminal state is enforced before anything can reach it.
+3. **No reject action.** Sending a draft back is V6's ops console; adding it
+   here would be a second write path to a table whose point is having one.
+4. The client's own last 90 posts are still an empty corpus (D126) — every row
+   says so in `notComparedAgainst`.
+
+Full reasoning in **D129**.
+
+### Needs you
+
+**Dispatch `Migrate production` on `feat/v3-drafts-approval`** — additive: one
+new table, one new function, no existing table or policy touched.
 
 ## D128 — 24 November 2026 (the worker says it is alive, and silence now means something)
 
