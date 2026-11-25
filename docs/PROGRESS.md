@@ -1,6 +1,78 @@
 # Progress — morning handoff
 
-## Handoff — 25 November 2026 (production is a migration behind `main`, and the check caught it)
+## Handoff — 25 November 2026 (the label path is proven; D128 and D129 are both on production)
+
+### What a user can now do
+
+Both migrations are applied and both features are on `main`:
+
+- **The worker says it is alive.** `/api/health/worker` answers whether anything
+  is draining the queue, and `worker_heartbeats` carries the commit production
+  is running — the question the P0 handoff could only call *due*.
+- **V3 refuses an approval server-side.** Every judged draft is a row, refused
+  ones included, and `drafts_approved_passed` makes an approval without a
+  passing verdict impossible for **every** role.
+
+### The label path ran, and the half that was only documentation is now observed
+
+`Migrate production (label)` **run #1**, `pull_request_target`, **success** —
+four jobs in the promised order:
+
+| Job | Result |
+|---|---|
+| May this proceed? | success — detected `20261124190000_drafts.sql` |
+| Apply migrations | success — applied it, then `migration-drift: production has all 19 migration(s) in this tree. OK` **before** merging |
+| Merge the pull request | success — #35 merged as `9c112a3f` |
+| Report a refusal | **skipped** — the correct outcome |
+
+**And the dispatch worked, by the bot** — the part that could not be rehearsed:
+
+- `Production schema check #36` — `workflow_dispatch`, **`github-actions[bot]`**, `9c112a3f`, green
+- `CI #267` — `workflow_dispatch`, **`github-actions[bot]`**, `9c112a3f`, green
+
+A `GITHUB_TOKEN` merge starts nothing, exactly as documented, and the named
+exception carried both checks. Two open questions also settled: the ruleset
+**accepted** a merge commit from `GITHUB_TOKEN`, and the emergency run had
+already caught production up on `20261124180000`, so the label run applied one
+migration rather than two — the two routes composed without either knowing
+about the other.
+
+`Production schema check` is green on `main`'s head. Nothing is outstanding on
+the schema.
+
+### Two settings still yours, and now unblocked
+
+1. **Healthcheck Path = `/healthz`** on the Railway service. The blocker is
+   gone — `worker_heartbeats` exists, so `/healthz` answers 200 once the worker
+   has written a beat. This is what makes a bad deploy fail instead of
+   replacing a working worker.
+2. **`WORKER_HEALTH_TOKEN`** in Vercel production (any value), else
+   `/api/health/worker` 404s there by design.
+
+### Still waiting on you
+
+The **production scan re-run** (same niche, "independent dog trainers"). Expect
+~5 minutes and ~22 searches; the log prints `report accepted:` with counts, or
+`report rejected: rule=…`. **V4/V5 are not started** — you asked me to wait for
+that review.
+
+It is also the first scan that will write `drafts` rows, so it is the first
+chance to see the gate's refusals on screen rather than in a log line.
+
+### Queued next, in order
+
+1. **V4** — "Generate with AI" inline assists. No migration.
+2. **V5** — the video agent. **The generator choice is yours** and is one of the
+   four things the sprint stops for.
+3. **The rewrite loop V3 is shaped for.** `attempts` can hold 2 and `blocked`
+   is terminal, but nothing produces attempt 2 yet.
+4. **Watch items:** `stopped by the searches budget` in Railway (22 of 24
+   searches is two of headroom), and whether `drafts` rows start accumulating
+   refusals worth looking at.
+5. **Debt from D130:** nothing mechanically stops the Merge button on a
+   migration PR. The rule is in CLAUDE.md; the enforcement is not.
+
+## Handoff — 25 November 2026 (production was a migration behind `main`, and the check caught it)
 
 ### What happened
 
