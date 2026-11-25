@@ -27,8 +27,11 @@ import {
   clipRequestBody,
   createXaiAdapter,
   imageRequestBody,
+  isKeyRejection,
   isRefusalCode,
   parseClipPoll,
+  xaiErrorCode,
+  xaiErrorMessage,
 } from './xai'
 
 const KEY = 'test-key'
@@ -335,6 +338,147 @@ describe('generating a clip', () => {
     expect((await adapter.generate(CLIP)).status).toBe('failed')
     // Nothing was written, so no asset points at an empty file.
     expect(saved).toHaveLength(0)
+  })
+})
+
+/**
+ * The error shape, pinned against what the live API really sends.
+ *
+ * Added after the first real call, on 25 November 2026, which answered:
+ *
+ * ```json
+ * { "code": "invalid-argument", "error": "Incorrect API key provided." }
+ * ```
+ *
+ * Two things in this adapter were written against the other shape and were
+ * wrong in the same silent way: the code was read from `error.code`, which does
+ * not exist there, and compared against `invalid_argument` with an underscore.
+ * Both failures land on the *same* side — a provider refusal reported as
+ * `failed` — and `failed` is the one outcome this product retries. Every test
+ * in this file passed throughout.
+ *
+ * So both shapes are asserted. The nested one is what the SDKs document and may
+ * still arrive; the flat one is what we have seen.
+ */
+describe('the error shape, both of them', () => {
+  test('reads a top-level code, which is what the live API sends', () => {
+    expect(xaiErrorCode({ code: 'invalid-argument', error: 'Incorrect API key provided.' })).toBe(
+      'invalid-argument',
+    )
+  })
+
+  test('reads a nested code, which is what the documentation shows', () => {
+    expect(xaiErrorCode({ error: { code: 'invalid_argument', message: 'nope' } })).toBe(
+      'invalid_argument',
+    )
+  })
+
+  test('prefers the top-level one when a body somehow carries both', () => {
+    expect(xaiErrorCode({ code: 'service-unavailable', error: { code: 'invalid_argument' } })).toBe(
+      'service-unavailable',
+    )
+  })
+
+  test('is null rather than undefined for a body with no code at all', () => {
+    expect(xaiErrorCode({})).toBeNull()
+    expect(xaiErrorCode(null)).toBeNull()
+    expect(xaiErrorCode('a string')).toBeNull()
+  })
+
+  test('reads the message from either shape', () => {
+    expect(xaiErrorMessage({ error: 'Incorrect API key provided.' })).toBe(
+      'Incorrect API key provided.',
+    )
+    expect(xaiErrorMessage({ error: { message: 'filtered' } })).toBe('filtered')
+    expect(xaiErrorMessage({})).toBeNull()
+  })
+
+  test('matches the refusal code in both spellings', () => {
+    // The whole bug, in two assertions: the second used to be false.
+    expect(isRefusalCode('invalid_argument')).toBe(true)
+    expect(isRefusalCode('invalid-argument')).toBe(true)
+  })
+
+  test('does not match a code that merely looks similar', () => {
+    expect(isRefusalCode('invalid_argument_type')).toBe(false)
+    expect(isRefusalCode('service-unavailable')).toBe(false)
+    expect(isRefusalCode(null)).toBe(false)
+  })
+
+  test('parseClipPoll reads a failure in the flat shape too', () => {
+    const result = parseClipPoll({
+      status: 'failed',
+      code: 'invalid-argument',
+      error: 'moderation declined this scene',
+    })
+
+    expect(result.errorCode).toBe('invalid-argument')
+    expect(result.errorMessage).toBe('moderation declined this scene')
+  })
+})
+
+describe('a rejected key, which wears a refusal’s clothes', () => {
+  test('is told apart from a moderation block by its sentence', () => {
+    expect(isKeyRejection('Incorrect API key provided. You can obtain an API key from …')).toBe(
+      true,
+    )
+    expect(isKeyRejection('incorrect API KEY provided')).toBe(true)
+    expect(isKeyRejection('moderation declined this scene')).toBe(false)
+    expect(isKeyRejection(null)).toBe(false)
+  })
+
+  test('a clip submission answered that way fails rather than blaming the scene', async () => {
+    const { adapter } = harness([
+      {
+        match: '/videos/generations',
+        responses: [
+          json({ code: 'invalid-argument', error: 'Incorrect API key provided.' }, false, 400),
+        ],
+      },
+    ])
+
+    const result = await adapter.generate(CLIP)
+
+    // Not `refused`. A refusal would put "reword it" on screen and send
+    // somebody to rewrite a prompt that was never the problem.
+    expect(result.status).toBe('failed')
+    if (result.status !== 'failed') throw new Error('unreachable')
+    expect(result.reason).toContain('rejected the API key')
+    expect(result.message).not.toMatch(/reword/i)
+  })
+
+  test('so does an image request', async () => {
+    const { adapter } = harness([
+      {
+        match: '/images/generations',
+        responses: [
+          json({ code: 'invalid-argument', error: 'Incorrect API key provided.' }, false, 400),
+        ],
+      },
+    ])
+
+    const result = await adapter.generate({ ...CLIP, kind: 'image' })
+
+    expect(result.status).toBe('failed')
+    if (result.status !== 'failed') throw new Error('unreachable')
+    expect(result.reason).toContain('rejected the API key')
+  })
+
+  test('a moderation block is still a refusal, in the shape the API really uses', async () => {
+    const { adapter } = harness([
+      {
+        match: '/videos/generations',
+        responses: [
+          json({ code: 'invalid-argument', error: 'the prompt was declined' }, false, 400),
+        ],
+      },
+    ])
+
+    const result = await adapter.generate(CLIP)
+
+    expect(result.status).toBe('refused')
+    if (result.status !== 'refused') throw new Error('unreachable')
+    expect(result.provenance?.usd).toBe(0)
   })
 })
 

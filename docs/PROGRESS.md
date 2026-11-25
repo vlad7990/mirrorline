@@ -7481,10 +7481,70 @@ else's resize of the render we already paid for — we do that resize ourselves 
 composite time, once, for nothing. The renderer exports 1080×1920, so a
 generated scene is upscaled about 1.5× when it is cut in.
 
+## 25 November 2026, evening · the generation screen runs end to end (D141, D142)
+
+**What a user can now do.** Set `GENERATION_ENABLED=1`, sign in, and open
+**`/app/dev/generate`**. The screen says which adapter this deployment will use
+and why, what the month has cost against its ceiling, and then generates one
+scene on a press — screening the prompt, reading the month and checking the cap,
+calling a provider, and writing the outcome to `agent_runs`, in that order,
+whatever the outcome. It is a developer screen: behind a flag, outside the
+studio's route group, with no sidebar and no link from anywhere a client goes.
+
+**Demoable with no key at all**, which is why it was worth building before one
+arrived. With no `XAI_API_KEY` the sample adapter answers and the result carries
+**"Sample data"** beside the AI badge, the full provenance line — adapter,
+model, billed cost, the request time, "watermark: not stated — we label it
+ourselves" — and no preview, because a sample has no bytes and a placeholder
+would be the lie that travels furthest.
+
+![The dev screen with the sample adapter answering, labelled "Sample data"](progress/d141-dev-generate-sample-1440.png)
+
+**The refusal is the half worth watching.** "Load a prompt we refuse" puts a
+named public figure in the box; the press is turned down by our own filter
+before any money moves, with the rule on screen (`named-person`), **$0.0000 —
+nothing was called**, and the sentence the ledger holds. The row really lands:
+reading `agent_runs` back with the service role after a run shows
+`{agent: media_generator, status: refused, usd: 0, reason: "the scene named a
+real public figure"}`, followed by the `ok` row from the next press.
+
+![A prompt refused by our own filter, with the rule named and nothing spent](progress/d141-dev-generate-refused-1440.png)
+
+At 390px it is a single column with no horizontal overflow (measured, 0px).
+
+![The same screen at 390px](progress/d141-dev-generate-390.png)
+
+**Three things it found by being run**, none of which any test could see:
+
+1. **The ledger write was failing silently.** `agent_runs` revokes insert from
+   `authenticated` (D96, D115), so every press logged `permission denied` into
+   the server console and the ledger stayed empty — swallowed by design, so a
+   lost log line never turns a finished clip into a failed one. Generation now
+   writes with the service-role client, as the scan always has.
+2. **A controlled `<textarea>` broke hydration**, leaving the form's buttons
+   inert while the screen looked finished. Now uncontrolled, with a ref.
+3. **xAI's real error shape is not the documented one** — the code is at the
+   top level, and hyphenated — so every provider refusal was being reported as
+   a retryable failure. Fixed, with both shapes pinned in tests (D142).
+
+**The live path is still unverified, and not for want of trying.** The key now
+in `apps/web/.env.local` is rejected by xAI: `{"code":"invalid-argument",
+"error":"Incorrect API key provided."}`. Nothing has been generated and nothing
+has been billed. The screen reports it honestly — "Generation is not configured
+on this environment", logged as *the provider rejected the API key* — rather
+than blaming the prompt, which is a mapping that had to be added for it.
+
+![The honest failure when the provider rejects the key](progress/d142-dev-generate-key-rejected-1440.png)
+
+`lint`, `typecheck`, **1465 tests** and `build` are green.
+
 ### Needs Vlad
 
-1. **`XAI_API_KEY` in `apps/web/.env.local`** — unblocks steps 4 and 6. Preview
-   only. Nothing else is waiting.
+1. **A working `XAI_API_KEY` in `apps/web/.env.local`.** The one there now is
+   rejected by xAI — see the screenshot above and D142. Preview only. With a
+   working key the three reality checks in the handoff can finally run: that
+   `request_id` comes back where the docs say, that a finished poll carries
+   `video.duration`, and that the billed figure matches the console.
 2. **Buy zero data retention on the xAI account.** Approved in principle; it is
    an Order Form line item rather than a flag, so it needs doing on the
    account. Until it is, xAI holds inputs and outputs for 30 days by default.
