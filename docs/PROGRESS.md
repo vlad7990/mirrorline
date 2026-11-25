@@ -1,5 +1,98 @@
 # Progress — morning handoff
 
+## Handoff — VIDEO session, 25 November 2026 (slice 1 is built and green; the next move is Vlad's phone and four numbers)
+
+**Read `docs/TESTING_SLICE_1_ON_PREVIEW.md` first** — it is the live task, and
+everything below is context for it.
+
+### Where everything stands
+
+| | State |
+|---|---|
+| **#44** `feat/video-v5-slice-1` | V5 slice 1. **CI green** on every job (`changes`, `verify`, `pipeline`, `e2e`). **Needs the `migrate-production` label** — it carries a migration *and* touches `services/worker`, so it is Vlad's twice over. |
+| **#46** `docs/v5-slice-2-plan` | The slice-2 plan (animated brand templates) + D152 + the drafted Remotion email. Docs only. **Approved in principle, parked** until slice 1 is proven on real footage. |
+| Preview schema | `20261125183653_video_pipeline` **applied by Vlad**. Buckets, `video_assets`, `transcripts`, `renders`, `approve_render` all live on `qypakxvxnjmsvxmxiynf`. |
+| Decision range | **D150–D159** is this session's (CLAUDE.md now carries the allocation). D150, D151, D152 used. Next is **D153**. |
+| `main` | Moved while slice 1 was in flight: the AI-GENERATION session merged #43 and #45 (their D140, D141). #44 and #46 both need a rebase before merge — `docs/DECISIONS.md` is an append-vs-append conflict in both. |
+
+### What a user can do, on preview, today
+
+Send a long video of their own from the studio and get back one captioned 9:16
+short cut to the four beats of an idea they approved — then watch it and approve
+it. Upload goes straight to Storage over TUS (no bytes through Vercel, resumable,
+up to 5 GB and an hour); the render transcribes once, aligns each beat, burns
+`.ass` captions with libass, exports 1080×1920 H.264 and stores it privately.
+Every refusal says why in a sentence the client can act on.
+
+### The one thing standing between that and "proven"
+
+**No worker is deployed against preview**, so a render only happens while Vlad
+runs one locally. That is what the testing doc walks through, and it needs two
+one-off installs on his Mac: an ffmpeg with libass (`brew upgrade ffmpeg` — his
+8.1.1 has none, D16) and faster-whisper (`uv sync --extra transcribe`).
+
+**The four numbers to come back with** are the per-beat coverages the worker now
+logs. They decide the only open question in slice 1: whether a beat written as a
+*direction* can be found in footage of somebody saying something adjacent to it.
+If the numbers are low the fix is upstream — the script agent writing beats as
+spoken lines — which is the SCAN session's lane and a conversation to have with
+a measurement in hand rather than an opinion.
+
+### Done since the last handoff
+
+- **Slice 1, whole** — migration and two private buckets; `beats.py` (the
+  aligner that refuses rather than approximates), `ass_captions.py`,
+  `short.py` + `render-short` and `transcribe-source`; `render_segments`,
+  `concat_filter`, `pick_h264_encoder`, `burn_poster`, `font_families` in
+  `ffmpeg.py`; the worker's `render-cuts` handler, `WORKER_KINDS`, a one-hour
+  render lease; `Dockerfile.video` with a digest-pinned LGPL ffmpeg; the studio
+  panel, TUS upload, render card and `approve_render`. **1332 unit tests, 143
+  engine tests, one e2e spec.**
+- **Gates** — the ffmpeg pin check in `pnpm licence-check` (fails if the pinned
+  artefact stops saying `lgpl`, says `latest`, or loses its digest), and
+  `combine-errors` allow-listed by name with its evidence rather than by
+  widening the list.
+- **`migrate-preview.yml`** (D151) — dispatch-only, no `ref` box to mistype,
+  refuses if the config points at production. Needs two secrets, and **cannot
+  apply its own introducing branch** (workflow_dispatch only registers from the
+  default branch — tested, HTTP 404).
+- **Two changes made for the test itself**: the render leg now refuses up front
+  with a readable sentence when ffmpeg lacks `ass` or an H.264 encoder (exit
+  code 3, which the worker treats as ours rather than as the client's footage),
+  and the worker logs each beat's coverage plus the encoder and font it used.
+
+### Still open, in priority order
+
+1. **The test above.** Everything else waits on it.
+2. **`SUPABASE_PREVIEW_ACCESS_TOKEN` + `SUPABASE_PREVIEW_DB_PASSWORD`** as repo
+   secrets, so preview migrations stop needing a hand (D151). Vlad adds them;
+   I never hold them.
+3. **The `video-worker` Railway service** — settings are in
+   `V5_VIDEO_PIPELINE_PLAN.md` §3.3 and were given in full on 25 November:
+   Dockerfile `services/worker/Dockerfile.video`, root `/`,
+   `WORKER_KINDS=render-cuts`, `WORKER_ID=video-worker`, healthcheck `/healthz`,
+   2 vCPU / 4 GB, Supabase keys only (**no** `ANTHROPIC_API_KEY` — verified:
+   `anthropicClient()` constructs lazily).
+4. **Preview's global Storage limit** → 5 GB, when a >50 MB upload matters.
+5. **The video image has never been built** (no Docker on this machine). The
+   pin's digest, the tarball layout and the uv installer were verified instead,
+   and the build self-checks libopenh264 and the `ass` filter — so the first
+   Railway build is the verification.
+6. **Screenshots at 1440 and 390 against a real render** — owed, and waiting on
+   the same test. The e2e spec attaches both for the empty state today.
+
+### Three things not to rediscover
+
+- **`segment.ts` is the only file shared with the AI-GENERATION session.** A
+  `Segment` is `source | generated`; `GeneratedSegment.label` is required and
+  `renders_ai_scene_is_labelled` makes an unlabelled AI scene a failed insert.
+  Slice 2's bookends deliberately do **not** join that union — they are brand
+  furniture with no beat, so they live in `renders.bookends`.
+- **A migration PR is merged by the label and by nothing else**, and this one
+  also touches `services/worker`, which is never auto-merged.
+- **Chain local gates with `&&`.** A pipe into `tail` returns `tail`'s exit
+  code; that let a red `tsc` through to a commit twice in one session.
+
 ## V5 slice 1 — footage in, a captioned 9:16 short out (25 November 2026)
 
 Branch `feat/video-v5-slice-1`, planned in `docs/plan/V5_VIDEO_PIPELINE_PLAN.md`

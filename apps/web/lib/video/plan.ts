@@ -140,6 +140,15 @@ export interface RenderSummary {
   readonly durationS: number | null
   readonly bytes: number | null
   readonly segments: readonly Segment[]
+  /**
+   * How well each beat matched the footage, straight from the aligner.
+   *
+   * Carried for one reason: it is the measurement the first real client video
+   * owes us. `docs/PROGRESS.md` says the aligner has never met real footage and
+   * that a weak match must produce a number rather than a shrug — so the worker
+   * logs these, and a run that looks wrong can be argued about with figures.
+   */
+  readonly coverage: readonly { readonly beat: string; readonly coverage: number }[]
   readonly complianceVerdict: string | null
   readonly complianceFindings: readonly string[]
   readonly encoderName: string | null
@@ -180,6 +189,7 @@ export function parseRenderSummary(value: unknown, assetId: string): RenderSumma
       durationS: null,
       bytes: null,
       segments: [],
+      coverage: [],
       complianceVerdict: null,
       complianceFindings: [],
       encoderName: null,
@@ -193,6 +203,7 @@ export function parseRenderSummary(value: unknown, assetId: string): RenderSumma
   const encoder = (raw.encoder ?? {}) as Record<string, unknown>
 
   const segments: Segment[] = []
+  const coverage: { beat: string; coverage: number }[] = []
   for (const entry of Array.isArray(raw.segments) ? raw.segments : []) {
     if (typeof entry !== 'object' || entry === null) continue
     const part = entry as Record<string, unknown>
@@ -200,6 +211,9 @@ export function parseRenderSummary(value: unknown, assetId: string): RenderSumma
     const startS = finite(part.startS)
     const endS = finite(part.endS)
     if (beat === undefined || startS === null || endS === null || endS <= startS) continue
+
+    const matched = finite((entry as Record<string, unknown>).coverage)
+    if (matched !== null) coverage.push({ beat, coverage: matched })
 
     segments.push({
       kind: 'source',
@@ -219,6 +233,7 @@ export function parseRenderSummary(value: unknown, assetId: string): RenderSumma
     durationS: finite(raw.durationS),
     bytes: finite(raw.bytes),
     segments,
+    coverage,
     complianceVerdict: text(compliance.verdict),
     complianceFindings: Array.isArray(compliance.findings)
       ? compliance.findings.filter((finding): finding is string => typeof finding === 'string')

@@ -22,6 +22,10 @@ Exit codes, matching `make-samples` so the two are not a pair of conventions:
 * `0` — a short was written.
 * `1` — nothing could be made, and `summary.json` says why in words.
 * `2` — the plan was wrong, which is our bug rather than the client's footage.
+* `3` — **this machine cannot render**: ffmpeg is missing the `ass` filter or an
+  H.264 encoder. Its own code because the audience is different — nothing about
+  the footage would change it, so the worker treats it as a failure of ours
+  rather than as a refusal to show the client.
 """
 
 from __future__ import annotations
@@ -34,7 +38,7 @@ from pathlib import Path
 from .beats import BeatNotFound
 from .brand import BrandError
 from .ffmpeg import FfmpegError, FfmpegMissing
-from .short import PlanError, ShortNotPossible, read_plan, render_short
+from .short import PlanError, RenderEnvironmentError, ShortNotPossible, read_plan, render_short
 
 __all__ = ["main"]
 
@@ -79,6 +83,11 @@ def main(argv: list[str] | None = None) -> int:
         _write_refusal(plan.out_dir, str(refusal))
         print(f"render-short: {refusal}", file=sys.stderr)
         return 1
+    except RenderEnvironmentError as error:
+        # Not written to summary.json: there is no sentence here a client should
+        # ever read, and the worker raises rather than recording a refusal.
+        print(f"render-short: {error}", file=sys.stderr)
+        return 3
     except FfmpegMissing as error:
         print(f"render-short: {error}", file=sys.stderr)
         return 1

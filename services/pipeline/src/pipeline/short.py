@@ -39,16 +39,26 @@ from pathlib import Path
 from .beats import Beat, BeatNotFound, align_beats
 from .brand import Brand, parse_brand
 from .compliance import check_cuts
-from .ffmpeg import burn_poster, font_families, pick_h264_encoder, probe, render_segments
+from .ffmpeg import (
+    FfmpegError,
+    burn_poster,
+    font_families,
+    has_filter,
+    pick_h264_encoder,
+    probe,
+    render_segments,
+)
 from .models import CaptionLine, Cut, Moment, Transcript, Word
 from .multiplier.ass_captions import AssStyle, TextOverlay, ass_document, pick_font_family
 from .multiplier.captions import caption_lines
 
 __all__ = [
     "PlanError",
+    "RenderEnvironmentError",
     "RenderPlan",
     "ShortNotPossible",
     "ShortOutcome",
+    "check_environment",
     "read_plan",
     "render_short",
 ]
@@ -70,6 +80,23 @@ candidate and reads as a lecture rather than as a video."""
 
 class PlanError(ValueError):
     """The plan file is not a plan. Exit code 2 — the caller got it wrong."""
+
+
+class RenderEnvironmentError(Exception):
+    """This ffmpeg cannot make the video, and no footage would change that.
+
+    Separate from every other failure here because the audience is different.
+    `BeatNotFound` is for the client — film that line. This is for whoever is
+    running the engine: the binary on this machine is missing a filter or an
+    encoder, and the sentence has to say which and what to do about it.
+
+    It exists because the alternative is a 900-line ffmpeg stderr tail. The
+    Homebrew ffmpeg on the machine this was written on has **no libass**
+    (docs/DECISIONS.md D16), so `-vf ass=` fails there with a filter-not-found
+    error buried in a wall of configuration flags — and the first person to
+    meet that would reasonably conclude the pipeline was broken rather than
+    their ffmpeg.
+    """
 
 
 class ShortNotPossible(Exception):
@@ -216,8 +243,31 @@ def _captions_for(
     return (tuple(lines), output_start)
 
 
+def check_environment() -> None:
+    """Can this ffmpeg do the two things a captioned short needs?
+
+    Asked **before** any work, because both answers are cheap and the failure
+    is otherwise expensive: transcription is the slow leg, and discovering a
+    missing filter after twenty minutes of it is twenty minutes nobody gets
+    back.
+    """
+    if not has_filter("ass"):
+        raise RenderEnvironmentError(
+            "this ffmpeg has no `ass` filter, so captions cannot be burned. "
+            "The worker image ships a build that has it; on macOS, "
+            "`brew upgrade ffmpeg` (or `brew install ffmpeg`) brings libass. "
+            "Check with: ffmpeg -hide_banner -filters | grep ' ass '"
+        )
+
+    try:
+        pick_h264_encoder()
+    except FfmpegError as error:
+        raise RenderEnvironmentError(str(error)) from error
+
+
 def render_short(plan: RenderPlan) -> ShortOutcome:
     """Align, caption, encode, and write the summary. Raises on refusal."""
+    check_environment()
     plan.out_dir.mkdir(parents=True, exist_ok=True)
 
     source_probe = probe(plan.source)

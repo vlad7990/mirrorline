@@ -452,6 +452,12 @@ export async function runRenderJob(
         `rendering ran past its ${Math.round(RENDER_TIME_BUDGET_MS / 60000)}-minute budget`,
       )
     }
+    if (render.code === 3) {
+      // The engine says this machine cannot render — a missing `ass` filter or
+      // no H.264 encoder. Ours, not the client's footage, so it throws rather
+      // than writing a refusal somebody would read as being about their video.
+      throw new Error(`this worker cannot render: ${render.stderr.trim()}`)
+    }
     if (render.code === 2) {
       // The plan was wrong, which is our bug and not the client's footage.
       throw new Error(`render-short rejected the plan: ${render.stderr.trim()}`)
@@ -489,6 +495,18 @@ export async function runRenderJob(
     if (summary.posterPath !== null) {
       await uploadObject(supabase, RENDERS_BUCKET, posterPath, summary.posterPath, 'image/jpeg')
     }
+
+    // The measurement the first real client video owes us (PROGRESS, slice 1's
+    // third gap). Logged per beat rather than summarised, because "the Payoff
+    // matched at 45%" is the sentence that decides whether the floor moves or
+    // the script agent's prompt does.
+    for (const found of summary.coverage) {
+      console.log(`[worker] beat ${found.beat}: ${Math.round(found.coverage * 100)}% of its words`)
+    }
+    console.log(
+      `[worker] encoded with ${summary.encoderName ?? 'unknown'}, font ${summary.fontFamily ?? 'unknown'}` +
+        `${summary.isBrandFont === false ? ' (not the brand’s own)' : ''}`,
+    )
 
     const aiScenes = aiScenesOf(summary.segments)
 
